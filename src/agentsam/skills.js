@@ -36,6 +36,47 @@ function skillDomain(row) {
   return meta.skill_domain || meta.domain || "";
 }
 
+function normalizeSlugList(context = {}) {
+  const slugs = [];
+  if (context.skill_slug) slugs.push(String(context.skill_slug).trim());
+  if (Array.isArray(context.skill_slugs)) {
+    for (const s of context.skill_slugs) {
+      const v = String(s || "").trim();
+      if (v) slugs.push(v);
+    }
+  }
+  return [...new Set(slugs.filter(Boolean))];
+}
+
+function scoreRouteKeys(row, routing = {}) {
+  let score = 0;
+  const routeKeys = parseJsonArray(row.route_keys_json);
+  if (!routeKeys.length) return 0;
+
+  const intent = String(routing.intent || "").toLowerCase();
+  const workflowKey = String(routing.workflow_key || "").toLowerCase();
+  const taskType = String(routing.task_type || "").toLowerCase();
+  const routeKey = String(routing.route_key || routing.intent || "").toLowerCase();
+
+  for (const entry of routeKeys) {
+    if (typeof entry === "string") {
+      const key = entry.toLowerCase();
+      if (key && (key === intent || key === routeKey || key === workflowKey || key === taskType)) {
+        score += 5;
+      }
+      continue;
+    }
+    if (!entry || typeof entry !== "object") continue;
+
+    if (entry.intent && String(entry.intent).toLowerCase() === intent) score += 5;
+    if (entry.route_key && String(entry.route_key).toLowerCase() === routeKey) score += 5;
+    if (entry.workflow_key && String(entry.workflow_key).toLowerCase() === workflowKey) score += 6;
+    if (entry.task_type && String(entry.task_type).toLowerCase() === taskType) score += 4;
+  }
+
+  return score;
+}
+
 async function hydrateRowWithRefs(env, row) {
   const { results: files } = await env.DB.prepare(
     `SELECT file_path, role, sort_order FROM agentsam_skill_file
@@ -45,6 +86,39 @@ async function hydrateRowWithRefs(env, row) {
     .bind(row.id)
     .all();
   return hydrateSkillWithFiles(env, row, files || []);
+}
+
+export function buildSkillHash(skills = []) {
+  const parts = (skills || [])
+    .map((s) => `${s.slug}:${s.version ?? 1}`)
+    .filter(Boolean)
+    .sort();
+  if (!parts.length) return "no_skills";
+  return parts.join("|");
+}
+
+export async function recordSkillInvocations(env, skills = []) {
+  if (!env?.DB || !skills?.length) return { updated: 0 };
+
+  let updated = 0;
+  for (const skill of skills) {
+    if (!skill?.id) continue;
+    try {
+      await env.DB.prepare(
+        `UPDATE agentsam_skill
+         SET invocation_count = invocation_count + 1,
+             last_invoked_at = datetime('now'),
+             updated_at = datetime('now')
+         WHERE id = ? AND tenant_id = ?`
+      )
+        .bind(skill.id, FNF_TENANT_ID)
+        .run();
+      updated += 1;
+    } catch {
+      /* non-blocking */
+    }
+  }
+  return { updated };
 }
 
 export async function listAgentSamSkills(env, { hydrate = false } = {}) {
@@ -89,6 +163,7 @@ export async function getAgentSamSkill(env, slug, { includeReferences = false } 
 
 /**
  * Pick skills relevant to admin chat message + UI context.
+ * context.skill_slug / context.skill_slugs force-match before scoring.
  */
 export async function resolveSkillsForChat(env, message, context = {}) {
   const { results: rows } = await env.DB.prepare(
@@ -98,6 +173,18 @@ export async function resolveSkillsForChat(env, message, context = {}) {
     .all();
 
   if (!rows?.length) return [];
+
+  const forceSlugs = normalizeSlugList(context);
+  if (forceSlugs.length) {
+    const forced = [];
+    for (const slug of forceSlugs) {
+      const row = rows.find((r) => r.slug === slug);
+      if (row) forced.push(row);
+    }
+    if (forced.length) {
+      return Promise.all(forced.slice(0, MAX_CHAT_SKILLS).map((row) => hydrateRowWithRefs(env, row)));
+    }
+  }
 
   const haystack = [
     message,
@@ -109,6 +196,13 @@ export async function resolveSkillsForChat(env, message, context = {}) {
   ]
     .join(" ")
     .toLowerCase();
+
+  const routing = {
+    intent: context.intent || "",
+    workflow_key: context.workflow_key || "",
+    task_type: context.task_type || context.topic || "",
+    route_key: context.route_key || context.intent || "",
+  };
 
   const alwaysApply = rows.filter((r) => r.always_apply);
   const scored = [];
@@ -130,6 +224,8 @@ export async function resolveSkillsForChat(env, message, context = {}) {
     }
     if (slug && haystack.includes(slug.replace(/-/g, " "))) score += 2;
     if (slug && haystack.includes(slug)) score += 3;
+
+    score += scoreRouteKeys(row, routing);
 
     if (domain === "commerce" && /product|inventory|order|shop|cart/.test(haystack)) score += 4;
     if (domain === "stripe" && /stripe|payment|checkout|webhook/.test(haystack)) score += 5;

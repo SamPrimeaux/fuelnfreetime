@@ -163,15 +163,17 @@ export async function routeAgentsamRequest(env, message, context = {}) {
 
   const workflowKey = classification.workflow_key;
   const workflow = await loadWorkflow(env, workflowKey);
+  const ai_routing = resolveAIRouting(classification, message, context);
   const skills = await resolveSkillsForChat(env, message, {
     ...context,
     topic: classification.task_type,
     intent: classification.intent,
     workflow_key: workflowKey,
+    task_type: context.task_type || ai_routing.task_type || classification.task_type,
+    route_key: classification.intent,
   });
   const mcpServers = selectMcpServers(classification.intent, message);
   const bridgeReady = Boolean(String(env.AGENTSAM_BRIDGE_KEY || "").trim());
-  const ai_routing = resolveAIRouting(classification, message, context);
   const tools = await selectToolsForChat(env, {
     intent: classification.intent,
     message,
@@ -206,7 +208,7 @@ export async function routeAgentsamRequest(env, message, context = {}) {
           ui_label: parseJson(workflow.metadata_json, {})?.ui_label || workflow.display_name,
         }
       : null,
-    skills: skills.map((s) => ({ slug: s.slug, name: s.name })),
+    skills: skills.map((s) => ({ slug: s.slug, name: s.name, version: s.version ?? 1, id: s.id })),
     tools: tools.map((t) => ({ tool_key: t.tool_key, name: t.display_name })),
     mcp_servers: mcpServers.map((s) => ({
       slug: s.slug,

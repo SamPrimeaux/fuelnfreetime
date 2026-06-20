@@ -34,6 +34,7 @@ export function buildPromptCacheKey(parts = {}) {
     parts.prompt_hash || "_",
     parts.context_hash || "_",
     parts.tool_hash || "_",
+    parts.skill_hash || "_",
   ];
   return segments.join(":");
 }
@@ -246,6 +247,7 @@ export async function getOrBuildPromptPack(env, routing, context, options = {}) 
   }
 
   const toolHash = options.tool_hash || "";
+  const skillHash = options.skill_hash || "";
   const contextHash = options.context_hash || options.stable_context_hash || "";
 
   const cacheKey = buildPromptCacheKey({
@@ -257,6 +259,7 @@ export async function getOrBuildPromptPack(env, routing, context, options = {}) 
     prompt_hash: catalogPack.promptHash,
     context_hash: contextHash,
     tool_hash: toolHash,
+    skill_hash: skillHash,
   });
 
   let cached = null;

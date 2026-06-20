@@ -38,9 +38,13 @@ import {
   probeGitHubConnection,
 } from "../agentsam/mcp-client.js";
 import { FNF_GITHUB_REPO, FNF_WORKSPACE_ID } from "../agentsam/constants.js";
+import {
+  formatSemanticSearchForPrompt,
+  maybeRunSemanticSearch,
+} from "../agentsam/fnf-vectorize.js";
 import { listMcpServersForUi, mcpRuntimeConfig } from "../agentsam/mcp-servers.js";
 import { listDrawerWorkflows, listStudioWorkflows, routeAgentsamRequest } from "../agentsam/router.js";
-import { getAgentSamSkill, listAgentSamSkills } from "../agentsam/skills.js";
+import { getAgentSamSkill, listAgentSamSkills, buildSkillHash, recordSkillInvocations } from "../agentsam/skills.js";
 import { getSessionUser } from "../lib/auth.js";
 
 const LEGACY_SYSTEM_PROMPT = `You are Agent Sam for Fuel & Free Time (fuelnfreetime.com).
@@ -90,11 +94,14 @@ async function assembleSystemPrompt(env, routing, context, message, attachments,
     .join("\n\n");
 
   let toolHash = "no_tools";
+  let skillHash = "no_skills";
   let contextPack;
   let promptPack;
+  let semanticBlock = "";
 
   try {
     toolHash = await getActiveToolsHash(env);
+    skillHash = buildSkillHash(routing.skills || []);
     contextPack = await getOrBuildContextPack(env, routing, message, {
       conversation_id: context.conversation_id,
       bridge_ready: bridgeConfigured(env),
@@ -105,9 +112,13 @@ async function assembleSystemPrompt(env, routing, context, message, attachments,
     });
     promptPack = await getOrBuildPromptPack(env, routing, context, {
       tool_hash: toolHash,
+      skill_hash: skillHash,
       context_hash: contextPack.stableContextHash || contextPack.contextHash,
       stable_context_hash: contextPack.stableContextHash || contextPack.contextHash,
     });
+
+    const semantic = await maybeRunSemanticSearch(env, message, routing);
+    semanticBlock = formatSemanticSearchForPrompt(semantic);
   } catch (err) {
     console.error("prompt assembly fallback", err?.message || err);
     contextPack = {
@@ -133,7 +144,7 @@ async function assembleSystemPrompt(env, routing, context, message, attachments,
     ? `GitHub OAuth (FNF-scoped): ${new URL(connectUrls.fnf_github_oauth, request.url).toString()}`
     : "";
 
-  const systemPrompt = [promptPack.systemPrompt, contextPack.contextText, oauthBlock]
+  const systemPrompt = [promptPack.systemPrompt, semanticBlock, contextPack.contextText, oauthBlock]
     .filter(Boolean)
     .join("\n\n");
 
@@ -289,6 +300,26 @@ export async function agentsamChat(request, env, executionCtx = null) {
     },
     trackBase
   );
+
+  if (routing.skills?.length) {
+    await trackAgentSamEvent(
+      env,
+      {
+        event_type: "system",
+        event_name: "skills_selected",
+        status: "success",
+        intent: routing.classification.intent,
+        workflow_key: workflowKey,
+        task_type: aiRouting.task_type,
+        metadata: {
+          skill_slugs: routing.skills.map((s) => s.slug),
+          skill_hash: buildSkillHash(routing.skills),
+        },
+      },
+      trackBase
+    );
+    await recordSkillInvocations(env, routing.skills);
+  }
 
   if (routing.workflow) {
     await trackAgentSamEvent(
@@ -855,6 +886,25 @@ export async function agentsamPromptCacheSummary(env) {
     top_fragments: (top_fragments || []).slice(0, 7).map((f) => f.fragment_key),
     top_workflows,
   });
+}
+
+export async function agentsamSemanticSearch(request, env) {
+  let body = {};
+  try {
+    body = (await request.json()) || {};
+  } catch {
+    body = {};
+  }
+  const query = String(body.query || body.q || "").trim();
+  if (!query) return json({ error: "query required" }, { status: 400 });
+
+  const { executeAgentSamTool } = await import("../agentsam/tool-handlers.js");
+  const result = await executeAgentSamTool(env, "fnf_semantic_search", {
+    query,
+    top_k: body.top_k || body.limit || 8,
+    source_type: body.source_type || null,
+  });
+  return json(result);
 }
 
 export async function agentsamPromptCacheInvalidate(request, env) {

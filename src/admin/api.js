@@ -43,6 +43,7 @@ import {
   agentsamPromptsList,
   agentsamPromptCacheSummary,
   agentsamPromptCacheInvalidate,
+  agentsamSemanticSearch,
   agentsamCompactionStatus,
   agentsamCompactionRun,
 } from "./agentsam.js";
@@ -492,6 +493,9 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   }
   if (path === "/api/admin/agentsam/prompts/cache/summary" && method === "GET") {
     return agentsamPromptCacheSummary(env);
+  }
+  if (path === "/api/admin/agentsam/tools/semantic-search" && method === "POST") {
+    return agentsamSemanticSearch(request, env);
   }
   if (path === "/api/admin/agentsam/prompts/cache/invalidate" && method === "POST") {
     return agentsamPromptCacheInvalidate(request, env);

@@ -13,6 +13,8 @@ export const FNF_D1_DATABASE = "fuelnfreetime";
 export const FNF_R2_BINDING = "WEBSITE_ASSETS";
 export const FNF_R2_BUCKET = "fuelnfreetime";
 export const FNF_APP_DOMAIN = "fuelnfreetime.com";
+export const FNF_VECTORIZE_INDEX = "fnf-agentsam-bge-m3-1024";
+export const FNF_EMBED_MODEL = "@cf/baai/bge-m3";
 
 /** Canonical platform scope for agentsam_tools handler_config.fnf_scope */
 export const FNF_PLATFORM_SCOPE = {
