@@ -102,7 +102,7 @@ export default {
     // /admin and /admin/ resolve based on session state
     if (path === "/admin" || path === "/admin/") {
       const user = await getSessionUser(request, env);
-      const dest = user ? "/admin/dashboard.html" : "/admin/login.html";
+      const dest = user ? "/admin/dashboard/overview.html" : "/admin/login.html";
       return noStore(Response.redirect(new URL(dest, request.url), 302));
     }
 

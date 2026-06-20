@@ -4,57 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard — Fuel & Free Time Admin</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/admin/css/admin.css">
+<meta http-equiv="refresh" content="0;url=/admin/dashboard/overview.html">
+<link rel="canonical" href="/admin/dashboard/overview.html">
 </head>
 <body>
-<script src="/admin/js/shell.js"></script>
-<script>
-renderShell('/admin/dashboard.html', `
-  <h1 class="admin-page-title">Dashboard</h1>
-  <p class="admin-page-sub">Overview of products, inventory, orders, and signups.</p>
-
-  <div class="admin-stat-grid" id="stat-grid">
-    <div class="admin-stat-card"><div class="admin-stat-value">—</div><div class="admin-stat-label">Products</div></div>
-    <div class="admin-stat-card"><div class="admin-stat-value">—</div><div class="admin-stat-label">Inventory Units</div></div>
-    <div class="admin-stat-card warn"><div class="admin-stat-value">—</div><div class="admin-stat-label">Low Stock SKUs</div></div>
-    <div class="admin-stat-card"><div class="admin-stat-value">—</div><div class="admin-stat-label">Orders</div></div>
-    <div class="admin-stat-card"><div class="admin-stat-value">—</div><div class="admin-stat-label">Newsletter Subscribers</div></div>
-  </div>
-
-  <div class="admin-card">
-    <div class="admin-card-title">Recent Signups</div>
-    <table class="admin-table">
-      <thead><tr><th>Email</th><th>Source Page</th><th>When</th></tr></thead>
-      <tbody id="recent-subs-body"><tr><td colspan="3" class="admin-empty">Loading…</td></tr></tbody>
-    </table>
-  </div>
-`);
-
-(async function () {
-  try {
-    const d = await adminFetch('/api/admin/overview');
-    const cards = document.querySelectorAll('#stat-grid .admin-stat-value');
-    cards[0].textContent = d.products;
-    cards[1].textContent = d.inventory_units;
-    cards[2].textContent = d.low_stock_variants;
-    cards[3].textContent = d.orders;
-    cards[4].textContent = d.subscribers;
-
-    const body = document.getElementById('recent-subs-body');
-    if (!d.recent_subscribers.length) {
-      body.innerHTML = '<tr><td colspan="3" class="admin-empty">No signups yet.</td></tr>';
-    } else {
-      body.innerHTML = d.recent_subscribers
-        .map(s => `<tr><td>${s.email}</td><td>${s.source_page || ''}</td><td>${fmtDate(s.created_at)}</td></tr>`)
-        .join('');
-    }
-  } catch (err) {
-    console.error(err);
-  }
-})();
-</script>
+<script>window.location.replace("/admin/dashboard/overview.html");</script>
+<p>Redirecting to <a href="/admin/dashboard/overview.html">Overview</a>…</p>
 </body>
 </html>

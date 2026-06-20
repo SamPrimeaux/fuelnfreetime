@@ -12,8 +12,10 @@
 <body>
   <div class="admin-login-wrap">
     <div class="admin-login-card">
-      <div class="admin-login-logo">FUEL<span>&</span>FREE TIME</div>
-      <div class="admin-login-sub">Admin Dashboard</div>
+      <div class="admin-login-logo">
+        <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ad23b2d9-e2e4-4ad6-eb81-9e4c983df000/thumbnail" alt="Fuel &amp; Free Time">
+        <span class="brand-tag">Admin Dashboard</span>
+      </div>
       <form id="login-form">
         <div class="admin-form-row">
           <label for="email">Email</label>
@@ -47,7 +49,7 @@
         });
         var data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Login failed');
-        window.location.href = '/admin/dashboard.html';
+        window.location.href = '/admin/dashboard/overview.html';
       } catch (err) {
         note.textContent = err.message;
         note.style.display = 'block';

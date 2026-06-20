@@ -93,3 +93,11 @@ CREATE TABLE IF NOT EXISTS product_images (
   created_at      TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE(product_id, media_asset_id)
 );
+
+-- ===== Mail (Gmail inbox + Resend sending) =====
+
+CREATE TABLE IF NOT EXISTS mail_settings (
+  id            INTEGER PRIMARY KEY CHECK (id = 1),
+  settings_json TEXT NOT NULL,
+  updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);

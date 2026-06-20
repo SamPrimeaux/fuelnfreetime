@@ -7,6 +7,12 @@ import {
   destroySession,
 } from "../lib/auth.js";
 import {
+  getMailSettings,
+  postMailSettings,
+  listMailMessages,
+  sendMailPreview,
+} from "./mail.js";
+import {
   uploadMedia,
   listMedia,
   deleteMedia,
@@ -366,6 +372,11 @@ export async function handleAdminApi(request, env, url) {
 
   m = path.match(/^\/api\/admin\/products\/(\d+)\/images\/(\d+)\/primary$/);
   if (m && method === "POST") return setPrimaryProductImage(request, env, m[1], m[2]);
+
+  if (path === "/api/admin/mail/settings" && method === "GET") return getMailSettings(env);
+  if (path === "/api/admin/mail/settings" && method === "POST") return postMailSettings(request, env);
+  if (path === "/api/admin/mail/messages" && method === "GET") return listMailMessages();
+  if (path === "/api/admin/mail/send" && method === "POST") return sendMailPreview(request, env);
 
   return json({ error: "Not found" }, { status: 404 });
 }
