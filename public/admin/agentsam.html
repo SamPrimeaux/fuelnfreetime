@@ -28,16 +28,17 @@ renderShell("/admin/agentsam", `
             </button>
             <div class="agentsam-page-menu" id="agentsam-tool-menu" role="menu" hidden>
               <button type="button" role="menuitem" data-tool="attach">Add photos &amp; files</button>
-              <button type="button" role="menuitem" data-tool="image">Create image</button>
-              <button type="button" role="menuitem" data-tool="research">Deep research</button>
-              <button type="button" role="menuitem" data-tool="web">Web search</button>
+              <button type="button" role="menuitem" data-tool="image" id="agentsam-menu-image">Create image</button>
+              <button type="button" role="menuitem" data-tool="research" id="agentsam-menu-research" disabled>Plan research</button>
+              <button type="button" role="menuitem" data-tool="web" id="agentsam-menu-web" disabled>Web search</button>
               <div class="agentsam-page-menu-divider"></div>
               <div class="agentsam-page-menu-label">Connections</div>
               <div id="agentsam-mcp-list"></div>
             </div>
-            <input type="file" id="agentsam-file-input" hidden multiple accept="image/*,.txt,.md,.csv,.json,.html,.css,.js,.ts,.tsx,.jsx,.xml,.yaml,.yml,.pdf">
+            <input type="file" id="agentsam-file-input" hidden multiple accept="image/png,image/jpeg,image/webp,image/gif,.txt,.md,.csv,.json,.html,.css,.js,.ts">
           </div>
           <div class="agentsam-page-composer-main">
+            <div class="agentsam-page-compose-modes" id="agentsam-compose-modes" hidden></div>
             <div class="agentsam-page-attachments" id="agentsam-attachments" hidden></div>
             <textarea id="agentsam-page-input" rows="1" placeholder="Ask anything" autocomplete="off"></textarea>
           </div>
@@ -47,8 +48,20 @@ renderShell("/admin/agentsam", `
         </form>
       </div>
       <div class="agentsam-page-chips" id="agentsam-page-chips"></div>
-      <p class="agentsam-page-foot" id="agentsam-page-status">AgentSam routes to content, creative, brand, code, and store workflows automatically.</p>
-      <div class="agentsam-page-github" id="agentsam-page-github" hidden></div>
+    </div>
+    <div class="agentsam-tool-modal" id="agentsam-tool-modal" hidden>
+      <div class="agentsam-tool-modal-backdrop" data-close-modal></div>
+      <div class="agentsam-tool-modal-panel" role="dialog" aria-modal="true" aria-labelledby="agentsam-tool-modal-title">
+        <header class="agentsam-tool-modal-head">
+          <h2 id="agentsam-tool-modal-title">Tool call</h2>
+          <button type="button" class="agentsam-tool-modal-close" data-close-modal aria-label="Close">&times;</button>
+        </header>
+        <div class="agentsam-tool-modal-body" id="agentsam-tool-modal-body"></div>
+        <footer class="agentsam-tool-modal-foot">
+          <button type="button" class="agentsam-tool-modal-copy" id="agentsam-tool-modal-copy">Copy</button>
+          <button type="button" class="agentsam-tool-modal-close-btn" data-close-modal>Close</button>
+        </footer>
+      </div>
     </div>
   </div>
 `, {

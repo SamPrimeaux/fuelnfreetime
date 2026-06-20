@@ -1,9 +1,12 @@
+import { ensureConversation } from "../agentsam/conversations.js";
 import {
   defaultMessageForAttachments,
-  enrichContextFromAttachments,
   formatAttachmentsForPrompt,
-  normalizeAttachments,
 } from "../agentsam/attachments.js";
+import { hydrateAttachmentsForChat } from "../agentsam/files.js";
+import { buildAgentsamUiConfig } from "../agentsam/quick-actions.js";
+import { persistChatExchange } from "../agentsam/threads.js";
+import { buildToolCallFromGithubMeta, routeChipsFromRouting } from "../agentsam/tool-traces.js";
 import { runAgentSamAi } from "../agentsam/ai-run.js";
 import {
   createAnalyticsIds,
@@ -87,8 +90,28 @@ export async function agentsamChat(request, env, executionCtx = null) {
   const chatStarted = Date.now();
   const body = await readJson(request);
   const rawContext = body?.context || {};
-  const attachments = normalizeAttachments(body?.attachments || rawContext.attachments || []);
-  const context = await enrichContextFromAttachments(env, rawContext, attachments, request.url);
+  const user = await getSessionUser(request, env);
+
+  const hydrated = await hydrateAttachmentsForChat(
+    env,
+    body?.attachments || rawContext.attachments || [],
+    request.url
+  );
+  const attachments = hydrated.attachments;
+  const context = {
+    ...rawContext,
+    ...hydrated.context,
+    page: rawContext.page || "/admin/agentsam",
+    workflow_key: rawContext.workflow_key || body?.workflow_key || null,
+    task_type: rawContext.task_type || body?.task_type || null,
+    lane: rawContext.lane || body?.lane || null,
+    mode: rawContext.mode || body?.mode || null,
+    has_image: hydrated.context.has_image || rawContext.has_image,
+    image_base64: hydrated.context.image_base64 || rawContext.image_base64,
+    image_url: hydrated.context.image_url || rawContext.image_url,
+    attachments: hydrated.attachments,
+  };
+
   const message =
     (body?.message || "").trim() ||
     (attachments.length ? defaultMessageForAttachments(attachments) : "");
@@ -96,11 +119,21 @@ export async function agentsamChat(request, env, executionCtx = null) {
     return json({ error: "message or attachment required" }, { status: 400 });
   }
 
-  const user = await getSessionUser(request, env);
-  const ids = createAnalyticsIds(body, context);
+  const conversation = await ensureConversation(env, body?.conversation_id || context.conversation_id, {
+    title: message,
+    createdBy: user?.id || null,
+    workflowKey: context.workflow_key,
+  });
+  const conversationId = conversation?.id || body?.conversation_id || null;
+
+  const ids = createAnalyticsIds(
+    { ...body, conversation_id: conversationId },
+    { ...context, conversation_id: conversationId }
+  );
   const trackBase = {
     ctx: executionCtx,
     ...ids,
+    conversation_id: conversationId,
     admin_user_id: user?.id || null,
     user_id: user?.id || null,
     user_email: user?.email || null,
@@ -183,9 +216,18 @@ export async function agentsamChat(request, env, executionCtx = null) {
   }
 
   const githubStarted = Date.now();
-  const githubResult = await fetchGithubContextForChat(env, message, user?.id || null);
+  const githubResult = await fetchGithubContextForChat(env, message, user?.id || null, {
+    ...trackBase,
+    ctx: executionCtx,
+  });
   const mcpContext = githubResult.context;
   const githubMeta = githubResult.meta;
+  const toolCalls = [];
+  const githubTrace = buildToolCallFromGithubMeta(githubMeta, ids);
+  if (githubTrace) {
+    githubTrace.tool_call_id = githubMeta?.tool_call_id || githubTrace.tool_call_id;
+    toolCalls.push(githubTrace);
+  }
 
   if (githubMeta) {
     await trackAgentSamEvent(
@@ -346,10 +388,25 @@ export async function agentsamChat(request, env, executionCtx = null) {
     trackBase
   );
 
+  persistChatExchange(env, {
+    conversationId,
+    messageId: ids.message_id,
+    userMessage: message,
+    assistantReply: ai.reply,
+    attachments,
+    toolCalls,
+    routing,
+    ai,
+    ctx: executionCtx,
+  });
+
   return json({
     ok: true,
     reply: ai.reply,
+    conversation_id: conversationId,
     model: ai.model,
+    route_chips: routeChipsFromRouting(routing, toolCalls),
+    tool_calls: toolCalls,
     ai: {
       selected_model: ai.selected_model,
       attempted_models: ai.attempted_models,
@@ -370,6 +427,7 @@ export async function agentsamChat(request, env, executionCtx = null) {
     analytics: {
       session_id: ids.session_id,
       message_id: ids.message_id,
+      conversation_id: conversationId,
       tracked: true,
     },
   });
@@ -433,11 +491,12 @@ export async function agentsamMcpStatus(env, userId = null) {
 }
 
 export async function agentsamTools(env) {
-  const [workflows, drawerWorkflows, mcpServers, toolCatalog] = await Promise.all([
+  const [workflows, drawerWorkflows, mcpServers, toolCatalog, uiConfig] = await Promise.all([
     listStudioWorkflows(env),
     listDrawerWorkflows(env),
     listMcpServersForUi(env),
     listToolsGrouped(env),
+    buildAgentsamUiConfig(env),
   ]);
 
   return json({
@@ -447,12 +506,9 @@ export async function agentsamTools(env) {
     mcp_servers: mcpServers,
     tool_catalog: toolCatalog,
     connect_urls: mcpConnectUrls(env),
-    quick_actions: [
-      { label: "Create an image", prompt: "Generate a premium collection banner direction for Fuel n Freetime" },
-      { label: "Write or edit", prompt: "Draft product copy for our latest tee — rugged, earned freedom tone" },
-      { label: "Look something up", prompt: "What should we publish next on fuelnfreetime.com?" },
-      { label: "Repo work", prompt: "Summarize recent commits on fuelnfreetime and what to verify before deploy" },
-    ],
+    quick_actions: uiConfig.quick_actions,
+    plus_menu: uiConfig.plus_menu,
+    iam_logo_url: uiConfig.iam_logo_url,
   });
 }
 

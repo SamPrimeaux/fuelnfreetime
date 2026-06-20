@@ -42,6 +42,15 @@ import {
   agentsamWorkflowsList,
 } from "./agentsam.js";
 import {
+  agentsamConversationCreate,
+  agentsamConversationDelete,
+  agentsamConversationGet,
+  agentsamConversationPatch,
+  agentsamConversationsList,
+} from "../agentsam/conversations.js";
+import { agentsamFileDelete, agentsamFileGet, agentsamFileUpload } from "../agentsam/files.js";
+import { agentsamToolCallGet } from "../agentsam/tool-traces.js";
+import {
   agentsamGithubOAuthCallback,
   agentsamGithubOAuthDisconnect,
   agentsamGithubOAuthStart,
@@ -448,6 +457,24 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   if (path === "/api/admin/agentsam/chat" && method === "POST") {
     return agentsamChat(request, env, executionCtx);
   }
+  if (path === "/api/admin/agentsam/files/upload" && method === "POST") {
+    return agentsamFileUpload(request, env);
+  }
+  let fileMatch = path.match(/^\/api\/admin\/agentsam\/files\/([a-z0-9_]+)$/);
+  if (fileMatch && method === "GET") return agentsamFileGet(env, fileMatch[1]);
+  if (fileMatch && method === "DELETE") return agentsamFileDelete(env, fileMatch[1]);
+  if (path === "/api/admin/agentsam/conversations" && method === "GET") {
+    return agentsamConversationsList(env);
+  }
+  if (path === "/api/admin/agentsam/conversations" && method === "POST") {
+    return agentsamConversationCreate(request, env);
+  }
+  let convMatch = path.match(/^\/api\/admin\/agentsam\/conversations\/([a-z0-9_]+)$/);
+  if (convMatch && method === "GET") return agentsamConversationGet(env, convMatch[1]);
+  if (convMatch && method === "PATCH") return agentsamConversationPatch(request, env, convMatch[1]);
+  if (convMatch && method === "DELETE") return agentsamConversationDelete(env, convMatch[1]);
+  let toolCallMatch = path.match(/^\/api\/admin\/agentsam\/tool-calls\/([a-z0-9_]+)$/);
+  if (toolCallMatch && method === "GET") return agentsamToolCallGet(env, toolCallMatch[1]);
   if (path === "/api/admin/agentsam/status" && method === "GET") {
     const user = await getSessionUser(request, env);
     return agentsamStatus(env, user?.id || null);

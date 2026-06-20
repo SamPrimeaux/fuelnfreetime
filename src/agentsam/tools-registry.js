@@ -298,15 +298,18 @@ export async function logToolCall(env, event, options = {}) {
   try {
     if (!env?.DB || !event?.tool_key) return { logged: false };
 
+    const id = event.id || `atcl_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
+
     const write = env.DB.prepare(
       `INSERT INTO agentsam_tool_call_log (
-         tenant_id, workspace_id, session_id, conversation_id, message_id, run_id, user_id,
+         id, tenant_id, workspace_id, session_id, conversation_id, message_id, run_id, user_id,
          tool_name, tool_key, agentsam_tools_id, tool_category, mcp_server_key, handler_type,
          status, duration_ms, error_message, cost_usd, input_tokens, output_tokens,
          input_summary, output_summary, retry_count
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
       .bind(
+        id,
         FNF_TENANT_ID,
         FNF_WORKSPACE_ID,
         options.session_id ?? null,
@@ -336,10 +339,10 @@ export async function logToolCall(env, event, options = {}) {
     const waitUntil = options.ctx?.waitUntil;
     if (typeof waitUntil === "function") {
       waitUntil(write);
-      return { logged: true, async: true };
+      return { logged: true, id, async: true };
     }
     await write;
-    return { logged: true, async: false };
+    return { logged: true, id, async: false };
   } catch (err) {
     console.error("logToolCall failed", err?.message || err);
     return { logged: false };

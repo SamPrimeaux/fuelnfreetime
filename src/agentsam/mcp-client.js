@@ -102,8 +102,9 @@ export async function callMcpTool(env, toolName, args = {}, logCtx = {}) {
   const started = Date.now();
   const result = await mcpRpc(env, "tools/call", { name: toolName, arguments: args });
   const durationMs = Date.now() - started;
+  const body = parseToolText(result);
 
-  await logToolCall(
+  const logResult = await logToolCall(
     env,
     {
       tool_key: toolName,
@@ -114,11 +115,15 @@ export async function callMcpTool(env, toolName, args = {}, logCtx = {}) {
       status: result.ok ? "success" : "failed",
       duration_ms: durationMs,
       error_message: result.ok ? null : result.error,
+      input_summary: JSON.stringify({ tool: toolName, args_keys: Object.keys(args || {}) }),
+      output_summary: result.ok
+        ? String(body?.raw || JSON.stringify(body || {})).slice(0, 240)
+        : result.error,
     },
     logCtx
   );
 
-  return result;
+  return { ...result, tool_call_id: logResult.id || null, duration_ms: durationMs, parsed: body };
 }
 
 export async function probeGitHubViaBridge(env) {
@@ -135,7 +140,7 @@ export async function probeGitHubViaBridge(env) {
   return { connected: body?.ok !== false, has_fnf_repo: hasFnf, sample: body };
 }
 
-export async function fetchGithubContextForChat(env, message, userId = null) {
+export async function fetchGithubContextForChat(env, message, userId = null, logCtx = {}) {
   const started = Date.now();
   const direct = await fetchGithubContextForAgent(env, message, userId);
   if (direct) {
@@ -159,7 +164,7 @@ export async function fetchGithubContextForChat(env, message, userId = null) {
   const repo = String(env.FNF_GITHUB_REPO || FNF_GITHUB_REPO);
 
   if (/github|repo|commit|branch|pr|pull request|code|deploy|worker|migration/.test(hay)) {
-    const listed = await callMcpTool(env, "agentsam_github_repo_list", {});
+    const listed = await callMcpTool(env, "agentsam_github_repo_list", {}, logCtx);
     const body = parseToolText(listed);
     const latency = Date.now() - started;
 
@@ -176,6 +181,7 @@ export async function fetchGithubContextForChat(env, message, userId = null) {
           mcp_tool: "agentsam_github_repo_list",
           mcp_success: false,
           mcp_latency_ms: latency,
+          tool_call_id: listed.tool_call_id || null,
         },
       };
     }
@@ -195,6 +201,7 @@ export async function fetchGithubContextForChat(env, message, userId = null) {
           mcp_tool: "agentsam_github_repo_list",
           mcp_success: true,
           mcp_latency_ms: latency,
+          tool_call_id: listed.tool_call_id || null,
         },
       };
     }
@@ -211,6 +218,7 @@ export async function fetchGithubContextForChat(env, message, userId = null) {
         mcp_success: false,
         mcp_latency_ms: latency,
         error: listed.error || "mcp_failed",
+        tool_call_id: listed.tool_call_id || null,
       },
     };
   }

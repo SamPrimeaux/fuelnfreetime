@@ -446,6 +446,272 @@ body.agentsam-page-body .console-main--bleed {
   color: #86efac;
 }
 
+.agentsam-page-stage.has-thread {
+  justify-content: flex-start;
+  padding-top: 32px;
+}
+
+.agentsam-page-compose-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 4px;
+}
+
+.agentsam-page-compose-modes[hidden] {
+  display: none;
+}
+
+.agentsam-page-mode-chip {
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(171, 104, 255, 0.14);
+  color: #d4b8ff;
+  border: 1px solid rgba(171, 104, 255, 0.28);
+}
+
+.agentsam-page-mode-chip button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  margin-left: 6px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.agentsam-page-tool-call {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+  margin: 8px 0 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--as-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--as-text);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.agentsam-page-tool-call:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.agentsam-page-tool-call.is-running {
+  position: relative;
+  overflow: hidden;
+}
+
+.agentsam-page-tool-call.is-running::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+  animation: agentsam-shimmer 1.4s infinite;
+}
+
+@keyframes agentsam-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.agentsam-page-tool-call-icon {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.agentsam-page-tool-call-icon img {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.agentsam-page-tool-call-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.agentsam-page-tool-call-body strong {
+  display: block;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.agentsam-page-tool-call-body span {
+  color: var(--as-muted);
+  font-size: 11px;
+}
+
+.agentsam-page-tool-call-status {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--as-muted);
+}
+
+.agentsam-page-tool-call-status.is-complete {
+  color: #86efac;
+}
+
+.agentsam-page-tool-call-status.is-failed {
+  color: #fca5a5;
+}
+
+.agentsam-tool-modal[hidden] {
+  display: none;
+}
+
+.agentsam-tool-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.agentsam-tool-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.agentsam-tool-modal-panel {
+  position: relative;
+  width: min(520px, 100%);
+  max-height: min(80vh, 640px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  border: 1px solid var(--as-border);
+  background: #1f1f24;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+}
+
+.agentsam-tool-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--as-border);
+}
+
+.agentsam-tool-modal-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.agentsam-tool-modal-close {
+  border: 0;
+  background: transparent;
+  color: var(--as-muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.agentsam-tool-modal-body {
+  padding: 14px 16px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.agentsam-tool-modal-kv {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 6px 10px;
+}
+
+.agentsam-tool-modal-kv dt {
+  color: var(--as-muted);
+  margin: 0;
+}
+
+.agentsam-tool-modal-kv dd {
+  margin: 0;
+  word-break: break-word;
+}
+
+.agentsam-tool-modal-pre {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--as-border);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 160px;
+  overflow: auto;
+}
+
+.agentsam-tool-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--as-border);
+}
+
+.agentsam-tool-modal-foot button {
+  border: 1px solid var(--as-border);
+  background: transparent;
+  color: var(--as-text);
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.agentsam-tool-modal-copy {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.console-recent-item.is-agentsam {
+  cursor: pointer;
+}
+
+.console-recent-item.is-agentsam:hover {
+  color: var(--as-text, #ececec);
+}
+
+.console-recent-item.is-agentsam small {
+  display: block;
+  color: var(--as-muted, #9b9b9b);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.console-recent-empty {
+  font-size: 12px;
+  color: var(--as-muted, #9b9b9b);
+  padding: 4px 0;
+}
+
+.agentsam-page-mcp-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
 @media (max-width: 640px) {
   .agentsam-page-stage {
     padding-bottom: 200px;
