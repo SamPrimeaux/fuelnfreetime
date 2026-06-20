@@ -29,6 +29,7 @@ import {
 import { handleAdminCmsApi } from "../cms/api.js";
 import {
   agentsamChat,
+  agentsamAiModelsList,
   agentsamDrawerWorkflowsList,
   agentsamMcpStatus,
   agentsamSkillGet,
@@ -450,6 +451,9 @@ export async function handleAdminApi(request, env, url) {
   }
   if (path === "/api/admin/agentsam/tools" && method === "GET") {
     return agentsamTools(env);
+  }
+  if (path === "/api/admin/agentsam/ai/models" && method === "GET") {
+    return agentsamAiModelsList(env);
   }
   if (path === "/api/admin/agentsam/mcp/status" && method === "GET") {
     const user = await getSessionUser(request, env);

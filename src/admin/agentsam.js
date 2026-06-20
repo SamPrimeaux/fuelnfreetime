@@ -1,4 +1,5 @@
 import { runAgentSamAi } from "../agentsam/ai-run.js";
+import { getAIRegistryStatus, listAIModelsGrouped } from "../agentsam/ai-registry.js";
 import {
   bridgeConfigured,
   fetchGithubContextForChat,
@@ -94,7 +95,11 @@ export async function agentsamChat(request, env) {
     .filter(Boolean)
     .join("\n\n");
 
-  const ai = await runAgentSamAi(env, systemPrompt, message);
+  const ai = await runAgentSamAi(env, systemPrompt, message, {
+    ...routing.ai_routing,
+    workflow_key: routing.classification.workflow_key,
+    intent: routing.classification.intent,
+  });
 
   if (ai.stub) {
     return json({
@@ -122,6 +127,17 @@ export async function agentsamChat(request, env) {
     ok: true,
     reply: ai.reply,
     model: ai.model,
+    ai: {
+      selected_model: ai.selected_model,
+      attempted_models: ai.attempted_models,
+      model_lane: ai.model_lane,
+      task_type: ai.task_type,
+      auxiliary_task_type: ai.auxiliary_task_type || null,
+      fallback_used: ai.fallback_used,
+      registry: ai.registry ?? true,
+      image_base64: ai.image_base64 || null,
+      mime_type: ai.mime_type || null,
+    },
     routing,
     mcp: { bridge: bridgeConfigured(env), github_context: !!mcpContext },
   });
@@ -146,6 +162,7 @@ export async function agentsamStatus(env, userId = null) {
   const mcpServers = await listMcpServersForUi(env, userId);
   const bridgeProbe = bridgeConfigured(env) ? await probeBridge(env) : null;
   const github = await probeGitHubConnection(env, userId);
+  const aiRegistry = await getAIRegistryStatus(env);
 
   return json({
     ok: true,
@@ -159,6 +176,7 @@ export async function agentsamStatus(env, userId = null) {
     github,
     mcp_servers: mcpServers,
     connect_urls: mcpConnectUrls(env),
+    ...aiRegistry,
   });
 }
 
@@ -221,4 +239,9 @@ export async function agentsamSkillGet(env, slug, url) {
   const skill = await getAgentSamSkill(env, slug, { includeReferences });
   if (!skill) return json({ error: "Skill not found" }, { status: 404 });
   return json({ ok: true, skill });
+}
+
+export async function agentsamAiModelsList(env) {
+  const { grouped, total } = await listAIModelsGrouped(env);
+  return json({ ok: true, grouped, total });
 }

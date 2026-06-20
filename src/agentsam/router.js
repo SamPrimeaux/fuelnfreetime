@@ -3,6 +3,7 @@
  * Single chat input; no mode picker required.
  */
 
+import { resolveAIRouting } from "./ai-registry.js";
 import { FNF_TENANT_ID, FNF_WORKSPACE_ID, DRAWER_WORKFLOW_KEYS } from "./constants.js";
 import { formatMcpForPrompt, selectMcpServers } from "./mcp-servers.js";
 import { formatSkillsForPrompt, resolveSkillsForChat } from "./skills.js";
@@ -142,6 +143,7 @@ export async function routeAgentsamRequest(env, message, context = {}) {
   });
   const mcpServers = selectMcpServers(classification.intent, message);
   const bridgeReady = Boolean(String(env.AGENTSAM_BRIDGE_KEY || "").trim());
+  const ai_routing = resolveAIRouting(classification, message, context);
 
   const systemBlocks = [
     formatWorkflowForPrompt(workflow),
@@ -169,6 +171,7 @@ export async function routeAgentsamRequest(env, message, context = {}) {
       status: bridgeReady ? "ready" : "needs_bridge",
     })),
     system_blocks: systemBlocks,
+    ai_routing,
     tenant_id: FNF_TENANT_ID,
     workspace_id: FNF_WORKSPACE_ID,
   };
