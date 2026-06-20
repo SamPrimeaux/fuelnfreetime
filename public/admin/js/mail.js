@@ -42,9 +42,37 @@ async function bootMailApp() {
   const root = document.getElementById("mail-root");
   if (!root) return;
 
-  const res = await fetch("/admin/partials/mail-app.html");
-  root.innerHTML = await res.text();
-  await initMailApp();
+  if (document.getElementById("mailApp")) {
+    await initMailApp();
+    return;
+  }
+
+  root.innerHTML =
+    '<div class="mail-boot-loading"><p>Loading inbox…</p></div>';
+
+  try {
+    const res = await fetch("/admin/partials/mail-app.html", {
+      credentials: "same-origin",
+      headers: { Accept: "text/html" },
+    });
+    const html = await res.text();
+    if (!res.ok || !html.includes('id="mailApp"')) {
+      throw new Error(
+        res.status === 401 || res.status === 302
+          ? "Session expired — refresh and sign in again"
+          : `Could not load mail UI (HTTP ${res.status})`
+      );
+    }
+    root.innerHTML = html;
+    await initMailApp();
+  } catch (err) {
+    root.innerHTML = `<div class="mail-boot-error">
+      <h2>Email workspace could not load</h2>
+      <p>${err.message || "Unknown error"}</p>
+      <button type="button" class="primary-button" onclick="location.reload()">Reload page</button>
+      <a href="/admin/login" class="ghost-button" style="display:inline-flex;margin-top:12px;text-decoration:none">Sign in again</a>
+    </div>`;
+  }
 }
 
 async function initMailApp() {

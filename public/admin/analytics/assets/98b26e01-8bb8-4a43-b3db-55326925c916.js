@@ -22,26 +22,6 @@ function OverviewPage({ range, tenant }) {
   const errors = genSeries(days, { seed: seed+3, base: 80, trend: -0.2, noise: 0.4 });
   const latency = genSeries(days, { seed: seed+4, base: 142, trend: -0.15, noise: 0.2 });
 
-  const tenants = [
-    { name: 'Acme Studios', plan: 'Enterprise', mrr: 24800, users: 1820, dau: 1402, growth: 12.4, status: 'good', region: 'us-east' },
-    { name: 'Lumen Health', plan: 'Scale',      mrr: 8400,  users: 612,  dau: 412,  growth: 28.2, status: 'good', region: 'eu-west' },
-    { name: 'Mosaic Finance', plan: 'Enterprise', mrr: 31200, users: 2204, dau: 1788, growth: 6.1, status: 'good', region: 'us-west' },
-    { name: 'Nimbus Labs', plan: 'Growth',    mrr: 2400,  users: 218,  dau: 188,  growth: -3.2, status: 'warn', region: 'ap-southeast' },
-    { name: 'Orbit Retail', plan: 'Scale',    mrr: 9600,  users: 884,  dau: 624,  growth: 4.8,  status: 'good', region: 'us-east' },
-    { name: 'Pinecrest Co.', plan: 'Growth',  mrr: 1800,  users: 142,  dau: 98,   growth: 18.0, status: 'good', region: 'eu-central' },
-    { name: 'Quantic AI',     plan: 'Enterprise', mrr: 42000, users: 3120, dau: 2680, growth: 22.4, status: 'good', region: 'us-east' },
-    { name: 'Rivermark Edu', plan: 'Free',     mrr: 0,     users: 320,  dau: 142,  growth: 1.4,  status: 'warn', region: 'eu-west' },
-  ];
-
-  const events = [
-    { t: '2 min ago', kind: 'deploy', tenant: 'Acme Studios', text: 'Deployed v3.18.2 to production', icon: 'sparkles', tone: 'accent' },
-    { t: '14 min ago', kind: 'alert',  tenant: 'Nimbus Labs',  text: 'D1 query p99 exceeded 250ms threshold', icon: 'flag', tone: 'warn' },
-    { t: '38 min ago', kind: 'billing', tenant: 'Quantic AI', text: 'Plan upgraded → Enterprise ($42K MRR)', icon: 'receipt', tone: 'good' },
-    { t: '1 hr ago',   kind: 'auth',    tenant: 'Mosaic Finance', text: 'New SSO connection (Okta) configured', icon: 'shield', tone: 'info' },
-    { t: '3 hr ago',   kind: 'data',    tenant: 'Lumen Health', text: 'KV write throughput +212% spike resolved', icon: 'bolt', tone: 'good' },
-    { t: '5 hr ago',   kind: 'user',    tenant: 'Orbit Retail',  text: '14 invites accepted in workspace', icon: 'users', tone: 'info' },
-  ];
-
   const funnel = [
     { label: 'Visited landing',   value: 124800, color: 'var(--accent)' },
     { label: 'Started trial',      value: 18200,  color: 'oklch(0.66 0.18 295)' },
@@ -80,7 +60,7 @@ function OverviewPage({ range, tenant }) {
       <div className="page-head">
         <div>
           <h1 className="page-title">Overview</h1>
-          <p className="page-sub">Cross-tenant performance across all services • Last refreshed 12s ago</p>
+          <p className="page-sub">Store performance & traffic • Last refreshed 12s ago</p>
         </div>
         <div className="page-actions">
           <button className="btn ghost"><Icon name="filter" size={12} /> Filters</button>
@@ -105,7 +85,7 @@ function OverviewPage({ range, tenant }) {
           <div className="card-head">
             <div>
               <div className="card-title">Traffic</div>
-              <div className="card-sub">Requests across all tenants and services</div>
+              <div className="card-sub">Requests across storefront and admin</div>
             </div>
             <div className="row gap-2">
               <span className="pill"><span className="live-dot" /> Live</span>
@@ -255,99 +235,6 @@ function OverviewPage({ range, tenant }) {
               ))}
               <span>More</span>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid cols-12">
-        <div className="card span-7">
-          <div className="card-head">
-            <div>
-              <div className="card-title">Top tenants</div>
-              <div className="card-sub">Sorted by MRR contribution</div>
-            </div>
-            <div className="row gap-2">
-              <button className="btn ghost text-xs">Sort: MRR <Icon name="chevronDown" size={11} /></button>
-              <button className="btn ghost text-xs">View all →</button>
-            </div>
-          </div>
-          <div style={{ overflow: 'auto' }}>
-            <table className="tbl">
-              <thead>
-                <tr>
-                  <th>Tenant</th>
-                  <th>Plan</th>
-                  <th>Region</th>
-                  <th className="num">Users</th>
-                  <th className="num">DAU</th>
-                  <th className="num">MRR</th>
-                  <th className="num">Δ 30d</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tenants.map((t, i) => (
-                  <tr key={i} className="row-link">
-                    <td>
-                      <div className="row gap-2">
-                        <div style={{ width: 22, height: 22, borderRadius: 5, background: `oklch(0.5 0.15 ${(i*40)%360})`, display: 'grid', placeItems: 'center', fontSize: 10, fontWeight: 600 }}>
-                          {t.name[0]}
-                        </div>
-                        <span style={{ fontWeight: 500 }}>{t.name}</span>
-                      </div>
-                    </td>
-                    <td><span className={`pill ${t.plan === 'Enterprise' ? 'accent' : t.plan === 'Free' ? '' : 'info'}`}>{t.plan}</span></td>
-                    <td className="mono muted text-xs">{t.region}</td>
-                    <td className="num">{fmtNum(t.users)}</td>
-                    <td className="num">{fmtNum(t.dau)}</td>
-                    <td className="num">${fmtNum(t.mrr)}</td>
-                    <td className="num" style={{ color: t.growth >= 0 ? 'var(--good)' : 'var(--bad)' }}>
-                      {t.growth >= 0 ? '+' : ''}{t.growth.toFixed(1)}%
-                    </td>
-                    <td><span className={`pill ${t.status}`}><span className="dot" /> {t.status === 'good' ? 'Healthy' : 'Watch'}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="card span-5">
-          <div className="card-head">
-            <div>
-              <div className="card-title">Activity stream</div>
-              <div className="card-sub">Cross-tenant events</div>
-            </div>
-            <span className="pill"><span className="live-dot" /> Live</span>
-          </div>
-          <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-            {events.map((e, i) => (
-              <div key={i} className="row gap-3" style={{ padding: '10px 0', borderBottom: i < events.length - 1 ? '1px solid var(--line-soft)' : 'none' }}>
-                <div style={{
-                  width: 28, height: 28, borderRadius: 7, flexShrink: 0,
-                  display: 'grid', placeItems: 'center',
-                  background: e.tone === 'good' ? 'oklch(0.42 0.13 155 / 0.18)' :
-                              e.tone === 'warn' ? 'oklch(0.50 0.13 85 / 0.18)' :
-                              e.tone === 'info' ? 'oklch(0.46 0.13 220 / 0.18)' :
-                              'oklch(0.42 0.16 285 / 0.20)',
-                  color: e.tone === 'good' ? 'var(--good)' : e.tone === 'warn' ? 'var(--warn)' : e.tone === 'info' ? 'var(--info)' : 'var(--accent)',
-                }}>
-                  <Icon name={e.icon} size={13} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="text-sm" style={{ color: 'var(--fg)' }}>{e.text}</div>
-                  <div className="row gap-2 text-xs muted" style={{ marginTop: 2 }}>
-                    <span>{e.tenant}</span>
-                    <span>•</span>
-                    <span>{e.t}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="card-foot">
-            <span>Showing 6 of 1,284 events</span>
-            <button className="btn ghost text-xs">View all →</button>
           </div>
         </div>
       </div>

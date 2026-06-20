@@ -1,0 +1,19 @@
+{
+  "rules": [
+    {
+      "allowed": {
+        "origins": [
+          "https://fuelnfreetime.com",
+          "https://www.fuelnfreetime.com",
+          "https://fuelnfreetime.meauxbility.workers.dev",
+          "http://localhost:8787",
+          "http://127.0.0.1:8787"
+        ],
+        "methods": ["GET", "HEAD"],
+        "headers": ["*"]
+      },
+      "exposeHeaders": ["ETag", "Content-Length", "Content-Type", "Accept-Ranges", "Content-Range"],
+      "maxAgeSeconds": 86400
+    }
+  ]
+}

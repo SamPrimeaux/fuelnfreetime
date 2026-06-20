@@ -22,40 +22,50 @@ const ICONS = {
 
 const NAV = {
   main: [
-    { href: "/admin/home.html", label: "Home", icon: "home" },
-    { href: "/admin/orders.html", label: "Orders", icon: "orders" },
+    { href: "/admin/home", label: "Home", icon: "home" },
+    { href: "/admin/orders", label: "Orders", icon: "orders" },
     {
       id: "products",
       label: "Products",
       icon: "products",
       children: [
-        { href: "/admin/products.html", label: "All products" },
-        { href: "/admin/products.html", label: "Collections" },
-        { href: "/admin/inventory.html", label: "Inventory" },
+        { href: "/admin/products", label: "All products" },
+        { href: "/admin/products", label: "Collections" },
+        { href: "/admin/inventory", label: "Inventory" },
       ],
     },
-    { href: "/admin/subscribers.html", label: "Customers", icon: "customers" },
-    { href: "/admin/scaffold.html?view=growth", label: "Growth", icon: "growth" },
-    { href: "/admin/scaffold.html?view=discounts", label: "Discounts", icon: "discounts" },
-    { href: "/admin/content.html", label: "Content", icon: "content" },
-    { href: "/admin/scaffold.html?view=markets", label: "Markets", icon: "markets" },
-    { href: "/admin/dashboard/finance.html", label: "Finance", icon: "finance" },
-    { href: "/admin/dashboard/overview.html", label: "Analytics", icon: "analytics" },
+    { href: "/admin/subscribers", label: "Customers", icon: "customers" },
+    { href: "/admin/scaffold?view=growth", label: "Growth", icon: "growth" },
+    { href: "/admin/scaffold?view=discounts", label: "Discounts", icon: "discounts" },
+    { href: "/admin/content", label: "Content", icon: "content" },
+    { href: "/admin/scaffold?view=markets", label: "Markets", icon: "markets" },
+    {
+      id: "analytics",
+      label: "Analytics",
+      icon: "analytics",
+      href: "/admin/analytics/overview",
+      children: [
+        { href: "/admin/analytics/overview", label: "Overview", analyticsView: "overview" },
+        { href: "/admin/analytics/finance", label: "Finance", analyticsView: "finance" },
+        { href: "/admin/analytics/health", label: "Health", analyticsView: "health" },
+      ],
+    },
   ],
   channels: [
     {
       id: "online-store",
+      href: "/admin/store",
       label: "Online Store",
       icon: "store",
       children: [
-        { href: "/admin/pages.html", label: "Pages" },
-        { href: "/admin/pages.html", label: "Themes" },
+        { href: "/admin/pages", label: "Pages" },
+        { href: "/admin/preferences", label: "Preferences" },
       ],
     },
-    { href: "/admin/scaffold.html?view=pos", label: "Point of Sale", icon: "pos" },
-    { href: "/admin/scaffold.html?view=agentic", label: "Agentic", icon: "agentic" },
+    { href: "/admin/scaffold?view=pos", label: "Point of Sale", icon: "pos" },
+    { href: "#agentic", label: "Agentic", icon: "agentic", agentsam: true },
   ],
-  apps: [{ href: "/admin/dashboard/email.html", label: "Email", icon: "email" }],
+  apps: [{ href: "/admin/email", label: "Email", icon: "email" }],
 };
 
 function ensureConsoleAssets() {
@@ -65,6 +75,13 @@ function ensureConsoleAssets() {
     link.id = "console-css";
     link.rel = "stylesheet";
     link.href = "/admin/css/console.css";
+    document.head.appendChild(link);
+  }
+  if (!document.getElementById("agentsam-css")) {
+    const link = document.createElement("link");
+    link.id = "agentsam-css";
+    link.rel = "stylesheet";
+    link.href = "/admin/css/agentsam.css";
     document.head.appendChild(link);
   }
   if (!document.querySelector('link[href*="fonts.googleapis.com"]')) {
@@ -91,7 +108,7 @@ async function adminFetch(path, opts = {}) {
     ...opts,
   });
   if (res.status === 401) {
-    window.location.href = "/admin/login.html";
+    window.location.href = "/admin/login";
     throw new Error("Unauthorized");
   }
   const data = await res.json().catch(() => ({}));
@@ -113,54 +130,101 @@ function fmtDate(iso) {
   });
 }
 
+function adminPathBase(href) {
+  const base = (href || "").split("?")[0];
+  const m = base.match(/^\/admin\/([a-z0-9-]+)\.html$/);
+  if (m) return `/admin/${m[1]}`;
+  return base;
+}
+
 function navActive(href, activeHref) {
+  const baseHref = adminPathBase(href);
+  const baseActive = adminPathBase(activeHref);
+  if (baseHref === baseActive) return true;
   if (href === activeHref) return true;
   const aliases = {
-    "/admin/home.html": ["/admin/store.html", "/admin/dashboard.html"],
-    "/admin/products.html": ["/admin/product-edit.html"],
-    "/admin/content.html": ["/admin/media.html"],
-    "/admin/dashboard/overview.html": ["/admin/dashboard/analytics.html"],
+    "/admin/home": ["/admin/dashboard", "/admin/dashboard.html"],
+    "/admin/store": ["/admin/pages", "/admin/page-edit", "/admin/theme-editor", "/admin/preferences"],
+    "/admin/products": ["/admin/product-edit"],
+    "/admin/content": ["/admin/media", "/admin/media.html"],
+    "/admin/pages": ["/admin/page-edit", "/admin/theme-editor"],
+    "/admin/theme-editor": ["/admin/page-edit"],
+    "/admin/analytics/overview": [
+      "/admin/analytics/finance",
+      "/admin/analytics/health",
+    ],
   };
   for (const [key, list] of Object.entries(aliases)) {
-    if (href === key && (activeHref === key || list.some((p) => activeHref.startsWith(p)))) {
+    if (baseHref === key && (baseActive === key || list.some((p) => baseActive.startsWith(p)))) {
       return true;
     }
   }
-  if (activeHref.startsWith("/admin/scaffold.html") && href.startsWith("/admin/scaffold.html")) {
+  if (baseActive.startsWith("/admin/scaffold") && baseHref.startsWith("/admin/scaffold")) {
     return href === activeHref;
   }
   return false;
 }
 
-function groupOpen(id, activeHref, children) {
+function groupOpen(id, activeHref, children, parentHref) {
+  if (parentHref && navActive(parentHref, activeHref)) return true;
   if (!children) return false;
   return children.some((c) => navActive(c.href, activeHref));
 }
 
-function icon(name) {
-  return `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">${ICONS[name] || ""}</svg>`;
+function icon(name, size = 18, className = "console-icon") {
+  return `<svg class="${className}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" aria-hidden="true">${ICONS[name] || ""}</svg>`;
 }
 
 function renderNavItem(item, activeHref) {
   if (item.children) {
-    const open = groupOpen(item.id, activeHref, item.children);
-    const parentActive = item.children.some((c) => navActive(c.href, activeHref));
+    const open = groupOpen(item.id, activeHref, item.children, item.href);
+    const parentActive =
+      (item.href && navActive(item.href, activeHref)) ||
+      item.children.some((c) => navActive(c.href, activeHref));
+
+    if (item.href) {
+      return `
+      <div class="console-nav-split${parentActive ? " is-active" : ""}">
+        <a href="${item.href}" class="console-nav-item console-nav-item--split">${icon(item.icon || "store")}<span>${item.label}</span></a>
+        <button type="button" class="console-nav-toggle" data-toggle="${item.id}" aria-label="Toggle ${item.label}">
+          ${icon("chev", 13, "console-icon chev")}
+        </button>
+      </div>
+      <div class="console-nav-children${open ? " is-open" : ""}" data-group="${item.id}">
+        ${item.children
+          .map((child) => {
+            const active = navActive(child.href, activeHref);
+            const analyticsAttr = child.analyticsView
+              ? ` data-analytics-view="${child.analyticsView}"`
+              : "";
+            return `<a href="${child.href}" class="console-nav-child${active ? " is-active" : ""}"${analyticsAttr}>${active ? '<span class="branch">↳</span>' : ""}${child.label}</a>`;
+          })
+          .join("")}
+      </div>`;
+    }
+
     return `
       <button type="button" class="console-nav-item${parentActive ? " is-active" : ""}" data-toggle="${item.id}">
         ${icon(item.icon || "store")}
         <span style="flex:1;text-align:left">${item.label}</span>
-        <svg class="chev" viewBox="0 0 24 24" fill="none">${ICONS.chev}</svg>
+        ${icon("chev", 13, "console-icon chev")}
       </button>
       <div class="console-nav-children${open ? " is-open" : ""}" data-group="${item.id}">
         ${item.children
           .map((child) => {
             const active = navActive(child.href, activeHref);
-            return `<a href="${child.href}" class="console-nav-child${active ? " is-active" : ""}">${active ? '<span class="branch">↳</span>' : ""}${child.label}</a>`;
+            const analyticsAttr = child.analyticsView
+              ? ` data-analytics-view="${child.analyticsView}"`
+              : "";
+            return `<a href="${child.href}" class="console-nav-child${active ? " is-active" : ""}"${analyticsAttr}>${active ? '<span class="branch">↳</span>' : ""}${child.label}</a>`;
           })
           .join("")}
       </div>`;
   }
   const active = navActive(item.href, activeHref);
+  if (item.agentsam) {
+    return `<a href="#" class="console-nav-item${active ? " is-active" : ""}" data-agentsam-open>${icon(item.icon)}${item.label}</a>`;
+  }
   return `<a href="${item.href}" class="console-nav-item${active ? " is-active" : ""}">${icon(item.icon)}${item.label}</a>`;
 }
 
@@ -170,31 +234,58 @@ function renderSideNav(activeHref) {
   const apps = NAV.apps.map((item) => renderNavItem(item, activeHref)).join("");
   return `
     <div class="console-nav-group">${main}</div>
-    <div class="console-nav-label">Sales channels ${icon("chev")}</div>
+    <div class="console-nav-label">Sales channels</div>
     <div class="console-nav-group">${channels}</div>
-    <div class="console-nav-label">Apps ${icon("chev")}</div>
+    <div class="console-nav-label">Apps</div>
     <div class="console-nav-group">${apps}</div>
     <div class="console-sidenav-foot">
       <div class="console-recent-label">Recent activity</div>
       <div class="console-recent-item">CMS pages published</div>
       <div class="console-recent-item">Store orders &amp; inventory</div>
       <div class="console-sidenav-divider"></div>
-      <a href="/admin/account.html" class="console-nav-item${navActive("/admin/account.html", activeHref) ? " is-active" : ""}">${icon("settings")}Settings</a>
+      <a href="/admin/account" class="console-nav-item${navActive("/admin/account", activeHref) ? " is-active" : ""}">${icon("settings")}Settings</a>
     </div>`;
+}
+
+function ensureConsoleLayout() {
+  if (!document.getElementById("console-app")) {
+    const app = document.createElement("div");
+    app.id = "console-app";
+    document.body.appendChild(app);
+  }
+  if (!document.getElementById("console-overlay")) {
+    const overlay = document.createElement("div");
+    overlay.id = "console-overlay";
+    document.body.appendChild(overlay);
+  }
+}
+
+function stabilizeShellDrawers() {
+  requestAnimationFrame(() => {
+    document.querySelectorAll(".admin-drawer, .admin-drawer-backdrop, .agentsam-drawer, .agentsam-backdrop").forEach((el) => {
+      el.classList.add("drawer-mounted");
+      el.style.removeProperty("visibility");
+    });
+    document.body.classList.remove("console-shell-loading");
+  });
 }
 
 function renderShell(activeHref, mainHtml, options = {}) {
   const { fullBleed = false, onReady } = options;
   ensureConsoleAssets();
+  ensureConsoleLayout();
+
+  document.body.classList.remove("agentsam-open", "admin-nav-open", "console-body-bleed", "admin-body-bleed");
+  document.body.classList.add("console-shell-loading");
 
   const mainClass = fullBleed
     ? "console-main admin-main console-main--bleed admin-main--bleed"
     : "console-main admin-main";
 
-  document.body.innerHTML = `
+  document.getElementById("console-app").innerHTML = `
     <div class="console-shell admin-shell">
       <header class="console-topbar">
-        <a href="/admin/home.html" class="console-topbar-mark">
+        <a href="/admin/home" class="console-topbar-mark">
           <div class="console-topbar-mark-icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2 21 7v10l-9 5-9-5V7z" stroke="#141414" stroke-width="2" stroke-linejoin="round"/><path d="M12 7v10M7.5 9.5l9 5M16.5 9.5l-9 5" stroke="#141414" stroke-width="1.6"/></svg>
           </div>
@@ -208,7 +299,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
           </div>
         </div>
         <div class="console-topbar-actions">
-          <button type="button" class="console-icon-btn" aria-label="Assistant" title="Agent Sam (coming soon)">
+          <button type="button" class="console-icon-btn" id="agentsam-toggle" aria-label="Agent Sam" aria-expanded="false" title="Agent Sam">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
           </button>
           <button type="button" class="console-icon-btn" aria-label="Notifications">
@@ -227,7 +318,8 @@ function renderShell(activeHref, mainHtml, options = {}) {
                 <img src="${LOGO_URL}" alt="">
                 <div><strong>Fuel &amp; Free Time</strong><br><small>fuelnfreetime.com</small></div>
               </div>
-              <a href="/admin/account.html" class="console-menu-item">Store settings</a>
+              <a href="/admin/preferences" class="console-menu-item">Store preferences</a>
+              <a href="/admin/account" class="console-menu-item">Account &amp; password</a>
               <a href="/" class="console-menu-item" target="_blank" rel="noopener">View storefront</a>
               <div class="console-menu-divider"></div>
               <button type="button" class="console-menu-item admin-logout-btn">Log out</button>
@@ -243,12 +335,12 @@ function renderShell(activeHref, mainHtml, options = {}) {
         <div class="admin-drawer-backdrop" id="admin-drawer-backdrop" aria-hidden="true"></div>
         <aside class="admin-drawer" id="admin-drawer" aria-hidden="true">
           <div class="admin-drawer-head">
-            <a href="/admin/home.html" class="admin-drawer-logo">
+            <a href="/admin/home" class="admin-drawer-logo">
               <img src="${LOGO_URL}" alt="" width="48" height="48">
               <span>Fuel &amp; Free Time</span>
             </a>
             <button type="button" class="admin-drawer-close" id="admin-drawer-close" aria-label="Close navigation">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
             </button>
           </div>
           <nav class="console-sidenav admin-nav admin-nav--drawer" style="display:block;width:100%;border:0;background:transparent;padding:0">${renderSideNav(activeHref)}</nav>
@@ -264,10 +356,12 @@ function renderShell(activeHref, mainHtml, options = {}) {
 
   if (fullBleed) document.body.classList.add("console-body-bleed", "admin-body-bleed");
 
+  bindConsoleGlobalHandlers();
+
   document.querySelectorAll(".admin-logout-btn").forEach((btn) => {
     btn.addEventListener("click", async () => {
       await fetch("/api/admin/logout", { method: "POST" }).catch(() => {});
-      window.location.href = "/admin/login.html";
+      window.location.href = "/admin/login";
     });
   });
 
@@ -278,15 +372,14 @@ function renderShell(activeHref, mainHtml, options = {}) {
     const open = storeMenu?.classList.toggle("open");
     storeBtn.setAttribute("aria-expanded", String(!!open));
   });
-  document.addEventListener("click", () => {
-    storeMenu?.classList.remove("open");
-    storeBtn?.setAttribute("aria-expanded", "false");
-  });
 
   document.querySelectorAll("[data-toggle]").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       const id = btn.getAttribute("data-toggle");
       const group = document.querySelector(`[data-group="${id}"]`);
+      group?.classList.add("is-animating");
       group?.classList.toggle("is-open");
     });
   });
@@ -300,7 +393,57 @@ function renderShell(activeHref, mainHtml, options = {}) {
     .catch(() => {});
 
   initMobileNav();
+  initAgentsamShell();
+  wireAgentsamTriggers();
+  stabilizeShellDrawers();
+
+  document.querySelectorAll("[data-agentsam-open]").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      e.preventDefault();
+      window.openAgentsamDrawer?.();
+    });
+  });
+
   if (typeof onReady === "function") onReady();
+  window.wireAnalyticsNav?.();
+}
+
+function bindConsoleGlobalHandlers() {
+  if (window.__consoleGlobalHandlers) return;
+  window.__consoleGlobalHandlers = true;
+
+  document.addEventListener("click", () => {
+    document.getElementById("console-store-menu")?.classList.remove("open");
+    document.getElementById("console-store-btn")?.setAttribute("aria-expanded", "false");
+  });
+}
+
+function initAgentsamShell() {
+  if (typeof window.initAgentsamDrawer === "function") {
+    window.initAgentsamDrawer();
+    return;
+  }
+  if (document.getElementById("agentsam-script")) return;
+  const script = document.createElement("script");
+  script.id = "agentsam-script";
+  script.src = "/admin/js/agentsam.js";
+  script.onload = () => {
+    window.initAgentsamDrawer?.();
+    wireAgentsamTriggers();
+  };
+  document.head.appendChild(script);
+}
+
+function wireAgentsamTriggers() {
+  document.querySelectorAll("[data-agentsam-prompt]").forEach((btn) => {
+    if (btn.dataset.agentsamWired) return;
+    btn.dataset.agentsamWired = "1";
+    btn.addEventListener("click", () => {
+      const prompt = btn.getAttribute("data-agentsam-prompt") || "";
+      window.openAgentsamDrawer?.();
+      if (prompt && window.sendAgentsamMessage) window.sendAgentsamMessage(prompt);
+    });
+  });
 }
 
 function initMobileNav() {

@@ -1,0 +1,5 @@
+/* Admin app shell overrides — console.css loaded from /admin/css in index.html */
+
+#root {
+  min-height: 100dvh;
+}

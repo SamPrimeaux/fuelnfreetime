@@ -13,7 +13,7 @@
 <body>
 <script src="/admin/js/shell.js"></script>
 <script>
-renderShell('/admin/inventory.html', `
+renderShell('/admin/inventory', `
   <h1 class="admin-page-title">Inventory</h1>
   <p class="admin-page-sub">Every SKU across every product, lowest stock first.</p>
 
@@ -35,7 +35,7 @@ async function load() {
     }
     body.innerHTML = d.inventory.map(v => `
       <tr data-id="${v.id}">
-        <td><a href="/admin/product-edit.html?id=${v.product_id}">${v.product_title}</a></td>
+        <td><a href="/admin/product-edit?id=${v.product_id}">${v.product_title}</a></td>
         <td>${v.sku}</td>
         <td>${v.size || '—'}</td>
         <td>${v.color || '—'}</td>

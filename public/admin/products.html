@@ -13,13 +13,13 @@
 <body>
 <script src="/admin/js/shell.js"></script>
 <script>
-renderShell('/admin/products.html', `
+renderShell('/admin/products', `
   <div class="admin-toolbar">
     <div>
       <h1 class="admin-page-title">Products</h1>
       <p class="admin-page-sub">Manage catalog items, pricing, and status.</p>
     </div>
-    <a href="/admin/product-edit.html" class="btn primary">+ New Product</a>
+    <a href="/admin/product-edit" class="btn primary">+ New Product</a>
   </div>
 
   <div class="admin-card">
@@ -44,13 +44,13 @@ function badgeFor(status) {
     }
     body.innerHTML = d.products.map(p => `
       <tr>
-        <td><a href="/admin/product-edit.html?id=${p.id}">${p.title}</a></td>
+        <td><a href="/admin/product-edit?id=${p.id}">${p.title}</a></td>
         <td>${p.collection || '—'}</td>
         <td>${centsToDollars(p.price_cents)}</td>
         <td>${badgeFor(p.status)}</td>
         <td>${p.variant_count}</td>
         <td>${p.total_inventory}${p.total_inventory <= 3 && p.variant_count > 0 ? ' <span class="badge low">low</span>' : ''}</td>
-        <td><a href="/admin/product-edit.html?id=${p.id}" class="btn ghost small">Edit</a></td>
+        <td><a href="/admin/product-edit?id=${p.id}" class="btn ghost small">Edit</a></td>
       </tr>
     `).join('');
   } catch (err) {

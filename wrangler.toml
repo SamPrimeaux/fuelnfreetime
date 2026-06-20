@@ -33,6 +33,14 @@ bucket_name = "fuelnfreetime"
 binding = "CMS_CACHE"
 id = "bc3b4e3f272e4b46b3c92df6dff85bff"
 
+[[durable_objects.bindings]]
+name = "CMS_EDITOR"
+class_name = "CmsEditorRoom"
+
+[[migrations]]
+tag = "v1-cms-editor"
+new_sqlite_classes = ["CmsEditorRoom"]
+
 [assets]
 directory = "./public"
 binding = "ASSETS"

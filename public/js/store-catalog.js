@@ -1,5 +1,5 @@
 /**
- * Injects live products from D1 into the shop grid.
+ * Injects live products from D1 into the shop grid — no placeholder cards.
  */
 (function () {
   const CART_KEY = "fnf_cart";
@@ -18,7 +18,9 @@
   function buildCard(p) {
     const inv = Number(p.total_inventory || 0);
     const invNote =
-      inv > 0 && inv <= 5 ? `<p class="fft-fuelnote inv-note" style="color:var(--accent);font-weight:800">Only ${inv} left!</p>` : `<p class="fft-fuelnote inv-note"></p>`;
+      inv > 0 && inv <= 5
+        ? `<p class="fft-fuelnote inv-note" style="color:var(--accent);font-weight:800">Only ${inv} left!</p>`
+        : `<p class="fft-fuelnote inv-note"></p>`;
     const badge = p.collection
       ? `<span class="fft-badge alt">${p.collection.replace(/^\w/, (c) => c.toUpperCase())}</span>`
       : "";
@@ -57,6 +59,16 @@
     return article;
   }
 
+  function renderEmpty(grid) {
+    grid.innerHTML = `
+      <div class="fft-empty-state" style="grid-column:1/-1;text-align:center;padding:3rem 1rem">
+        <h3 style="margin:0 0 .5rem;font-size:1.25rem">Products coming online</h3>
+        <p style="margin:0;color:var(--muted,#666);max-width:36ch;margin-inline:auto">
+          The catalog is managed from your admin dashboard. Add products in Admin → Products.
+        </p>
+      </div>`;
+  }
+
   function bindLiveCardActions(grid) {
     if (grid.dataset.liveBound) return;
     grid.dataset.liveBound = "1";
@@ -86,22 +98,22 @@
     try {
       const res = await fetch("/api/store/products");
       const data = await res.json();
-      if (!res.ok || !data.products?.length) return;
+      grid.innerHTML = "";
 
-      // Hide placeholder/demo cards when real inventory is live
-      grid.querySelectorAll(".fft-card:not([data-live])").forEach((el) => {
-        el.style.display = "none";
-        el.dataset.placeholder = "true";
-      });
+      if (!res.ok || !data.products?.length) {
+        renderEmpty(grid);
+        return;
+      }
 
       const frag = document.createDocumentFragment();
       data.products.forEach((p) => frag.appendChild(buildCard(p)));
-      grid.prepend(frag);
+      grid.appendChild(frag);
 
       bindLiveCardActions(grid);
       document.dispatchEvent(new CustomEvent("fnf:catalog-ready"));
     } catch (err) {
       console.warn("Live catalog:", err);
+      renderEmpty(grid);
     }
   }
 

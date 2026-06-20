@@ -15,6 +15,10 @@ import {
 import {
   uploadMedia,
   listMedia,
+  updateMedia,
+  reorderMedia,
+  syncMediaFromR2,
+  platformBindings,
   deleteMedia,
   listProductImages,
   attachProductImage,
@@ -22,6 +26,8 @@ import {
   setPrimaryProductImage,
 } from "./media.js";
 import { handleAdminCmsApi } from "../cms/api.js";
+import { agentsamChat, agentsamStatus } from "./agentsam.js";
+import { onlineStoreOverview, getStorePreferences, postStorePreferences } from "./store.js";
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -189,22 +195,42 @@ async function updateProduct(request, env, id) {
   if (!body) return json({ error: "Invalid body" }, { status: 400 });
 
   const priceCents = Math.round(Number(body.price_cents || body.price || 0));
+  const slug = body.slug?.trim();
 
-  await env.DB.prepare(
-    `UPDATE products
-     SET title = ?, description = ?, collection = ?, price_cents = ?, image_url = ?, status = ?, updated_at = datetime('now')
-     WHERE id = ?`
-  )
-    .bind(
-      body.title,
-      body.description || null,
-      body.collection || null,
-      priceCents,
-      body.image_url || null,
-      body.status || "draft",
-      id
+  if (slug) {
+    await env.DB.prepare(
+      `UPDATE products
+       SET slug = ?, title = ?, description = ?, collection = ?, price_cents = ?, image_url = ?, status = ?, updated_at = datetime('now')
+       WHERE id = ?`
     )
-    .run();
+      .bind(
+        slug,
+        body.title,
+        body.description || null,
+        body.collection || null,
+        priceCents,
+        body.image_url || null,
+        body.status || "draft",
+        id
+      )
+      .run();
+  } else {
+    await env.DB.prepare(
+      `UPDATE products
+       SET title = ?, description = ?, collection = ?, price_cents = ?, image_url = ?, status = ?, updated_at = datetime('now')
+       WHERE id = ?`
+    )
+      .bind(
+        body.title,
+        body.description || null,
+        body.collection || null,
+        priceCents,
+        body.image_url || null,
+        body.status || "draft",
+        id
+      )
+      .run();
+  }
 
   return json({ ok: true });
 }
@@ -335,6 +361,15 @@ export async function handleAdminApi(request, env, url) {
     return changePassword(request, env, user);
   }
   if (path === "/api/admin/overview" && method === "GET") return overview(request, env);
+  if (path === "/api/admin/store/online" && method === "GET") {
+    return onlineStoreOverview(env);
+  }
+  if (path === "/api/admin/store/preferences" && method === "GET") {
+    return getStorePreferences(env);
+  }
+  if (path === "/api/admin/store/preferences" && method === "POST") {
+    return postStorePreferences(request, env);
+  }
 
   if (path === "/api/admin/products" && method === "GET") return listProducts(request, env);
   if (path === "/api/admin/products" && method === "POST") return createProduct(request, env);
@@ -360,8 +395,14 @@ export async function handleAdminApi(request, env, url) {
 
   if (path === "/api/admin/media" && method === "POST") return uploadMedia(request, env);
   if (path === "/api/admin/media" && method === "GET") return listMedia(request, env, url);
+  if (path === "/api/admin/media/sync" && method === "POST") {
+    return json(await syncMediaFromR2(env));
+  }
+  if (path === "/api/admin/media/reorder" && method === "POST") return reorderMedia(request, env);
+  if (path === "/api/admin/platform/bindings" && method === "GET") return platformBindings(env);
 
   m = path.match(/^\/api\/admin\/media\/(\d+)$/);
+  if (m && method === "PATCH") return updateMedia(request, env, m[1]);
   if (m && method === "DELETE") return deleteMedia(request, env, m[1]);
 
   m = path.match(/^\/api\/admin\/products\/(\d+)\/images$/);
@@ -378,6 +419,27 @@ export async function handleAdminApi(request, env, url) {
   if (path === "/api/admin/mail/settings" && method === "POST") return postMailSettings(request, env);
   if (path === "/api/admin/mail/messages" && method === "GET") return listMailMessages();
   if (path === "/api/admin/mail/send" && method === "POST") return sendMailPreview(request, env);
+
+  if (path === "/api/admin/agentsam/chat" && method === "POST") {
+    return agentsamChat(request, env);
+  }
+  if (path === "/api/admin/agentsam/status" && method === "GET") {
+    return agentsamStatus(env);
+  }
+
+  const liveMatch = path.match(/^\/api\/admin\/cms\/live\/([a-z0-9-]+)$/);
+  if (liveMatch) {
+    const user = await getSessionUser(request, env);
+    if (!user) return json({ error: "Unauthorized" }, { status: 401 });
+    if (!env.CMS_EDITOR) return json({ error: "Live editor not configured" }, { status: 503 });
+
+    const pageSlug = liveMatch[1];
+    const id = env.CMS_EDITOR.idFromName(pageSlug);
+    const stub = env.CMS_EDITOR.get(id);
+    const doUrl = new URL(request.url);
+    doUrl.searchParams.set("slug", pageSlug);
+    return stub.fetch(new Request(doUrl.toString(), request));
+  }
 
   const cmsResponse = await handleAdminCmsApi(request, env, url);
   if (cmsResponse) return cmsResponse;

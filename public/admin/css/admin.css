@@ -156,7 +156,9 @@ body.admin-body-bleed .admin-shell {
 .admin-main--bleed.admin-main--mail {
   background: #0a0a0a;
   overflow: hidden;
-  height: 100vh;
+  height: 100%;
+  min-height: calc(100dvh - var(--c-topbar-h, 56px));
+  max-height: calc(100dvh - var(--c-topbar-h, 56px));
   padding: 0;
   flex: 1;
   min-width: 0;
@@ -184,7 +186,13 @@ body.admin-body-bleed .admin-shell {
   min-height: calc(100vh - 0px);
   border: 0;
   display: block;
-  background: oklch(0.16 0.01 270);
+  background: #f1f1f1;
+  opacity: 1;
+  transition: opacity 0.15s ease;
+}
+
+.admin-analytics-mount.is-switching .analytics-embed-frame {
+  opacity: 1;
 }
 
 .analytics-loading {
@@ -192,7 +200,7 @@ body.admin-body-bleed .admin-shell {
   inset: 0;
   display: grid;
   place-items: center;
-  background: oklch(0.16 0.01 270);
+  background: #f1f1f1;
   z-index: 2;
 }
 
@@ -563,6 +571,9 @@ body.admin-nav-open .admin-menu-toggle-icon span:nth-child(3) {
   -webkit-backdrop-filter: blur(6px);
   opacity: 0;
   pointer-events: none;
+}
+
+.admin-drawer-backdrop.drawer-mounted {
   transition: opacity 0.3s ease;
 }
 
@@ -588,12 +599,15 @@ body.admin-nav-open .admin-drawer-backdrop {
     max(18px, env(safe-area-inset-bottom, 0px))
     18px;
   transform: translateX(105%);
-  transition: transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
   background: rgba(16, 16, 18, 0.68);
   backdrop-filter: blur(28px) saturate(1.35);
   -webkit-backdrop-filter: blur(28px) saturate(1.35);
   border-left: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: -18px 0 56px rgba(0, 0, 0, 0.48);
+}
+
+.admin-drawer.drawer-mounted {
+  transition: transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 body.admin-nav-open .admin-drawer {

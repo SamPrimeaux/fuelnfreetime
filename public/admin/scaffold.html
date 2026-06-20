@@ -20,7 +20,7 @@ const titles = {
   agentic: "Agentic",
 };
 const title = titles[view] || "Feature";
-const activeHref = `/admin/scaffold.html?view=${view}`;
+const activeHref = `/admin/scaffold?view=${view}`;
 
 renderShell(activeHref, `
   <div class="console-page">
@@ -29,10 +29,14 @@ renderShell(activeHref, `
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z" stroke="#8a5a00" stroke-width="1.5" stroke-linejoin="round"/></svg>
       <h1>${title} is on the roadmap</h1>
       <p>This section ships after the core console is live. Products, content, pages, finance, and email are wired today.</p>
-      <a href="/admin/home.html" class="btn primary">Back to home</a>
+      <a href="/admin/home" class="btn primary">Back to home</a>
     </div>
   </div>
-`);
+`, {
+  onReady() {
+    if (view === "agentic") window.openAgentsamDrawer?.();
+  },
+});
 </script>
 </body>
 </html>

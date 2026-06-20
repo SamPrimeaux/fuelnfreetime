@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Theme Editor — Fuel & Free Time Admin</title>
+<link rel="stylesheet" href="/admin/css/admin.css">
+<link rel="stylesheet" href="/admin/css/console.css">
+</head>
+<body>
+<script src="/admin/js/shell.js"></script>
+<script src="/admin/js/pages-shared.js"></script>
+<script src="/admin/js/cms-live.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+let slug = params.get("slug") || "shop";
+
+const PAGE_OPTIONS = [
+  { slug: "home", label: "Home", route: "/" },
+  { slug: "shop", label: "Shop", route: "/shop.html" },
+  { slug: "about", label: "About", route: "/about.html" },
+  { slug: "community", label: "Community", route: "/community.html" },
+];
+
+let pageData = null;
+let activeSection = "hero";
+let liveEditor = null;
+let livePatchTimer = null;
+
+function pageRoute(s) {
+  return PAGE_OPTIONS.find((p) => p.slug === s)?.route || "/";
+}
+
+function getPath(obj, path) {
+  return path.split(".").reduce((acc, key) => (acc == null ? acc : acc[key]), obj);
+}
+
+function setPath(obj, path, value) {
+  const keys = path.split(".");
+  let cur = obj;
+  for (let i = 0; i < keys.length - 1; i++) {
+    if (!cur[keys[i]] || typeof cur[keys[i]] !== "object") cur[keys[i]] = {};
+    cur = cur[keys[i]];
+  }
+  cur[keys[keys.length - 1]] = value;
+}
+
+function fieldId(sectionKey, fieldKey) {
+  return `te-${sectionKey}-${fieldKey.replace(/\./g, "-")}`;
+}
+
+renderShell(
+  "/admin/theme-editor",
+  `
+  <div class="theme-editor">
+    <header class="theme-editor-head">
+      <div>
+        <h1 class="admin-page-title">Theme editor</h1>
+        <p class="admin-page-sub">Edit hero copy and preview the storefront live. Save drafts, then publish from the full page editor.</p>
+      </div>
+      <div class="theme-editor-head-actions">
+        <select id="theme-page-select" class="theme-select" aria-label="Page"></select>
+        <a href="#" class="btn ghost" id="theme-full-edit">Full editor</a>
+        <button type="button" class="btn primary" id="theme-publish">Publish live</button>
+      </div>
+    </header>
+    <div class="theme-editor-body">
+      <aside class="theme-editor-panel">
+        <div class="theme-editor-panel-head">
+          <strong id="theme-section-title">Hero</strong>
+          <span class="badge draft" id="theme-section-status">draft</span>
+        </div>
+        <form id="theme-form" class="theme-form"></form>
+        <p class="theme-editor-note" id="theme-note"></p>
+      </aside>
+      <div class="theme-editor-preview-wrap">
+        <div class="theme-editor-preview-bar">
+          <span id="theme-preview-label">Preview</span>
+          <a href="#" target="_blank" rel="noopener" class="btn ghost small" id="theme-open-tab">Open in tab</a>
+        </div>
+        <iframe id="theme-preview" title="Storefront preview" class="theme-editor-preview"></iframe>
+      </div>
+    </div>
+  </div>
+`,
+  { fullBleed: true }
+);
+
+function setNote(msg, kind) {
+  const el = document.getElementById("theme-note");
+  if (!el) return;
+  el.textContent = msg || "";
+  el.className = `theme-editor-note${kind ? ` is-${kind}` : ""}`;
+}
+
+function renderPageSelect() {
+  const sel = document.getElementById("theme-page-select");
+  sel.innerHTML = PAGE_OPTIONS.map(
+    (p) => `<option value="${p.slug}"${p.slug === slug ? " selected" : ""}>${p.label}</option>`
+  );
+  sel.addEventListener("change", () => {
+    slug = sel.value;
+    history.replaceState(null, "", `?slug=${slug}`);
+    document.getElementById("theme-full-edit").href = `/admin/page-edit?slug=${slug}`;
+    connectLive();
+    loadPage();
+  });
+  document.getElementById("theme-full-edit").href = `/admin/page-edit?slug=${slug}`;
+}
+
+function refreshPreview() {
+  const route = pageRoute(slug);
+  const iframe = document.getElementById("theme-preview");
+  const bust = Date.now();
+  iframe.src = `${route}?preview=1&_=${bust}`;
+  document.getElementById("theme-open-tab").href = `${route}?preview=1`;
+  document.getElementById("theme-preview-label").textContent = `Preview — ${slug}`;
+}
+
+function renderForm(section) {
+  const schema = window.SECTION_FIELDS[slug]?.[section.key] || [];
+  const form = document.getElementById("theme-form");
+  document.getElementById("theme-section-title").textContent = `${section.key} section`;
+  const statusEl = document.getElementById("theme-section-status");
+  statusEl.textContent = section.status || "draft";
+  statusEl.className = `badge ${section.status === "published" ? "active" : "draft"}`;
+
+  if (!schema.length) {
+    form.innerHTML = `<p class="admin-empty">No quick-edit fields for this section yet. Use the full editor.</p>`;
+    return;
+  }
+
+  form.innerHTML =
+    schema
+      .map((field) => {
+        const id = fieldId(section.key, field.key);
+        const val = getPath(section.content, field.key) ?? "";
+        const input =
+          field.type === "textarea"
+            ? `<textarea id="${id}" rows="3">${escapeHtml(String(val))}</textarea>`
+            : `<input id="${id}" type="${field.type === "url" ? "url" : "text"}" value="${escapeAttr(String(val))}">`;
+        return `<div class="admin-form-row"><label for="${id}">${field.label}</label>${input}</div>`;
+      })
+      .join("") + `<button type="submit" class="btn primary">Save draft</button>`;
+
+  schema.forEach((field) => {
+    const el = document.getElementById(fieldId(section.key, field.key));
+    if (!el) return;
+    el.addEventListener("input", () => {
+      clearTimeout(livePatchTimer);
+      livePatchTimer = setTimeout(() => {
+        const content = {};
+        schema.forEach((f) => {
+          const input = document.getElementById(fieldId(section.key, f.key));
+          if (input) setPath(content, f.key, input.value.trim());
+        });
+        liveEditor?.patchSection(section.key, content);
+      }, 450);
+    });
+  });
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const content = {};
+    schema.forEach((field) => {
+      const el = document.getElementById(fieldId(section.key, field.key));
+      if (el) setPath(content, field.key, el.value.trim());
+    });
+    try {
+      await adminFetch(`/api/admin/cms/pages/${slug}/sections/${section.key}`, {
+        method: "PUT",
+        body: JSON.stringify({ content }),
+      });
+      setNote("Saved as draft. Preview refreshed.", "success");
+      await loadPage();
+    } catch (err) {
+      setNote(err.message, "error");
+    }
+  };
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function escapeAttr(s) {
+  return escapeHtml(s).replace(/"/g, "&quot;");
+}
+
+async function loadPage() {
+  setNote("");
+  try {
+    const d = await adminFetch(`/api/admin/cms/pages/${slug}`);
+    pageData = d.page;
+    const section =
+      pageData.sections.find((s) => s.key === activeSection) || pageData.sections[0];
+    if (section) {
+      activeSection = section.key;
+      renderForm(section);
+    }
+    refreshPreview();
+  } catch (err) {
+    setNote(err.message, "error");
+  }
+}
+
+document.getElementById("theme-publish").addEventListener("click", async () => {
+  try {
+    if (liveEditor) {
+      liveEditor.publish();
+    } else {
+      await adminFetch(`/api/admin/cms/pages/${slug}/publish`, { method: "POST" });
+    }
+    setNote("Published to live site.", "success");
+    await loadPage();
+  } catch (err) {
+    setNote(err.message, "error");
+  }
+});
+
+function connectLive() {
+  liveEditor?.close();
+  liveEditor = connectCmsLive(slug, {
+    onConnected() {
+      setNote("Live editing connected.", "success");
+    },
+    onSectionUpdated(data) {
+      if (data.sectionKey === activeSection) refreshPreview();
+    },
+    onPublished() {
+      setNote("Published to live site.", "success");
+      loadPage();
+    },
+    onError(err) {
+      if (err) setNote(String(err), "error");
+    },
+  });
+}
+
+loadCmsRegistry().then(() => {
+  connectLive();
+  renderPageSelect();
+  loadPage();
+});
+</script>
+</body>
+</html>

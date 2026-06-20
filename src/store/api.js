@@ -177,6 +177,19 @@ export async function handleStoreApi(request, env, url) {
   const path = url.pathname;
   const method = request.method;
 
+  if (path === "/api/store/meta" && method === "GET") {
+    const { loadStorePreferences } = await import("../admin/store.js");
+    const prefs = await loadStorePreferences(env);
+    return json({
+      ok: true,
+      meta: {
+        homeTitle: prefs.homeTitle,
+        metaDescription: prefs.metaDescription,
+        socialImageUrl: prefs.socialImageUrl,
+      },
+    });
+  }
+
   if (path === "/api/store/products" && method === "GET") {
     return listStoreProducts(env);
   }

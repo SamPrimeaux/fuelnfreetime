@@ -563,6 +563,39 @@
   .mail-root .detail-handle { display: none; }
 }
 
+.mail-root .toast.open { opacity: 1; pointer-events: auto; transform: none; }
+
+.mail-boot-loading,
+.mail-boot-error {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  min-height: 320px;
+  padding: 32px;
+  text-align: center;
+}
+
+.mail-boot-loading p,
+.mail-boot-error p {
+  color: var(--fnf-muted);
+  font-size: 14px;
+  margin: 8px 0 0;
+}
+
+.mail-boot-error h2 {
+  margin: 0;
+  font-family: var(--brand-font);
+  font-size: 1.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fnf-ink);
+}
+
+.mail-boot-error .primary-button,
+.mail-boot-error .ghost-button {
+  margin-top: 16px;
+}
+
 @media (max-width: 820px) {
   .mail-root .stage {
     padding:

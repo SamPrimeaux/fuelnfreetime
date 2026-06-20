@@ -16,13 +16,13 @@
 <script src="/admin/js/mail.js"></script>
 <script>
 renderShell(
-  "/admin/dashboard/email.html",
+  "/admin/email",
   `<div id="mail-root" class="mail-root" aria-label="Mail workspace"></div>`,
   {
     fullBleed: true,
     onReady: () => {
       document.querySelector(".console-main")?.classList.add("admin-main--mail");
-      bootMailApp();
+      requestAnimationFrame(() => bootMailApp());
     },
   }
 );

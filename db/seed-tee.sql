@@ -1,4 +1,16 @@
--- Seed / activate Fuel N Free Time Tee for v1 storefront
+-- Seed / activate Fuel N Free Time Tee (slug-based, idempotent)
+
+INSERT OR IGNORE INTO products (slug, title, description, collection, price_cents, image_url, status, updated_at)
+VALUES (
+  'fuel-n-free-time-tee',
+  'Fuel N Free Time Tee',
+  'Earned-not-given energy on premium cotton. Front graphic with full back print. Built for those who fuel hard and live free.',
+  'essentials',
+  3400,
+  '/media/products/shirts/fft-tee-frontside.webp',
+  'active',
+  datetime('now')
+);
 
 UPDATE products SET
   title = 'Fuel N Free Time Tee',
@@ -10,21 +22,23 @@ UPDATE products SET
   updated_at = datetime('now')
 WHERE slug = 'fuel-n-free-time-tee';
 
--- Secondary back image
 INSERT OR IGNORE INTO product_images (product_id, media_asset_id, position, is_primary)
-SELECT 2, 6, 1, 0
-WHERE EXISTS (SELECT 1 FROM products WHERE id = 2)
-  AND EXISTS (SELECT 1 FROM media_assets WHERE id = 6)
-  AND NOT EXISTS (SELECT 1 FROM product_images WHERE product_id = 2 AND media_asset_id = 6);
+SELECT p.id, m.id, 1, 0
+FROM products p, media_assets m
+WHERE p.slug = 'fuel-n-free-time-tee'
+  AND m.r2_key = 'products/shirts/earn-your-freetime-teeshirt-backside.webp'
+  AND NOT EXISTS (
+    SELECT 1 FROM product_images pi
+    WHERE pi.product_id = p.id AND pi.media_asset_id = m.id
+  );
 
--- Variants (idempotent by sku)
 INSERT OR IGNORE INTO product_variants (product_id, sku, size, color, price_cents, inventory_qty, updated_at)
-SELECT 2, 'FNF-TEE-S', 'S', 'Black', 3400, 8, datetime('now') WHERE EXISTS (SELECT 1 FROM products WHERE id = 2);
+SELECT p.id, 'FNF-TEE-S', 'S', 'Black', 3400, 8, datetime('now') FROM products p WHERE p.slug = 'fuel-n-free-time-tee';
 INSERT OR IGNORE INTO product_variants (product_id, sku, size, color, price_cents, inventory_qty, updated_at)
-SELECT 2, 'FNF-TEE-M', 'M', 'Black', 3400, 12, datetime('now') WHERE EXISTS (SELECT 1 FROM products WHERE id = 2);
+SELECT p.id, 'FNF-TEE-M', 'M', 'Black', 3400, 12, datetime('now') FROM products p WHERE p.slug = 'fuel-n-free-time-tee';
 INSERT OR IGNORE INTO product_variants (product_id, sku, size, color, price_cents, inventory_qty, updated_at)
-SELECT 2, 'FNF-TEE-L', 'L', 'Black', 3400, 10, datetime('now') WHERE EXISTS (SELECT 1 FROM products WHERE id = 2);
+SELECT p.id, 'FNF-TEE-L', 'L', 'Black', 3400, 10, datetime('now') FROM products p WHERE p.slug = 'fuel-n-free-time-tee';
 INSERT OR IGNORE INTO product_variants (product_id, sku, size, color, price_cents, inventory_qty, updated_at)
-SELECT 2, 'FNF-TEE-XL', 'XL', 'Black', 3400, 6, datetime('now') WHERE EXISTS (SELECT 1 FROM products WHERE id = 2);
+SELECT p.id, 'FNF-TEE-XL', 'XL', 'Black', 3400, 6, datetime('now') FROM products p WHERE p.slug = 'fuel-n-free-time-tee';
 INSERT OR IGNORE INTO product_variants (product_id, sku, size, color, price_cents, inventory_qty, updated_at)
-SELECT 2, 'FNF-TEE-XXL', 'XXL', 'Black', 3400, 4, datetime('now') WHERE EXISTS (SELECT 1 FROM products WHERE id = 2);
+SELECT p.id, 'FNF-TEE-XXL', 'XXL', 'Black', 3400, 4, datetime('now') FROM products p WHERE p.slug = 'fuel-n-free-time-tee';

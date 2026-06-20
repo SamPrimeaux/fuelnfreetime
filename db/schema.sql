@@ -80,9 +80,14 @@ CREATE TABLE IF NOT EXISTS media_assets (
   content_type  TEXT,
   size_bytes    INTEGER,
   category      TEXT,
+  folder        TEXT NOT NULL DEFAULT 'images',
+  display_order INTEGER NOT NULL DEFAULT 0,
   alt_text      TEXT,
-  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE INDEX IF NOT EXISTS idx_media_assets_folder_order ON media_assets(folder, display_order, id);
 
 CREATE TABLE IF NOT EXISTS product_images (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -97,6 +102,12 @@ CREATE TABLE IF NOT EXISTS product_images (
 -- ===== Mail (Gmail inbox + Resend sending) =====
 
 CREATE TABLE IF NOT EXISTS mail_settings (
+  id            INTEGER PRIMARY KEY CHECK (id = 1),
+  settings_json TEXT NOT NULL,
+  updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS store_settings (
   id            INTEGER PRIMARY KEY CHECK (id = 1),
   settings_json TEXT NOT NULL,
   updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
