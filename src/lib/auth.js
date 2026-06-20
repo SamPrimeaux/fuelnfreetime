@@ -122,19 +122,7 @@ export async function getSessionUser(request, env) {
     .bind(tokenHash)
     .first();
 
-  if (row) return row;
-
-  // Legacy fallback during migration window
-  const legacy = await env.DB.prepare(
-    `SELECT u.id, u.email
-     FROM admin_sessions s
-     JOIN admin_users u ON u.id = s.user_id
-     WHERE s.token_hash = ? AND s.expires_at > datetime('now')`
-  )
-    .bind(tokenHash)
-    .first();
-
-  return legacy || null;
+  return row || null;
 }
 
 export async function destroySession(request, env) {
@@ -143,7 +131,6 @@ export async function destroySession(request, env) {
   if (!token) return;
   const tokenHash = await sha256Hex(token);
   await env.DB.prepare(`DELETE FROM auth_sessions WHERE token_hash = ?`).bind(tokenHash).run();
-  await env.DB.prepare(`DELETE FROM admin_sessions WHERE token_hash = ?`).bind(tokenHash).run();
 }
 
 export async function findAuthUserByEmail(env, email) {
