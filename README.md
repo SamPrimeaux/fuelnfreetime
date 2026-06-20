@@ -61,7 +61,7 @@ Pick models from the [Workers AI model catalog](https://developers.cloudflare.co
 |----------|---------|-----|
 | `APP_NAME` | `Fuel & Free Time` | Health / metadata |
 | `APP_DOMAIN` | `fuelnfreetime.com` | Canonical domain |
-| `ALLOWED_ORIGINS` | `https://fuelnfreetime.com` | CORS when needed |
+| `ALLOWED_ORIGINS` | `https://fuelnfreetime.com,https://www.fuelnfreetime.com,https://fuelnfreetime.meauxbility.workers.dev` | CORS when needed |
 
 Secrets (never commit): see [`SECRETS.md`](SECRETS.md).
 
@@ -279,13 +279,69 @@ Gmail OAuth client credentials will likely be secrets + Workers KV/D1 when imple
 
 ---
 
+## Custom domain & DNS cutover
+
+**Current state:** `fuelnfreetime.com` is added to Cloudflare but **pending** (`ns_mismatch`) — the registrar still points at Google Domains / Shopify nameservers. Until cutover completes, use **https://fuelnfreetime.meauxbility.workers.dev**.
+
+### Check propagation
+
+```bash
+npm run dns:check
+```
+
+### At your registrar (tomorrow)
+
+Set nameservers to:
+
+- `jessica.ns.cloudflare.com`
+- `mike.ns.cloudflare.com`
+
+Cloudflare zone ID: `816a5d2284103e4481987ceeb16c2ca9`
+
+### DNS records to keep in Cloudflare (already staged)
+
+| Type | Name | Target | Notes |
+|------|------|--------|-------|
+| **Worker** | `fuelnfreetime.com` | `fuelnfreetime` | Apex → this Worker |
+| **Worker** | `www` | `fuelnfreetime` | Add in dashboard (recommended alert) |
+
+`wrangler.toml` also declares custom domains for apex + `www` — they attach automatically once the zone is **active**.
+
+### Worker routing (Shopify-compat)
+
+Old Shopify URLs keep working after cutover:
+
+| Legacy URL | Serves |
+|------------|--------|
+| `/pages/shop` | `/shop.html` |
+| `/pages/community` | `/community.html` |
+| `/pages/about` | `/about.html` |
+| `/cart`, `/pages/cart` | `/cart.html` |
+| `/collections/*` | `/shop.html` |
+| `/products/:slug` | Product detail page |
+
+`www.fuelnfreetime.com` → 301 redirect to apex.
+
+### Verify after cutover
+
+```bash
+curl -s https://fuelnfreetime.com/api/health
+curl -I https://fuelnfreetime.com/pages/shop
+```
+
+### Email (optional, post-cutover)
+
+For Resend transactional mail from `@fuelnfreetime.com`, add their SPF/DKIM records in Cloudflare DNS when you enable sending. For inbox routing, use **Email Routing** in the dashboard (MX records Cloudflare provides).
+
+---
+
 ## Roadmap (in-repo stubs)
 
 - [ ] Checkout / Stripe → `orders` table
 - [ ] Gmail OAuth + live inbox sync
 - [ ] Resend production send + webhooks
 - [ ] Workers AI triage on mail + product copy
-- [ ] Custom domain `fuelnfreetime.com` on this Worker (DNS + route)
+- [x] Custom domain config in `wrangler.toml` + Shopify URL aliases (waiting on NS cutover)
 
 ---
 

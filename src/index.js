@@ -12,6 +12,7 @@
 import { handleAdminApi } from "./admin/api.js";
 import { handleStoreApi } from "./store/api.js";
 import { getSessionUser } from "./lib/auth.js";
+import { redirectWww, resolveStorefrontPath, serveStaticAlias } from "./lib/routes.js";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -71,6 +72,9 @@ const ADMIN_PUBLIC_PAGES = new Set(["/admin/login.html"]);
 
 export default {
   async fetch(request, env, ctx) {
+    const wwwRedirect = redirectWww(request);
+    if (wwwRedirect) return wwwRedirect;
+
     const url = new URL(request.url);
     const path = url.pathname;
 
@@ -78,6 +82,8 @@ export default {
       return Response.json({
         ok: true,
         app: env.APP_NAME,
+        domain: env.APP_DOMAIN,
+        host: url.hostname,
         bindings: {
           db: !!env.DB,
           r2: !!env.WEBSITE_ASSETS,
@@ -123,9 +129,13 @@ export default {
       return noStore(await env.ASSETS.fetch(request));
     }
 
-    // Shopify-style /pages/* routes on custom domain
-    if (path === "/pages/shop" || path === "/pages/shop/") {
-      return Response.redirect(new URL("/shop.html", request.url), 301);
+    // Shopify-style paths and legacy URLs on custom domain
+    const alias = resolveStorefrontPath(path);
+    if (alias) {
+      if (path.startsWith("/pages/")) {
+        return Response.redirect(new URL(alias, request.url), 301);
+      }
+      return serveStaticAlias(request, env, alias);
     }
 
     const productMatch = path.match(/^\/products\/([^/]+)\/?$/);

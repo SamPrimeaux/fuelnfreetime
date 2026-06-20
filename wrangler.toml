@@ -1,11 +1,21 @@
 name = "fuelnfreetime"
 main = "src/index.js"
 compatibility_date = "2025-04-01"
+workers_dev = true
 
 [vars]
 APP_NAME = "Fuel & Free Time"
 APP_DOMAIN = "fuelnfreetime.com"
-ALLOWED_ORIGINS = "https://fuelnfreetime.com"
+ALLOWED_ORIGINS = "https://fuelnfreetime.com,https://www.fuelnfreetime.com,https://fuelnfreetime.meauxbility.workers.dev"
+
+# Custom domains — activate once Cloudflare zone leaves "pending" (nameservers cut over).
+[[routes]]
+pattern = "fuelnfreetime.com"
+custom_domain = true
+
+[[routes]]
+pattern = "www.fuelnfreetime.com"
+custom_domain = true
 
 [[d1_databases]]
 binding = "DB"
