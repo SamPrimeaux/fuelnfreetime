@@ -10,6 +10,7 @@
  */
 
 import { handleAdminApi } from "./admin/api.js";
+import { runAgentsamCompaction } from "./agentsam/compaction.js";
 import { handleStoreApi } from "./store/api.js";
 import { handlePublicCmsApi } from "./cms/api.js";
 import { getSessionUser } from "./lib/auth.js";
@@ -217,6 +218,26 @@ export default {
       return handleNewsletter(request, env);
     }
 
+    if (path === "/api/internal/agentsam/compaction/run" && request.method === "POST") {
+      const secret = request.headers.get("X-Agentsam-Compaction-Secret") || "";
+      if (!env.AGENTSAM_COMPACTION_SECRET || secret !== env.AGENTSAM_COMPACTION_SECRET) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      let body = {};
+      try {
+        body = await request.json();
+      } catch {
+        body = {};
+      }
+      const result = await runAgentsamCompaction(env, {
+        date_key: body.date_key,
+        force: body.force === true,
+        skip_trim: body.skip_trim === true,
+        trigger_source: body.trigger_source || "script",
+      });
+      return Response.json(result);
+    }
+
     if (path.startsWith("/api/store/")) {
       return handleStoreApi(request, env, url);
     }
@@ -352,5 +373,16 @@ export default {
 
     // Everything else falls through to the static site in /public
     return env.ASSETS.fetch(request);
+  },
+
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(
+      runAgentsamCompaction(env, {
+        trigger_source: "cron",
+        cron: event.cron,
+      }).catch((err) => {
+        console.error("agentsam scheduled compaction failed", err?.message || err);
+      })
+    );
   },
 };

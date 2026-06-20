@@ -45,6 +45,9 @@ class_name = "CmsEditorRoom"
 tag = "v1-cms-editor"
 new_sqlite_classes = ["CmsEditorRoom"]
 
+[triggers]
+crons = ["0 4 * * *"]
+
 [assets]
 directory = "./public"
 binding = "ASSETS"

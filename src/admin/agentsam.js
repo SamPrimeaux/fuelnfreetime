@@ -28,6 +28,7 @@ import {
   summarizePromptCache,
 } from "../agentsam/prompt-cache.js";
 import { listPromptFragments, listPromptTemplates } from "../agentsam/prompt-registry.js";
+import { getCompactionStatus, runAgentsamCompaction } from "../agentsam/compaction.js";
 import { getActiveToolsHash } from "../agentsam/tools-registry.js";
 import {
   bridgeConfigured,
@@ -716,6 +717,7 @@ export async function agentsamStatus(env, userId = null) {
   const aiRegistry = await getAIRegistryStatus(env);
   const analyticsStatus = await getAgentSamAnalyticsStatus(env);
   const toolsRegistry = await getToolsRegistryStatus(env);
+  const compaction = await getCompactionStatus(env, { limit: 3 });
 
   return json({
     ok: true,
@@ -733,6 +735,7 @@ export async function agentsamStatus(env, userId = null) {
     ...aiRegistry,
     analytics: analyticsStatus,
     tools: toolsRegistry,
+    compaction,
   });
 }
 
@@ -873,4 +876,31 @@ export async function agentsamPromptCacheInvalidate(request, env) {
     cache_key: body.context_cache_key,
   });
   return json({ ok: true, prompt, context });
+}
+
+export async function agentsamCompactionStatus(env) {
+  const status = await getCompactionStatus(env);
+  return json(status);
+}
+
+export async function agentsamCompactionRun(request, env, executionCtx = null) {
+  let body = {};
+  try {
+    body = (await request.json()) || {};
+  } catch {
+    body = {};
+  }
+
+  const result = await runAgentsamCompaction(env, {
+    date_key: body.date_key,
+    force: body.force === true,
+    skip_trim: body.skip_trim === true,
+    trigger_source: "admin",
+  });
+
+  if (executionCtx?.waitUntil && result.ok) {
+    executionCtx.waitUntil(Promise.resolve());
+  }
+
+  return json(result);
 }

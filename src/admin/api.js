@@ -43,6 +43,8 @@ import {
   agentsamPromptsList,
   agentsamPromptCacheSummary,
   agentsamPromptCacheInvalidate,
+  agentsamCompactionStatus,
+  agentsamCompactionRun,
 } from "./agentsam.js";
 import {
   agentsamConversationCreate,
@@ -502,6 +504,12 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   }
   if (path === "/api/admin/agentsam/analytics/summary" && method === "GET") {
     return agentsamAnalyticsSummary(env, url);
+  }
+  if (path === "/api/admin/agentsam/compaction/status" && method === "GET") {
+    return agentsamCompactionStatus(env);
+  }
+  if (path === "/api/admin/agentsam/compaction/run" && method === "POST") {
+    return agentsamCompactionRun(request, env, executionCtx);
   }
   if (path === "/api/admin/analytics/finance" && method === "GET") {
     const range = url.searchParams.get("range") || "30d";

@@ -1,8 +1,19 @@
 #!/usr/bin/env node
 /**
- * AgentSam analytics rollup — placeholder CLI.
+ * Alias for AgentSam daily rollup (analytics + prompt usage + tool calls).
+ * See scripts/agentsam-compact.mjs
  */
 
-console.log("AgentSam analytics rollup is not fully implemented yet.");
-console.log("See docs/AGENTSAM-COMPACTION.md for the protocol.");
-process.exit(0);
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const compactScript = path.join(scriptDir, "agentsam-compact.mjs");
+
+const result = spawnSync(process.execPath, [compactScript, ...process.argv.slice(2)], {
+  stdio: "inherit",
+  env: process.env,
+});
+
+process.exit(result.status ?? 1);
