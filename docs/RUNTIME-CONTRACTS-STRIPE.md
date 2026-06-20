@@ -2,7 +2,8 @@
 
 **Status:** Not started (checkout v1 live without payment)  
 **Parent contract:** [`RUNTIME-CONTRACTS-COMMERCE.md`](RUNTIME-CONTRACTS-COMMERCE.md) §8  
-**Agent entry:** [`../AGENTS.md`](../AGENTS.md)
+**Agent entry:** [`../AGENTS.md`](../AGENTS.md)  
+**Stripe agent skill:** [`.cursor/skills/stripe-best-practices/SKILL.md`](../.cursor/skills/stripe-best-practices/SKILL.md) ([stripe/ai](https://github.com/stripe/ai/blob/main/skills/stripe-best-practices/SKILL.md)) — read with this checklist; repo contracts win on inventory/order flow.
 
 This document is an **ordered task list** for wiring Stripe Checkout. Complete tasks in sequence unless noted. Do not skip inventory-timing changes (Task 12–14) — v1 checkout decrements stock immediately today.
 

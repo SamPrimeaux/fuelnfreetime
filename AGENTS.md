@@ -25,6 +25,7 @@ This file is the entry point for human and AI collaborators (including Connor's 
 |--------|----------|--------|
 | **Commerce** — products, variants, inventory, media, cart, checkout, orders | [`docs/RUNTIME-CONTRACTS-COMMERCE.md`](docs/RUNTIME-CONTRACTS-COMMERCE.md) | Products/inventory live; Stripe **not wired** |
 | **Stripe** — ordered implementation checklist | [`docs/RUNTIME-CONTRACTS-STRIPE.md`](docs/RUNTIME-CONTRACTS-STRIPE.md) | Not started |
+| **Stripe agent skills** | [`.cursor/skills/stripe-best-practices/SKILL.md`](.cursor/skills/stripe-best-practices/SKILL.md) | Vendored from [stripe/ai](https://github.com/stripe/ai) |
 | **CMS** — pages, sections, publish, KV, R2 bodies, live editor | [`docs/FNF-CMS-SPRINT-2026-06-20.md`](docs/FNF-CMS-SPRINT-2026-06-20.md) | Live |
 
 If a feature does not fit an existing contract, **update the contract first** (or in the same PR), then implement.
