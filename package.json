@@ -16,6 +16,7 @@
     "db:seed:cms:local": "wrangler d1 execute fuelnfreetime --local --file=db/seed-cms.sql",
     "db:seed:cms:full:local": "wrangler d1 execute fuelnfreetime --local --file=db/seed-cms-full.sql",
     "db:seed:tee": "wrangler d1 execute fuelnfreetime --remote --file=db/seed-tee.sql",
+    "db:seed:platform": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/seed-platform.sql",
     "cms:generate-seed": "node scripts/generate-cms-seed.mjs",
     "cms:bootstrap": "npm run cms:generate-seed && npm run db:seed:cms:full && npm run db:seed:tee",
     "cms:warm": "node scripts/warm-cms-cache.mjs",
