@@ -2,6 +2,7 @@
  * Workers AI runner — D1 registry model selection with safe emergency fallbacks.
  */
 
+import { trackAgentSamEvent, estimateCostUsd, estimateTokens } from "./analytics.js";
 import {
   getFallbackChain,
   normalizeChatRouting,
@@ -129,6 +130,24 @@ async function executeModel(env, model, systemPrompt, userMessage, routing) {
   throw new Error("empty_response");
 }
 
+function analyticsBase(routing) {
+  const ctx = routing.analytics || {};
+  return {
+    ctx: ctx.execution_ctx,
+    session_id: ctx.session_id,
+    conversation_id: ctx.conversation_id,
+    message_id: ctx.message_id,
+    run_id: ctx.run_id,
+    workflow_key: ctx.workflow_key || routing.workflow_key,
+    workflow_id: ctx.workflow_id,
+    user_id: ctx.user_id,
+    admin_user_id: ctx.admin_user_id,
+    user_email: ctx.user_email,
+    intent: routing.intent || ctx.intent,
+    task_type: routing.task_type,
+  };
+}
+
 export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}) {
   if (!env.AGENTSAM_WAI) {
     return { ok: false, stub: true, error: "AGENTSAM_WAI not bound" };
@@ -140,6 +159,8 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
   let selectedModel = null;
   let lastError = null;
   let fallbackUsed = false;
+  const aiStarted = Date.now();
+  const trackOpts = analyticsBase(routing);
 
   for (let index = 0; index < chain.length; index += 1) {
     const model = chain[index];
@@ -161,6 +182,7 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
       if (index > 0) fallbackUsed = true;
       selectedModel = model;
 
+      const durationMs = Date.now() - started;
       attemptedModels.push({
         model_id: model.model_id,
         display_name: model.display_name || model.model_id,
@@ -168,9 +190,34 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
         task_type: model.task_type,
         index,
         ok: true,
-        duration_ms: Date.now() - started,
+        duration_ms: durationMs,
         emergency: !!model.emergency,
       });
+
+      const inputTokens = estimateTokens(userMessage) + estimateTokens(systemPrompt);
+      const outputTokens = estimateTokens(output.reply);
+      const aiLatencyMs = Date.now() - aiStarted;
+      const costTier = model.cost_tier || "unknown";
+      const estimatedCostUsd = estimateCostUsd(inputTokens, outputTokens, costTier);
+
+      await trackAgentSamEvent(
+        env,
+        {
+          event_type: "ai_model",
+          event_name: "model_selected",
+          status: "success",
+          provider: "workers_ai",
+          model_id: model.model_id,
+          model_lane: model.lane,
+          task_type: normalized.task_type,
+          fallback_used: fallbackUsed,
+          fallback_attempt_index: index,
+          attempted_models: attemptedModels,
+          ai_latency_ms: durationMs,
+          metadata: { emergency: !!model.emergency, registry: !model.emergency },
+        },
+        trackOpts
+      );
 
       return {
         ok: true,
@@ -185,9 +232,16 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
         attempted_models: attemptedModels,
         fallback_used: fallbackUsed,
         registry: !model.emergency,
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        total_tokens: inputTokens + outputTokens,
+        estimated_cost_usd: estimatedCostUsd,
+        ai_latency_ms: aiLatencyMs,
+        cost_tier: costTier,
       };
     } catch (err) {
       lastError = err;
+      const durationMs = Date.now() - started;
       attemptedModels.push({
         model_id: model.model_id,
         display_name: model.display_name || model.model_id,
@@ -196,9 +250,31 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
         index,
         ok: false,
         error: err?.message || String(err),
-        duration_ms: Date.now() - started,
+        duration_ms: durationMs,
         emergency: !!model.emergency,
       });
+
+      await trackAgentSamEvent(
+        env,
+        {
+          event_type: "ai_model",
+          event_name: "model_fallback",
+          status: "fallback",
+          provider: "workers_ai",
+          model_id: model.model_id,
+          model_lane: model.lane,
+          task_type: normalized.task_type,
+          fallback_used: 1,
+          fallback_attempt_index: index,
+          error_code: err?.message || "model_failed",
+          error_message: err?.message || String(err),
+          error_stage: "ai_run",
+          ai_latency_ms: durationMs,
+          attempted_models: attemptedModels,
+        },
+        trackOpts
+      );
+
       console.error(
         "agentsam ai model failed",
         model.model_id,
@@ -215,5 +291,6 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
     task_type: normalized.task_type,
     attempted_models: attemptedModels,
     fallback_used: attemptedModels.length > 1,
+    ai_latency_ms: Date.now() - aiStarted,
   };
 }

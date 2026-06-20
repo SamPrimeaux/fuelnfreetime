@@ -40,6 +40,7 @@
     "db:migrate:agentsam-ai": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file db/migrate-agentsam-ai.sql",
     "db:seed:agentsam-ai": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file db/seed-agentsam-ai.sql",
     "db:install:agentsam-ai": "npm run db:migrate:agentsam-ai && npm run db:seed:agentsam-ai",
+    "db:migrate:agentsam-analytics": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file db/migrate-agentsam-analytics.sql",
     "db:migrate:project-context": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-agentsam-project-context.sql",
     "db:seed:ctx-fuelnfreetime": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-agentsam-project-context.sql && ./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/seed-ctx-fuelnfreetime-worker.sql",
     "db:seed:ctx-fuelnfreetime:iam": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute inneranimalmedia-business --remote -c ../inneranimalmedia/wrangler.production.toml --file=db/seed-ctx-fuelnfreetime-iam.sql",

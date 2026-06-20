@@ -226,7 +226,7 @@ export default {
     }
 
     if (path.startsWith("/api/admin/")) {
-      return noStore(await handleAdminApi(request, env, url));
+      return noStore(await handleAdminApi(request, env, url, ctx));
     }
 
     if (path.startsWith("/media/")) {

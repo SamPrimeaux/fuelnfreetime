@@ -30,6 +30,7 @@ import { handleAdminCmsApi } from "../cms/api.js";
 import {
   agentsamChat,
   agentsamAiModelsList,
+  agentsamAnalyticsSummary,
   agentsamDrawerWorkflowsList,
   agentsamMcpStatus,
   agentsamSkillGet,
@@ -364,7 +365,7 @@ async function listSubscribers(request, env) {
 
 // ----- Router -----
 
-export async function handleAdminApi(request, env, url) {
+export async function handleAdminApi(request, env, url, executionCtx = null) {
   const path = url.pathname;
   const method = request.method;
 
@@ -443,7 +444,7 @@ export async function handleAdminApi(request, env, url) {
   if (path === "/api/admin/mail/send" && method === "POST") return sendMailPreview(request, env);
 
   if (path === "/api/admin/agentsam/chat" && method === "POST") {
-    return agentsamChat(request, env);
+    return agentsamChat(request, env, executionCtx);
   }
   if (path === "/api/admin/agentsam/status" && method === "GET") {
     const user = await getSessionUser(request, env);
@@ -454,6 +455,9 @@ export async function handleAdminApi(request, env, url) {
   }
   if (path === "/api/admin/agentsam/ai/models" && method === "GET") {
     return agentsamAiModelsList(env);
+  }
+  if (path === "/api/admin/agentsam/analytics/summary" && method === "GET") {
+    return agentsamAnalyticsSummary(env, url);
   }
   if (path === "/api/admin/agentsam/mcp/status" && method === "GET") {
     const user = await getSessionUser(request, env);

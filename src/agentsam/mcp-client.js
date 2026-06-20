@@ -116,10 +116,24 @@ export async function probeGitHubViaBridge(env) {
 }
 
 export async function fetchGithubContextForChat(env, message, userId = null) {
+  const started = Date.now();
   const direct = await fetchGithubContextForAgent(env, message, userId);
-  if (direct) return direct;
+  if (direct) {
+    return {
+      context: direct,
+      meta: {
+        success: !direct.startsWith("GITHUB:"),
+        source: "direct",
+        github_repo: FNF_GITHUB_REPO,
+        github_operation: "recent_commits",
+        mcp_latency_ms: Date.now() - started,
+      },
+    };
+  }
 
-  if (!bridgeConfigured(env)) return null;
+  if (!bridgeConfigured(env)) {
+    return { context: null, meta: null };
+  }
 
   const hay = message.toLowerCase();
   const repo = String(env.FNF_GITHUB_REPO || FNF_GITHUB_REPO);
@@ -127,16 +141,61 @@ export async function fetchGithubContextForChat(env, message, userId = null) {
   if (/github|repo|commit|branch|pr|pull request|code|deploy|worker|migration/.test(hay)) {
     const listed = await callMcpTool(env, "agentsam_github_repo_list", {});
     const body = parseToolText(listed);
+    const latency = Date.now() - started;
+
     if (body?.ok === false && body?.error === "github_not_connected") {
-      return "GITHUB MCP (bridge): not connected — set FNF_GITHUB_TOKEN or connect GitHub OAuth in AgentSam.";
+      return {
+        context:
+          "GITHUB MCP (bridge): not connected — set FNF_GITHUB_TOKEN or connect GitHub OAuth in AgentSam.",
+        meta: {
+          success: false,
+          source: "bridge",
+          github_repo: repo,
+          github_operation: "agentsam_github_repo_list",
+          mcp_server: "inneranimalmedia-mcp-server",
+          mcp_tool: "agentsam_github_repo_list",
+          mcp_success: false,
+          mcp_latency_ms: latency,
+        },
+      };
     }
+
     if (body?.ok !== false) {
-      const hasFnf = (body?.repos || []).some((r) => String(r.full_name || "").toLowerCase() === repo.toLowerCase());
-      return `GITHUB MCP (bridge):\nRepo: ${repo}\nAccessible: ${hasFnf ? "yes" : "check token scope"}`;
+      const hasFnf = (body?.repos || []).some(
+        (r) => String(r.full_name || "").toLowerCase() === repo.toLowerCase()
+      );
+      return {
+        context: `GITHUB MCP (bridge):\nRepo: ${repo}\nAccessible: ${hasFnf ? "yes" : "check token scope"}`,
+        meta: {
+          success: true,
+          source: "bridge",
+          github_repo: repo,
+          github_operation: "agentsam_github_repo_list",
+          mcp_server: "inneranimalmedia-mcp-server",
+          mcp_tool: "agentsam_github_repo_list",
+          mcp_success: true,
+          mcp_latency_ms: latency,
+        },
+      };
     }
+
+    return {
+      context: null,
+      meta: {
+        success: false,
+        source: "bridge",
+        github_repo: repo,
+        github_operation: "agentsam_github_repo_list",
+        mcp_server: "inneranimalmedia-mcp-server",
+        mcp_tool: "agentsam_github_repo_list",
+        mcp_success: false,
+        mcp_latency_ms: latency,
+        error: listed.error || "mcp_failed",
+      },
+    };
   }
 
-  return null;
+  return { context: null, meta: null };
 }
 
 export async function probeGitHubConnection(env, userId = null) {
