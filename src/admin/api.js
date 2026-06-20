@@ -27,6 +27,7 @@ import {
   setPrimaryProductImage,
 } from "./media.js";
 import { handleAdminCmsApi } from "../cms/api.js";
+import { getFinanceAnalytics } from "./analytics-finance.js";
 import {
   agentsamChat,
   agentsamAiModelsList,
@@ -458,6 +459,11 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   }
   if (path === "/api/admin/agentsam/analytics/summary" && method === "GET") {
     return agentsamAnalyticsSummary(env, url);
+  }
+  if (path === "/api/admin/analytics/finance" && method === "GET") {
+    const range = url.searchParams.get("range") || "30d";
+    const data = await getFinanceAnalytics(env, range);
+    return json(data);
   }
   if (path === "/api/admin/agentsam/mcp/status" && method === "GET") {
     const user = await getSessionUser(request, env);

@@ -15,3 +15,9 @@ export async function adminFetch<T = unknown>(path: string, opts: RequestInit = 
 export async function requireSession() {
   return adminFetch<{ email: string }>("/api/admin/me");
 }
+
+export async function fetchFinanceAnalytics(range: string) {
+  return adminFetch<import("./types").FinanceAnalyticsResponse>(
+    `/api/admin/analytics/finance?range=${encodeURIComponent(range)}`
+  );
+}
