@@ -38,10 +38,13 @@ renderShell("/admin/agentsam", `
           <div class="agentsam-page-composer-main">
             <div class="agentsam-page-compose-modes" id="agentsam-compose-modes" hidden></div>
             <div class="agentsam-page-attachments" id="agentsam-attachments" hidden></div>
-            <textarea id="agentsam-page-input" rows="1" placeholder="Ask anything" autocomplete="off"></textarea>
+            <div class="agentsam-page-input-row">
+              <div class="agentsam-page-connection-pills" id="agentsam-connection-pills" hidden></div>
+              <textarea id="agentsam-page-input" rows="1" placeholder="Ask anything" autocomplete="off"></textarea>
+            </div>
           </div>
           <button type="submit" class="agentsam-page-send" id="agentsam-page-send" aria-label="Send">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12h13M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 19V5M12 5l-6 6M12 5l6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
         </form>
       </div>

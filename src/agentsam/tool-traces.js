@@ -35,10 +35,19 @@ function displayNameFor(meta) {
   if (meta.display_name) return meta.display_name;
   const key = meta.tool_key || meta.mcp_tool || "";
   if (/github_repo_list|github/.test(key)) return "Reading repository";
-  if (/mcp/.test(meta.mcp_server || "")) return "Calling Inner Animal MCP";
+  if (/semantic_search|fnf_semantic/.test(key)) return "Semantic search";
+  if (/mcp/.test(meta.mcp_server || "")) return "Called tool";
   if (/d1/.test(key)) return "Querying D1";
   if (/r2|media/.test(key)) return "Listing media assets";
-  return meta.tool_name || key || "Calling tool";
+  return meta.tool_name || key || "Called tool";
+}
+
+function subtitleFor(meta) {
+  if (meta.subtitle) return meta.subtitle;
+  if (meta.mcp_server) return meta.mcp_server;
+  if (meta.server) return meta.server;
+  if (meta.tool_key) return meta.tool_key;
+  return "";
 }
 
 export function buildToolCallFromGithubMeta(meta, ids = {}) {
@@ -52,12 +61,20 @@ export function buildToolCallFromGithubMeta(meta, ids = {}) {
     tool_call_id: null,
     tool_key: toolKey,
     display_name: displayNameFor({ ...meta, tool_key: toolKey }),
+    subtitle: subtitleFor({
+      ...meta,
+      tool_key: toolKey,
+      mcp_server: meta.mcp_server,
+      server: meta.mcp_server || "github",
+    }),
     provider,
     server: meta.mcp_server || "github",
     status: meta.success ? "complete" : "failed",
     duration_ms: meta.mcp_latency_ms ?? null,
-    input_preview: clip(meta.github_operation || "GitHub context request"),
-    output_preview: clip(meta.success ? `Repo: ${meta.github_repo || "fuelnfreetime"}` : meta.error || "Failed"),
+    input_preview: clip(meta.github_operation || meta.input_preview || "GitHub context request"),
+    output_preview: clip(
+      meta.output_preview || (meta.success ? `Repo: ${meta.github_repo || "fuelnfreetime"}` : meta.error || "Failed")
+    ),
     icon: iconForTool(toolKey, provider),
     conversation_id: ids.conversation_id,
     message_id: ids.message_id,
@@ -85,6 +102,7 @@ export async function getToolCallById(env, id) {
     tool_call_id: row.id,
     tool_key: row.tool_key,
     display_name: displayNameFor(row),
+    subtitle: subtitleFor(row),
     provider,
     server: row.mcp_server_key || row.handler_type,
     status: row.status === "success" ? "complete" : row.status || "failed",

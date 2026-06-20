@@ -5,7 +5,27 @@
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_ATTACHMENTS = 6;
 
+const IAM_LOGO_DEFAULT =
+  "https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ac515729-af6b-4ea5-8b10-e581a4d02100/thumbnail";
+
 const GITHUB_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>`;
+
+const CHEVRON_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+const FALLBACK_MCP_SERVERS = [
+  {
+    slug: "inneranimalmedia-mcp-server",
+    display_name: "Inner Animal MCP",
+    status: "needs_bridge",
+    connected: false,
+  },
+  {
+    slug: "github",
+    display_name: "GitHub",
+    status: "needs_oauth",
+    connected: false,
+  },
+];
 
 /** @type {string|null} */
 let conversationId = null;
@@ -14,11 +34,17 @@ let pendingAttachments = [];
 /** @type {object|null} */
 let composeContext = null;
 /** @type {string|null} */
-let iamLogoUrl = null;
+let iamLogoUrl = IAM_LOGO_DEFAULT;
 /** @type {object|null} */
 let plusMenuConfig = null;
 /** @type {object|null} */
 let modalToolCall = null;
+/** @type {Array<any>} */
+let mcpServers = [];
+/** @type {Set<string>} */
+let activeConnections = new Set();
+/** @type {object} */
+let connectUrls = {};
 
 function $(id) {
   return document.getElementById(id);
@@ -91,6 +117,178 @@ function renderComposeModes() {
   }
 }
 
+function connectionComposerLabel(server) {
+  if (server.slug === "inneranimalmedia-mcp-server") return "inneranimalmedia-mcp…";
+  if (server.slug === "github") return "GitHub";
+  const label = server.slug || server.display_name || "connection";
+  return label.length > 22 ? `${label.slice(0, 20)}…` : label;
+}
+
+function connectionMenuLabel(server) {
+  if (server.slug === "inneranimalmedia-mcp-server") return "Inner Animal MCP";
+  if (server.slug === "github") return "GitHub";
+  return server.display_name || server.slug || "Connection";
+}
+
+function connectionIconMarkup(server, { size = "md" } = {}) {
+  const cls = size === "sm" ? "agentsam-conn-icon agentsam-conn-icon--sm" : "agentsam-conn-icon";
+  const name = `${server.display_name || ""} ${server.slug || ""}`;
+  if (/inner animal|iam|inneranimalmedia/i.test(name)) {
+    const src = iamLogoUrl || IAM_LOGO_DEFAULT;
+    return `<img class="${cls}" src="${src}" alt="" loading="lazy">`;
+  }
+  if (/github/i.test(name)) {
+    return `<span class="${cls} agentsam-conn-icon--svg">${GITHUB_SVG}</span>`;
+  }
+  return `<span class="${cls} agentsam-conn-icon--text">C</span>`;
+}
+
+function connectionStatusLabel(server) {
+  if (server.connected || server.status === "ready") return "Ready";
+  if (server.status === "needs_oauth") return "Connect";
+  if (server.status === "needs_bridge") return "Needs bridge";
+  if (server.status === "planned" || server.status === "disabled") return "Off";
+  return server.status || "—";
+}
+
+function getServerBySlug(slug) {
+  return mcpServers.find((s) => s.slug === slug);
+}
+
+function disconnectConnection(slug, e) {
+  e?.preventDefault();
+  e?.stopPropagation();
+  activeConnections.delete(slug);
+  renderConnectionPills();
+  renderMcpList(mcpServers);
+}
+
+function toggleConnection(slug) {
+  if (activeConnections.has(slug)) {
+    activeConnections.delete(slug);
+  } else {
+    activeConnections.add(slug);
+  }
+  renderConnectionPills();
+  renderMcpList(mcpServers);
+}
+
+function initActiveConnections(servers) {
+  activeConnections = new Set((servers || []).map((s) => s.slug).filter(Boolean));
+}
+
+function renderConnectionPills() {
+  const box = $("agentsam-connection-pills");
+  if (!box) return;
+  box.innerHTML = "";
+
+  const active = mcpServers.filter((s) => activeConnections.has(s.slug));
+  if (!active.length) {
+    box.hidden = true;
+    return;
+  }
+
+  box.hidden = false;
+  active.forEach((server) => {
+    const pill = document.createElement("div");
+    pill.className = "agentsam-conn-pill";
+    pill.title = connectionMenuLabel(server);
+    pill.innerHTML = `
+      ${connectionIconMarkup(server, { size: "sm" })}
+      <span class="agentsam-conn-pill-label">${escapeHtml(connectionComposerLabel(server))}</span>
+      <button type="button" class="agentsam-conn-pill-x" aria-label="Disconnect ${escapeHtml(connectionMenuLabel(server))}">×</button>
+    `;
+    pill.querySelector(".agentsam-conn-pill-x")?.addEventListener("click", (e) => {
+      disconnectConnection(server.slug, e);
+    });
+    box.appendChild(pill);
+  });
+}
+
+function formatPreviewBlock(text) {
+  const raw = String(text || "").trim();
+  if (!raw) return "";
+  try {
+    const parsed = JSON.parse(raw);
+    return JSON.stringify(parsed, null, 2);
+  } catch {
+    return raw;
+  }
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    /* ignore */
+  }
+}
+
+function renderToolCallCrumb(toolCall, { running = false } = {}) {
+  const details = document.createElement("details");
+  details.className = `agentsam-tool-crumb${running ? " is-running" : ""}`;
+  if (!running) details.open = false;
+
+  const summary = document.createElement("summary");
+  summary.className = "agentsam-tool-crumb-summary";
+  summary.innerHTML = `
+    <span class="agentsam-tool-crumb-brace">{ }</span>
+    <span class="agentsam-tool-crumb-label">${running ? "Calling tool" : "Called tool"}</span>
+    <span class="agentsam-tool-crumb-chevron">${CHEVRON_SVG}</span>
+  `;
+  details.appendChild(summary);
+
+  if (running) return details;
+
+  const panel = document.createElement("div");
+  panel.className = "agentsam-tool-crumb-panel";
+
+  const head = document.createElement("div");
+  head.className = "agentsam-tool-crumb-head";
+  head.appendChild(toolIconEl(toolCall.icon));
+  const headText = document.createElement("div");
+  headText.className = "agentsam-tool-crumb-head-text";
+  headText.innerHTML = `<strong>${escapeHtml(toolCall.display_name || "Called tool")}</strong><span>${escapeHtml(toolCall.subtitle || toolCall.server || toolCall.provider || "")}</span>`;
+  head.appendChild(headText);
+  panel.appendChild(head);
+
+  if (toolCall.input_preview) {
+    const section = document.createElement("div");
+    section.className = "agentsam-tool-crumb-section";
+    const formatted = formatPreviewBlock(toolCall.input_preview);
+    section.innerHTML = `<div class="agentsam-tool-crumb-section-head"><span>Request</span><button type="button" class="agentsam-tool-crumb-copy">Copy</button></div>`;
+    const pre = document.createElement("pre");
+    pre.textContent = formatted;
+    section.appendChild(pre);
+    section.querySelector(".agentsam-tool-crumb-copy")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      copyText(formatted);
+    });
+    panel.appendChild(section);
+  }
+
+  if (toolCall.output_preview || toolCall.error) {
+    const section = document.createElement("div");
+    section.className = "agentsam-tool-crumb-section";
+    const body = toolCall.error || toolCall.output_preview;
+    const formatted = formatPreviewBlock(body);
+    section.innerHTML = `<div class="agentsam-tool-crumb-section-head"><span>${toolCall.error ? "Error" : "Response"}</span><button type="button" class="agentsam-tool-crumb-copy">Copy</button></div>`;
+    const pre = document.createElement("pre");
+    pre.textContent = formatted;
+    section.appendChild(pre);
+    section.querySelector(".agentsam-tool-crumb-copy")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      copyText(formatted);
+    });
+    panel.appendChild(section);
+  }
+
+  details.appendChild(panel);
+  return details;
+}
+
 function toolIconEl(icon) {
   const wrap = document.createElement("div");
   wrap.className = "agentsam-page-tool-call-icon";
@@ -111,31 +309,6 @@ function toolIconEl(icon) {
   }
   wrap.textContent = icon.label || "T";
   return wrap;
-}
-
-function renderToolCallBlock(toolCall, { running = false } = {}) {
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = `agentsam-page-tool-call${running ? " is-running" : ""}`;
-  btn.dataset.toolCallId = toolCall.tool_call_id || toolCall.id;
-
-  btn.appendChild(toolIconEl(toolCall.icon));
-
-  const body = document.createElement("div");
-  body.className = "agentsam-page-tool-call-body";
-  body.innerHTML = `<strong>${toolCall.display_name || "Calling tool"}</strong><span>${toolCall.server || toolCall.provider || ""}</span>`;
-  btn.appendChild(body);
-
-  const status = document.createElement("span");
-  status.className = "agentsam-page-tool-call-status";
-  const st = running ? "running" : toolCall.status || "complete";
-  status.textContent = st;
-  if (st === "complete") status.classList.add("is-complete");
-  if (st === "failed") status.classList.add("is-failed");
-  btn.appendChild(status);
-
-  btn.addEventListener("click", () => openToolCallModal(toolCall.tool_call_id || toolCall.id, toolCall));
-  return btn;
 }
 
 async function openToolCallModal(id, fallback = null) {
@@ -210,7 +383,7 @@ function appendBubble(role, text, { routeChips = [], attachments = [], toolCalls
   const wrap = document.createElement("div");
   wrap.className = `agentsam-page-bubble agentsam-page-bubble--${role}`;
 
-  if (role === "assistant") appendRouteChips(wrap, routeChips);
+  if (role === "assistant" && !toolCalls.length) appendRouteChips(wrap, routeChips);
 
   if (attachments.length) {
     const media = document.createElement("div");
@@ -232,7 +405,10 @@ function appendBubble(role, text, { routeChips = [], attachments = [], toolCalls
   }
 
   if (toolCalls.length) {
-    toolCalls.forEach((tc) => wrap.appendChild(renderToolCallBlock(tc)));
+    const toolsWrap = document.createElement("div");
+    toolsWrap.className = "agentsam-page-tool-crumbs";
+    toolCalls.forEach((tc) => toolsWrap.appendChild(renderToolCallCrumb(tc)));
+    wrap.appendChild(toolsWrap);
   }
 
   const body = document.createElement("div");
@@ -354,6 +530,7 @@ function buildSendContext() {
     page: "/admin/agentsam",
     conversation_id: conversationId,
     has_image: pendingAttachments.some((a) => a.kind === "image"),
+    active_mcp_connections: [...activeConnections],
   };
   if (composeContext) {
     ctx.workflow_key = composeContext.workflow_key;
@@ -465,17 +642,60 @@ function renderMcpList(servers) {
   list.innerHTML = "";
 
   (servers || []).forEach((s) => {
-    const row = document.createElement("div");
-    row.className = "agentsam-page-mcp";
-    const icon =
-      /inner animal|iam|mcp/i.test(s.display_name || s.name || "")
-        ? `<img class="agentsam-page-mcp-icon" src="${iamLogoUrl || ""}" alt="">`
-        : /github/i.test(s.display_name || s.name || "")
-          ? `<span style="display:inline-flex;color:#ececec">${GITHUB_SVG}</span>`
-          : "";
-    row.innerHTML = `<span style="display:inline-flex;align-items:center;gap:8px">${icon}<span>${s.display_name || s.name}</span></span><small class="${s.connected || s.status === "READY" ? "is-ready" : ""}">${s.status || (s.connected ? "READY" : "—")}</small>`;
-    list.appendChild(row);
+    const btn = document.createElement("button");
+    const isActive = activeConnections.has(s.slug);
+    btn.type = "button";
+    btn.className = `agentsam-page-mcp${isActive ? " is-active" : ""}`;
+    btn.setAttribute("role", "menuitem");
+
+    let trailing = "";
+    if (isActive) {
+      trailing = `<span class="agentsam-page-mcp-check" aria-hidden="true">✓</span>`;
+    } else if (s.slug === "github" && !s.connected && connectUrls.fnf_github_oauth) {
+      trailing = `<span class="agentsam-page-mcp-link">Connect</span>`;
+    } else if (!s.connected && s.status === "needs_bridge") {
+      trailing = `<span class="agentsam-page-mcp-hint">Setup</span>`;
+    }
+
+    btn.innerHTML = `
+      <span class="agentsam-page-mcp-main">
+        ${connectionIconMarkup(s)}
+        <span class="agentsam-page-mcp-label">${escapeHtml(connectionMenuLabel(s))}</span>
+      </span>
+      ${trailing}
+    `;
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (s.slug === "github" && !s.connected && connectUrls.fnf_github_oauth && !isActive) {
+        window.location.href = connectUrls.fnf_github_oauth;
+        closeToolMenu();
+        return;
+      }
+      toggleConnection(s.slug);
+      closeToolMenu();
+    });
+    list.appendChild(btn);
   });
+}
+
+function applyPlatformData(data) {
+  if (!data) return;
+  iamLogoUrl = data.iam_logo_url || IAM_LOGO_DEFAULT;
+  connectUrls = data.connect_urls || connectUrls || {};
+
+  const incoming = data.mcp_servers && data.mcp_servers.length ? data.mcp_servers : FALLBACK_MCP_SERVERS;
+  const bySlug = new Map(incoming.map((s) => [s.slug, s]));
+  mcpServers = ["inneranimalmedia-mcp-server", "github"]
+    .map((slug) => bySlug.get(slug))
+    .filter(Boolean);
+
+  if (!mcpServers.length) mcpServers = [...FALLBACK_MCP_SERVERS];
+
+  if (!activeConnections.size) initActiveConnections(mcpServers);
+  renderMcpList(mcpServers);
+  renderConnectionPills();
+  renderChips(data.quick_actions);
+  applyPlusMenuConfig(data.plus_menu);
 }
 
 function renderChips(actions) {
@@ -683,20 +903,16 @@ function bindUi() {
 async function boot() {
   bindUi();
   try {
-    const [toolsRes] = await Promise.all([
-      fetch("/api/admin/agentsam/tools", { credentials: "include" }),
-    ]);
+    const toolsRes = await fetch("/api/admin/agentsam/tools", { credentials: "include" });
     const data = await toolsRes.json();
-    if (data.ok) {
-      iamLogoUrl = data.iam_logo_url;
-      renderMcpList(data.mcp_servers);
-      renderChips(data.quick_actions);
-      applyPlusMenuConfig(data.plus_menu);
+    if (toolsRes.ok && data.ok) {
+      applyPlatformData(data);
+    } else {
+      applyPlatformData({ mcp_servers: FALLBACK_MCP_SERVERS, quick_actions: [] });
     }
   } catch {
-    renderChips([
-      { label: "Write or edit", prompt: "Draft shop hero copy.", enabled: true },
-    ]);
+    applyPlatformData({ mcp_servers: FALLBACK_MCP_SERVERS, quick_actions: [] });
+    renderChips([{ label: "Write or edit", prompt: "Draft shop hero copy.", enabled: true }]);
   }
   hydrateRecentActivity();
 }
