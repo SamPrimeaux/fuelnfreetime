@@ -3,7 +3,7 @@
  * Single chat input; no mode picker required.
  */
 
-import { FNF_TENANT_ID, FNF_WORKSPACE_ID } from "./constants.js";
+import { FNF_TENANT_ID, FNF_WORKSPACE_ID, DRAWER_WORKFLOW_KEYS } from "./constants.js";
 import { formatMcpForPrompt, selectMcpServers } from "./mcp-servers.js";
 import { formatSkillsForPrompt, resolveSkillsForChat } from "./skills.js";
 
@@ -119,19 +119,34 @@ function formatWorkflowForPrompt(workflow) {
 }
 
 export async function routeAgentsamRequest(env, message, context = {}) {
-  const classification = classifyIntent(message, context);
-  const workflow = await loadWorkflow(env, classification.workflow_key);
+  const explicitWorkflow = (context.workflow_key || "").trim();
+  const classification = explicitWorkflow
+    ? {
+        intent: context.intent || "studio",
+        score: 100,
+        workflow_key: explicitWorkflow,
+        task_type: context.task_type || "studio_workflow",
+        source: "drawer",
+      }
+    : classifyIntent(message, context);
+
+  if (!explicitWorkflow) classification.source = "auto";
+
+  const workflowKey = classification.workflow_key;
+  const workflow = await loadWorkflow(env, workflowKey);
   const skills = await resolveSkillsForChat(env, message, {
     ...context,
     topic: classification.task_type,
     intent: classification.intent,
+    workflow_key: workflowKey,
   });
   const mcpServers = selectMcpServers(classification.intent, message);
+  const bridgeReady = Boolean(String(env.AGENTSAM_BRIDGE_KEY || "").trim());
 
   const systemBlocks = [
     formatWorkflowForPrompt(workflow),
     formatSkillsForPrompt(skills),
-    formatMcpForPrompt(mcpServers),
+    formatMcpForPrompt(mcpServers, bridgeReady),
   ].filter(Boolean);
 
   return {
@@ -151,11 +166,50 @@ export async function routeAgentsamRequest(env, message, context = {}) {
     mcp_servers: mcpServers.map((s) => ({
       slug: s.slug,
       name: s.display_name,
-      status: s.status,
+      status: bridgeReady ? "ready" : "needs_bridge",
     })),
     system_blocks: systemBlocks,
     tenant_id: FNF_TENANT_ID,
     workspace_id: FNF_WORKSPACE_ID,
+  };
+}
+
+export async function listDrawerWorkflows(env) {
+  if (!env.DB) return [];
+  try {
+    const placeholders = DRAWER_WORKFLOW_KEYS.map(() => "?").join(",");
+    const { results } = await env.DB.prepare(
+      `SELECT id, workflow_key, display_name, description, default_mode, default_task_type,
+              risk_level, requires_approval, metadata_json
+       FROM agentsam_workflows
+       WHERE tenant_id = ? AND is_active = 1
+         AND workflow_key IN (${placeholders})
+       ORDER BY CASE workflow_key
+         WHEN 'fnf_content_studio' THEN 1
+         WHEN 'fnf_creative_studio' THEN 2
+         WHEN 'fnf_brand_refresh' THEN 3
+         ELSE 99 END`
+    )
+      .bind(FNF_TENANT_ID, ...DRAWER_WORKFLOW_KEYS)
+      .all();
+
+    return (results || []).map((row) => mapWorkflowRow(row));
+  } catch {
+    return [];
+  }
+}
+
+function mapWorkflowRow(row) {
+  const meta = parseJson(row.metadata_json, {});
+  return {
+    id: row.id,
+    workflow_key: row.workflow_key,
+    display_name: row.display_name,
+    description: row.description,
+    ui_label: meta.ui_label || row.display_name,
+    ui_description: meta.ui_description || row.description,
+    suggested_prompts: meta.suggested_prompts || [],
+    category: meta.category || "agentic",
   };
 }
 
@@ -173,19 +227,7 @@ export async function listStudioWorkflows(env) {
       .bind(FNF_TENANT_ID)
       .all();
 
-    return (results || []).map((row) => {
-      const meta = parseJson(row.metadata_json, {});
-      return {
-        id: row.id,
-        workflow_key: row.workflow_key,
-        display_name: row.display_name,
-        description: row.description,
-        ui_label: meta.ui_label || row.display_name,
-        ui_description: meta.ui_description || row.description,
-        suggested_prompts: meta.suggested_prompts || [],
-        category: meta.category || "agentic",
-      };
-    });
+    return (results || []).map((row) => mapWorkflowRow(row));
   } catch {
     return [];
   }

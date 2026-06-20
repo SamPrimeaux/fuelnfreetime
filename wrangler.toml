@@ -7,6 +7,9 @@ workers_dev = true
 APP_NAME = "Fuel & Free Time"
 APP_DOMAIN = "fuelnfreetime.com"
 ALLOWED_ORIGINS = "https://fuelnfreetime.com,https://www.fuelnfreetime.com,https://fuelnfreetime.meauxbility.workers.dev"
+IAM_MCP_URL = "https://mcp.inneranimalmedia.com/mcp"
+IAM_ORIGIN = "https://inneranimalmedia.com"
+FNF_GITHUB_REPO = "SamPrimeaux/fuelnfreetime"
 
 # Custom domains — activate once Cloudflare zone leaves "pending" (nameservers cut over).
 [[routes]]

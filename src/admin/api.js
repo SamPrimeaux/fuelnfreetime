@@ -29,6 +29,8 @@ import {
 import { handleAdminCmsApi } from "../cms/api.js";
 import {
   agentsamChat,
+  agentsamDrawerWorkflowsList,
+  agentsamMcpStatus,
   agentsamSkillGet,
   agentsamSkillsList,
   agentsamStatus,
@@ -442,8 +444,14 @@ export async function handleAdminApi(request, env, url) {
   if (path === "/api/admin/agentsam/tools" && method === "GET") {
     return agentsamTools(env);
   }
+  if (path === "/api/admin/agentsam/mcp/status" && method === "GET") {
+    return agentsamMcpStatus(env);
+  }
   if (path === "/api/admin/agentsam/workflows" && method === "GET") {
     return agentsamWorkflowsList(env);
+  }
+  if (path === "/api/admin/agentsam/workflows/drawer" && method === "GET") {
+    return agentsamDrawerWorkflowsList(env);
   }
   if (path === "/api/admin/agentsam/skills" && method === "GET") {
     return agentsamSkillsList(env, url);

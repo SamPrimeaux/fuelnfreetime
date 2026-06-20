@@ -1,5 +1,12 @@
-import { listMcpServersForUi } from "../agentsam/mcp-servers.js";
-import { listStudioWorkflows, routeAgentsamRequest } from "../agentsam/router.js";
+import {
+  bridgeConfigured,
+  fetchGithubContextForChat,
+  mcpConnectUrls,
+  probeBridge,
+  probeGitHubViaBridge,
+} from "../agentsam/mcp-client.js";
+import { listMcpServersForUi, mcpRuntimeConfig } from "../agentsam/mcp-servers.js";
+import { listDrawerWorkflows, listStudioWorkflows, routeAgentsamRequest } from "../agentsam/router.js";
 import { getAgentSamSkill, listAgentSamSkills } from "../agentsam/skills.js";
 
 const AGENTSAM_MODEL = "@cf/meta/llama-3.1-8b-instruct";
@@ -7,10 +14,10 @@ const AGENTSAM_MODEL = "@cf/meta/llama-3.1-8b-instruct";
 const SYSTEM_PROMPT = `You are Agent Sam for Fuel & Free Time (fuelnfreetime.com).
 You handle everything through one conversation: store ops, content writing, creative direction, brand work, email drafts, brainstorming, and repo/code guidance.
 Be concise, practical, and on-brand — rugged, earned freedom, motorsports and garage culture.
-Use LIVE STORE DATA and routed WORKFLOW/SKILLS when present.
+Use LIVE STORE DATA, routed WORKFLOW/SKILLS, and MCP/GITHUB context when present.
 Do not invent inventory, orders, or prices.
 For image/logo/code tasks: produce clear deliverables, steps, or drafts; note when live publish or asset replacement needs owner approval.
-When MCP tools are listed but status is not "ready", explain what you can do now and what will connect next.`;
+When GitHub MCP context says not connected, tell the user to connect GitHub in IAM integrations (link provided in routing).`;
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -78,10 +85,18 @@ export async function agentsamChat(request, env) {
   const context = body?.context || {};
   const routing = await routeAgentsamRequest(env, message, context);
 
+  const mcpContext = bridgeConfigured(env) ? await fetchGithubContextForChat(env, message) : null;
+  const connectUrls = mcpConnectUrls(env);
+
   const contextLines = [
     context.page ? `Admin UI path: ${context.page}.` : "",
     context.slug ? `Editing CMS page slug: ${context.slug}.` : "",
+    context.workflow_key ? `Selected workflow: ${context.workflow_key}.` : "",
     await liveStoreContext(env),
+    mcpContext,
+    connectUrls.iam_integrations
+      ? `IAM integrations (GitHub OAuth): ${connectUrls.iam_integrations}`
+      : "",
     ...routing.system_blocks,
   ]
     .filter(Boolean)
@@ -94,6 +109,7 @@ export async function agentsamChat(request, env) {
         "Agent Sam is ready but Workers AI (AGENTSAM_WAI) is not bound in this environment. Routing and workflows are live — bind AGENTSAM_WAI in wrangler.toml for AI responses.",
       stub: true,
       routing,
+      mcp: { bridge: bridgeConfigured(env), github_context: !!mcpContext },
     });
   }
 
@@ -112,6 +128,7 @@ export async function agentsamChat(request, env) {
       reply,
       model: AGENTSAM_MODEL,
       routing,
+      mcp: { bridge: bridgeConfigured(env), github_context: !!mcpContext },
     });
   } catch (err) {
     console.error("agentsam chat error", err);
@@ -141,6 +158,9 @@ export async function agentsamStatus(env) {
     /* tables may not exist yet */
   }
 
+  const mcpServers = await listMcpServersForUi(env);
+  const bridgeProbe = bridgeConfigured(env) ? await probeBridge(env) : null;
+
   return json({
     ok: true,
     bound: !!env.AGENTSAM_WAI,
@@ -149,16 +169,42 @@ export async function agentsamStatus(env) {
     skills_registered: skillCount,
     workflows_registered: workflowCount,
     skills_storage: "D1 agentsam_skill + R2 agentsam/skills/",
-    mcp_servers: listMcpServersForUi(),
+    bridge_configured: bridgeConfigured(env),
+    bridge_ready: bridgeProbe?.ok ?? false,
+    mcp_servers: mcpServers,
+    connect_urls: mcpConnectUrls(env),
+  });
+}
+
+export async function agentsamMcpStatus(env) {
+  const bridge = bridgeConfigured(env);
+  const probe = bridge ? await probeBridge(env) : null;
+  const github = bridge && probe?.ok ? await probeGitHubViaBridge(env) : null;
+
+  return json({
+    ok: true,
+    ...mcpRuntimeConfig(env),
+    bridge_ready: probe?.ok ?? false,
+    tool_count: probe?.tool_count ?? 0,
+    github: github || { connected: false },
+    connect_urls: mcpConnectUrls(env),
+    mcp_servers: await listMcpServersForUi(env),
   });
 }
 
 export async function agentsamTools(env) {
-  const workflows = await listStudioWorkflows(env);
+  const [workflows, drawerWorkflows, mcpServers] = await Promise.all([
+    listStudioWorkflows(env),
+    listDrawerWorkflows(env),
+    listMcpServersForUi(env),
+  ]);
+
   return json({
     ok: true,
     workflows,
-    mcp_servers: listMcpServersForUi(),
+    drawer_workflows: drawerWorkflows,
+    mcp_servers: mcpServers,
+    connect_urls: mcpConnectUrls(env),
     quick_actions: [
       { label: "Create an image", prompt: "Generate a premium collection banner direction for Fuel n Freetime" },
       { label: "Write or edit", prompt: "Draft product copy for our latest tee — rugged, earned freedom tone" },
@@ -170,6 +216,11 @@ export async function agentsamTools(env) {
 
 export async function agentsamWorkflowsList(env) {
   const workflows = await listStudioWorkflows(env);
+  return json({ ok: true, workflows });
+}
+
+export async function agentsamDrawerWorkflowsList(env) {
+  const workflows = await listDrawerWorkflows(env);
   return json({ ok: true, workflows });
 }
 

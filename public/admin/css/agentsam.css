@@ -148,6 +148,56 @@ body.agentsam-open {
   font-style: italic;
 }
 
+.agentsam-workflows {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 16px 0;
+}
+
+.agentsam-workflow {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.65);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #4a4a4a;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.agentsam-workflow.is-active {
+  background: rgba(92, 45, 145, 0.12);
+  border-color: rgba(92, 45, 145, 0.35);
+  color: #3d2060;
+}
+
+.agentsam-mcp {
+  margin: 8px 16px 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #5a4a20;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.agentsam-mcp a {
+  color: #7c4a00;
+  font-weight: 600;
+}
+
+.agentsam-msg-route {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6b4c99;
+  margin-bottom: 4px;
+}
+
 .agentsam-prompts {
   display: flex;
   flex-wrap: wrap;

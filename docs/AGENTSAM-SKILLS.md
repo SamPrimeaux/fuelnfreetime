@@ -74,12 +74,16 @@ npm run agentsam:skills:sync
 
 Registry: `src/agentsam/mcp-servers.js`
 
-| slug | purpose | status |
-|------|---------|--------|
-| `github` | Repo / PR / code context | `planned` — needs `GITHUB_MCP_TOKEN` |
-| `inneranimalmedia-mcp-server` | Platform D1 / Workers tools | `dev` — needs `IAM_MCP_TOKEN` |
+| slug | purpose | auth |
+|------|---------|------|
+| `inneranimalmedia-mcp-server` | Platform D1 / Workers / GitHub catalog | `AGENTSAM_BRIDGE_KEY` (IAM bridge) |
+| `github` | Repo tools via IAM MCP | GitHub OAuth on IAM + bridge dispatch |
 
-Router attaches relevant MCP lanes to the system prompt; execution wiring is next pass.
+```bash
+npx wrangler secret put AGENTSAM_BRIDGE_KEY
+```
+
+Drawer lists **Content Studio**, **Creative Studio**, **Brand Refresh** by `metadata_json.ui_label`; selected `workflow_key` overrides auto-routing.
 
 
 | slug | provider | endpoint |
