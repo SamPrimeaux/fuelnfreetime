@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pages — Fuel & Free Time Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/admin/css/admin.css">
+</head>
+<body>
+<script src="/admin/js/shell.js"></script>
+<script>
+const PAGE_ROUTES = {
+  home: '/',
+  shop: '/shop.html',
+  about: '/about.html',
+  community: '/community.html',
+};
+
+renderShell('/admin/pages.html', `
+  <div class="admin-toolbar">
+    <div>
+      <h1 class="admin-page-title">Pages</h1>
+      <p class="admin-page-sub">Edit live site heroes and marketing copy. Save drafts, preview, then publish to the storefront.</p>
+    </div>
+  </div>
+
+  <div class="admin-card">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>Page</th>
+          <th>Sections</th>
+          <th>Status</th>
+          <th>Updated</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="pages-body"><tr><td colspan="5" class="admin-empty">Loading…</td></tr></tbody>
+    </table>
+  </div>
+`);
+
+function badge(status) {
+  const cls = status === 'published' ? 'active' : 'draft';
+  return `<span class="badge ${cls}">${status}</span>`;
+}
+
+(async function () {
+  const body = document.getElementById('pages-body');
+  try {
+    const d = await adminFetch('/api/admin/cms/pages');
+    if (!d.pages.length) {
+      body.innerHTML = '<tr><td colspan="5" class="admin-empty">No pages yet.</td></tr>';
+      return;
+    }
+    body.innerHTML = d.pages.map((p) => {
+      const live = PAGE_ROUTES[p.slug] || '#';
+      const preview = `${live}${live.includes('?') ? '&' : '?'}preview=1`;
+      return `
+        <tr>
+          <td>
+            <strong>${p.title}</strong>
+            <div style="color:var(--smoke);font-size:12px;margin-top:2px;">/${p.slug === 'home' ? '' : p.slug}</div>
+          </td>
+          <td>${p.section_count || 0}</td>
+          <td>${badge(p.status || 'draft')}</td>
+          <td>${p.updated_at ? fmtDate(p.updated_at) : '—'}</td>
+          <td style="white-space:nowrap;">
+            <a href="/admin/page-edit.html?slug=${p.slug}" class="btn ghost small">Edit</a>
+            <a href="${preview}" class="btn ghost small" target="_blank" rel="noopener">Preview</a>
+            <a href="${live}" class="btn ghost small" target="_blank" rel="noopener">Live</a>
+          </td>
+        </tr>`;
+    }).join('');
+  } catch (err) {
+    body.innerHTML = `<tr><td colspan="5" class="admin-empty">${err.message}</td></tr>`;
+  }
+})();
+</script>
+</body>
+</html>

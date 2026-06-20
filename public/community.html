@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-cms-page="community">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1232,28 +1232,28 @@
     <section class="community-hero">
         <div class="community-hero-content">
             <h1 class="community-hero-title">
-                Join the <span>Movement</span>
+                <span data-cms="hero.headline">Join the</span> <span data-cms="hero.headlineAccent">Movement</span>
             </h1>
-            <p class="community-hero-subtitle">
+            <p class="community-hero-subtitle" data-cms="hero.subheadline">
                 Where every mile has a story, every hour is earned, and every member is family. 
                 This is more than a brand — it's a brotherhood of freedom seekers.
             </p>
             <div class="community-stats">
                 <div class="stat-item">
-                    <div class="stat-number">5K+</div>
-                    <div class="stat-label">Members Strong</div>
+                    <div class="stat-number" data-cms="hero.stat1Value">5K+</div>
+                    <div class="stat-label" data-cms="hero.stat1Label">Members Strong</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number">23</div>
-                    <div class="stat-label">Cities Connected</div>
+                    <div class="stat-number" data-cms="hero.stat2Value">23</div>
+                    <div class="stat-label" data-cms="hero.stat2Label">Cities Connected</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number">150+</div>
-                    <div class="stat-label">Events Hosted</div>
+                    <div class="stat-number" data-cms="hero.stat3Value">150+</div>
+                    <div class="stat-label" data-cms="hero.stat3Label">Events Hosted</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number">∞</div>
-                    <div class="stat-label">Stories Shared</div>
+                    <div class="stat-number" data-cms="hero.stat4Value">∞</div>
+                    <div class="stat-label" data-cms="hero.stat4Label">Stories Shared</div>
                 </div>
             </div>
         </div>
@@ -1678,6 +1678,7 @@
             });
         })();
     </script>
+    <script src="/js/cms-hydrate.js" defer></script>
     <script src="/js/fnf-newsletter.js" defer></script>
 </body>
 </html>

@@ -14,6 +14,7 @@ const NAV_SECTIONS = [
   {
     label: "Store",
     items: [
+      { href: "/admin/pages.html", label: "Pages" },
       { href: "/admin/store.html", label: "Store Summary" },
       { href: "/admin/products.html", label: "Products" },
       { href: "/admin/media.html", label: "Media" },

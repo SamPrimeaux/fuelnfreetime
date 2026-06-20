@@ -21,6 +21,7 @@ import {
   detachProductImage,
   setPrimaryProductImage,
 } from "./media.js";
+import { handleAdminCmsApi } from "../cms/api.js";
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -377,6 +378,9 @@ export async function handleAdminApi(request, env, url) {
   if (path === "/api/admin/mail/settings" && method === "POST") return postMailSettings(request, env);
   if (path === "/api/admin/mail/messages" && method === "GET") return listMailMessages();
   if (path === "/api/admin/mail/send" && method === "POST") return sendMailPreview(request, env);
+
+  const cmsResponse = await handleAdminCmsApi(request, env, url);
+  if (cmsResponse) return cmsResponse;
 
   return json({ error: "Not found" }, { status: 404 });
 }

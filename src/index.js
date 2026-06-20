@@ -11,6 +11,7 @@
 
 import { handleAdminApi } from "./admin/api.js";
 import { handleStoreApi } from "./store/api.js";
+import { handlePublicCmsApi } from "./cms/api.js";
 import { getSessionUser } from "./lib/auth.js";
 import { redirectWww, resolveStorefrontPath, serveStaticAlias } from "./lib/routes.js";
 
@@ -100,6 +101,10 @@ export default {
 
     if (path.startsWith("/api/store/")) {
       return handleStoreApi(request, env, url);
+    }
+
+    if (path.startsWith("/api/cms/")) {
+      return handlePublicCmsApi(request, env, url);
     }
 
     if (path.startsWith("/api/admin/")) {

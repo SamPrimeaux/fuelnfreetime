@@ -101,3 +101,28 @@ CREATE TABLE IF NOT EXISTS mail_settings (
   settings_json TEXT NOT NULL,
   updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- ===== CMS (pages + editable sections) =====
+
+CREATE TABLE IF NOT EXISTS pages (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  slug        TEXT NOT NULL UNIQUE,
+  title       TEXT NOT NULL,
+  status      TEXT NOT NULL DEFAULT 'draft',
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS page_sections (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  page_id      INTEGER NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+  section_key  TEXT NOT NULL,
+  sort_order   INTEGER NOT NULL DEFAULT 0,
+  content_json TEXT NOT NULL DEFAULT '{}',
+  status       TEXT NOT NULL DEFAULT 'draft',
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(page_id, section_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_page_sections_page ON page_sections(page_id, sort_order);

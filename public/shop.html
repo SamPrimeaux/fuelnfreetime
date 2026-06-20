@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-cms-page="shop">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1510,16 +1510,16 @@
         <div class="fft-hybrid-wrap fft-hybrid-texture">
             <header class="fft-hybrid-hero reveal on">
                 <div class="fft-hybrid-hero-media" aria-hidden="true" data-parallax>
-                    <img src="https://cdn.shopify.com/s/files/1/0666/4060/9411/files/high_octane.jpg?v=1756307558" alt="" loading="eager" fetchpriority="high">
+                    <img src="https://cdn.shopify.com/s/files/1/0666/4060/9411/files/high_octane.jpg?v=1756307558" alt="" loading="eager" fetchpriority="high" data-cms="hero.imageUrl" data-cms-attr="src">
                 </div>
                 <div class="fft-hybrid-hero-content">
                     <div class="fft-hybrid-hero-card">
-                        <div class="fft-eyebrow">Collections</div>
-                        <h1 class="fft-hero-title">A lifestyle built from grit — and time.</h1>
-                        <p class="fft-hero-sub">Shop High Octane, Masters, and Essentials. Clean grid. Real stories. Fire-orange attitude.</p>
+                        <div class="fft-eyebrow" data-cms="hero.eyebrow">Collections</div>
+                        <h1 class="fft-hero-title" data-cms="hero.headline">A lifestyle built from grit — and time.</h1>
+                        <p class="fft-hero-sub" data-cms="hero.subheadline">Shop High Octane, Masters, and Essentials. Clean grid. Real stories. Fire-orange attitude.</p>
                         <div class="fft-cta-row">
-                            <a class="fft-btn accent" href="#fft-grid">Shop All</a>
-                            <a class="fft-btn ghost" href="#fft-collections">Browse Collections</a>
+                            <a class="fft-btn accent" href="#fft-grid" data-cms="hero.ctaPrimary.href" data-cms-attr="href"><span data-cms="hero.ctaPrimary.label">Shop All</span></a>
+                            <a class="fft-btn ghost" href="#fft-collections" data-cms="hero.ctaSecondary.href" data-cms-attr="href"><span data-cms="hero.ctaSecondary.label">Browse Collections</span></a>
                         </div>
                         <div class="fft-gauge" aria-hidden="true"></div>
                     </div>
@@ -2128,6 +2128,7 @@
             });
         })();
     </script>
+    <script src="/js/cms-hydrate.js" defer></script>
     <script src="/js/store-catalog.js" defer></script>
     <script src="/js/store-cart.js" defer></script>
     <script src="/js/fnf-newsletter.js" defer></script>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-cms-page="about">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1348,12 +1348,12 @@
         <section class="about-hero">
             <div class="about-hero-content">
                 <div class="hero-meta-info">
-                    <p class="meta-text-1">Est. 2025</p>
+                    <p class="meta-text-1" data-cms="hero.meta1">Est. 2025</p>
                     <span class="divider"></span>
-                    <p class="meta-text-2">Made in Lafayette, Louisiana</p>
+                    <p class="meta-text-2" data-cms="hero.meta2">Made in Lafayette, Louisiana</p>
                 </div>
-                <h1 class="about-hero-title">Built in the Garage</h1>
-                <p class="about-hero-subtitle">
+                <h1 class="about-hero-title" data-cms="hero.headline">Built in the Garage</h1>
+                <p class="about-hero-subtitle" data-cms="hero.subheadline">
                     Born from blood, sweat, and years of earning our freedom. This is more than a brand — it's a brotherhood.
                 </p>
             </div>
@@ -1860,6 +1860,7 @@
             });
         })();
     </script>
+    <script src="/js/cms-hydrate.js" defer></script>
     <script src="/js/fnf-newsletter.js" defer></script>
 </body>
 </html>

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edit Page — Fuel & Free Time Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/admin/css/admin.css">
+<style>
+  .section-card { margin-bottom: 20px; }
+  .section-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:14px; }
+  .section-head p { margin:4px 0 0; color:var(--smoke); font-size:13px; }
+  .field-hint { font-size:11px; color:var(--smoke); margin-top:4px; }
+  .media-pick-row { display:flex; gap:8px; align-items:center; margin-top:6px; }
+  .media-pick-row .btn { flex:none; }
+  .media-thumb { width:72px; height:48px; object-fit:cover; border-radius:6px; border:1px solid var(--line); background:#000; }
+</style>
+</head>
+<body>
+<script src="/admin/js/shell.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const slug = params.get('slug') || 'shop';
+
+const PAGE_ROUTES = {
+  home: '/',
+  shop: '/shop.html',
+  about: '/about.html',
+  community: '/community.html',
+};
+
+const SECTION_FIELDS = {
+  home: {
+    hero: [
+      { key: 'titleLine1', label: 'Title line 1', type: 'text' },
+      { key: 'titleLine2', label: 'Title line 2 (emphasis)', type: 'text' },
+      { key: 'subheadline', label: 'Subheadline', type: 'textarea' },
+      { key: 'ctaLabel', label: 'CTA label', type: 'text' },
+      { key: 'ctaHref', label: 'CTA link', type: 'text' },
+    ],
+  },
+  shop: {
+    hero: [
+      { key: 'eyebrow', label: 'Eyebrow', type: 'text' },
+      { key: 'headline', label: 'Headline', type: 'text' },
+      { key: 'subheadline', label: 'Subheadline', type: 'textarea' },
+      { key: 'imageUrl', label: 'Hero image URL', type: 'url', media: true },
+      { key: 'ctaPrimary.label', label: 'Primary CTA label', type: 'text' },
+      { key: 'ctaPrimary.href', label: 'Primary CTA link', type: 'text' },
+      { key: 'ctaSecondary.label', label: 'Secondary CTA label', type: 'text' },
+      { key: 'ctaSecondary.href', label: 'Secondary CTA link', type: 'text' },
+    ],
+  },
+  about: {
+    hero: [
+      { key: 'meta1', label: 'Meta line 1', type: 'text' },
+      { key: 'meta2', label: 'Meta line 2', type: 'text' },
+      { key: 'headline', label: 'Headline', type: 'text' },
+      { key: 'subheadline', label: 'Subheadline', type: 'textarea' },
+    ],
+  },
+  community: {
+    hero: [
+      { key: 'headline', label: 'Headline (before accent)', type: 'text' },
+      { key: 'headlineAccent', label: 'Headline accent', type: 'text' },
+      { key: 'subheadline', label: 'Subheadline', type: 'textarea' },
+      { key: 'stat1Value', label: 'Stat 1 value', type: 'text' },
+      { key: 'stat1Label', label: 'Stat 1 label', type: 'text' },
+      { key: 'stat2Value', label: 'Stat 2 value', type: 'text' },
+      { key: 'stat2Label', label: 'Stat 2 label', type: 'text' },
+      { key: 'stat3Value', label: 'Stat 3 value', type: 'text' },
+      { key: 'stat3Label', label: 'Stat 3 label', type: 'text' },
+      { key: 'stat4Value', label: 'Stat 4 value', type: 'text' },
+      { key: 'stat4Label', label: 'Stat 4 label', type: 'text' },
+    ],
+  },
+};
+
+let pageData = null;
+let mediaLibrary = [];
+
+function getPath(obj, path) {
+  return path.split('.').reduce((acc, key) => (acc == null ? acc : acc[key]), obj);
+}
+
+function setPath(obj, path, value) {
+  const keys = path.split('.');
+  let cur = obj;
+  for (let i = 0; i < keys.length - 1; i++) {
+    if (!cur[keys[i]] || typeof cur[keys[i]] !== 'object') cur[keys[i]] = {};
+    cur = cur[keys[i]];
+  }
+  cur[keys[keys.length - 1]] = value;
+}
+
+function fieldId(sectionKey, fieldKey) {
+  return `f-${sectionKey}-${fieldKey.replace(/\./g, '-')}`;
+}
+
+renderShell('/admin/pages.html', `
+  <div class="admin-toolbar">
+    <div>
+      <h1 class="admin-page-title" id="page-title">Edit Page</h1>
+      <p class="admin-page-sub" id="page-sub">Loading…</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="/admin/pages.html" class="btn ghost">&larr; All Pages</a>
+      <a href="#" class="btn ghost" id="preview-btn" target="_blank" rel="noopener">Preview draft</a>
+      <button type="button" class="btn primary" id="publish-btn">Publish live</button>
+    </div>
+  </div>
+  <div id="sections-root"></div>
+  <div class="admin-note" id="page-note" style="display:none;"></div>
+`);
+
+function showNote(msg, kind) {
+  const el = document.getElementById('page-note');
+  el.style.display = 'block';
+  el.className = `admin-note ${kind || ''}`;
+  el.textContent = msg;
+}
+
+function renderSectionForm(section) {
+  const schema = SECTION_FIELDS[slug]?.[section.key];
+  if (!schema) {
+    return `<div class="admin-card section-card"><div class="admin-card-title">${section.key}</div><p class="admin-empty">No editor schema for this section yet.</p></div>`;
+  }
+
+  const fields = schema.map((field) => {
+    const id = fieldId(section.key, field.key);
+    const val = getPath(section.content, field.key) ?? '';
+    const input =
+      field.type === 'textarea'
+        ? `<textarea id="${id}" rows="3">${escapeHtml(String(val))}</textarea>`
+        : `<input id="${id}" type="${field.type === 'url' ? 'url' : 'text'}" value="${escapeAttr(String(val))}">`;
+
+    const mediaRow = field.media
+      ? `<div class="media-pick-row">
+           <img class="media-thumb" id="${id}-thumb" src="${escapeAttr(String(val || ''))}" alt="" onerror="this.style.opacity='0.2'">
+           <button type="button" class="btn ghost small" data-media-target="${id}">Pick from library</button>
+         </div>`
+      : '';
+
+    return `
+      <div class="admin-form-row">
+        <label for="${id}">${field.label}</label>
+        ${input}
+        ${mediaRow}
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="admin-card section-card" data-section="${section.key}">
+      <div class="section-head">
+        <div>
+          <div class="admin-card-title" style="margin:0;text-transform:capitalize;">${section.key} section</div>
+          <p>Changes save as draft until you publish.</p>
+        </div>
+        <span class="badge ${section.status === 'published' ? 'active' : 'draft'}">${section.status || 'draft'}</span>
+      </div>
+      <form class="section-form" data-section-key="${section.key}">
+        ${fields}
+        <button type="submit" class="btn primary">Save section</button>
+      </form>
+    </div>`;
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function escapeAttr(s) {
+  return escapeHtml(s).replace(/"/g, '&quot;');
+}
+
+function collectSectionContent(sectionKey) {
+  const schema = SECTION_FIELDS[slug]?.[sectionKey] || [];
+  const content = {};
+  schema.forEach((field) => {
+    const el = document.getElementById(fieldId(sectionKey, field.key));
+    if (!el) return;
+    setPath(content, field.key, el.value.trim());
+  });
+  return content;
+}
+
+async function loadPage() {
+  const previewUrl = `${PAGE_ROUTES[slug] || '/'}?preview=1`;
+  document.getElementById('preview-btn').href = previewUrl;
+
+  try {
+    const d = await adminFetch(`/api/admin/cms/pages/${slug}`);
+    pageData = d.page;
+    document.getElementById('page-title').textContent = `Edit ${pageData.title}`;
+    document.getElementById('page-sub').textContent =
+      `${pageData.status === 'published' ? 'Published' : 'Draft'} · ${pageData.sections.length} section(s)`;
+
+    const root = document.getElementById('sections-root');
+    root.innerHTML = pageData.sections.map(renderSectionForm).join('');
+
+    root.querySelectorAll('.section-form').forEach((form) => {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const sectionKey = form.dataset.sectionKey;
+        const content = collectSectionContent(sectionKey);
+        try {
+          await adminFetch(`/api/admin/cms/pages/${slug}/sections/${sectionKey}`, {
+            method: 'PUT',
+            body: JSON.stringify({ content }),
+          });
+          showNote(`${sectionKey} saved as draft.`, 'success');
+          await loadPage();
+        } catch (err) {
+          showNote(err.message, 'error');
+        }
+      });
+    });
+
+    root.querySelectorAll('[data-media-target]').forEach((btn) => {
+      btn.addEventListener('click', () => openMediaPicker(btn.dataset.mediaTarget));
+    });
+  } catch (err) {
+    document.getElementById('sections-root').innerHTML =
+      `<div class="admin-card"><p class="admin-empty">${err.message}</p></div>`;
+  }
+}
+
+async function openMediaPicker(targetId) {
+  if (!mediaLibrary.length) {
+    try {
+      const d = await adminFetch('/api/admin/media');
+      mediaLibrary = d.media || [];
+    } catch {
+      showNote('Could not load media library.', 'error');
+      return;
+    }
+  }
+  if (!mediaLibrary.length) {
+    showNote('Media library is empty — upload assets in Media first.', 'error');
+    return;
+  }
+
+  const names = mediaLibrary.map((m, i) => `${i + 1}. ${m.filename}`).join('\n');
+  const pick = prompt(`Enter media number (1–${mediaLibrary.length}):\n\n${names}`);
+  const idx = Number(pick) - 1;
+  if (!Number.isInteger(idx) || idx < 0 || idx >= mediaLibrary.length) return;
+
+  const asset = mediaLibrary[idx];
+  const input = document.getElementById(targetId);
+  const thumb = document.getElementById(`${targetId}-thumb`);
+  if (input) input.value = asset.url;
+  if (thumb) {
+    thumb.src = asset.url;
+    thumb.style.opacity = '1';
+  }
+}
+
+document.getElementById('publish-btn').addEventListener('click', async () => {
+  try {
+    await adminFetch(`/api/admin/cms/pages/${slug}/publish`, { method: 'POST' });
+    showNote('Published to live site.', 'success');
+    await loadPage();
+  } catch (err) {
+    showNote(err.message, 'error');
+  }
+});
+
+loadPage();
+</script>
+</body>
+</html>
