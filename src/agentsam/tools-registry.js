@@ -369,3 +369,20 @@ export async function listToolsGrouped(env) {
 
   return { grouped, total: tools.length };
 }
+
+export async function getActiveToolsHash(env) {
+  try {
+    const tools = await listAgentSamTools(env);
+    const keys = tools
+      .map((t) => t.tool_key)
+      .filter(Boolean)
+      .sort()
+      .join(",");
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(keys));
+    return Array.from(new Uint8Array(buf))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  } catch {
+    return "tools_unavailable";
+  }
+}

@@ -15,7 +15,15 @@ import {
   trackAgentSamEvent,
 } from "../agentsam/analytics.js";
 import { getAIRegistryStatus, listAIModelsGrouped } from "../agentsam/ai-registry.js";
-import { getToolsRegistryStatus, listToolsGrouped } from "../agentsam/tools-registry.js";
+import { getOrBuildContextPack, summarizeContextCache } from "../agentsam/context-cache.js";
+import {
+  getOrBuildPromptPack,
+  invalidatePromptCache,
+  logPromptUsage,
+  summarizePromptCache,
+} from "../agentsam/prompt-cache.js";
+import { listPromptFragments, listPromptTemplates } from "../agentsam/prompt-registry.js";
+import { getActiveToolsHash } from "../agentsam/tools-registry.js";
 import {
   bridgeConfigured,
   fetchGithubContextForChat,
@@ -23,21 +31,17 @@ import {
   probeBridge,
   probeGitHubConnection,
 } from "../agentsam/mcp-client.js";
-import { FNF_GITHUB_REPO } from "../agentsam/constants.js";
+import { FNF_GITHUB_REPO, FNF_WORKSPACE_ID } from "../agentsam/constants.js";
 import { listMcpServersForUi, mcpRuntimeConfig } from "../agentsam/mcp-servers.js";
 import { listDrawerWorkflows, listStudioWorkflows, routeAgentsamRequest } from "../agentsam/router.js";
 import { getAgentSamSkill, listAgentSamSkills } from "../agentsam/skills.js";
 import { getSessionUser } from "../lib/auth.js";
 
-const SYSTEM_PROMPT = `You are Agent Sam for Fuel & Free Time (fuelnfreetime.com).
+const LEGACY_SYSTEM_PROMPT = `You are Agent Sam for Fuel & Free Time (fuelnfreetime.com).
 You handle everything through one conversation: store ops, content writing, creative direction, brand work, email drafts, brainstorming, and repo/code guidance.
 Be concise, practical, and on-brand — rugged, earned freedom, motorsports and garage culture.
-Use LIVE STORE DATA, routed WORKFLOW/SKILLS, and GITHUB context when present.
-For Cloudflare/Workers/D1/R2/deploy/MCP tasks: follow loaded Cloudflare skills and fnf-cloudflare-runtime (bindings, secrets, deploy paths).
-All tools are scoped to this Worker (fuelnfreetime), D1 database fuelnfreetime, R2 bucket fuelnfreetime, and GitHub repo SamPrimeaux/fuelnfreetime only — never other tenants or projects.
-Do not invent inventory, orders, or prices.
-For image/logo/code tasks: produce clear deliverables, steps, or drafts; note when live publish or asset replacement needs owner approval.
-GitHub access is scoped to SamPrimeaux/fuelnfreetime only.`;
+All tools are scoped to this Worker (fuelnfreetime), D1 database fuelnfreetime, R2 bucket fuelnfreetime, and GitHub repo SamPrimeaux/fuelnfreetime only.
+Do not invent inventory, orders, or prices.`;
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -52,38 +56,89 @@ async function readJson(request) {
 }
 
 async function liveStoreContext(env) {
+  /* moved to context-cache.js — kept for emergency fallback */
   try {
-    const [products, pages, lowStock] = await Promise.all([
+    const [products] = await Promise.all([
       env.DB.prepare(`SELECT COUNT(*) AS n FROM products WHERE status = 'active'`).first(),
-      env.DB.prepare(
-        `SELECT slug, title, status, updated_at FROM pages ORDER BY updated_at DESC LIMIT 12`
-      ).all(),
-      env.DB.prepare(
-        `SELECT p.title, v.size, v.inventory_qty, v.sku
-         FROM product_variants v
-         JOIN products p ON p.id = v.product_id
-         WHERE p.status = 'active' AND v.inventory_qty <= 5
-         ORDER BY v.inventory_qty ASC LIMIT 8`
-      ).all(),
     ]);
-
-    const pageLines = (pages.results || [])
-      .map((p) => `- ${p.slug}: ${p.status} (updated ${p.updated_at || "—"})`)
-      .join("\n");
-
-    const stockLines = (lowStock.results || [])
-      .map((r) => `- ${r.title} ${r.size || r.sku}: ${r.inventory_qty} left`)
-      .join("\n");
-
-    return `LIVE STORE DATA:
-Active products: ${products?.n ?? 0}
-Pages:
-${pageLines || "(none seeded — run CMS bootstrap in admin)"}
-Low stock (≤5):
-${stockLines || "(none)"}`;
+    return `LIVE STORE DATA: Active products: ${products?.n ?? 0}`;
   } catch {
     return "LIVE STORE DATA: unavailable (D1 not bound).";
   }
+}
+
+async function assembleSystemPrompt(env, routing, context, message, attachments, mcpContext, request) {
+  const promptStarted = Date.now();
+  const aiRouting = routing.ai_routing || {};
+  const workflowKey = routing.classification?.workflow_key;
+  const attachmentBlock = formatAttachmentsForPrompt(attachments);
+  const imageNames = attachments
+    .filter((a) => a.kind === "image" || a.image_base64 || String(a.mime_type || "").startsWith("image/"))
+    .map((a) => a.name)
+    .join(", ");
+  const attachmentHint = [
+    imageNames ? `User attached image(s): ${imageNames}. Use vision when appropriate.` : "",
+    attachmentBlock,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  let toolHash = "no_tools";
+  let contextPack;
+  let promptPack;
+
+  try {
+    toolHash = await getActiveToolsHash(env);
+    contextPack = await getOrBuildContextPack(env, routing, message, {
+      conversation_id: context.conversation_id,
+      bridge_ready: bridgeConfigured(env),
+      repo_context: mcpContext,
+      attachment_hint: attachmentHint || null,
+      page: context.page,
+      slug: context.slug,
+    });
+    promptPack = await getOrBuildPromptPack(env, routing, context, {
+      tool_hash: toolHash,
+      context_hash: contextPack.contextHash,
+    });
+  } catch (err) {
+    console.error("prompt assembly fallback", err?.message || err);
+    contextPack = {
+      contextText: await liveStoreContext(env),
+      cache_hit: false,
+      cache_key: null,
+      estimatedTokens: 0,
+      contextHash: "fallback",
+    };
+    promptPack = {
+      systemPrompt: LEGACY_SYSTEM_PROMPT,
+      cache_hit: false,
+      cache_key: null,
+      fragmentKeys: [],
+      estimatedTokens: 0,
+      build_duration_ms: Date.now() - promptStarted,
+      cache_lookup_ms: 0,
+    };
+  }
+
+  const connectUrls = mcpConnectUrls(env);
+  const oauthBlock = connectUrls.fnf_github_oauth
+    ? `GitHub OAuth (FNF-scoped): ${new URL(connectUrls.fnf_github_oauth, request.url).toString()}`
+    : "";
+
+  const systemPrompt = [promptPack.systemPrompt, contextPack.contextText, oauthBlock]
+    .filter(Boolean)
+    .join("\n\n");
+
+  return {
+    systemPrompt,
+    promptPack,
+    contextPack,
+    toolHash,
+    buildDurationMs: Date.now() - promptStarted,
+    aiRouting,
+    workflowKey,
+  };
 }
 
 export async function agentsamChat(request, env, executionCtx = null) {
@@ -250,28 +305,93 @@ export async function agentsamChat(request, env, executionCtx = null) {
 
   const connectUrls = mcpConnectUrls(env);
 
-  const attachmentBlock = formatAttachmentsForPrompt(attachments);
-  const imageNames = attachments
-    .filter((a) => a.kind === "image" || a.image_base64 || String(a.mime_type || "").startsWith("image/"))
-    .map((a) => a.name)
-    .join(", ");
-
-  const systemPrompt = [
-    SYSTEM_PROMPT,
-    context.page ? `Admin UI path: ${context.page}.` : "",
-    context.slug ? `Editing CMS page slug: ${context.slug}.` : "",
-    context.workflow_key ? `Selected workflow: ${context.workflow_key}.` : "",
-    imageNames ? `User attached image(s): ${imageNames}. Use vision analysis when an image is present.` : "",
-    attachmentBlock,
-    await liveStoreContext(env),
+  const assembled = await assembleSystemPrompt(
+    env,
+    routing,
+    { ...context, conversation_id: conversationId },
+    message,
+    attachments,
     mcpContext,
-    connectUrls.fnf_github_oauth
-      ? `GitHub OAuth (FNF-scoped): ${new URL(connectUrls.fnf_github_oauth, request.url).toString()}`
-      : "",
-    ...routing.system_blocks,
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+    request
+  );
+  const systemPrompt = assembled.systemPrompt;
+  const promptPack = assembled.promptPack;
+  const contextPack = assembled.contextPack;
+
+  await trackAgentSamEvent(
+    env,
+    {
+      event_type: "system",
+      event_name: promptPack.cache_hit ? "prompt_cache_hit" : "prompt_cache_miss",
+      status: "success",
+      workflow_key: workflowKey,
+      task_type: aiRouting.task_type,
+      route_lane: aiRouting.lane || aiRouting.model_lane,
+      metadata: {
+        prompt_cache_key: promptPack.cache_key,
+        fragment_keys: promptPack.fragmentKeys,
+        estimated_prompt_tokens: promptPack.estimatedTokens,
+      },
+    },
+    trackBase
+  );
+
+  await trackAgentSamEvent(
+    env,
+    {
+      event_type: "system",
+      event_name: contextPack.cache_hit ? "context_cache_hit" : "context_cache_miss",
+      status: "success",
+      workflow_key: workflowKey,
+      metadata: {
+        context_cache_key: contextPack.cache_key,
+        estimated_context_tokens: contextPack.estimatedTokens,
+      },
+    },
+    trackBase
+  );
+
+  if (!promptPack.cache_hit) {
+    await trackAgentSamEvent(
+      env,
+      { event_type: "system", event_name: "prompt_pack_built", status: "success", workflow_key: workflowKey },
+      trackBase
+    );
+  }
+  if (!contextPack.cache_hit) {
+    await trackAgentSamEvent(
+      env,
+      { event_type: "system", event_name: "context_pack_built", status: "success", workflow_key: workflowKey },
+      trackBase
+    );
+  }
+
+  const savedTokens =
+    (promptPack.cache_hit ? promptPack.estimatedTokens : 0) +
+    (contextPack.cache_hit ? contextPack.estimatedTokens : 0);
+
+  logPromptUsage(
+    env,
+    {
+      conversation_id: conversationId,
+      message_id: ids.message_id,
+      run_id: ids.run_id,
+      workflow_key: workflowKey,
+      route_lane: aiRouting.lane || aiRouting.model_lane,
+      task_type: aiRouting.task_type,
+      prompt_cache_key: promptPack.cache_key,
+      context_cache_key: contextPack.cache_key,
+      prompt_cache_hit: promptPack.cache_hit,
+      context_cache_hit: contextPack.cache_hit,
+      prompt_tokens_estimated: promptPack.estimatedTokens,
+      context_tokens_estimated: contextPack.estimatedTokens,
+      build_duration_ms: assembled.buildDurationMs,
+      cache_lookup_ms: (promptPack.cache_lookup_ms || 0) + (contextPack.cache_lookup_ms || 0),
+      saved_tokens_estimated: savedTokens,
+      status: promptPack.cache_hit && contextPack.cache_hit ? "success" : "miss",
+    },
+    trackBase
+  );
 
   if (aiRouting.task_type === "image_generation") {
     await trackAgentSamEvent(
@@ -298,6 +418,14 @@ export async function agentsamChat(request, env, executionCtx = null) {
     image_url: aiRouting.image_url || context.image_url,
     workflow_key: workflowKey,
     intent: routing.classification.intent,
+    prompt_meta: {
+      prompt_cache_hit: promptPack.cache_hit,
+      context_cache_hit: contextPack.cache_hit,
+      prompt_cache_key: promptPack.cache_key,
+      context_cache_key: contextPack.cache_key,
+      fragment_keys: promptPack.fragmentKeys,
+      estimated_prompt_tokens: promptPack.estimatedTokens + contextPack.estimatedTokens,
+    },
     analytics: {
       execution_ctx: executionCtx,
       ...ids,
@@ -430,6 +558,14 @@ export async function agentsamChat(request, env, executionCtx = null) {
       conversation_id: conversationId,
       tracked: true,
     },
+    prompt: {
+      cache_hit: Boolean(promptPack.cache_hit),
+      prompt_cache_key: promptPack.cache_key,
+      context_cache_hit: Boolean(contextPack.cache_hit),
+      context_cache_key: contextPack.cache_key,
+      estimated_prompt_tokens: (promptPack.estimatedTokens || 0) + (contextPack.estimatedTokens || 0),
+      fragment_keys: promptPack.fragmentKeys || [],
+    },
   });
 }
 
@@ -549,4 +685,65 @@ export async function agentsamAnalyticsSummary(env, url) {
   const range = url.searchParams.get("range") || "24h";
   const summary = await summarizeAgentSamAnalytics(env, { range });
   return json(summary);
+}
+
+export async function agentsamPromptsList(env) {
+  const [prompts, fragments] = await Promise.all([
+    listPromptTemplates(env),
+    listPromptFragments(env),
+  ]);
+  return json({ ok: true, prompts, fragments });
+}
+
+export async function agentsamPromptCacheSummary(env) {
+  const [prompt_cache, context_cache] = await Promise.all([
+    summarizePromptCache(env),
+    summarizeContextCache(env),
+  ]);
+
+  let top_workflows = [];
+  let top_fragments = [];
+  try {
+    const wf = await env.DB.prepare(
+      `SELECT workflow_key, COUNT(*) AS n, SUM(saved_tokens_estimated) AS saved
+       FROM agentsam_prompt_usage WHERE workspace_id = ? AND created_at_unix >= ?
+       GROUP BY workflow_key ORDER BY n DESC LIMIT 5`
+    )
+      .bind(FNF_WORKSPACE_ID, Math.floor(Date.now() / 1000) - 86400)
+      .all();
+    top_workflows = wf.results || [];
+
+    top_fragments = await listPromptFragments(env);
+  } catch {
+    /* non-blocking */
+  }
+
+  return json({
+    ok: true,
+    prompt_cache,
+    context_cache,
+    top_fragments: (top_fragments || []).slice(0, 7).map((f) => f.fragment_key),
+    top_workflows,
+  });
+}
+
+export async function agentsamPromptCacheInvalidate(request, env) {
+  let body = {};
+  try {
+    body = (await request.json()) || {};
+  } catch {
+    body = {};
+  }
+  const prompt = await invalidatePromptCache(env, {
+    reason: body.reason || "admin_invalidate",
+    workflow_key: body.workflow_key,
+    cache_key: body.cache_key,
+  });
+  const { invalidateContextCache } = await import("../agentsam/context-cache.js");
+  const context = await invalidateContextCache(env, {
+    reason: body.reason || "admin_invalidate",
+    workflow_key: body.workflow_key,
+    cache_key: body.context_cache_key,
+  });
+  return json({ ok: true, prompt, context });
 }

@@ -1,6 +1,6 @@
 /**
  * Agent Sam request router — intent → workflow + skills + MCP lanes.
- * Single chat input; no mode picker required.
+ * Prompt/context assembly is handled by prompt-registry + context-cache after routing.
  */
 
 import { resolveAIRouting } from "./ai-registry.js";

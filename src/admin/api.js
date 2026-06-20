@@ -40,6 +40,9 @@ import {
   agentsamStatus,
   agentsamTools,
   agentsamWorkflowsList,
+  agentsamPromptsList,
+  agentsamPromptCacheSummary,
+  agentsamPromptCacheInvalidate,
 } from "./agentsam.js";
 import {
   agentsamConversationCreate,
@@ -481,6 +484,15 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   }
   if (path === "/api/admin/agentsam/tools" && method === "GET") {
     return agentsamTools(env);
+  }
+  if (path === "/api/admin/agentsam/prompts" && method === "GET") {
+    return agentsamPromptsList(env);
+  }
+  if (path === "/api/admin/agentsam/prompts/cache/summary" && method === "GET") {
+    return agentsamPromptCacheSummary(env);
+  }
+  if (path === "/api/admin/agentsam/prompts/cache/invalidate" && method === "POST") {
+    return agentsamPromptCacheInvalidate(request, env);
   }
   if (path === "/api/admin/agentsam/ai/models" && method === "GET") {
     return agentsamAiModelsList(env);

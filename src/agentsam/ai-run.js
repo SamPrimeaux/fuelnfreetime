@@ -214,7 +214,12 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
           fallback_attempt_index: index,
           attempted_models: attemptedModels,
           ai_latency_ms: durationMs,
-          metadata: { emergency: !!model.emergency, registry: !model.emergency },
+          metadata: {
+            emergency: !!model.emergency,
+            registry: !model.emergency,
+            prompt_cache_hit: routing.prompt_meta?.prompt_cache_hit ?? null,
+            context_cache_hit: routing.prompt_meta?.context_cache_hit ?? null,
+          },
         },
         trackOpts
       );
