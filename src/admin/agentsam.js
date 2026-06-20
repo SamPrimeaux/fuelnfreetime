@@ -1,4 +1,10 @@
 import { M } from "../cms/media-paths.js";
+import {
+  formatSkillsForPrompt,
+  getAgentSamSkill,
+  listAgentSamSkills,
+  resolveSkillsForChat,
+} from "../agentsam/skills.js";
 
 const AGENTSAM_MODEL = "@cf/meta/llama-3.1-8b-instruct";
 
@@ -74,10 +80,14 @@ export async function agentsamChat(request, env) {
   if (!message) return json({ error: "message required" }, { status: 400 });
 
   const context = body?.context || {};
+  const matchedSkills = await resolveSkillsForChat(env, message, context);
+  const skillsBlock = formatSkillsForPrompt(matchedSkills);
+
   const contextLines = [
     context.page ? `Admin UI path: ${context.page}.` : "",
     context.slug ? `Editing CMS page slug: ${context.slug}.` : "",
     await liveStoreContext(env),
+    skillsBlock,
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -101,7 +111,12 @@ export async function agentsamChat(request, env) {
     });
 
     const reply = extractReply(result).trim() || "I couldn't generate a response. Try again.";
-    return json({ ok: true, reply, model: AGENTSAM_MODEL });
+    return json({
+      ok: true,
+      reply,
+      model: AGENTSAM_MODEL,
+      skills: matchedSkills.map((s) => ({ slug: s.slug, name: s.name })),
+    });
   } catch (err) {
     console.error("agentsam chat error", err);
     return json(
@@ -115,10 +130,35 @@ export async function agentsamChat(request, env) {
 }
 
 export async function agentsamStatus(env) {
+  let skillCount = 0;
+  try {
+    const { results } = await env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM agentsam_skill WHERE is_active = 1`
+    ).all();
+    skillCount = results?.[0]?.n ?? 0;
+  } catch {
+    /* table may not exist yet */
+  }
+
   return json({
     ok: true,
     bound: !!env.AGENTSAM_WAI,
     model: AGENTSAM_MODEL,
     name: "Agent Sam",
+    skills_registered: skillCount,
+    skills_storage: "D1 agentsam_skill + R2 agentsam/skills/",
   });
+}
+
+export async function agentsamSkillsList(env, url) {
+  const hydrate = url.searchParams.get("hydrate") === "1";
+  const skills = await listAgentSamSkills(env, { hydrate });
+  return json({ ok: true, skills });
+}
+
+export async function agentsamSkillGet(env, slug, url) {
+  const includeReferences = url.searchParams.get("references") !== "0";
+  const skill = await getAgentSamSkill(env, slug, { includeReferences });
+  if (!skill) return json({ error: "Skill not found" }, { status: 404 });
+  return json({ ok: true, skill });
 }

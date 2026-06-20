@@ -1,6 +1,6 @@
 # Agent skills (Fuel & Free Time)
 
-Project-scoped Cursor agent skills for this repo. Anyone cloning the repo gets them automatically.
+Project-scoped Cursor agent skills. **Runtime copy** lives in R2 `agentsam/skills/` with D1 registry — sync via `npm run agentsam:skills:sync`. See [`docs/AGENTSAM-SKILLS.md`](../docs/AGENTSAM-SKILLS.md).
 
 ## Stripe skills (upstream)
 

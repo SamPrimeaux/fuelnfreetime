@@ -26,7 +26,7 @@ import {
   setPrimaryProductImage,
 } from "./media.js";
 import { handleAdminCmsApi } from "../cms/api.js";
-import { agentsamChat, agentsamStatus } from "./agentsam.js";
+import { agentsamChat, agentsamSkillGet, agentsamSkillsList, agentsamStatus } from "./agentsam.js";
 import { onlineStoreOverview, getStorePreferences, postStorePreferences } from "./store.js";
 
 function json(data, init = {}) {
@@ -425,6 +425,14 @@ export async function handleAdminApi(request, env, url) {
   }
   if (path === "/api/admin/agentsam/status" && method === "GET") {
     return agentsamStatus(env);
+  }
+  if (path === "/api/admin/agentsam/skills" && method === "GET") {
+    return agentsamSkillsList(env, url);
+  }
+
+  let skillMatch = path.match(/^\/api\/admin\/agentsam\/skills\/([a-z0-9-]+)$/);
+  if (skillMatch && method === "GET") {
+    return agentsamSkillGet(env, skillMatch[1], url);
   }
 
   const liveMatch = path.match(/^\/api\/admin\/cms\/live\/([a-z0-9-]+)$/);
