@@ -15,7 +15,7 @@ Aligned with **inneranimalmedia** `agentsam_skill` / `agentsam_hook` / `agentsam
 | **D1** | `agentsam_workflows` | Canonical workflow registry (IAM parity) |
 | **D1** | `agentsam_ai` | Workers AI model registry + routed fallbacks |
 | **D1** | `agentsam_analytics` | Event ledger (chat, routing, MCP, AI cost) |
-| **D1** | `agentsam_tools` | Tool catalog SSOT (handlers, MCP bridge, store/CMS) |
+| **D1** | `agentsam_tools` | Tool catalog SSOT — **scoped to FNF worker/D1/R2/repo only** |
 | **D1** | `agentsam_mcp_servers` | MCP server registry |
 | **D1** | `agentsam_tool_policy_keys` | Chat allowlists / non-cacheable policies |
 | **D1** | `agentsam_tool_chain` | Multi-step tool execution chain |
@@ -91,6 +91,7 @@ Chat resolver loads up to **3 skills**: always-on `fnf-cloudflare-runtime` + bes
 
 ```bash
 npm run db:install:agentsam-tools   # migrate + seed tools platform
+npm run db:patch:agentsam-tools-scope  # enforce FNF worker/D1/R2/repo scope on catalog
 npm run db:install:agentsam-ai      # migrate + seed AI model registry
 ```
 

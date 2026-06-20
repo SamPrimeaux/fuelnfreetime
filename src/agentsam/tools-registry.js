@@ -2,7 +2,12 @@
  * AgentSam tools registry — D1-backed catalog (IAM parity, FNF scoped).
  */
 
-import { FNF_TENANT_ID, FNF_WORKSPACE_ID } from "./constants.js";
+import {
+  FNF_PLATFORM_SCOPE,
+  FNF_TENANT_ID,
+  FNF_TOOL_SCOPE_NOTE,
+  FNF_WORKSPACE_ID,
+} from "./constants.js";
 import { sanitizeAnalyticsText } from "./analytics.js";
 
 function parseJson(raw, fallback = null) {
@@ -67,6 +72,42 @@ function matchesWorkspace(tool, workspaceId = FNF_WORKSPACE_ID) {
   return scopes.includes(workspaceId);
 }
 
+function matchesFnfPlatformScope(tool) {
+  const cfg = tool.handler_config || {};
+  const scope = cfg.fnf_scope || {};
+
+  if (cfg.database && cfg.database !== FNF_PLATFORM_SCOPE.d1_database) return false;
+  if (cfg.d1_database && cfg.d1_database !== FNF_PLATFORM_SCOPE.d1_database) return false;
+  if (cfg.binding && cfg.binding !== FNF_PLATFORM_SCOPE.d1_binding && cfg.binding !== FNF_PLATFORM_SCOPE.r2_binding) {
+    return false;
+  }
+  if (cfg.r2_bucket && cfg.r2_bucket !== FNF_PLATFORM_SCOPE.r2_bucket) return false;
+  if (cfg.worker && cfg.worker !== FNF_PLATFORM_SCOPE.worker) return false;
+
+  const repos = cfg.repo_allowlist || scope.github_repos || [];
+  if (Array.isArray(repos) && repos.length) {
+    const ok = repos.every((r) => String(r).toLowerCase() === FNF_PLATFORM_SCOPE.github_repo.toLowerCase());
+    if (!ok) return false;
+  }
+
+  if (scope.workspace_id && scope.workspace_id !== FNF_WORKSPACE_ID) return false;
+  if (scope.tenant_id && scope.tenant_id !== FNF_TENANT_ID) return false;
+
+  return true;
+}
+
+export function formatScopeForPrompt() {
+  return `TOOL PLATFORM SCOPE (hard limit):
+- Worker: ${FNF_PLATFORM_SCOPE.worker}
+- D1: ${FNF_PLATFORM_SCOPE.d1_database} via ${FNF_PLATFORM_SCOPE.d1_binding}
+- R2: ${FNF_PLATFORM_SCOPE.r2_bucket} via ${FNF_PLATFORM_SCOPE.r2_binding}
+- GitHub: ${FNF_PLATFORM_SCOPE.github_repo}
+- Domain: ${FNF_PLATFORM_SCOPE.domain}
+${FNF_TOOL_SCOPE_NOTE}`;
+}
+
+export { FNF_PLATFORM_SCOPE, FNF_TOOL_SCOPE_NOTE };
+
 function scoreTool(tool, { intent, message, workflowKey, taskType, domain }) {
   let score = 0;
   const hay = `${intent || ""} ${message || ""} ${workflowKey || ""} ${taskType || ""}`.toLowerCase();
@@ -90,8 +131,8 @@ export async function listAgentSamTools(env, options = {}) {
   if (!env?.DB) return [];
 
   const includeInactive = options.includeInactive === true;
-  const clauses = ["tenant_id = ?"];
-  const binds = [options.tenant_id || FNF_TENANT_ID];
+  const clauses = ["tenant_id = ?", "(workspace_id IS NULL OR workspace_id = ?)"];
+  const binds = [options.tenant_id || FNF_TENANT_ID, options.workspace_id || FNF_WORKSPACE_ID];
 
   if (!includeInactive) clauses.push("is_active = 1");
   if (options.handler_type) {
@@ -117,7 +158,10 @@ export async function listAgentSamTools(env, options = {}) {
       .bind(...binds)
       .all();
 
-    return (results || []).map(mapToolRow).filter((t) => matchesWorkspace(t, options.workspace_id));
+    return (results || [])
+      .map(mapToolRow)
+      .filter((t) => matchesWorkspace(t, options.workspace_id))
+      .filter((t) => matchesFnfPlatformScope(t));
   } catch (err) {
     console.error("agentsam tools list failed", err?.message || err);
     return [];
@@ -236,13 +280,15 @@ export async function getToolsRegistryStatus(env) {
 }
 
 export function formatToolsForPrompt(tools = []) {
-  if (!tools?.length) return "";
+  const scopeBlock = formatScopeForPrompt();
+  if (!tools?.length) return scopeBlock;
+
   const lines = tools.map((t) => {
     const approval = t.requires_approval ? " [approval required]" : "";
     const lane = t.mcp_server_key ? ` via ${t.mcp_server_key}` : "";
     return `- ${t.display_name} (${t.tool_key}) — ${t.description}${lane}${approval}`;
   });
-  return `AVAILABLE TOOLS:\n${lines.join("\n")}`;
+  return `${scopeBlock}\n\nAVAILABLE TOOLS:\n${lines.join("\n")}`;
 }
 
 /**
