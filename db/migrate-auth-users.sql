@@ -1,4 +1,4 @@
--- IAM-parity auth_users + auth_sessions for Fuel & Free Time
+-- auth_users + auth_sessions for Fuel & Free Time
 -- Run: npm run db:migrate:auth-users
 -- Migrates legacy admin_users → auth_users; sessions use auth_sessions (TEXT user_id)
 
@@ -14,13 +14,9 @@ CREATE TABLE IF NOT EXISTS auth_users (
   updated_at              TEXT DEFAULT (datetime('now')),
   tenant_id               TEXT,
   is_superadmin           INTEGER DEFAULT 0,
-  superadmin_group_id     TEXT,
   is_verified             INTEGER NOT NULL DEFAULT 0,
   verified_at             INTEGER,
-  superadmin_uuid         TEXT,
   superadmin_identity_id  TEXT,
-  person_uuid             TEXT,
-  supabase_user_id        TEXT,
   status                  TEXT DEFAULT 'active',
   active_tenant_id        TEXT,
   active_workspace_id     TEXT,
@@ -31,11 +27,9 @@ CREATE TABLE IF NOT EXISTS auth_users (
   phone                   TEXT,
   mfa_enabled             INTEGER DEFAULT 0,
   timezone                TEXT DEFAULT 'America/Chicago',
-  user_key                TEXT,
   default_workspace_id    TEXT,
   role                    TEXT NOT NULL DEFAULT 'member',
   account_type            TEXT NOT NULL DEFAULT 'human',
-  identity_label          TEXT,
   iam_owned               INTEGER NOT NULL DEFAULT 0,
   downgrade_protected     INTEGER NOT NULL DEFAULT 0,
   notification_email      TEXT,

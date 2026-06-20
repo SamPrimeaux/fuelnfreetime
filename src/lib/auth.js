@@ -1,5 +1,5 @@
 /**
- * Admin auth — IAM-parity auth_users + auth_sessions (PBKDF2, httpOnly cookie).
+ * Admin auth — auth_users + auth_sessions (PBKDF2, httpOnly cookie).
  */
 
 import { FNF_TENANT_ID, FNF_WORKSPACE_ID } from "../agentsam/constants.js";

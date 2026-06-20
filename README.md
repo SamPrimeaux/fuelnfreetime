@@ -85,7 +85,7 @@ Registry source of truth: [`src/cms/registry.js`](src/cms/registry.js)
 | `media_assets` | R2 library metadata |
 | `store_settings` | SEO title, meta description, social image |
 | `orders` / `order_items` | Checkout (Stripe pending) |
-| `auth_users` / `auth_sessions` | Admin auth (IAM-parity; canonical) |
+| `auth_users` / `auth_sessions` | Admin auth (canonical) |
 | `admin_users` / `admin_sessions` | Legacy auth (kept for migration fallback) |
 
 ---
