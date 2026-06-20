@@ -8,6 +8,7 @@ import {
   FNF_TOOL_SCOPE_NOTE,
   FNF_WORKSPACE_ID,
 } from "./constants.js";
+import { isToolKeyAllowed } from "./feature-gates.js";
 import { sanitizeAnalyticsText } from "./analytics.js";
 
 function parseJson(raw, fallback = null) {
@@ -161,7 +162,8 @@ export async function listAgentSamTools(env, options = {}) {
     return (results || [])
       .map(mapToolRow)
       .filter((t) => matchesWorkspace(t, options.workspace_id))
-      .filter((t) => matchesFnfPlatformScope(t));
+      .filter((t) => matchesFnfPlatformScope(t))
+      .filter((t) => isToolKeyAllowed(t.tool_key, t.display_name));
   } catch (err) {
     console.error("agentsam tools list failed", err?.message || err);
     return [];

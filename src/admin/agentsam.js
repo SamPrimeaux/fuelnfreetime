@@ -5,6 +5,11 @@ import {
 } from "../agentsam/attachments.js";
 import { hydrateAttachmentsForChat } from "../agentsam/files.js";
 import { buildAgentsamUiConfig } from "../agentsam/quick-actions.js";
+import {
+  BLOCKED_FEATURE_MESSAGES,
+  detectBlockedFeatureRequest,
+  getAgentFeatures,
+} from "../agentsam/feature-gates.js";
 import { persistChatExchange } from "../agentsam/threads.js";
 import { buildToolCallFromGithubMeta, routeChipsFromRouting } from "../agentsam/tool-traces.js";
 import { runAgentSamAi } from "../agentsam/ai-run.js";
@@ -205,6 +210,57 @@ export async function agentsamChat(request, env, executionCtx = null) {
     },
     trackBase
   );
+
+  const blockedFeature = detectBlockedFeatureRequest(message, attachments);
+  if (blockedFeature) {
+    const blockedReply = BLOCKED_FEATURE_MESSAGES[blockedFeature];
+
+    await trackAgentSamEvent(
+      env,
+      {
+        event_type: "system",
+        event_name: "feature_blocked",
+        status: "blocked",
+        prompt_text: message,
+        metadata: { feature: blockedFeature, reason: "disabled_for_workspace" },
+      },
+      trackBase
+    );
+
+    persistChatExchange(env, {
+      conversationId,
+      messageId: ids.message_id,
+      userMessage: message,
+      assistantReply: blockedReply,
+      attachments,
+      toolCalls: [],
+      routing: {
+        classification: {
+          intent: "general",
+          workflow_key: "fnf_agentsam_chat",
+          task_type: "admin_chat",
+          source: "feature_gate",
+        },
+      },
+      ai: { ok: true, reply: blockedReply },
+      ctx: executionCtx,
+    });
+
+    return json({
+      ok: true,
+      reply: blockedReply,
+      conversation_id: conversationId,
+      feature_blocked: blockedFeature,
+      route_chips: [],
+      tool_calls: [],
+      analytics: {
+        session_id: ids.session_id,
+        message_id: ids.message_id,
+        conversation_id: conversationId,
+        tracked: true,
+      },
+    });
+  }
 
   const routingStarted = Date.now();
   const routing = await routeAgentsamRequest(env, message, context);
@@ -644,6 +700,7 @@ export async function agentsamTools(env) {
     connect_urls: mcpConnectUrls(env),
     quick_actions: uiConfig.quick_actions,
     plus_menu: uiConfig.plus_menu,
+    features: getAgentFeatures(),
     iam_logo_url: uiConfig.iam_logo_url,
   });
 }
@@ -678,7 +735,7 @@ export async function agentsamAiModelsList(env) {
 
 export async function agentsamToolsCatalog(env) {
   const { grouped, total } = await listToolsGrouped(env);
-  return json({ ok: true, grouped, total });
+  return json({ ok: true, grouped, total, features: getAgentFeatures() });
 }
 
 export async function agentsamAnalyticsSummary(env, url) {

@@ -509,22 +509,11 @@ function renderChips(actions) {
 function applyPlusMenuConfig(config) {
   plusMenuConfig = config || {};
   const imageBtn = $("agentsam-menu-image");
-  const researchBtn = $("agentsam-menu-research");
-  const webBtn = $("agentsam-menu-web");
 
   if (imageBtn && config.image) {
     imageBtn.textContent = config.image.label || "Create image";
     imageBtn.disabled = !config.image.enabled;
-  }
-  if (researchBtn && config.research) {
-    researchBtn.textContent = config.research.label || "Plan research";
-    researchBtn.disabled = !config.research.enabled;
-    researchBtn.title = config.research.disabled_reason || "";
-  }
-  if (webBtn && config.web) {
-    webBtn.textContent = config.web.label || "Web search";
-    webBtn.disabled = !config.web.enabled;
-    webBtn.title = config.web.disabled_reason || "";
+    imageBtn.hidden = config.image.enabled === false;
   }
 }
 

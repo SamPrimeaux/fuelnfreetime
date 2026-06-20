@@ -3,7 +3,11 @@
  */
 
 import { FNF_WORKSPACE_ID } from "./constants.js";
-import { listAgentSamTools } from "./tools-registry.js";
+import {
+  getAgentFeatures,
+  isFeatureEnabled,
+  isQuickActionAllowed,
+} from "./feature-gates.js";
 import { listStudioWorkflows } from "./router.js";
 
 const IAM_LOGO =
@@ -30,16 +34,8 @@ const DEFAULT_ACTIONS = [
   },
 ];
 
-function parseJson(raw, fallback = null) {
-  try {
-    if (raw == null || raw === "") return fallback;
-    return typeof raw === "string" ? JSON.parse(raw) : raw;
-  } catch {
-    return fallback;
-  }
-}
-
 async function hasActiveImageModels(env) {
+  if (!isFeatureEnabled("image_generation")) return false;
   try {
     const row = await env.DB.prepare(
       `SELECT COUNT(*) AS n FROM agentsam_ai
@@ -51,17 +47,6 @@ async function hasActiveImageModels(env) {
   } catch {
     return false;
   }
-}
-
-async function hasExecutableWebTool(env) {
-  const tools = await listAgentSamTools(env);
-  return tools.some(
-    (t) =>
-      t.is_active &&
-      /web|search/i.test(`${t.tool_key} ${t.display_name}`) &&
-      t.handler_type === "mcp" &&
-      !/cloudflare.docs|documentation/i.test(t.display_name || "")
-  );
 }
 
 export async function buildQuickActions(env) {
@@ -97,82 +82,69 @@ export async function buildQuickActions(env) {
       prompt: content.suggested_prompts?.[0] || "Write better product copy for this item.",
       enabled: true,
     });
+
+    if (content.suggested_prompts?.length > 1) {
+      actions.push({
+        id: "improve_copy",
+        label: "Improve product copy",
+        workflow_key: "fnf_content_studio",
+        task_type: "text_generation",
+        lane: "general",
+        prompt: content.suggested_prompts[0] || "Improve this product description for Fuel n Freetime.",
+        enabled: true,
+      });
+    }
   }
 
-  const hasWeb = await hasExecutableWebTool(env);
-  if (hasWeb) {
+  if (isFeatureEnabled("image_upload")) {
     actions.push({
-      id: "lookup",
-      label: "Look something up",
-      workflow_key: "fnf_content_studio",
-      task_type: "text_generation",
-      lane: "general",
-      prompt: "What should we publish next on fuelnfreetime.com?",
-      enabled: true,
-    });
-  } else if (content?.suggested_prompts?.length > 2) {
-    actions.push({
-      id: "plan_content",
-      label: "Plan content",
-      workflow_key: "fnf_content_studio",
-      task_type: "text_generation",
-      lane: "general",
-      prompt: content.suggested_prompts[2] || "What should we publish next on the site?",
+      id: "review_image",
+      label: "Review uploaded image",
+      workflow_key: "fnf_creative_studio",
+      task_type: "image_to_text",
+      lane: "vision",
+      prompt: "Review the attached image for Fuel n Freetime brand fit and suggest edits.",
       enabled: true,
     });
   }
 
-  actions.push({
-    id: "repo_work",
-    label: "Repo work",
-    workflow_key: "fnf_content_studio",
-    task_type: "code_generation",
-    lane: "code",
-    prompt: "Summarize recent commits on fuelnfreetime and what to verify before deploy.",
-    enabled: true,
-  });
+  if (isFeatureEnabled("github_repo")) {
+    actions.push({
+      id: "repo_work",
+      label: "Repo work",
+      workflow_key: "fnf_content_studio",
+      task_type: "code_generation",
+      lane: "code",
+      prompt: "Summarize recent commits on fuelnfreetime and what to verify before deploy.",
+      enabled: true,
+    });
+  }
 
-  return actions.slice(0, 4);
+  return actions.filter(isQuickActionAllowed).slice(0, 4);
 }
 
-export function buildPlusMenuCapabilities({ imageReady, webReady, researchReady }) {
+export function buildPlusMenuCapabilities({ imageReady }) {
   return {
-    attach: { enabled: true, label: "Add photos & files" },
+    attach: { enabled: isFeatureEnabled("image_upload"), label: "Add photos & files" },
     image: {
-      enabled: imageReady,
-      label: imageReady ? "Create image" : "Create image (AI unavailable)",
+      enabled: imageReady && isFeatureEnabled("image_generation"),
+      label: "Create image",
       mode: "image",
       workflow_key: "fnf_creative_studio",
-    },
-    research: {
-      enabled: researchReady,
-      label: researchReady ? "Plan research" : "Plan research (coming soon)",
-      disabled_reason: researchReady ? null : "No research tool registered yet.",
-    },
-    web: {
-      enabled: webReady,
-      label: webReady ? "Web search" : "Web search (coming soon)",
-      disabled_reason: webReady ? null : "No web search tool is executable yet.",
     },
   };
 }
 
 export async function buildAgentsamUiConfig(env) {
-  const [quick_actions, imageReady, webReady] = await Promise.all([
+  const [quick_actions, imageReady] = await Promise.all([
     buildQuickActions(env),
     hasActiveImageModels(env),
-    hasExecutableWebTool(env),
   ]);
 
-  const plus_menu = buildPlusMenuCapabilities({
-    imageReady,
-    webReady,
-    researchReady: false,
-  });
-
   return {
-    quick_actions: quick_actions.length ? quick_actions : DEFAULT_ACTIONS,
-    plus_menu,
+    quick_actions: quick_actions.length ? quick_actions : DEFAULT_ACTIONS.filter(isQuickActionAllowed),
+    plus_menu: buildPlusMenuCapabilities({ imageReady }),
+    features: getAgentFeatures(),
     iam_logo_url: IAM_LOGO,
   };
 }

@@ -3,6 +3,7 @@
  */
 
 import { FNF_TENANT_ID, FNF_WORKSPACE_ID } from "./constants.js";
+import { isFeatureEnabled } from "./feature-gates.js";
 import { getSessionUser } from "../lib/auth.js";
 
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -12,10 +13,8 @@ const ALLOWED_TEXT = new Set([
   "text/markdown",
   "text/csv",
   "application/json",
-  "text/html",
-  "text/css",
-  "application/javascript",
 ]);
+const ALLOWED_EXT = new Set(["txt", "md", "csv", "json"]);
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -50,10 +49,12 @@ function guessMimeFromName(name) {
 }
 
 function isAllowed(mime, name) {
+  const ext = (name.split(".").pop() || "").toLowerCase();
+  if (mime === "application/pdf" || ext === "pdf") return false;
+  if (!isFeatureEnabled("image_upload") && ALLOWED_IMAGE.has(mime)) return false;
   if (ALLOWED_IMAGE.has(mime)) return true;
   if (ALLOWED_TEXT.has(mime)) return true;
-  const ext = (name.split(".").pop() || "").toLowerCase();
-  return ["txt", "md", "csv", "json", "html", "css", "js", "ts"].includes(ext);
+  return ALLOWED_EXT.has(ext);
 }
 
 function r2PathFor(attachmentId, filename) {
@@ -168,8 +169,14 @@ export async function agentsamFileUpload(request, env) {
 
   const fileName = String(file.name || "upload");
   const mimeType = file.type || guessMimeFromName(fileName);
+  const ext = (fileName.split(".").pop() || "").toLowerCase();
+
+  if (mimeType === "application/pdf" || ext === "pdf") {
+    return json({ error: "PDF extraction is not enabled for this workspace." }, { status: 415 });
+  }
+
   if (!isAllowed(mimeType, fileName)) {
-    return json({ error: "Unsupported file type" }, { status: 400 });
+    return json({ error: "Unsupported file type" }, { status: 415 });
   }
 
   const attachmentId = `att_${crypto.randomUUID().replace(/-/g, "").slice(0, 24)}`;

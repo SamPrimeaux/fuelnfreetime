@@ -5,6 +5,7 @@
 
 import { resolveAIRouting } from "./ai-registry.js";
 import { FNF_TENANT_ID, FNF_WORKSPACE_ID, DRAWER_WORKFLOW_KEYS } from "./constants.js";
+import { detectBlockedFeatureRequest } from "./feature-gates.js";
 import { formatMcpForPrompt, selectMcpServers } from "./mcp-servers.js";
 import { formatSkillsForPrompt, resolveSkillsForChat } from "./skills.js";
 import { formatToolsForPrompt, selectToolsForChat } from "./tools-registry.js";
@@ -121,6 +122,32 @@ function formatWorkflowForPrompt(workflow) {
 }
 
 export async function routeAgentsamRequest(env, message, context = {}) {
+  const blockedFeature = detectBlockedFeatureRequest(message, context.attachments || []);
+  if (blockedFeature) {
+    return {
+      blocked_feature: blockedFeature,
+      classification: {
+        intent: "general",
+        score: 0,
+        workflow_key: "fnf_agentsam_chat",
+        task_type: "admin_chat",
+        source: "feature_gate",
+      },
+      workflow: null,
+      skills: [],
+      tools: [],
+      mcp_servers: [],
+      system_blocks: [],
+      ai_routing: resolveAIRouting(
+        { intent: "general", task_type: "admin_chat", workflow_key: "fnf_agentsam_chat" },
+        message,
+        context
+      ),
+      tenant_id: FNF_TENANT_ID,
+      workspace_id: FNF_WORKSPACE_ID,
+    };
+  }
+
   const explicitWorkflow = (context.workflow_key || "").trim();
   const classification = explicitWorkflow
     ? {

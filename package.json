@@ -44,6 +44,7 @@
     "db:seed:agentsam-tools": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file db/seed-agentsam-tools.sql",
     "db:install:agentsam-tools": "npm run db:migrate:agentsam-tools && npm run db:seed:agentsam-tools",
     "db:patch:agentsam-tools-scope": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file db/patch-agentsam-tools-fnf-scope.sql",
+    "db:patch:agentsam-disable-research-tools": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file db/patch-agentsam-disable-research-tools.sql",
     "db:migrate:agentsam-analytics": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file db/migrate-agentsam-analytics.sql",
     "db:migrate:agentsam-conversations": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file db/migrate-agentsam-conversations.sql",
     "db:migrate:agentsam-attachments": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file db/migrate-agentsam-attachments.sql",
