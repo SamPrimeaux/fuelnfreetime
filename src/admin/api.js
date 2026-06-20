@@ -32,6 +32,7 @@ import {
   agentsamChat,
   agentsamAiModelsList,
   agentsamAnalyticsSummary,
+  agentsamToolsCatalog,
   agentsamDrawerWorkflowsList,
   agentsamMcpStatus,
   agentsamSkillGet,
@@ -456,6 +457,9 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   }
   if (path === "/api/admin/agentsam/ai/models" && method === "GET") {
     return agentsamAiModelsList(env);
+  }
+  if (path === "/api/admin/agentsam/tools/catalog" && method === "GET") {
+    return agentsamToolsCatalog(env);
   }
   if (path === "/api/admin/agentsam/analytics/summary" && method === "GET") {
     return agentsamAnalyticsSummary(env, url);

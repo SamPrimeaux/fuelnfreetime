@@ -6,6 +6,7 @@ import {
   trackAgentSamEvent,
 } from "../agentsam/analytics.js";
 import { getAIRegistryStatus, listAIModelsGrouped } from "../agentsam/ai-registry.js";
+import { getToolsRegistryStatus, listToolsGrouped } from "../agentsam/tools-registry.js";
 import {
   bridgeConfigured,
   fetchGithubContextForChat,
@@ -371,6 +372,7 @@ export async function agentsamStatus(env, userId = null) {
   const github = await probeGitHubConnection(env, userId);
   const aiRegistry = await getAIRegistryStatus(env);
   const analyticsStatus = await getAgentSamAnalyticsStatus(env);
+  const toolsRegistry = await getToolsRegistryStatus(env);
 
   return json({
     ok: true,
@@ -386,6 +388,7 @@ export async function agentsamStatus(env, userId = null) {
     connect_urls: mcpConnectUrls(env),
     ...aiRegistry,
     analytics: analyticsStatus,
+    tools: toolsRegistry,
   });
 }
 
@@ -406,10 +409,11 @@ export async function agentsamMcpStatus(env, userId = null) {
 }
 
 export async function agentsamTools(env) {
-  const [workflows, drawerWorkflows, mcpServers] = await Promise.all([
+  const [workflows, drawerWorkflows, mcpServers, toolCatalog] = await Promise.all([
     listStudioWorkflows(env),
     listDrawerWorkflows(env),
     listMcpServersForUi(env),
+    listToolsGrouped(env),
   ]);
 
   return json({
@@ -417,6 +421,7 @@ export async function agentsamTools(env) {
     workflows,
     drawer_workflows: drawerWorkflows,
     mcp_servers: mcpServers,
+    tool_catalog: toolCatalog,
     connect_urls: mcpConnectUrls(env),
     quick_actions: [
       { label: "Create an image", prompt: "Generate a premium collection banner direction for Fuel n Freetime" },
@@ -452,6 +457,11 @@ export async function agentsamSkillGet(env, slug, url) {
 
 export async function agentsamAiModelsList(env) {
   const { grouped, total } = await listAIModelsGrouped(env);
+  return json({ ok: true, grouped, total });
+}
+
+export async function agentsamToolsCatalog(env) {
+  const { grouped, total } = await listToolsGrouped(env);
   return json({ ok: true, grouped, total });
 }
 

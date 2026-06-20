@@ -13,6 +13,14 @@ Aligned with **inneranimalmedia** `agentsam_skill` / `agentsam_hook` / `agentsam
 | **D1** | `agentsam_webhook_events` | Webhook event log + processing status |
 | **D1** | `agentsam_mcp_workflows` | Minimal MCP step-graph FK target for hooks |
 | **D1** | `agentsam_workflows` | Canonical workflow registry (IAM parity) |
+| **D1** | `agentsam_ai` | Workers AI model registry + routed fallbacks |
+| **D1** | `agentsam_analytics` | Event ledger (chat, routing, MCP, AI cost) |
+| **D1** | `agentsam_tools` | Tool catalog SSOT (handlers, MCP bridge, store/CMS) |
+| **D1** | `agentsam_mcp_servers` | MCP server registry |
+| **D1** | `agentsam_tool_policy_keys` | Chat allowlists / non-cacheable policies |
+| **D1** | `agentsam_tool_chain` | Multi-step tool execution chain |
+| **D1** | `agentsam_tool_call_log` | Hot tool invocation log |
+| **D1** | `agentsam_tool_stats_compacted` | Rolled-up tool reliability stats |
 | **D1** | `agentsam_workflow_nodes` | Step graph per workflow (trigger → output spine) |
 | **R2** | `agentsam/skills/{slug}/…` on `WEBSITE_ASSETS` | Markdown bodies |
 | **Repo** | `.cursor/skills/` | Cursor source → synced to R2 |
@@ -81,6 +89,11 @@ npm run agentsam:skills:install
 
 Chat resolver loads up to **3 skills**: always-on `fnf-cloudflare-runtime` + best matches (Cloudflare domain boosted for worker/d1/deploy/MCP messages).
 
+```bash
+npm run db:install:agentsam-tools   # migrate + seed tools platform
+npm run db:install:agentsam-ai      # migrate + seed AI model registry
+```
+
 `npm run deploy` runs `wrangler deploy --install-skills` to refresh IDE agent skills.
 
 ## Admin API
@@ -90,7 +103,8 @@ Chat resolver loads up to **3 skills**: always-on `fnf-cloudflare-runtime` + bes
 | `GET` | `/api/admin/agentsam/skills` | List skills (`?hydrate=1` loads R2) |
 | `GET` | `/api/admin/agentsam/skills/:slug` | One skill + references |
 | `GET` | `/api/admin/agentsam/status` | Workers AI + workflows + MCP prep status |
-| `GET` | `/api/admin/agentsam/tools` | Quick actions + MCP server registry for UI |
+| `GET` | `/api/admin/agentsam/tools` | Quick actions + MCP servers + tool catalog |
+| `GET` | `/api/admin/agentsam/tools/catalog` | Tools grouped by category |
 | `GET` | `/api/admin/agentsam/workflows` | Studio workflow list |
 | `POST` | `/api/admin/agentsam/chat` | Single input chat with intent routing |
 

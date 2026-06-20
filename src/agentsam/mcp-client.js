@@ -4,6 +4,7 @@
 
 import { FNF_GITHUB_REPO, FNF_TENANT_ID, FNF_WORKSPACE_ID } from "./constants.js";
 import { fetchGithubContextForAgent, githubStatus } from "./github-client.js";
+import { logToolCall } from "./tools-registry.js";
 
 const DEFAULT_MCP_URL = "https://mcp.inneranimalmedia.com/mcp";
 const DEFAULT_IAM_ORIGIN = "https://inneranimalmedia.com";
@@ -97,8 +98,27 @@ export async function probeBridge(env) {
   };
 }
 
-export async function callMcpTool(env, toolName, args = {}) {
-  return mcpRpc(env, "tools/call", { name: toolName, arguments: args });
+export async function callMcpTool(env, toolName, args = {}, logCtx = {}) {
+  const started = Date.now();
+  const result = await mcpRpc(env, "tools/call", { name: toolName, arguments: args });
+  const durationMs = Date.now() - started;
+
+  await logToolCall(
+    env,
+    {
+      tool_key: toolName,
+      tool_name: toolName,
+      mcp_server_key: "inneranimalmedia-mcp-server",
+      handler_type: "mcp",
+      tool_category: "mcp",
+      status: result.ok ? "success" : "failed",
+      duration_ms: durationMs,
+      error_message: result.ok ? null : result.error,
+    },
+    logCtx
+  );
+
+  return result;
 }
 
 export async function probeGitHubViaBridge(env) {

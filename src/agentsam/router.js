@@ -7,6 +7,7 @@ import { resolveAIRouting } from "./ai-registry.js";
 import { FNF_TENANT_ID, FNF_WORKSPACE_ID, DRAWER_WORKFLOW_KEYS } from "./constants.js";
 import { formatMcpForPrompt, selectMcpServers } from "./mcp-servers.js";
 import { formatSkillsForPrompt, resolveSkillsForChat } from "./skills.js";
+import { formatToolsForPrompt, selectToolsForChat } from "./tools-registry.js";
 
 const INTENT_RULES = [
   {
@@ -144,10 +145,24 @@ export async function routeAgentsamRequest(env, message, context = {}) {
   const mcpServers = selectMcpServers(classification.intent, message);
   const bridgeReady = Boolean(String(env.AGENTSAM_BRIDGE_KEY || "").trim());
   const ai_routing = resolveAIRouting(classification, message, context);
+  const tools = await selectToolsForChat(env, {
+    intent: classification.intent,
+    message,
+    workflowKey,
+    taskType: ai_routing.task_type,
+    domain: ai_routing.repo_related
+      ? "code"
+      : ai_routing.content_related
+        ? "content"
+        : ai_routing.task_type === "image_generation"
+          ? "cloudflare"
+          : "general",
+  });
 
   const systemBlocks = [
     formatWorkflowForPrompt(workflow),
     formatSkillsForPrompt(skills),
+    formatToolsForPrompt(tools),
     formatMcpForPrompt(mcpServers, bridgeReady),
   ].filter(Boolean);
 
@@ -165,6 +180,7 @@ export async function routeAgentsamRequest(env, message, context = {}) {
         }
       : null,
     skills: skills.map((s) => ({ slug: s.slug, name: s.name })),
+    tools: tools.map((t) => ({ tool_key: t.tool_key, name: t.display_name })),
     mcp_servers: mcpServers.map((s) => ({
       slug: s.slug,
       name: s.display_name,

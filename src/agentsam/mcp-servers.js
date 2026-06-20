@@ -10,6 +10,7 @@ import {
   probeBridge,
   probeGitHubConnection,
 } from "./mcp-client.js";
+import { listAgentSamMcpServers } from "./tools-registry.js";
 
 export const MCP_SERVERS = [
   {
@@ -52,6 +53,40 @@ export async function listMcpServersForUi(env, userId = null) {
   githubReady = gh.connected === true;
 
   const urls = mcpConnectUrls(env);
+  const dbServers = await listAgentSamMcpServers(env);
+
+  if (dbServers.length) {
+    return dbServers.map((s) => {
+      const isGithub = s.server_key === "github";
+      const isIam = s.server_key.includes("inneranimalmedia");
+      let status = "needs_bridge";
+      let connected = false;
+
+      if (!bridge && s.auth_type !== "none") {
+        status = "needs_bridge";
+      } else if (isIam) {
+        status = bridgeReady ? "ready" : "dev";
+        connected = bridgeReady;
+      } else if (isGithub) {
+        status = githubReady ? "ready" : bridgeReady ? "needs_oauth" : "needs_bridge";
+        connected = githubReady;
+      } else if (s.auth_type === "none") {
+        status = s.is_active ? "planned" : "disabled";
+      }
+
+      return {
+        id: s.id,
+        slug: s.server_key,
+        display_name: s.display_name,
+        description: s.description,
+        status,
+        tool_lanes: s.tool_lanes,
+        connected,
+        auth_type: s.auth_type,
+        connect_urls: isGithub || isIam ? urls : undefined,
+      };
+    });
+  }
 
   return MCP_SERVERS.map((s) => {
     const isGithub = s.slug === "github";
