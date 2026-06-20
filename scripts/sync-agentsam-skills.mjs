@@ -60,6 +60,19 @@ function inferSkillDomain(slug, description = "") {
   const s = `${slug} ${description}`.toLowerCase();
   if (s.includes("stripe") || s.includes("payment") || s.includes("checkout")) return "stripe";
   if (s.includes("commerce") || s.includes("product") || s.includes("inventory")) return "commerce";
+  if (
+    s.includes("cloudflare") ||
+    s.includes("worker") ||
+    s.includes("wrangler") ||
+    s.includes("durable") ||
+    s.includes("agents-sdk") ||
+    s.includes("mcp-server") ||
+    s.includes("web-perf") ||
+    s.includes("d1") ||
+    s.includes("r2")
+  ) {
+    return "cloudflare";
+  }
   return "platform";
 }
 
@@ -67,7 +80,51 @@ function inferTags(slug, domain) {
   const tags = [slug.replace(/-/g, "_")];
   if (domain === "stripe") tags.push("stripe", "payments", "checkout", "webhooks");
   if (domain === "commerce") tags.push("commerce", "products", "inventory", "orders");
+  if (domain === "cloudflare") {
+    tags.push(
+      "cloudflare",
+      "workers",
+      "wrangler",
+      "d1",
+      "r2",
+      "kv",
+      "durable_objects",
+      "workers_ai",
+      "deploy",
+      "mcp"
+    );
+  }
   return [...new Set(tags)];
+}
+
+const ALWAYS_APPLY_SLUGS = new Set(["fnf-cloudflare-runtime"]);
+
+function inferTaskTypes(domain, slug) {
+  if (domain === "stripe") return ["stripe", "payments", "commerce"];
+  if (domain === "commerce") return ["commerce", "products", "inventory", "orders"];
+  if (domain === "cloudflare") {
+    return [
+      "cloudflare",
+      "workers",
+      "deploy",
+      "d1",
+      "r2",
+      "kv",
+      "durable_objects",
+      "workers_ai",
+      "mcp",
+      "repo_work",
+    ];
+  }
+  return ["platform"];
+}
+
+function inferSortOrder(domain, slug) {
+  if (slug === "fnf-cloudflare-runtime") return 1;
+  if (domain === "commerce") return 5;
+  if (domain === "stripe") return 10;
+  if (domain === "cloudflare") return 8;
+  return 20;
 }
 
 function walkMarkdownFiles(dir) {
@@ -148,6 +205,7 @@ function skillInsertSql({
   taskTypes,
   metadata,
   sortOrder,
+  alwaysApply = false,
 }) {
   return `INSERT OR REPLACE INTO agentsam_skill (
   id, tenant_id, user_id, workspace_id, slug, name, description, content_markdown,
@@ -167,7 +225,7 @@ function skillInsertSql({
   'tenant',
   '${sqlEscape(slashTrigger || slug)}',
   '${sqlEscape(JSON.stringify(globs || []))}',
-  0,
+  ${alwaysApply ? 1 : 0},
   '${sqlEscape(JSON.stringify(taskTypes || []))}',
   '[]',
   '{}',
@@ -203,15 +261,14 @@ function buildSeedSql(skills) {
         domain: skill.domain,
         slashTrigger: skill.slug,
         tags: skill.tags,
-        globs: [],
-        taskTypes:
-          skill.domain === "stripe"
-            ? ["stripe", "payments", "commerce"]
-            : skill.domain === "commerce"
-              ? ["commerce", "products"]
-              : ["platform"],
+        globs:
+          skill.domain === "cloudflare"
+            ? ["wrangler.toml", "src/**/*.js", "docs/AGENTSAM-SKILLS.md"]
+            : [],
+        taskTypes: inferTaskTypes(skill.domain, skill.slug),
         metadata,
-        sortOrder: skill.domain === "stripe" ? 10 : 20,
+        sortOrder: inferSortOrder(skill.domain, skill.slug),
+        alwaysApply: ALWAYS_APPLY_SLUGS.has(skill.slug),
       })
     );
     lines.push("");
@@ -247,6 +304,30 @@ VALUES ('${sqlEscape(skill.id)}', '${sqlEscape(file.r2Key)}', '${sqlEscape(file.
         skill_domain: "commerce",
       },
       sortOrder: 5,
+      alwaysApply: false,
+    })
+  );
+
+  lines.push(
+    skillInsertSql({
+      id: "skill_fnf_stripe_runtime",
+      slug: "fnf-stripe-runtime",
+      name: "FNF Stripe implementation checklist",
+      description: "Ordered Stripe Checkout tasks and inventory rules for Fuel & Free Time.",
+      filePath: `${R2_PREFIX}/fnf-stripe-runtime/SKILL.md`,
+      domain: "stripe",
+      slashTrigger: "stripe",
+      tags: ["stripe", "checkout", "webhooks", "payments"],
+      globs: ["docs/RUNTIME-CONTRACTS-STRIPE.md", ".cursor/skills/stripe-best-practices/**"],
+      taskTypes: ["stripe", "payments", "commerce"],
+      metadata: {
+        r2_bucket: BUCKET,
+        r2_skill_key: `${R2_PREFIX}/fnf-stripe-runtime/SKILL.md`,
+        source: "docs",
+        skill_domain: "stripe",
+      },
+      sortOrder: 6,
+      alwaysApply: false,
     })
   );
 
@@ -285,29 +366,7 @@ function main() {
   }
 
   const seedPath = path.join(REPO_ROOT, "db/seed-agentsam-skills.sql");
-  let sql = buildSeedSql(skills);
-
-  if (fs.existsSync(stripeDoc)) {
-    sql += `\n\n${skillInsertSql({
-      id: "skill_fnf_stripe_runtime",
-      slug: "fnf-stripe-runtime",
-      name: "FNF Stripe implementation checklist",
-      description: "Ordered Stripe Checkout tasks and inventory rules for Fuel & Free Time.",
-      filePath: stripeKey,
-      domain: "stripe",
-      slashTrigger: "stripe",
-      tags: ["stripe", "checkout", "webhooks", "payments"],
-      globs: ["docs/RUNTIME-CONTRACTS-STRIPE.md", ".cursor/skills/stripe-best-practices/**"],
-      taskTypes: ["stripe", "payments", "commerce"],
-      metadata: {
-        r2_bucket: BUCKET,
-        r2_skill_key: stripeKey,
-        source: "docs",
-        skill_domain: "stripe",
-      },
-      sortOrder: 6,
-    })}\n`;
-  }
+  const sql = buildSeedSql(skills);
 
   if (!DRY_RUN) {
     fs.writeFileSync(seedPath, sql);

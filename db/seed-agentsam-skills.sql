@@ -6,6 +6,856 @@ INSERT OR REPLACE INTO agentsam_skill (
   model_constraints_json, access_mode, tags_json, metadata_json, retrieval_strategy,
   sort_order, version, is_active, updated_at
 ) VALUES (
+  'skill_agents_sdk',
+  'tenant_fuelnfreetime',
+  'au_fnf_system',
+  'ws_fuelnfreetime',
+  'agents-sdk',
+  'agents-sdk',
+  'Build AI agents on Cloudflare Workers using the Agents SDK. Load when creating stateful agents, durable workflows, real-time WebSocket apps, scheduled tasks, MCP servers, or chat applications. Covers Agent class, state management, callable RPC, Workflows integration, and React hooks.',
+  '',
+  'agentsam/skills/agents-sdk/SKILL.md',
+  'tenant',
+  'agents-sdk',
+  '["wrangler.toml","src/**/*.js","docs/AGENTSAM-SKILLS.md"]',
+  0,
+  '["cloudflare","workers","deploy","d1","r2","kv","durable_objects","workers_ai","mcp","repo_work"]',
+  '[]',
+  '{}',
+  'read_only',
+  '["agents_sdk","cloudflare","workers","wrangler","d1","r2","kv","durable_objects","workers_ai","deploy","mcp"]',
+  '{"r2_bucket":"fuelnfreetime","r2_skill_key":"agentsam/skills/agents-sdk/SKILL.md","source":".cursor/skills","skill_domain":"cloudflare"}',
+  'r2',
+  8,
+  1,
+  1,
+  datetime('now')
+);
+
+DELETE FROM agentsam_skill_file WHERE skill_id = 'skill_agents_sdk';
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_agents_sdk', 'agentsam/skills/agents-sdk/references/callable.md', 'reference', 0);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_agents_sdk', 'agentsam/skills/agents-sdk/references/codemode.md', 'reference', 1);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_agents_sdk', 'agentsam/skills/agents-sdk/references/email.md', 'reference', 2);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_agents_sdk', 'agentsam/skills/agents-sdk/references/mcp.md', 'reference', 3);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_agents_sdk', 'agentsam/skills/agents-sdk/references/state-scheduling.md', 'reference', 4);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_agents_sdk', 'agentsam/skills/agents-sdk/references/streaming-chat.md', 'reference', 5);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_agents_sdk', 'agentsam/skills/agents-sdk/references/workflows.md', 'reference', 6);
+
+INSERT OR REPLACE INTO agentsam_skill (
+  id, tenant_id, user_id, workspace_id, slug, name, description, content_markdown,
+  file_path, scope, slash_trigger, globs, always_apply, task_types_json, route_keys_json,
+  model_constraints_json, access_mode, tags_json, metadata_json, retrieval_strategy,
+  sort_order, version, is_active, updated_at
+) VALUES (
+  'skill_building_ai_agent_on_cloudflare',
+  'tenant_fuelnfreetime',
+  'au_fnf_system',
+  'ws_fuelnfreetime',
+  'building-ai-agent-on-cloudflare',
+  'building-ai-agent-on-cloudflare',
+  '',
+  '',
+  'agentsam/skills/building-ai-agent-on-cloudflare/SKILL.md',
+  'tenant',
+  'building-ai-agent-on-cloudflare',
+  '["wrangler.toml","src/**/*.js","docs/AGENTSAM-SKILLS.md"]',
+  0,
+  '["cloudflare","workers","deploy","d1","r2","kv","durable_objects","workers_ai","mcp","repo_work"]',
+  '[]',
+  '{}',
+  'read_only',
+  '["building_ai_agent_on_cloudflare","cloudflare","workers","wrangler","d1","r2","kv","durable_objects","workers_ai","deploy","mcp"]',
+  '{"r2_bucket":"fuelnfreetime","r2_skill_key":"agentsam/skills/building-ai-agent-on-cloudflare/SKILL.md","source":".cursor/skills","skill_domain":"cloudflare"}',
+  'r2',
+  8,
+  1,
+  1,
+  datetime('now')
+);
+
+DELETE FROM agentsam_skill_file WHERE skill_id = 'skill_building_ai_agent_on_cloudflare';
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_building_ai_agent_on_cloudflare', 'agentsam/skills/building-ai-agent-on-cloudflare/references/agent-patterns.md', 'reference', 0);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_building_ai_agent_on_cloudflare', 'agentsam/skills/building-ai-agent-on-cloudflare/references/examples.md', 'reference', 1);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_building_ai_agent_on_cloudflare', 'agentsam/skills/building-ai-agent-on-cloudflare/references/state-patterns.md', 'reference', 2);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_building_ai_agent_on_cloudflare', 'agentsam/skills/building-ai-agent-on-cloudflare/references/troubleshooting.md', 'reference', 3);
+
+INSERT OR REPLACE INTO agentsam_skill (
+  id, tenant_id, user_id, workspace_id, slug, name, description, content_markdown,
+  file_path, scope, slash_trigger, globs, always_apply, task_types_json, route_keys_json,
+  model_constraints_json, access_mode, tags_json, metadata_json, retrieval_strategy,
+  sort_order, version, is_active, updated_at
+) VALUES (
+  'skill_building_mcp_server_on_cloudflare',
+  'tenant_fuelnfreetime',
+  'au_fnf_system',
+  'ws_fuelnfreetime',
+  'building-mcp-server-on-cloudflare',
+  'building-mcp-server-on-cloudflare',
+  '',
+  '',
+  'agentsam/skills/building-mcp-server-on-cloudflare/SKILL.md',
+  'tenant',
+  'building-mcp-server-on-cloudflare',
+  '["wrangler.toml","src/**/*.js","docs/AGENTSAM-SKILLS.md"]',
+  0,
+  '["cloudflare","workers","deploy","d1","r2","kv","durable_objects","workers_ai","mcp","repo_work"]',
+  '[]',
+  '{}',
+  'read_only',
+  '["building_mcp_server_on_cloudflare","cloudflare","workers","wrangler","d1","r2","kv","durable_objects","workers_ai","deploy","mcp"]',
+  '{"r2_bucket":"fuelnfreetime","r2_skill_key":"agentsam/skills/building-mcp-server-on-cloudflare/SKILL.md","source":".cursor/skills","skill_domain":"cloudflare"}',
+  'r2',
+  8,
+  1,
+  1,
+  datetime('now')
+);
+
+DELETE FROM agentsam_skill_file WHERE skill_id = 'skill_building_mcp_server_on_cloudflare';
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_building_mcp_server_on_cloudflare', 'agentsam/skills/building-mcp-server-on-cloudflare/references/examples.md', 'reference', 0);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_building_mcp_server_on_cloudflare', 'agentsam/skills/building-mcp-server-on-cloudflare/references/oauth-setup.md', 'reference', 1);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_building_mcp_server_on_cloudflare', 'agentsam/skills/building-mcp-server-on-cloudflare/references/troubleshooting.md', 'reference', 2);
+
+INSERT OR REPLACE INTO agentsam_skill (
+  id, tenant_id, user_id, workspace_id, slug, name, description, content_markdown,
+  file_path, scope, slash_trigger, globs, always_apply, task_types_json, route_keys_json,
+  model_constraints_json, access_mode, tags_json, metadata_json, retrieval_strategy,
+  sort_order, version, is_active, updated_at
+) VALUES (
+  'skill_cloudflare',
+  'tenant_fuelnfreetime',
+  'au_fnf_system',
+  'ws_fuelnfreetime',
+  'cloudflare',
+  'cloudflare',
+  'Comprehensive Cloudflare platform skill covering Workers, Pages, storage (KV, D1, R2), AI (Workers AI, Vectorize, Agents SDK), networking (Tunnel, Spectrum), security (WAF, DDoS), and infrastructure-as-code (Terraform, Pulumi). Use for any Cloudflare development task.',
+  '',
+  'agentsam/skills/cloudflare/SKILL.md',
+  'tenant',
+  'cloudflare',
+  '["wrangler.toml","src/**/*.js","docs/AGENTSAM-SKILLS.md"]',
+  0,
+  '["cloudflare","workers","deploy","d1","r2","kv","durable_objects","workers_ai","mcp","repo_work"]',
+  '[]',
+  '{}',
+  'read_only',
+  '["cloudflare","workers","wrangler","d1","r2","kv","durable_objects","workers_ai","deploy","mcp"]',
+  '{"r2_bucket":"fuelnfreetime","r2_skill_key":"agentsam/skills/cloudflare/SKILL.md","source":".cursor/skills","skill_domain":"cloudflare"}',
+  'r2',
+  8,
+  1,
+  1,
+  datetime('now')
+);
+
+DELETE FROM agentsam_skill_file WHERE skill_id = 'skill_cloudflare';
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/agents-sdk/README.md', 'reference', 0);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/agents-sdk/api.md', 'reference', 1);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/agents-sdk/configuration.md', 'reference', 2);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/agents-sdk/gotchas.md', 'reference', 3);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/agents-sdk/patterns.md', 'reference', 4);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/ai-gateway/README.md', 'reference', 5);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/ai-gateway/configuration.md', 'reference', 6);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/ai-gateway/dynamic-routing.md', 'reference', 7);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/ai-gateway/features.md', 'reference', 8);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/ai-gateway/sdk-integration.md', 'reference', 9);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/ai-gateway/troubleshooting.md', 'reference', 10);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/ai-search/README.md', 'reference', 11);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/ai-search/api.md', 'reference', 12);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/ai-search/configuration.md', 'reference', 13);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/ai-search/gotchas.md', 'reference', 14);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/ai-search/patterns.md', 'reference', 15);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/analytics-engine/README.md', 'reference', 16);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/analytics-engine/api.md', 'reference', 17);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/analytics-engine/configuration.md', 'reference', 18);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/analytics-engine/gotchas.md', 'reference', 19);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/analytics-engine/patterns.md', 'reference', 20);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/api/README.md', 'reference', 21);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/api/api.md', 'reference', 22);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/api/configuration.md', 'reference', 23);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/api/gotchas.md', 'reference', 24);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/api/patterns.md', 'reference', 25);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/api-shield/README.md', 'reference', 26);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/api-shield/api.md', 'reference', 27);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/api-shield/configuration.md', 'reference', 28);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/api-shield/gotchas.md', 'reference', 29);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/api-shield/patterns.md', 'reference', 30);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/argo-smart-routing/README.md', 'reference', 31);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/argo-smart-routing/api.md', 'reference', 32);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/argo-smart-routing/configuration.md', 'reference', 33);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/argo-smart-routing/gotchas.md', 'reference', 34);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/argo-smart-routing/patterns.md', 'reference', 35);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/bindings/README.md', 'reference', 36);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/bindings/api.md', 'reference', 37);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/bindings/configuration.md', 'reference', 38);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/bindings/gotchas.md', 'reference', 39);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/bindings/patterns.md', 'reference', 40);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/bot-management/README.md', 'reference', 41);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/bot-management/api.md', 'reference', 42);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/bot-management/configuration.md', 'reference', 43);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/bot-management/gotchas.md', 'reference', 44);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/bot-management/patterns.md', 'reference', 45);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/browser-rendering/README.md', 'reference', 46);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/browser-rendering/api.md', 'reference', 47);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/browser-rendering/configuration.md', 'reference', 48);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/browser-rendering/gotchas.md', 'reference', 49);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/browser-rendering/patterns.md', 'reference', 50);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/c3/README.md', 'reference', 51);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/c3/api.md', 'reference', 52);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/c3/configuration.md', 'reference', 53);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/c3/gotchas.md', 'reference', 54);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/c3/patterns.md', 'reference', 55);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/cache-reserve/README.md', 'reference', 56);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/cache-reserve/api.md', 'reference', 57);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/cache-reserve/configuration.md', 'reference', 58);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/cache-reserve/gotchas.md', 'reference', 59);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/cache-reserve/patterns.md', 'reference', 60);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/containers/README.md', 'reference', 61);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/containers/api.md', 'reference', 62);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/containers/configuration.md', 'reference', 63);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/containers/gotchas.md', 'reference', 64);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/containers/patterns.md', 'reference', 65);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/cron-triggers/README.md', 'reference', 66);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/cron-triggers/api.md', 'reference', 67);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/cron-triggers/configuration.md', 'reference', 68);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/cron-triggers/gotchas.md', 'reference', 69);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/cron-triggers/patterns.md', 'reference', 70);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/d1/README.md', 'reference', 71);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/d1/api.md', 'reference', 72);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/d1/configuration.md', 'reference', 73);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/d1/gotchas.md', 'reference', 74);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/d1/patterns.md', 'reference', 75);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/ddos/README.md', 'reference', 76);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/ddos/api.md', 'reference', 77);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/ddos/configuration.md', 'reference', 78);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/ddos/gotchas.md', 'reference', 79);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/ddos/patterns.md', 'reference', 80);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/do-storage/README.md', 'reference', 81);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/do-storage/api.md', 'reference', 82);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/do-storage/configuration.md', 'reference', 83);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/do-storage/gotchas.md', 'reference', 84);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/do-storage/patterns.md', 'reference', 85);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/do-storage/testing.md', 'reference', 86);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/durable-objects/README.md', 'reference', 87);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/durable-objects/api.md', 'reference', 88);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/durable-objects/configuration.md', 'reference', 89);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/durable-objects/gotchas.md', 'reference', 90);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/durable-objects/patterns.md', 'reference', 91);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/email-routing/README.md', 'reference', 92);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/email-routing/api.md', 'reference', 93);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/email-routing/configuration.md', 'reference', 94);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/email-routing/gotchas.md', 'reference', 95);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/email-routing/patterns.md', 'reference', 96);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/email-workers/README.md', 'reference', 97);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/email-workers/api.md', 'reference', 98);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/email-workers/configuration.md', 'reference', 99);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/email-workers/gotchas.md', 'reference', 100);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/email-workers/patterns.md', 'reference', 101);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/hyperdrive/README.md', 'reference', 102);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/hyperdrive/api.md', 'reference', 103);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/hyperdrive/configuration.md', 'reference', 104);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/hyperdrive/gotchas.md', 'reference', 105);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/hyperdrive/patterns.md', 'reference', 106);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/images/README.md', 'reference', 107);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/images/api.md', 'reference', 108);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/images/configuration.md', 'reference', 109);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/images/gotchas.md', 'reference', 110);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/images/patterns.md', 'reference', 111);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/kv/README.md', 'reference', 112);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/kv/api.md', 'reference', 113);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/kv/configuration.md', 'reference', 114);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/kv/gotchas.md', 'reference', 115);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/kv/patterns.md', 'reference', 116);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/miniflare/README.md', 'reference', 117);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/miniflare/api.md', 'reference', 118);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/miniflare/configuration.md', 'reference', 119);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/miniflare/gotchas.md', 'reference', 120);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/miniflare/patterns.md', 'reference', 121);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/network-interconnect/README.md', 'reference', 122);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/network-interconnect/api.md', 'reference', 123);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/network-interconnect/configuration.md', 'reference', 124);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/network-interconnect/gotchas.md', 'reference', 125);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/network-interconnect/patterns.md', 'reference', 126);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/observability/README.md', 'reference', 127);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/observability/api.md', 'reference', 128);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/observability/configuration.md', 'reference', 129);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/observability/gotchas.md', 'reference', 130);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/observability/patterns.md', 'reference', 131);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/pages/README.md', 'reference', 132);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/pages/api.md', 'reference', 133);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/pages/configuration.md', 'reference', 134);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/pages/gotchas.md', 'reference', 135);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/pages/patterns.md', 'reference', 136);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/pages-functions/README.md', 'reference', 137);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/pages-functions/api.md', 'reference', 138);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/pages-functions/configuration.md', 'reference', 139);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/pages-functions/gotchas.md', 'reference', 140);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/pages-functions/patterns.md', 'reference', 141);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/pipelines/README.md', 'reference', 142);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/pipelines/api.md', 'reference', 143);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/pipelines/configuration.md', 'reference', 144);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/pipelines/gotchas.md', 'reference', 145);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/pipelines/patterns.md', 'reference', 146);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/pulumi/README.md', 'reference', 147);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/pulumi/api.md', 'reference', 148);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/pulumi/configuration.md', 'reference', 149);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/pulumi/gotchas.md', 'reference', 150);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/pulumi/patterns.md', 'reference', 151);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/queues/README.md', 'reference', 152);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/queues/api.md', 'reference', 153);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/queues/configuration.md', 'reference', 154);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/queues/gotchas.md', 'reference', 155);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/queues/patterns.md', 'reference', 156);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/r2/README.md', 'reference', 157);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/r2/api.md', 'reference', 158);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/r2/configuration.md', 'reference', 159);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/r2/gotchas.md', 'reference', 160);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/r2/patterns.md', 'reference', 161);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/r2-data-catalog/README.md', 'reference', 162);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/r2-data-catalog/api.md', 'reference', 163);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/r2-data-catalog/configuration.md', 'reference', 164);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/r2-data-catalog/gotchas.md', 'reference', 165);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/r2-data-catalog/patterns.md', 'reference', 166);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/r2-sql/README.md', 'reference', 167);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/r2-sql/api.md', 'reference', 168);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/r2-sql/configuration.md', 'reference', 169);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/r2-sql/gotchas.md', 'reference', 170);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/r2-sql/patterns.md', 'reference', 171);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/realtime-sfu/README.md', 'reference', 172);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/realtime-sfu/api.md', 'reference', 173);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/realtime-sfu/configuration.md', 'reference', 174);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/realtime-sfu/gotchas.md', 'reference', 175);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/realtime-sfu/patterns.md', 'reference', 176);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/realtimekit/README.md', 'reference', 177);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/realtimekit/api.md', 'reference', 178);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/realtimekit/configuration.md', 'reference', 179);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/realtimekit/gotchas.md', 'reference', 180);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/realtimekit/patterns.md', 'reference', 181);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/sandbox/README.md', 'reference', 182);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/sandbox/api.md', 'reference', 183);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/sandbox/configuration.md', 'reference', 184);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/sandbox/gotchas.md', 'reference', 185);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/sandbox/patterns.md', 'reference', 186);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/secrets-store/README.md', 'reference', 187);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/secrets-store/api.md', 'reference', 188);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/secrets-store/configuration.md', 'reference', 189);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/secrets-store/gotchas.md', 'reference', 190);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/secrets-store/patterns.md', 'reference', 191);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/smart-placement/README.md', 'reference', 192);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/smart-placement/api.md', 'reference', 193);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/smart-placement/configuration.md', 'reference', 194);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/smart-placement/gotchas.md', 'reference', 195);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/smart-placement/patterns.md', 'reference', 196);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/snippets/README.md', 'reference', 197);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/snippets/api.md', 'reference', 198);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/snippets/configuration.md', 'reference', 199);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/snippets/gotchas.md', 'reference', 200);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/snippets/patterns.md', 'reference', 201);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/spectrum/README.md', 'reference', 202);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/spectrum/api.md', 'reference', 203);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/spectrum/configuration.md', 'reference', 204);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/spectrum/gotchas.md', 'reference', 205);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/spectrum/patterns.md', 'reference', 206);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/static-assets/README.md', 'reference', 207);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/static-assets/api.md', 'reference', 208);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/static-assets/configuration.md', 'reference', 209);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/static-assets/gotchas.md', 'reference', 210);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/static-assets/patterns.md', 'reference', 211);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/stream/README.md', 'reference', 212);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/stream/api-live.md', 'reference', 213);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/stream/api.md', 'reference', 214);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/stream/configuration.md', 'reference', 215);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/stream/gotchas.md', 'reference', 216);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/stream/patterns.md', 'reference', 217);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/tail-workers/README.md', 'reference', 218);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/tail-workers/api.md', 'reference', 219);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/tail-workers/configuration.md', 'reference', 220);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/tail-workers/gotchas.md', 'reference', 221);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/tail-workers/patterns.md', 'reference', 222);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/terraform/README.md', 'reference', 223);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/terraform/api.md', 'reference', 224);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/terraform/configuration.md', 'reference', 225);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/terraform/gotchas.md', 'reference', 226);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/terraform/patterns.md', 'reference', 227);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/tunnel/README.md', 'reference', 228);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/tunnel/api.md', 'reference', 229);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/tunnel/configuration.md', 'reference', 230);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/tunnel/gotchas.md', 'reference', 231);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/tunnel/networking.md', 'reference', 232);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/tunnel/patterns.md', 'reference', 233);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/turn/README.md', 'reference', 234);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/turn/api.md', 'reference', 235);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/turn/configuration.md', 'reference', 236);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/turn/gotchas.md', 'reference', 237);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/turn/patterns.md', 'reference', 238);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/turnstile/README.md', 'reference', 239);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/turnstile/api.md', 'reference', 240);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/turnstile/configuration.md', 'reference', 241);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/turnstile/gotchas.md', 'reference', 242);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/turnstile/patterns.md', 'reference', 243);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/vectorize/README.md', 'reference', 244);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/vectorize/api.md', 'reference', 245);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/vectorize/configuration.md', 'reference', 246);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/vectorize/gotchas.md', 'reference', 247);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/vectorize/patterns.md', 'reference', 248);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/waf/README.md', 'reference', 249);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/waf/api.md', 'reference', 250);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/waf/configuration.md', 'reference', 251);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/waf/gotchas.md', 'reference', 252);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/waf/patterns.md', 'reference', 253);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/web-analytics/README.md', 'reference', 254);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/web-analytics/configuration.md', 'reference', 255);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/web-analytics/gotchas.md', 'reference', 256);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/web-analytics/integration.md', 'reference', 257);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/web-analytics/patterns.md', 'reference', 258);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workerd/README.md', 'reference', 259);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workerd/api.md', 'reference', 260);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workerd/configuration.md', 'reference', 261);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workerd/gotchas.md', 'reference', 262);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workerd/patterns.md', 'reference', 263);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers/README.md', 'reference', 264);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers/api.md', 'reference', 265);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers/configuration.md', 'reference', 266);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers/frameworks.md', 'reference', 267);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers/gotchas.md', 'reference', 268);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers/patterns.md', 'reference', 269);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers-ai/README.md', 'reference', 270);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers-ai/api.md', 'reference', 271);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers-ai/configuration.md', 'reference', 272);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers-ai/gotchas.md', 'reference', 273);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers-ai/patterns.md', 'reference', 274);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers-for-platforms/README.md', 'reference', 275);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers-for-platforms/api.md', 'reference', 276);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers-for-platforms/configuration.md', 'reference', 277);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers-for-platforms/gotchas.md', 'reference', 278);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers-for-platforms/patterns.md', 'reference', 279);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers-playground/README.md', 'reference', 280);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers-playground/api.md', 'reference', 281);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers-playground/configuration.md', 'reference', 282);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers-playground/gotchas.md', 'reference', 283);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers-playground/patterns.md', 'reference', 284);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers-vpc/README.md', 'reference', 285);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers-vpc/api.md', 'reference', 286);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers-vpc/configuration.md', 'reference', 287);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers-vpc/gotchas.md', 'reference', 288);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workers-vpc/patterns.md', 'reference', 289);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workflows/README.md', 'reference', 290);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workflows/api.md', 'reference', 291);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workflows/configuration.md', 'reference', 292);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workflows/gotchas.md', 'reference', 293);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/workflows/patterns.md', 'reference', 294);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/wrangler/README.md', 'reference', 295);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/wrangler/api.md', 'reference', 296);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/wrangler/configuration.md', 'reference', 297);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/wrangler/gotchas.md', 'reference', 298);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/wrangler/patterns.md', 'reference', 299);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/zaraz/IMPLEMENTATION_SUMMARY.md', 'reference', 300);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/zaraz/README.md', 'reference', 301);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/zaraz/api.md', 'reference', 302);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/zaraz/configuration.md', 'reference', 303);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/zaraz/gotchas.md', 'reference', 304);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_cloudflare', 'agentsam/skills/cloudflare/references/zaraz/patterns.md', 'reference', 305);
+
+INSERT OR REPLACE INTO agentsam_skill (
+  id, tenant_id, user_id, workspace_id, slug, name, description, content_markdown,
+  file_path, scope, slash_trigger, globs, always_apply, task_types_json, route_keys_json,
+  model_constraints_json, access_mode, tags_json, metadata_json, retrieval_strategy,
+  sort_order, version, is_active, updated_at
+) VALUES (
+  'skill_durable_objects',
+  'tenant_fuelnfreetime',
+  'au_fnf_system',
+  'ws_fuelnfreetime',
+  'durable-objects',
+  'durable-objects',
+  'Create and review Cloudflare Durable Objects. Use when building stateful coordination (chat rooms, multiplayer games, booking systems), implementing RPC methods, SQLite storage, alarms, WebSockets, or reviewing DO code for best practices. Covers Workers integration, wrangler config, and testing with Vitest.',
+  '',
+  'agentsam/skills/durable-objects/SKILL.md',
+  'tenant',
+  'durable-objects',
+  '["wrangler.toml","src/**/*.js","docs/AGENTSAM-SKILLS.md"]',
+  0,
+  '["cloudflare","workers","deploy","d1","r2","kv","durable_objects","workers_ai","mcp","repo_work"]',
+  '[]',
+  '{}',
+  'read_only',
+  '["durable_objects","cloudflare","workers","wrangler","d1","r2","kv","workers_ai","deploy","mcp"]',
+  '{"r2_bucket":"fuelnfreetime","r2_skill_key":"agentsam/skills/durable-objects/SKILL.md","source":".cursor/skills","skill_domain":"cloudflare"}',
+  'r2',
+  8,
+  1,
+  1,
+  datetime('now')
+);
+
+DELETE FROM agentsam_skill_file WHERE skill_id = 'skill_durable_objects';
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_durable_objects', 'agentsam/skills/durable-objects/references/rules.md', 'reference', 0);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_durable_objects', 'agentsam/skills/durable-objects/references/testing.md', 'reference', 1);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_durable_objects', 'agentsam/skills/durable-objects/references/workers.md', 'reference', 2);
+
+INSERT OR REPLACE INTO agentsam_skill (
+  id, tenant_id, user_id, workspace_id, slug, name, description, content_markdown,
+  file_path, scope, slash_trigger, globs, always_apply, task_types_json, route_keys_json,
+  model_constraints_json, access_mode, tags_json, metadata_json, retrieval_strategy,
+  sort_order, version, is_active, updated_at
+) VALUES (
+  'skill_fnf_cloudflare_runtime',
+  'tenant_fuelnfreetime',
+  'au_fnf_system',
+  'ws_fuelnfreetime',
+  'fnf-cloudflare-runtime',
+  'fnf-cloudflare-runtime',
+  'Fuel & Free Time Cloudflare Worker runtime — bindings, deploy, AgentSam bridge, D1/R2/KV/DO/Workers AI. Always apply for platform and deploy questions on this repo.',
+  '',
+  'agentsam/skills/fnf-cloudflare-runtime/SKILL.md',
+  'tenant',
+  'fnf-cloudflare-runtime',
+  '["wrangler.toml","src/**/*.js","docs/AGENTSAM-SKILLS.md"]',
+  1,
+  '["cloudflare","workers","deploy","d1","r2","kv","durable_objects","workers_ai","mcp","repo_work"]',
+  '[]',
+  '{}',
+  'read_only',
+  '["fnf_cloudflare_runtime","cloudflare","workers","wrangler","d1","r2","kv","durable_objects","workers_ai","deploy","mcp"]',
+  '{"r2_bucket":"fuelnfreetime","r2_skill_key":"agentsam/skills/fnf-cloudflare-runtime/SKILL.md","source":".cursor/skills","skill_domain":"cloudflare"}',
+  'r2',
+  1,
+  1,
+  1,
+  datetime('now')
+);
+
+DELETE FROM agentsam_skill_file WHERE skill_id = 'skill_fnf_cloudflare_runtime';
+
+INSERT OR REPLACE INTO agentsam_skill (
+  id, tenant_id, user_id, workspace_id, slug, name, description, content_markdown,
+  file_path, scope, slash_trigger, globs, always_apply, task_types_json, route_keys_json,
+  model_constraints_json, access_mode, tags_json, metadata_json, retrieval_strategy,
+  sort_order, version, is_active, updated_at
+) VALUES (
   'skill_stripe_best_practices',
   'tenant_fuelnfreetime',
   'au_fnf_system',
@@ -154,6 +1004,112 @@ INSERT OR REPLACE INTO agentsam_skill (
   model_constraints_json, access_mode, tags_json, metadata_json, retrieval_strategy,
   sort_order, version, is_active, updated_at
 ) VALUES (
+  'skill_web_perf',
+  'tenant_fuelnfreetime',
+  'au_fnf_system',
+  'ws_fuelnfreetime',
+  'web-perf',
+  'web-perf',
+  'Analyzes web performance using Chrome DevTools MCP. Measures Core Web Vitals (FCP, LCP, TBT, CLS, Speed Index), identifies render-blocking resources, network dependency chains, layout shifts, caching issues, and accessibility gaps. Use when asked to audit, profile, debug, or optimize page load performance, Lighthouse scores, or site speed.',
+  '',
+  'agentsam/skills/web-perf/SKILL.md',
+  'tenant',
+  'web-perf',
+  '["wrangler.toml","src/**/*.js","docs/AGENTSAM-SKILLS.md"]',
+  0,
+  '["cloudflare","workers","deploy","d1","r2","kv","durable_objects","workers_ai","mcp","repo_work"]',
+  '[]',
+  '{}',
+  'read_only',
+  '["web_perf","cloudflare","workers","wrangler","d1","r2","kv","durable_objects","workers_ai","deploy","mcp"]',
+  '{"r2_bucket":"fuelnfreetime","r2_skill_key":"agentsam/skills/web-perf/SKILL.md","source":".cursor/skills","skill_domain":"cloudflare"}',
+  'r2',
+  8,
+  1,
+  1,
+  datetime('now')
+);
+
+DELETE FROM agentsam_skill_file WHERE skill_id = 'skill_web_perf';
+
+INSERT OR REPLACE INTO agentsam_skill (
+  id, tenant_id, user_id, workspace_id, slug, name, description, content_markdown,
+  file_path, scope, slash_trigger, globs, always_apply, task_types_json, route_keys_json,
+  model_constraints_json, access_mode, tags_json, metadata_json, retrieval_strategy,
+  sort_order, version, is_active, updated_at
+) VALUES (
+  'skill_workers_best_practices',
+  'tenant_fuelnfreetime',
+  'au_fnf_system',
+  'ws_fuelnfreetime',
+  'workers-best-practices',
+  'workers-best-practices',
+  'Reviews and authors Cloudflare Workers code against production best practices. Load when writing new Workers, reviewing Worker code, configuring wrangler.jsonc, or checking for common Workers anti-patterns (streaming, floating promises, global state, secrets, bindings, observability). Biases towards retrieval from Cloudflare docs over pre-trained knowledge.',
+  '',
+  'agentsam/skills/workers-best-practices/SKILL.md',
+  'tenant',
+  'workers-best-practices',
+  '[]',
+  0,
+  '["commerce","products","inventory","orders"]',
+  '[]',
+  '{}',
+  'read_only',
+  '["workers_best_practices","commerce","products","inventory","orders"]',
+  '{"r2_bucket":"fuelnfreetime","r2_skill_key":"agentsam/skills/workers-best-practices/SKILL.md","source":".cursor/skills","skill_domain":"commerce"}',
+  'r2',
+  5,
+  1,
+  1,
+  datetime('now')
+);
+
+DELETE FROM agentsam_skill_file WHERE skill_id = 'skill_workers_best_practices';
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_workers_best_practices', 'agentsam/skills/workers-best-practices/references/review.md', 'reference', 0);
+INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
+VALUES ('skill_workers_best_practices', 'agentsam/skills/workers-best-practices/references/rules.md', 'reference', 1);
+
+INSERT OR REPLACE INTO agentsam_skill (
+  id, tenant_id, user_id, workspace_id, slug, name, description, content_markdown,
+  file_path, scope, slash_trigger, globs, always_apply, task_types_json, route_keys_json,
+  model_constraints_json, access_mode, tags_json, metadata_json, retrieval_strategy,
+  sort_order, version, is_active, updated_at
+) VALUES (
+  'skill_wrangler',
+  'tenant_fuelnfreetime',
+  'au_fnf_system',
+  'ws_fuelnfreetime',
+  'wrangler',
+  'wrangler',
+  'Cloudflare Workers CLI for deploying, developing, and managing Workers, KV, R2, D1, Vectorize, Hyperdrive, Workers AI, Containers, Queues, Workflows, Pipelines, and Secrets Store. Load before running wrangler commands to ensure correct syntax and best practices.',
+  '',
+  'agentsam/skills/wrangler/SKILL.md',
+  'tenant',
+  'wrangler',
+  '["wrangler.toml","src/**/*.js","docs/AGENTSAM-SKILLS.md"]',
+  0,
+  '["cloudflare","workers","deploy","d1","r2","kv","durable_objects","workers_ai","mcp","repo_work"]',
+  '[]',
+  '{}',
+  'read_only',
+  '["wrangler","cloudflare","workers","d1","r2","kv","durable_objects","workers_ai","deploy","mcp"]',
+  '{"r2_bucket":"fuelnfreetime","r2_skill_key":"agentsam/skills/wrangler/SKILL.md","source":".cursor/skills","skill_domain":"cloudflare"}',
+  'r2',
+  8,
+  1,
+  1,
+  datetime('now')
+);
+
+DELETE FROM agentsam_skill_file WHERE skill_id = 'skill_wrangler';
+
+INSERT OR REPLACE INTO agentsam_skill (
+  id, tenant_id, user_id, workspace_id, slug, name, description, content_markdown,
+  file_path, scope, slash_trigger, globs, always_apply, task_types_json, route_keys_json,
+  model_constraints_json, access_mode, tags_json, metadata_json, retrieval_strategy,
+  sort_order, version, is_active, updated_at
+) VALUES (
   'skill_fnf_commerce_runtime',
   'tenant_fuelnfreetime',
   'au_fnf_system',
@@ -179,7 +1135,6 @@ INSERT OR REPLACE INTO agentsam_skill (
   1,
   datetime('now')
 );
-
 INSERT OR REPLACE INTO agentsam_skill (
   id, tenant_id, user_id, workspace_id, slug, name, description, content_markdown,
   file_path, scope, slash_trigger, globs, always_apply, task_types_json, route_keys_json,

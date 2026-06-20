@@ -53,6 +53,36 @@ npm run db:seed:agentsam-platform
 npm run agentsam:skills:sync
 ```
 
+```bash
+# Full platform schema (destructive to agentsam_skill — re-seed after)
+npm run db:migrate:agentsam-platform
+
+# Cloudflare skills → .cursor/skills → R2 + D1
+npm run agentsam:skills:install-cf
+npm run agentsam:skills:sync
+
+# Or one shot:
+npm run agentsam:skills:install
+```
+
+### Cloudflare skill pack (AgentSam)
+
+| slug | always_apply | domain |
+|------|--------------|--------|
+| `fnf-cloudflare-runtime` | yes | FNF bindings, deploy, bridge, Workers AI |
+| `cloudflare` | no | Platform overview |
+| `wrangler` | no | CLI, secrets, bindings |
+| `workers-best-practices` | no | Production Worker patterns |
+| `durable-objects` | no | CMS_EDITOR DO |
+| `agents-sdk` | no | Agents SDK |
+| `building-mcp-server-on-cloudflare` | no | IAM MCP bridge |
+| `building-ai-agent-on-cloudflare` | no | Agent chat patterns |
+| `web-perf` | no | Storefront performance |
+
+Chat resolver loads up to **3 skills**: always-on `fnf-cloudflare-runtime` + best matches (Cloudflare domain boosted for worker/d1/deploy/MCP messages).
+
+`npm run deploy` runs `wrangler deploy --install-skills` to refresh IDE agent skills.
+
 ## Admin API
 
 | Method | Path | Description |

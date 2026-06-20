@@ -1,6 +1,16 @@
 import { hydrateSkillRowFromR2, hydrateSkillWithFiles, hydrateSkillsFromR2 } from "./skill-r2.js";
 import { FNF_TENANT_ID } from "./constants.js";
 
+const MAX_CHAT_SKILLS = 3;
+
+const CLOUDFLARE_FALLBACK_SLUGS = [
+  "fnf-cloudflare-runtime",
+  "workers-best-practices",
+  "wrangler",
+];
+
+const COMMERCE_FALLBACK_SLUGS = ["fnf-commerce-runtime", "stripe-best-practices"];
+
 function parseJsonArray(raw, fallback = []) {
   try {
     if (!raw) return fallback;
@@ -24,6 +34,17 @@ function parseMetadata(row) {
 function skillDomain(row) {
   const meta = parseMetadata(row);
   return meta.skill_domain || meta.domain || "";
+}
+
+async function hydrateRowWithRefs(env, row) {
+  const { results: files } = await env.DB.prepare(
+    `SELECT file_path, role, sort_order FROM agentsam_skill_file
+     WHERE skill_id = ? AND role = 'reference'
+     ORDER BY sort_order ASC LIMIT 4`
+  )
+    .bind(row.id)
+    .all();
+  return hydrateSkillWithFiles(env, row, files || []);
 }
 
 export async function listAgentSamSkills(env, { hydrate = false } = {}) {
@@ -83,13 +104,18 @@ export async function resolveSkillsForChat(env, message, context = {}) {
     context.page || "",
     context.slug || "",
     context.topic || "",
+    context.intent || "",
+    context.workflow_key || "",
   ]
     .join(" ")
     .toLowerCase();
 
+  const alwaysApply = rows.filter((r) => r.always_apply);
   const scored = [];
 
   for (const row of rows) {
+    if (row.always_apply) continue;
+
     let score = 0;
     const tags = parseJsonArray(row.tags_json);
     const tasks = parseJsonArray(row.task_types_json);
@@ -107,8 +133,14 @@ export async function resolveSkillsForChat(env, message, context = {}) {
 
     if (domain === "commerce" && /product|inventory|order|shop|cart/.test(haystack)) score += 4;
     if (domain === "stripe" && /stripe|payment|checkout|webhook/.test(haystack)) score += 5;
-
-    if (row.always_apply) score += 8;
+    if (
+      domain === "cloudflare" &&
+      /cloudflare|worker|wrangler|d1|r2|kv|deploy|binding|secret|mcp|bridge|durable|agentsam_wai|observability/.test(
+        haystack
+      )
+    ) {
+      score += 6;
+    }
 
     if (row.slash_trigger && haystack.includes(String(row.slash_trigger).toLowerCase())) {
       score += 6;
@@ -119,29 +151,44 @@ export async function resolveSkillsForChat(env, message, context = {}) {
 
   scored.sort((a, b) => b.score - a.score || a.row.sort_order - b.row.sort_order);
 
-  const top = scored.slice(0, 2).map((s) => s.row);
-  if (top.length) {
-    return Promise.all(
-      top.map(async (row) => {
-        const { results: files } = await env.DB.prepare(
-          `SELECT file_path, role, sort_order FROM agentsam_skill_file
-           WHERE skill_id = ? AND role = 'reference'
-           ORDER BY sort_order ASC LIMIT 4`
-        )
-          .bind(row.id)
-          .all();
-        return hydrateSkillWithFiles(env, row, files || []);
-      })
-    );
+  const picked = [];
+  const seen = new Set();
+
+  for (const row of alwaysApply) {
+    if (seen.has(row.slug)) continue;
+    picked.push(row);
+    seen.add(row.slug);
   }
 
-  if (/(product|inventory|order|shop|checkout|stripe|payment)/i.test(haystack)) {
-    const slugs = ["fnf-commerce-runtime", "stripe-best-practices"];
-    const picked = rows.filter((r) => slugs.includes(r.slug)).slice(0, 2);
-    return Promise.all(picked.map((row) => hydrateSkillRowFromR2(env, row)));
+  for (const { row } of scored) {
+    if (picked.length >= MAX_CHAT_SKILLS) break;
+    if (seen.has(row.slug)) continue;
+    picked.push(row);
+    seen.add(row.slug);
   }
 
-  return [];
+  if (picked.length < MAX_CHAT_SKILLS) {
+    let fallbackSlugs = [];
+    if (/cloudflare|worker|wrangler|d1|r2|deploy|mcp|code|repo/.test(haystack)) {
+      fallbackSlugs = CLOUDFLARE_FALLBACK_SLUGS;
+    } else if (/(product|inventory|order|shop|checkout|stripe|payment)/i.test(haystack)) {
+      fallbackSlugs = COMMERCE_FALLBACK_SLUGS;
+    }
+
+    for (const slug of fallbackSlugs) {
+      if (picked.length >= MAX_CHAT_SKILLS) break;
+      if (seen.has(slug)) continue;
+      const row = rows.find((r) => r.slug === slug);
+      if (row) {
+        picked.push(row);
+        seen.add(slug);
+      }
+    }
+  }
+
+  if (!picked.length) return [];
+
+  return Promise.all(picked.map((row) => hydrateRowWithRefs(env, row)));
 }
 
 export function formatSkillsForPrompt(skills) {
@@ -158,5 +205,5 @@ export function formatSkillsForPrompt(skills) {
     });
 
   if (!blocks.length) return "";
-  return `AGENT SKILLS (follow when relevant):\n\n${blocks.join("\n\n---\n\n")}`;
+  return `AGENT SKILLS (follow when relevant — Cloudflare platform skills loaded for Workers/D1/R2/deploy/MCP):\n\n${blocks.join("\n\n---\n\n")}`;
 }
