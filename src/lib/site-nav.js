@@ -10,14 +10,14 @@ export const DEFAULT_NAV_ITEMS = [
   {
     id: "shop",
     label: "Shop",
-    href: "/shop.html",
+    href: "/shop",
     matchPrefixes: ["/shop", "/products/", "/collections/"],
   },
-  { id: "about", label: "About", href: "/about.html", matchPrefixes: ["/about"] },
+  { id: "about", label: "About", href: "/about", matchPrefixes: ["/about"] },
   {
     id: "community",
     label: "Community",
-    href: "/community.html",
+    href: "/community",
     matchPrefixes: ["/community"],
   },
 ];

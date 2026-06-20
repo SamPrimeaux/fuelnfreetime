@@ -12,14 +12,14 @@
       {
         id: "shop",
         label: "Shop",
-        href: "/shop.html",
+        href: "/shop",
         matchPrefixes: ["/shop", "/products/", "/collections/"],
       },
-      { id: "about", label: "About", href: "/about.html", matchPrefixes: ["/about"] },
+      { id: "about", label: "About", href: "/about", matchPrefixes: ["/about"] },
       {
         id: "community",
         label: "Community",
-        href: "/community.html",
+        href: "/community",
         matchPrefixes: ["/community"],
       },
     ],
@@ -134,12 +134,28 @@
 
     let lastY = window.scrollY;
     let hidden = false;
+    let ticking = false;
 
-    const onScroll = () => {
+    const emitGlass = (opacity) => {
+      document.documentElement.style.setProperty("--fnf-glass-opacity", String(opacity));
+      document.dispatchEvent(new CustomEvent("fnf:header-glass", { detail: { opacity } }));
+    };
+
+    const updateHeader = () => {
       const y = window.scrollY;
       const delta = y - lastY;
+      const velocity = Math.abs(delta);
 
-      header.classList.toggle("is-scrolling", y > 8);
+      if (delta < 0 && y > 20) {
+        const opacity = Math.min(0.18 + velocity * 0.014, 0.72);
+        emitGlass(opacity);
+        header.classList.add("is-glass");
+      } else if (y <= 20) {
+        emitGlass(0);
+        header.classList.remove("is-glass");
+      } else if (delta > 0) {
+        emitGlass(Math.max(0, parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--fnf-glass-opacity")) - 0.08));
+      }
 
       if (y < 64) {
         if (hidden) {
@@ -159,10 +175,18 @@
       }
 
       lastY = y;
+      ticking = false;
+    };
+
+    const onScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(updateHeader);
+        ticking = true;
+      }
     };
 
     window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
+    updateHeader();
 
     const closeMenu = () => {
       burger.classList.remove("is-open");

@@ -1438,60 +1438,59 @@
         }
     </style>
     <link rel="stylesheet" href="/css/store-shell.css">
+    <link rel="stylesheet" href="/css/shop-hero.css">
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 </head>
 <body>
     <div id="fnf-store-mount"></div>
 
     <!-- SHOP PAGE CONTENT -->
     <section id="fft-shop-hybrid" aria-label="Fuel & Free Time Shop – Hybrid Lifestyle">
-        <!-- ================== COUNTDOWN STRIP ================== -->
-        <div class="fft-hybrid-wrap fft-hybrid-texture">
-            <section class="fft-countdown" data-launch="2025-09-15T17:00:00">
-                <div class="row" aria-live="polite">
-                    <div class="fft-kpi">
-                        <small>Days</small>
-                        <div class="fft-seg" id="fft-dd">00</div>
-                    </div>
-                    <div class="fft-sep">:</div>
-                    <div class="fft-kpi">
-                        <small>Hours</small>
-                        <div class="fft-seg" id="fft-hh">00</div>
-                    </div>
-                    <div class="fft-sep">:</div>
-                    <div class="fft-kpi">
-                        <small>Minutes</small>
-                        <div class="fft-seg" id="fft-mm">00</div>
-                    </div>
-                    <div class="fft-sep">:</div>
-                    <div class="fft-kpi">
-                        <small>Seconds</small>
-                        <div class="fft-seg" id="fft-ss">00</div>
-                    </div>
-                </div>
-                <div class="fft-kpi-note">Launch countdown — set your reminder & get first dibs.</div>
-            </section>
-        </div>
 
-        <!-- ================= HERO ================= -->
-        <div class="fft-hybrid-wrap fft-hybrid-texture">
-            <header class="fft-hybrid-hero reveal on">
-                <div class="fft-hybrid-hero-media" aria-hidden="true" data-parallax>
-                    <img src="/media/archive/shopify-import/graphics/high_octane.jpg" alt="" loading="eager" fetchpriority="high" data-cms="hero.imageUrl" data-cms-attr="src">
+        <!-- ================= ADVENTURE HERO ================= -->
+        <section class="fnf-shop-hero" id="fnfShopHero">
+            <div class="fnf-shop-hero-bg" aria-hidden="true">
+                <div class="fnf-shop-hero-bg-layer fnf-shop-hero-bg-layer--a" data-parallax-speed="0.28">
+                    <img src="/media/archive/shopify-import/graphics/high_octane.jpg" alt="" loading="eager" fetchpriority="low">
                 </div>
-                <div class="fft-hybrid-hero-content">
-                    <div class="fft-hybrid-hero-card">
-                        <div class="fft-eyebrow" data-cms="hero.eyebrow">Collections</div>
-                        <h1 class="fft-hero-title" data-cms="hero.headline">A lifestyle built from grit — and time.</h1>
-                        <p class="fft-hero-sub" data-cms="hero.subheadline">Shop High Octane, Masters, and Essentials. Clean grid. Real stories. Fire-orange attitude.</p>
-                        <div class="fft-cta-row">
-                            <a class="fft-btn accent" href="#fft-grid" data-cms="hero.ctaPrimary.href" data-cms-attr="href"><span data-cms="hero.ctaPrimary.label">Shop All</span></a>
-                            <a class="fft-btn ghost" href="#fft-collections" data-cms="hero.ctaSecondary.href" data-cms-attr="href"><span data-cms="hero.ctaSecondary.label">Browse Collections</span></a>
-                        </div>
-                        <div class="fft-gauge" aria-hidden="true"></div>
-                    </div>
+                <div class="fnf-shop-hero-bg-layer fnf-shop-hero-bg-layer--b" data-parallax-speed="0.14">
+                    <img src="/media/archive/shopify-import/graphics/Vette.png" alt="" loading="lazy">
                 </div>
-            </header>
-        </div>
+                <div class="fnf-shop-hero-bg-glow"></div>
+                <div class="fnf-shop-hero-bg-scrim"></div>
+            </div>
+            <div class="fnf-shop-hero-inner">
+                <div class="fnf-shop-hero-content">
+                    <h1 class="fnf-shop-hero-title">
+                        <span>Discover</span>
+                        <span>Premium</span>
+                        <span>Gear</span>
+                    </h1>
+                    <p class="fnf-shop-hero-desc">
+                        Shop High Octane, Masters, and Essentials. Clean grid. Real stories. Fire-orange attitude — built for those who've earned their free time.
+                    </p>
+                    <a href="#fft-grid" class="fnf-shop-hero-cta">
+                        <span>Explore Shop</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </a>
+                </div>
+                <div class="fnf-shop-glb">
+                    <model-viewer
+                        id="fnfShopMV"
+                        src="/media/archive/shopify-import/3d-models/Emblem_of_Elegance.glb"
+                        alt="Fuel &amp; Free Time emblem"
+                        disable-zoom
+                        disable-pan
+                        disable-tap
+                        interaction-prompt="none"
+                        loading="eager"
+                        reveal="auto"
+                        shadow-intensity="0"
+                        exposure="1.05">
+                    </model-viewer>
+                </div>
+            </div>
+        </section>
 
         <!-- ============== COLLECTIONS STRIP (Swipe on mobile) ============== -->
         <div class="fft-hybrid-wrap">
@@ -1915,27 +1914,6 @@
             root.querySelector('#fft-qv-close').addEventListener('click', ()=>qv.classList.add('u-hide'));
             qv.addEventListener('click', e=>{ if(e.target===qv) qv.classList.add('u-hide'); });
 
-            /* ===== COUNTDOWN (digital-style) ===== */
-            const cd = root.querySelector('.fft-countdown');
-            if(cd){
-                const launchStr = cd.getAttribute('data-launch');
-                const target = launchStr ? new Date(launchStr) : new Date(Date.now()+7*24*60*60*1000); // fallback: 7 days
-                const dd = root.querySelector('#fft-dd'), hh = root.querySelector('#fft-hh'), mm = root.querySelector('#fft-mm'), ss = root.querySelector('#fft-ss');
-                function pad(n){ return String(n).padStart(2,'0'); }
-                function tick(){
-                    const now = new Date();
-                    let t = Math.max(0, target - now);
-                    const d = Math.floor(t/86400000); t-=d*86400000;
-                    const h = Math.floor(t/3600000); t-=h*3600000;
-                    const m = Math.floor(t/60000); t-=m*60000;
-                    const s = Math.floor(t/1000);
-                    dd.textContent = pad(d); hh.textContent = pad(h); mm.textContent = pad(m); ss.textContent = pad(s);
-                    if(target - now > 0) requestAnimationFrame(tick);
-                    else { cd.querySelector('.fft-kpi-note').textContent = "We're live — shop the drop!"; }
-                }
-                tick();
-            }
-
             /* ===== Initialize filters once ===== */
             apply();
         })();
@@ -1966,6 +1944,7 @@
     </script>
     <script src="/js/store-catalog.js" defer></script>
     <script src="/js/store-shell.js" defer></script>
+    <script src="/js/shop-hero.js" defer></script>
     <script src="/js/store-cart.js" defer></script>
     <script src="/js/fnf-head.js" defer></script>
     <script src="/js/cms-hydrate.js" defer></script>

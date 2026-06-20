@@ -48,7 +48,7 @@ export const PAGE_REGISTRY = {
           subheadline:
             "For those who've earned their freedom — on two wheels, four wheels, water, or in the garage.",
           ctaLabel: "Explore More",
-          ctaHref: "./shop.html",
+          ctaHref: "/shop",
           glbUrl: M.glbEmblem,
         },
       },

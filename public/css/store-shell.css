@@ -31,20 +31,24 @@ body.fnf-nav-open {
   inset: 0 0 auto 0;
   height: var(--fnf-header);
   z-index: 10000;
-  background: rgba(10, 10, 10, 0.72);
-  box-shadow: 0 1px 0 rgba(255, 69, 0, 0.06);
-  transition: transform 0.32s var(--fnf-ease), backdrop-filter 0.32s var(--fnf-ease),
-    background 0.32s var(--fnf-ease);
+  --fnf-glass-opacity: 0;
+  background: rgba(10, 10, 10, calc(0.55 + var(--fnf-glass-opacity) * 0.38));
+  box-shadow: 0 1px 0 rgba(255, 69, 0, calc(0.04 + var(--fnf-glass-opacity) * 0.08));
+  transition: transform 0.32s var(--fnf-ease), backdrop-filter 0.22s var(--fnf-ease),
+    background 0.22s var(--fnf-ease), box-shadow 0.22s var(--fnf-ease);
 }
 
 @supports (backdrop-filter: blur(1px)) {
   .fnf-header {
-    backdrop-filter: blur(12px) saturate(1.15);
+    backdrop-filter: blur(calc(6px + var(--fnf-glass-opacity) * 18px))
+      saturate(calc(1.05 + var(--fnf-glass-opacity) * 0.2));
+    -webkit-backdrop-filter: blur(calc(6px + var(--fnf-glass-opacity) * 18px))
+      saturate(calc(1.05 + var(--fnf-glass-opacity) * 0.2));
   }
-  .fnf-header.is-scrolling {
-    backdrop-filter: blur(18px) saturate(1.2);
-    background: rgba(10, 10, 10, 0.88);
-  }
+}
+
+.fnf-header.is-glass {
+  border-bottom: 1px solid rgba(255, 255, 255, calc(0.04 + var(--fnf-glass-opacity) * 0.1));
 }
 
 .fnf-header.is-hidden {

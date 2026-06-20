@@ -57,7 +57,7 @@
           <div class="cart-empty-icon">${CART_SVG}</div>
           <h2>Your cart is empty</h2>
           <p>Add something from the shop — your picks stay saved on this device until checkout.</p>
-          <a class="store-btn" href="/shop.html">Browse the shop</a>
+          <a class="store-btn" href="/shop">Browse the shop</a>
         </div>`;
       if (form) form.hidden = true;
       return;
@@ -69,7 +69,7 @@
       .map((item, idx) => {
         const line = (item.price_cents || 0) * item.qty;
         total += line;
-        const productHref = item.slug ? `/products/${item.slug}` : "/shop.html";
+        const productHref = item.slug ? `/products/${item.slug}` : "/shop";
         return `
         <article class="cart-line" data-idx="${idx}">
           <a href="${productHref}"><img src="${item.image || ""}" alt=""></a>

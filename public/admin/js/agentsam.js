@@ -93,6 +93,10 @@ async function sendAgentsamMessage(text) {
     typing.remove();
     if (!res.ok) throw new Error(data.error || "Request failed");
     appendMessage("assistant", data.reply);
+    if (data.routing?.workflow?.name) {
+      const status = document.getElementById("agentsam-status");
+      if (status) status.textContent = `${data.routing.workflow.name} · ${data.routing.classification?.intent || "chat"}`;
+    }
     if (data.stub) {
       document.getElementById("agentsam-status").textContent = "Stub mode — bind Workers AI";
     }

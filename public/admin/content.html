@@ -57,6 +57,40 @@ renderShell("/admin/content", `
           <option value="products">Products</option>
         </select>
       </div>
+
+      <div class="media-glb-placement" id="media-glb-placement" hidden>
+        <div class="media-glb-placement-head">
+          <strong>3D placement</strong>
+          <button type="button" class="btn ghost small" id="media-glb-reset">Reset</button>
+        </div>
+        <p class="media-glb-placement-note">Drag the model to orbit, scroll to zoom — controls sync live. Shift+drag pans the frame (X/Y).</p>
+
+        <div class="media-glb-placement-grid">
+          <label>Theta °<input type="number" id="glb-theta" step="1" min="-180" max="180"></label>
+          <label>Phi °<input type="number" id="glb-phi" step="1" min="0" max="180"></label>
+          <label>Radius %<input type="number" id="glb-radius" step="1" min="50" max="200"></label>
+          <label>FOV °<input type="number" id="glb-fov" step="1" min="15" max="60"></label>
+          <label>X px<input type="number" id="glb-x" step="1" min="-200" max="200"></label>
+          <label>Y px<input type="number" id="glb-y" step="1" min="-200" max="200"></label>
+          <label>Z px<input type="number" id="glb-z" step="1" min="-200" max="200"></label>
+          <label>Scale<input type="number" id="glb-scale" step="0.01" min="0.25" max="3"></label>
+        </div>
+
+        <div class="media-glb-sliders">
+          <label>Theta <input type="range" id="glb-theta-range" min="-180" max="180" step="1"></label>
+          <label>Phi <input type="range" id="glb-phi-range" min="0" max="180" step="1"></label>
+          <label>Radius <input type="range" id="glb-radius-range" min="50" max="200" step="1"></label>
+          <label>Y offset <input type="range" id="glb-y-range" min="-120" max="120" step="1"></label>
+          <label>Scale <input type="range" id="glb-scale-range" min="0.25" max="2" step="0.01"></label>
+        </div>
+
+        <div class="media-drawer-field">
+          <label for="media-glb-export">Placement notes</label>
+          <textarea id="media-glb-export" rows="8" readonly></textarea>
+        </div>
+        <button type="button" class="btn ghost small media-glb-copy" id="media-glb-copy">Copy placement notes</button>
+      </div>
+
       <div class="media-drawer-field media-drawer-meta">
         <div>Size: <span id="media-meta-size">—</span></div>
         <div>Uploaded: <span id="media-meta-date">—</span></div>

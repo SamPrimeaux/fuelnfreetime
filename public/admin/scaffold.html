@@ -17,11 +17,15 @@ const titles = {
   discounts: "Discounts",
   markets: "Markets",
   pos: "Point of Sale",
-  agentic: "Agentic",
+  agentic: "AgentSam",
 };
 const title = titles[view] || "Feature";
-const activeHref = `/admin/scaffold?view=${view}`;
-
+if (view === "agentic") {
+  location.replace("/admin/agentsam");
+}
+if (view === "agentic") {
+  location.replace("/admin/agentsam");
+} else {
 renderShell(activeHref, `
   <div class="console-page">
     <h1 class="admin-page-title">${title}</h1>
@@ -34,9 +38,9 @@ renderShell(activeHref, `
   </div>
 `, {
   onReady() {
-    if (view === "agentic") window.openAgentsamDrawer?.();
   },
 });
+}
 </script>
 </body>
 </html>

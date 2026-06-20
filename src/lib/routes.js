@@ -3,6 +3,12 @@
  */
 
 const PAGE_ALIASES = new Map([
+  ["/shop", "/shop.html"],
+  ["/shop/", "/shop.html"],
+  ["/about", "/about.html"],
+  ["/about/", "/about.html"],
+  ["/community", "/community.html"],
+  ["/community/", "/community.html"],
   ["/pages/shop", "/shop.html"],
   ["/pages/shop/", "/shop.html"],
   ["/pages/community", "/community.html"],
@@ -19,6 +25,26 @@ const PAGE_ALIASES = new Map([
   ["/collections/masters/", "/shop.html"],
   ["/collections/essentials", "/shop.html"],
   ["/collections/essentials/", "/shop.html"],
+]);
+
+/** /pages/* → canonical clean paths (301) */
+export const PAGES_CLEAN_REDIRECTS = new Map([
+  ["/pages/shop", "/shop"],
+  ["/pages/shop/", "/shop"],
+  ["/pages/about", "/about"],
+  ["/pages/about/", "/about"],
+  ["/pages/community", "/community"],
+  ["/pages/community/", "/community"],
+  ["/pages/cart", "/cart"],
+  ["/pages/cart/", "/cart"],
+]);
+
+/** Legacy .html URLs → clean paths (301) */
+export const STORE_HTML_REDIRECTS = new Map([
+  ["/shop.html", "/shop"],
+  ["/about.html", "/about"],
+  ["/community.html", "/community"],
+  ["/cart.html", "/cart"],
 ]);
 
 export function canonicalHost(hostname) {

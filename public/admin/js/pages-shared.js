@@ -2,7 +2,7 @@
 
 window.PAGE_ROUTES = {
   home: "/",
-  shop: "/shop.html",
+  shop: "/shop",
   about: "/about.html",
   community: "/community.html",
   site: "/",

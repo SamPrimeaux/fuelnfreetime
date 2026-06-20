@@ -17,6 +17,7 @@ export const ADMIN_CLEAN_PAGES = new Set([
   "preferences",
   "account",
   "email",
+  "agentsam",
 ]);
 
 /** Pages reachable without a session */

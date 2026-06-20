@@ -1,0 +1,192 @@
+/**
+ * Agent Sam request router — intent → workflow + skills + MCP lanes.
+ * Single chat input; no mode picker required.
+ */
+
+import { FNF_TENANT_ID, FNF_WORKSPACE_ID } from "./constants.js";
+import { formatMcpForPrompt, selectMcpServers } from "./mcp-servers.js";
+import { formatSkillsForPrompt, resolveSkillsForChat } from "./skills.js";
+
+const INTENT_RULES = [
+  {
+    intent: "content",
+    re: /\b(copy|write|email|seo|publish|campaign|newsletter|headline|description|blog|caption|subject line|hero copy|product copy|meta description)\b/i,
+    workflow_key: "fnf_content_studio",
+    task_type: "content_generation",
+  },
+  {
+    intent: "creative",
+    re: /\b(image|banner|mockup|graphic|photo|visual|hero image|creative|promo|social post|thumbnail|redesign this image|generate.*visual)\b/i,
+    workflow_key: "fnf_creative_studio",
+    task_type: "image_generation",
+  },
+  {
+    intent: "brand",
+    re: /\b(logo|brand|identity|refresh|typography|moodboard|visual identity|brand system|color palette)\b/i,
+    workflow_key: "fnf_brand_refresh",
+    task_type: "brand_design",
+  },
+  {
+    intent: "code",
+    re: /\b(code|repo|deploy|worker|bug|fix|refactor|api|route|sql|migration|typescript|javascript|pull request|commit|branch|github)\b/i,
+    workflow_key: null,
+    task_type: "repo_work",
+  },
+  {
+    intent: "commerce",
+    re: /\b(product|inventory|order|stock|cart|checkout|stripe|variant|sku|subscriber)\b/i,
+    workflow_key: null,
+    task_type: "store_ops",
+  },
+  {
+    intent: "brainstorm",
+    re: /\b(brainstorm|ideas|strategy|roadmap|what should|recommend|plan|next steps|prioritize)\b/i,
+    workflow_key: "fnf_agentsam_chat",
+    task_type: "brainstorm",
+  },
+];
+
+function parseJson(raw, fallback = null) {
+  try {
+    if (!raw) return fallback;
+    return typeof raw === "string" ? JSON.parse(raw) : raw;
+  } catch {
+    return fallback;
+  }
+}
+
+export function classifyIntent(message, context = {}) {
+  const hay = [message, context.page || "", context.slug || "", context.topic || ""].join(" ");
+
+  let best = { intent: "general", score: 0, workflow_key: "fnf_agentsam_chat", task_type: "admin_chat" };
+
+  for (const rule of INTENT_RULES) {
+    if (!rule.re.test(hay)) continue;
+    const score = (hay.match(rule.re) || []).length;
+    if (score >= best.score) {
+      best = {
+        intent: rule.intent,
+        score,
+        workflow_key: rule.workflow_key || best.workflow_key,
+        task_type: rule.task_type,
+      };
+    }
+  }
+
+  return best;
+}
+
+async function loadWorkflow(env, workflowKey) {
+  if (!workflowKey || !env.DB) return null;
+  try {
+    return await env.DB.prepare(
+      `SELECT id, workflow_key, display_name, description, default_mode, default_task_type,
+              risk_level, requires_approval, quality_gate_json, metadata_json
+       FROM agentsam_workflows
+       WHERE workflow_key = ? AND tenant_id = ? AND is_active = 1
+       LIMIT 1`
+    )
+      .bind(workflowKey, FNF_TENANT_ID)
+      .first();
+  } catch {
+    return null;
+  }
+}
+
+function formatWorkflowForPrompt(workflow) {
+  if (!workflow) return "";
+
+  const meta = parseJson(workflow.metadata_json, {});
+  const gate = parseJson(workflow.quality_gate_json, {});
+  const uiLabel = meta.ui_label || workflow.display_name;
+  const loop = meta.workflow_loop || [];
+  const approval = meta.approval_required_for || [];
+  const prompts = meta.suggested_prompts || [];
+  const dod = gate.definition_of_done || [];
+
+  return [
+    "ACTIVE WORKFLOW:",
+    `- ${uiLabel} (${workflow.workflow_key})`,
+    workflow.description ? `- ${workflow.description}` : "",
+    loop.length ? `- Loop: ${loop.join(" → ")}` : "",
+    dod.length ? `- Definition of done: ${dod.join("; ")}` : "",
+    approval.length ? `- Approval before: ${approval.join(", ")}` : "",
+    workflow.requires_approval ? "- This workflow requires explicit approval for risky actions." : "",
+    prompts.length ? `- Example prompts: ${prompts.slice(0, 3).join(" | ")}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+export async function routeAgentsamRequest(env, message, context = {}) {
+  const classification = classifyIntent(message, context);
+  const workflow = await loadWorkflow(env, classification.workflow_key);
+  const skills = await resolveSkillsForChat(env, message, {
+    ...context,
+    topic: classification.task_type,
+    intent: classification.intent,
+  });
+  const mcpServers = selectMcpServers(classification.intent, message);
+
+  const systemBlocks = [
+    formatWorkflowForPrompt(workflow),
+    formatSkillsForPrompt(skills),
+    formatMcpForPrompt(mcpServers),
+  ].filter(Boolean);
+
+  return {
+    classification,
+    workflow: workflow
+      ? {
+          id: workflow.id,
+          key: workflow.workflow_key,
+          name: workflow.display_name,
+          mode: workflow.default_mode,
+          risk: workflow.risk_level,
+          requires_approval: !!workflow.requires_approval,
+          ui_label: parseJson(workflow.metadata_json, {})?.ui_label || workflow.display_name,
+        }
+      : null,
+    skills: skills.map((s) => ({ slug: s.slug, name: s.name })),
+    mcp_servers: mcpServers.map((s) => ({
+      slug: s.slug,
+      name: s.display_name,
+      status: s.status,
+    })),
+    system_blocks: systemBlocks,
+    tenant_id: FNF_TENANT_ID,
+    workspace_id: FNF_WORKSPACE_ID,
+  };
+}
+
+export async function listStudioWorkflows(env) {
+  if (!env.DB) return [];
+  try {
+    const { results } = await env.DB.prepare(
+      `SELECT id, workflow_key, display_name, description, default_mode, default_task_type,
+              risk_level, requires_approval, metadata_json
+       FROM agentsam_workflows
+       WHERE tenant_id = ? AND is_active = 1
+         AND workflow_key IN ('fnf_content_studio','fnf_creative_studio','fnf_brand_refresh','fnf_agentsam_chat')
+       ORDER BY display_name ASC`
+    )
+      .bind(FNF_TENANT_ID)
+      .all();
+
+    return (results || []).map((row) => {
+      const meta = parseJson(row.metadata_json, {});
+      return {
+        id: row.id,
+        workflow_key: row.workflow_key,
+        display_name: row.display_name,
+        description: row.description,
+        ui_label: meta.ui_label || row.display_name,
+        ui_description: meta.ui_description || row.description,
+        suggested_prompts: meta.suggested_prompts || [],
+        category: meta.category || "agentic",
+      };
+    });
+  } catch {
+    return [];
+  }
+}

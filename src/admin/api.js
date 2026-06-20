@@ -27,7 +27,14 @@ import {
   setPrimaryProductImage,
 } from "./media.js";
 import { handleAdminCmsApi } from "../cms/api.js";
-import { agentsamChat, agentsamSkillGet, agentsamSkillsList, agentsamStatus } from "./agentsam.js";
+import {
+  agentsamChat,
+  agentsamSkillGet,
+  agentsamSkillsList,
+  agentsamStatus,
+  agentsamTools,
+  agentsamWorkflowsList,
+} from "./agentsam.js";
 import { onlineStoreOverview, getStorePreferences, postStorePreferences } from "./store.js";
 
 function json(data, init = {}) {
@@ -431,6 +438,12 @@ export async function handleAdminApi(request, env, url) {
   }
   if (path === "/api/admin/agentsam/status" && method === "GET") {
     return agentsamStatus(env);
+  }
+  if (path === "/api/admin/agentsam/tools" && method === "GET") {
+    return agentsamTools(env);
+  }
+  if (path === "/api/admin/agentsam/workflows" && method === "GET") {
+    return agentsamWorkflowsList(env);
   }
   if (path === "/api/admin/agentsam/skills" && method === "GET") {
     return agentsamSkillsList(env, url);

@@ -1,18 +1,16 @@
-import { M } from "../cms/media-paths.js";
-import {
-  formatSkillsForPrompt,
-  getAgentSamSkill,
-  listAgentSamSkills,
-  resolveSkillsForChat,
-} from "../agentsam/skills.js";
+import { listMcpServersForUi } from "../agentsam/mcp-servers.js";
+import { listStudioWorkflows, routeAgentsamRequest } from "../agentsam/router.js";
+import { getAgentSamSkill, listAgentSamSkills } from "../agentsam/skills.js";
 
 const AGENTSAM_MODEL = "@cf/meta/llama-3.1-8b-instruct";
 
-const SYSTEM_PROMPT = `You are Agent Sam, the Fuel & Free Time admin assistant.
-You help the store owner manage products, content, pages, orders, and the storefront at fuelnfreetime.com.
-Be concise, practical, and on-brand (rugged, earned freedom, motorsports/garage culture).
-Use the LIVE STORE DATA block when answering inventory, product, or page questions.
-Do not invent order numbers or inventory counts.`;
+const SYSTEM_PROMPT = `You are Agent Sam for Fuel & Free Time (fuelnfreetime.com).
+You handle everything through one conversation: store ops, content writing, creative direction, brand work, email drafts, brainstorming, and repo/code guidance.
+Be concise, practical, and on-brand — rugged, earned freedom, motorsports and garage culture.
+Use LIVE STORE DATA and routed WORKFLOW/SKILLS when present.
+Do not invent inventory, orders, or prices.
+For image/logo/code tasks: produce clear deliverables, steps, or drafts; note when live publish or asset replacement needs owner approval.
+When MCP tools are listed but status is not "ready", explain what you can do now and what will connect next.`;
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -40,9 +38,7 @@ function extractReply(result) {
 async function liveStoreContext(env) {
   try {
     const [products, pages, lowStock] = await Promise.all([
-      env.DB.prepare(
-        `SELECT COUNT(*) AS n FROM products WHERE status = 'active'`
-      ).first(),
+      env.DB.prepare(`SELECT COUNT(*) AS n FROM products WHERE status = 'active'`).first(),
       env.DB.prepare(
         `SELECT slug, title, status, updated_at FROM pages ORDER BY updated_at DESC LIMIT 12`
       ).all(),
@@ -80,14 +76,13 @@ export async function agentsamChat(request, env) {
   if (!message) return json({ error: "message required" }, { status: 400 });
 
   const context = body?.context || {};
-  const matchedSkills = await resolveSkillsForChat(env, message, context);
-  const skillsBlock = formatSkillsForPrompt(matchedSkills);
+  const routing = await routeAgentsamRequest(env, message, context);
 
   const contextLines = [
     context.page ? `Admin UI path: ${context.page}.` : "",
     context.slug ? `Editing CMS page slug: ${context.slug}.` : "",
     await liveStoreContext(env),
-    skillsBlock,
+    ...routing.system_blocks,
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -96,8 +91,9 @@ export async function agentsamChat(request, env) {
     return json({
       ok: true,
       reply:
-        "Agent Sam is ready but Workers AI (AGENTSAM_WAI) is not bound in this environment. Bind AGENTSAM_WAI in wrangler.toml to enable live responses.",
+        "Agent Sam is ready but Workers AI (AGENTSAM_WAI) is not bound in this environment. Routing and workflows are live — bind AGENTSAM_WAI in wrangler.toml for AI responses.",
       stub: true,
+      routing,
     });
   }
 
@@ -115,7 +111,7 @@ export async function agentsamChat(request, env) {
       ok: true,
       reply,
       model: AGENTSAM_MODEL,
-      skills: matchedSkills.map((s) => ({ slug: s.slug, name: s.name })),
+      routing,
     });
   } catch (err) {
     console.error("agentsam chat error", err);
@@ -131,13 +127,18 @@ export async function agentsamChat(request, env) {
 
 export async function agentsamStatus(env) {
   let skillCount = 0;
+  let workflowCount = 0;
   try {
-    const { results } = await env.DB.prepare(
+    const skills = await env.DB.prepare(
       `SELECT COUNT(*) AS n FROM agentsam_skill WHERE is_active = 1`
-    ).all();
-    skillCount = results?.[0]?.n ?? 0;
+    ).first();
+    skillCount = skills?.n ?? 0;
+    const wfs = await env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM agentsam_workflows WHERE is_active = 1`
+    ).first();
+    workflowCount = wfs?.n ?? 0;
   } catch {
-    /* table may not exist yet */
+    /* tables may not exist yet */
   }
 
   return json({
@@ -146,8 +147,30 @@ export async function agentsamStatus(env) {
     model: AGENTSAM_MODEL,
     name: "Agent Sam",
     skills_registered: skillCount,
+    workflows_registered: workflowCount,
     skills_storage: "D1 agentsam_skill + R2 agentsam/skills/",
+    mcp_servers: listMcpServersForUi(),
   });
+}
+
+export async function agentsamTools(env) {
+  const workflows = await listStudioWorkflows(env);
+  return json({
+    ok: true,
+    workflows,
+    mcp_servers: listMcpServersForUi(),
+    quick_actions: [
+      { label: "Create an image", prompt: "Generate a premium collection banner direction for Fuel n Freetime" },
+      { label: "Write or edit", prompt: "Draft product copy for our latest tee — rugged, earned freedom tone" },
+      { label: "Look something up", prompt: "What should we publish next on fuelnfreetime.com?" },
+      { label: "Repo work", prompt: "Summarize what changed in the fuelnfreetime repo and what to verify before deploy" },
+    ],
+  });
+}
+
+export async function agentsamWorkflowsList(env) {
+  const workflows = await listStudioWorkflows(env);
+  return json({ ok: true, workflows });
 }
 
 export async function agentsamSkillsList(env, url) {

@@ -107,6 +107,14 @@ async function nextDisplayOrder(env, folder) {
 }
 
 function rowToAsset(row) {
+  let placement = null;
+  if (row.placement_json) {
+    try {
+      placement = JSON.parse(row.placement_json);
+    } catch {
+      placement = null;
+    }
+  }
   return {
     id: row.id,
     r2_key: row.r2_key,
@@ -118,6 +126,7 @@ function rowToAsset(row) {
     folder: row.folder || inferFolder(row.r2_key, row.content_type),
     display_order: row.display_order ?? 0,
     alt_text: row.alt_text || "",
+    placement,
     created_at: row.created_at,
     updated_at: row.updated_at || row.created_at,
   };
@@ -314,12 +323,21 @@ export async function updateMedia(request, env, id) {
   const displayOrder =
     body.display_order != null ? Math.round(Number(body.display_order)) : asset.display_order;
 
+  let placementJson = asset.placement_json;
+  if (body.placement !== undefined) {
+    if (body.placement === null) {
+      placementJson = null;
+    } else if (typeof body.placement === "object") {
+      placementJson = JSON.stringify(body.placement);
+    }
+  }
+
   await env.DB.prepare(
     `UPDATE media_assets
-     SET filename = ?, alt_text = ?, folder = ?, display_order = ?, updated_at = datetime('now')
+     SET filename = ?, alt_text = ?, folder = ?, display_order = ?, placement_json = ?, updated_at = datetime('now')
      WHERE id = ?`
   )
-    .bind(filename, altText, folder, displayOrder, id)
+    .bind(filename, altText, folder, displayOrder, placementJson, id)
     .run();
 
   const updated = await env.DB.prepare(`SELECT * FROM media_assets WHERE id = ?`).bind(id).first();

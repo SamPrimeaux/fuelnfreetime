@@ -70,7 +70,7 @@
       <div class="pdp-error-wrap">
         <h1>Product not found</h1>
         <p>${message || "This item may have moved or is not available yet."}</p>
-        <a class="pdp-btn primary" href="/shop.html">Back to shop</a>
+        <a class="pdp-btn primary" href="/shop">Back to shop</a>
       </div>`;
   }
 
@@ -121,7 +121,7 @@
     }
 
     root.innerHTML = `
-      <nav class="pdp-crumb" aria-label="Breadcrumb"><a href="/shop.html">Shop</a> / <span>${product.title}</span></nav>
+      <nav class="pdp-crumb" aria-label="Breadcrumb"><a href="/shop">Shop</a> / <span>${product.title}</span></nav>
       <div class="pdp-layout">
         <div class="pdp-gallery">
           <div class="pdp-main"><img id="pdp-main-img" src="${mainImg}" alt="${product.title}"></div>

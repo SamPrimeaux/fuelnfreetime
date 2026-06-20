@@ -42,7 +42,7 @@ INSERT OR REPLACE INTO agentsam_project_context (
   '["Client worker/repo separate from IAM platform — deploy from /Users/samprimeaux/fuelnfreetime only","Client D1 fuelnfreetime is runtime SoT — IAM row is compass/registry only","Never apply inneranimalmedia migrations to client D1","Connor: read client AGENTS.md + npm run agentsam:skills:sync on client repo","Stripe skills vendored at client .cursor/skills/stripe-best-practices/"]',
   '["Stripe not wired on client worker","Client ctx row on worker D1 must stay in sync with this IAM registry row","No IAM Vectorize ingest of client repo yet (optional)"]',
   'products,product_variants,orders,order_items,pages,page_sections,agentsam_skill,agentsam_webhooks',
-  'agentsam_skill_file,agentsam_hook,agentsam_webhook_events,agentsam_mcp_workflows,media_assets,store_settings',
+  'agentsam_skill_file,agentsam_hook,agentsam_webhook_events,agentsam_workflows,agentsam_mcp_workflows,media_assets,store_settings',
   'fuelnfreetime',
   'fuelnfreetime',
   'fuelnfreetime.com,www.fuelnfreetime.com,fuelnfreetime.meauxbility.workers.dev',

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentSam — Fuel & Free Time Admin</title>
+<link rel="stylesheet" href="/admin/css/admin.css">
+<link rel="stylesheet" href="/admin/css/console.css">
+<link rel="stylesheet" href="/admin/css/agentsam-page.css">
+</head>
+<body class="agentsam-page-body">
+<script src="/admin/js/shell.js"></script>
+<script>
+renderShell("/admin/agentsam", `
+  <div class="agentsam-page" id="agentsam-page">
+    <div class="agentsam-page-stage">
+      <div class="agentsam-page-hero" id="agentsam-hero">
+        <h1>What's on the agenda today?</h1>
+      </div>
+      <div class="agentsam-page-thread" id="agentsam-thread" role="log" aria-live="polite" hidden></div>
+    </div>
+    <div class="agentsam-page-dock">
+      <div class="agentsam-page-composer-wrap">
+        <form class="agentsam-page-composer" id="agentsam-page-form">
+          <div class="agentsam-page-tools">
+            <button type="button" class="agentsam-page-plus" id="agentsam-plus" aria-expanded="false" aria-haspopup="menu" aria-label="Tools and attachments">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+            <div class="agentsam-page-menu" id="agentsam-tool-menu" role="menu" hidden>
+              <button type="button" role="menuitem" data-tool="attach">Add photos &amp; files</button>
+              <button type="button" role="menuitem" data-tool="image">Create image</button>
+              <button type="button" role="menuitem" data-tool="research">Deep research</button>
+              <button type="button" role="menuitem" data-tool="web">Web search</button>
+              <div class="agentsam-page-menu-divider"></div>
+              <div class="agentsam-page-menu-label">Connections</div>
+              <div id="agentsam-mcp-list"></div>
+            </div>
+          </div>
+          <textarea id="agentsam-page-input" rows="1" placeholder="Ask anything" autocomplete="off"></textarea>
+          <button type="submit" class="agentsam-page-send" id="agentsam-page-send" aria-label="Send">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12h13M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </form>
+      </div>
+      <div class="agentsam-page-chips" id="agentsam-page-chips"></div>
+      <p class="agentsam-page-foot" id="agentsam-page-status">AgentSam routes to content, creative, brand, code, and store workflows automatically.</p>
+    </div>
+  </div>
+`, {
+  fullBleed: true,
+  onReady() {
+    document.body.classList.add("agentsam-page-body");
+    const toggle = document.getElementById("agentsam-toggle");
+    if (toggle) {
+      toggle.addEventListener("click", (e) => {
+        if (location.pathname === "/admin/agentsam") {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          document.getElementById("agentsam-page-input")?.focus();
+        }
+      }, true);
+    }
+    const s = document.createElement("script");
+    s.src = "/admin/js/agentsam-page.js";
+    document.body.appendChild(s);
+  },
+});
+</script>
+</body>
+</html>

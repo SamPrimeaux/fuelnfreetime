@@ -63,7 +63,7 @@ const NAV = {
       ],
     },
     { href: "/admin/scaffold?view=pos", label: "Point of Sale", icon: "pos" },
-    { href: "#agentic", label: "Agentic", icon: "agentic", agentsam: true },
+    { href: "/admin/agentsam", label: "AgentSam", icon: "agentic" },
   ],
   apps: [{ href: "/admin/email", label: "Email", icon: "email" }],
 };

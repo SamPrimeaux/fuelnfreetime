@@ -20,7 +20,7 @@ import {
   isAdminPublicPath,
   redirectToAdminLogin,
 } from "./lib/admin-routes.js";
-import { redirectWww, resolveStorefrontPath, serveStaticAlias } from "./lib/routes.js";
+import { redirectWww, resolveStorefrontPath, serveStaticAlias, STORE_HTML_REDIRECTS, PAGES_CLEAN_REDIRECTS } from "./lib/routes.js";
 
 export { CmsEditorRoom } from "./do/CmsEditorRoom.js";
 
@@ -312,12 +312,25 @@ export default {
       return noStore(await env.ASSETS.fetch(request));
     }
 
+    // Legacy *.html storefront URLs → clean paths
+    const cleanStore = STORE_HTML_REDIRECTS.get(path);
+    if (cleanStore) {
+      const dest = new URL(request.url);
+      dest.pathname = cleanStore;
+      return Response.redirect(dest.toString(), 301);
+    }
+
+    // Shopify /pages/* → clean paths
+    const cleanPages = PAGES_CLEAN_REDIRECTS.get(path);
+    if (cleanPages) {
+      const dest = new URL(request.url);
+      dest.pathname = cleanPages;
+      return Response.redirect(dest.toString(), 301);
+    }
+
     // Shopify-style paths and legacy URLs on custom domain
     const alias = resolveStorefrontPath(path);
     if (alias) {
-      if (path.startsWith("/pages/")) {
-        return Response.redirect(new URL(alias, request.url), 301);
-      }
       return serveStaticAlias(request, env, alias);
     }
 
