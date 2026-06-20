@@ -6,12 +6,11 @@
  *   WEBSITE_ASSETS R2 bucket "fuelnfreetime"
  *   AGENTSAM_WAI   Workers AI
  *   CMS_CACHE      KV namespace "fuelnfreetime-cache"
- *   ASSETS         Static files served from /public (index, shop, about, community)
- *
- * Static pages (index/shop/about/community) are served straight from
- * ASSETS. This file only owns the dynamic bits: API routes today, and
- * eventually CMS/cart/checkout as those get built out.
+ *   ASSETS         Static files served from /public (marketing pages + /admin dashboard)
  */
+
+import { handleAdminApi } from "./admin/api.js";
+import { getSessionUser } from "./lib/auth.js";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -45,11 +44,23 @@ async function handleNewsletter(request, env) {
   return Response.json({ ok: true });
 }
 
+// Any response tied to admin session state must never be cached at the
+// edge — otherwise one user's authenticated page can get served to the
+// next unauthenticated visitor straight from cache.
+function noStore(response) {
+  const r = new Response(response.body, response);
+  r.headers.set("cache-control", "private, no-store");
+  return r;
+}
+
+const ADMIN_PUBLIC_PAGES = new Set(["/admin/login.html"]);
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const path = url.pathname;
 
-    if (url.pathname === "/api/health") {
+    if (path === "/api/health") {
       return Response.json({
         ok: true,
         app: env.APP_NAME,
@@ -63,13 +74,36 @@ export default {
       });
     }
 
-    if (url.pathname === "/api/newsletter" && request.method === "POST") {
+    if (path === "/api/newsletter" && request.method === "POST") {
       return handleNewsletter(request, env);
+    }
+
+    if (path.startsWith("/api/admin/")) {
+      return noStore(await handleAdminApi(request, env, url));
+    }
+
+    // /admin and /admin/ resolve based on session state
+    if (path === "/admin" || path === "/admin/") {
+      const user = await getSessionUser(request, env);
+      const dest = user ? "/admin/dashboard.html" : "/admin/login.html";
+      return noStore(Response.redirect(new URL(dest, request.url), 302));
+    }
+
+    // Every /admin/*.html page is session-dependent (gated or shows a
+    // user-specific shell), so none of it may be cached at the edge.
+    if (path.startsWith("/admin/") && path.endsWith(".html")) {
+      if (!ADMIN_PUBLIC_PAGES.has(path)) {
+        const user = await getSessionUser(request, env);
+        if (!user) {
+          return noStore(Response.redirect(new URL("/admin/login.html", request.url), 302));
+        }
+      }
+      return noStore(await env.ASSETS.fetch(request));
     }
 
     // html_handling = "none" means Cloudflare won't auto-map "/" to
     // index.html, so do it ourselves before falling through to ASSETS.
-    if (url.pathname === "/") {
+    if (path === "/") {
       const indexUrl = new URL(request.url);
       indexUrl.pathname = "/index.html";
       return env.ASSETS.fetch(new Request(indexUrl, request));

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edit Product — Fuel & Free Time Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/admin/css/admin.css">
+</head>
+<body>
+<script src="/admin/js/shell.js"></script>
+<script>
+const params = new URLSearchParams(location.search);
+const productId = params.get('id');
+const isNew = !productId;
+
+renderShell('/admin/products.html', `
+  <div class="admin-toolbar">
+    <div>
+      <h1 class="admin-page-title">${isNew ? 'New Product' : 'Edit Product'}</h1>
+      <p class="admin-page-sub">${isNew ? 'Create a catalog item.' : 'Update details and manage variants.'}</p>
+    </div>
+    <a href="/admin/products.html" class="btn ghost">&larr; Back to Products</a>
+  </div>
+
+  <div class="admin-card">
+    <form id="product-form">
+      <div class="admin-form-grid">
+        <div class="admin-form-row">
+          <label for="title">Title</label>
+          <input id="title" required>
+        </div>
+        <div class="admin-form-row">
+          <label for="slug">Slug (optional — auto-generated from title)</label>
+          <input id="slug" placeholder="octane-badge-tee">
+        </div>
+      </div>
+      <div class="admin-form-row">
+        <label for="description">Description</label>
+        <textarea id="description" rows="3"></textarea>
+      </div>
+      <div class="admin-form-grid">
+        <div class="admin-form-row">
+          <label for="collection">Collection</label>
+          <input id="collection" placeholder="high-octane / masters / essentials">
+        </div>
+        <div class="admin-form-row">
+          <label for="status">Status</label>
+          <select id="status">
+            <option value="draft">draft</option>
+            <option value="active">active</option>
+            <option value="archived">archived</option>
+          </select>
+        </div>
+      </div>
+      <div class="admin-form-grid">
+        <div class="admin-form-row">
+          <label for="price">Price (USD)</label>
+          <input id="price" type="number" step="0.01" min="0" required>
+        </div>
+        <div class="admin-form-row">
+          <label for="image_url">Image URL</label>
+          <input id="image_url" placeholder="https://...">
+        </div>
+      </div>
+      <button type="submit" class="btn primary" id="save-btn">${isNew ? 'Create Product' : 'Save Changes'}</button>
+      ${isNew ? '' : '<button type="button" class="btn danger" id="delete-btn" style="margin-left:10px;">Delete Product</button>'}
+      <div class="admin-note" id="form-note" style="display:none;"></div>
+    </form>
+  </div>
+
+  <div class="admin-card" id="variants-card" style="${isNew ? 'display:none;' : ''}">
+    <div class="admin-card-title">Variants</div>
+    <table class="admin-table">
+      <thead><tr><th>SKU</th><th>Size</th><th>Color</th><th>Price Override</th><th>Inventory</th><th></th></tr></thead>
+      <tbody id="variants-body"><tr><td colspan="6" class="admin-empty">Loading…</td></tr></tbody>
+    </table>
+    <div style="margin-top:16px;">
+      <div class="admin-form-grid" style="grid-template-columns: 1.4fr 0.8fr 0.8fr 0.8fr 0.8fr;">
+        <div class="admin-form-row"><label>SKU</label><input id="new-sku" placeholder="octane-tee-bk-m"></div>
+        <div class="admin-form-row"><label>Size</label><input id="new-size" placeholder="M"></div>
+        <div class="admin-form-row"><label>Color</label><input id="new-color" placeholder="Black"></div>
+        <div class="admin-form-row"><label>Price ($)</label><input id="new-price" type="number" step="0.01" placeholder="optional"></div>
+        <div class="admin-form-row"><label>Qty</label><input id="new-qty" type="number" value="0"></div>
+      </div>
+      <button class="btn ghost" id="add-variant-btn">+ Add Variant</button>
+      <div class="admin-note" id="variant-note" style="display:none;"></div>
+    </div>
+  </div>
+`);
+
+function note(id, msg, isError) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'admin-note ' + (isError ? 'error' : 'success');
+  el.style.display = 'block';
+}
+
+function renderVariants(variants) {
+  const body = document.getElementById('variants-body');
+  if (!variants.length) {
+    body.innerHTML = '<tr><td colspan="6" class="admin-empty">No variants yet.</td></tr>';
+    return;
+  }
+  body.innerHTML = variants.map(v => `
+    <tr data-id="${v.id}">
+      <td><input class="v-sku" value="${v.sku}" style="width:140px;"></td>
+      <td><input class="v-size" value="${v.size || ''}" style="width:60px;"></td>
+      <td><input class="v-color" value="${v.color || ''}" style="width:80px;"></td>
+      <td><input class="v-price" type="number" step="0.01" value="${v.price_cents != null ? (v.price_cents / 100).toFixed(2) : ''}" style="width:80px;"></td>
+      <td><input class="v-qty admin-inline-qty" type="number" value="${v.inventory_qty}"></td>
+      <td>
+        <button class="btn ghost small v-save">Save</button>
+        <button class="btn danger small v-delete">Delete</button>
+      </td>
+    </tr>
+  `).join('');
+
+  body.querySelectorAll('tr').forEach(row => {
+    const id = row.dataset.id;
+    row.querySelector('.v-save').addEventListener('click', async () => {
+      try {
+        await adminFetch(`/api/admin/variants/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            sku: row.querySelector('.v-sku').value.trim(),
+            size: row.querySelector('.v-size').value.trim(),
+            color: row.querySelector('.v-color').value.trim(),
+            price_cents: row.querySelector('.v-price').value ? Math.round(parseFloat(row.querySelector('.v-price').value) * 100) : null,
+            inventory_qty: row.querySelector('.v-qty').value,
+          }),
+        });
+        note('variant-note', 'Variant saved.', false);
+      } catch (err) {
+        note('variant-note', err.message, true);
+      }
+    });
+    row.querySelector('.v-delete').addEventListener('click', async () => {
+      if (!confirm('Delete this variant?')) return;
+      try {
+        await adminFetch(`/api/admin/variants/${id}`, { method: 'DELETE' });
+        loadProduct();
+      } catch (err) {
+        note('variant-note', err.message, true);
+      }
+    });
+  });
+}
+
+async function loadProduct() {
+  if (isNew) return;
+  try {
+    const d = await adminFetch(`/api/admin/products/${productId}`);
+    document.getElementById('title').value = d.product.title;
+    document.getElementById('slug').value = d.product.slug;
+    document.getElementById('description').value = d.product.description || '';
+    document.getElementById('collection').value = d.product.collection || '';
+    document.getElementById('status').value = d.product.status;
+    document.getElementById('price').value = (d.product.price_cents / 100).toFixed(2);
+    document.getElementById('image_url').value = d.product.image_url || '';
+    renderVariants(d.variants);
+  } catch (err) {
+    note('form-note', err.message, true);
+  }
+}
+loadProduct();
+
+document.getElementById('product-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const payload = {
+    title: document.getElementById('title').value.trim(),
+    slug: document.getElementById('slug').value.trim(),
+    description: document.getElementById('description').value.trim(),
+    collection: document.getElementById('collection').value.trim(),
+    status: document.getElementById('status').value,
+    price_cents: Math.round(parseFloat(document.getElementById('price').value || '0') * 100),
+    image_url: document.getElementById('image_url').value.trim(),
+  };
+  try {
+    if (isNew) {
+      const d = await adminFetch('/api/admin/products', { method: 'POST', body: JSON.stringify(payload) });
+      window.location.href = `/admin/product-edit.html?id=${d.id}`;
+    } else {
+      await adminFetch(`/api/admin/products/${productId}`, { method: 'PUT', body: JSON.stringify(payload) });
+      note('form-note', 'Saved.', false);
+    }
+  } catch (err) {
+    note('form-note', err.message, true);
+  }
+});
+
+const deleteBtn = document.getElementById('delete-btn');
+if (deleteBtn) {
+  deleteBtn.addEventListener('click', async () => {
+    if (!confirm('Delete this product and all its variants? This cannot be undone.')) return;
+    try {
+      await adminFetch(`/api/admin/products/${productId}`, { method: 'DELETE' });
+      window.location.href = '/admin/products.html';
+    } catch (err) {
+      note('form-note', err.message, true);
+    }
+  });
+}
+
+const addVariantBtn = document.getElementById('add-variant-btn');
+if (addVariantBtn) {
+  addVariantBtn.addEventListener('click', async () => {
+    const sku = document.getElementById('new-sku').value.trim();
+    if (!sku) { note('variant-note', 'SKU is required.', true); return; }
+    try {
+      await adminFetch(`/api/admin/products/${productId}/variants`, {
+        method: 'POST',
+        body: JSON.stringify({
+          sku,
+          size: document.getElementById('new-size').value.trim(),
+          color: document.getElementById('new-color').value.trim(),
+          price_cents: document.getElementById('new-price').value ? Math.round(parseFloat(document.getElementById('new-price').value) * 100) : null,
+          inventory_qty: document.getElementById('new-qty').value || 0,
+        }),
+      });
+      document.getElementById('new-sku').value = '';
+      document.getElementById('new-size').value = '';
+      document.getElementById('new-color').value = '';
+      document.getElementById('new-price').value = '';
+      document.getElementById('new-qty').value = '0';
+      note('variant-note', 'Variant added.', false);
+      loadProduct();
+    } catch (err) {
+      note('variant-note', err.message, true);
+    }
+  });
+}
+</script>
+</body>
+</html>

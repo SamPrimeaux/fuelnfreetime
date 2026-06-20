@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orders — Fuel & Free Time Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/admin/css/admin.css">
+</head>
+<body>
+<script src="/admin/js/shell.js"></script>
+<script>
+renderShell('/admin/orders.html', `
+  <h1 class="admin-page-title">Orders</h1>
+  <p class="admin-page-sub">Checkout isn't wired up yet, so this stays empty until that ships — schema's ready to go.</p>
+
+  <div class="admin-card">
+    <table class="admin-table">
+      <thead><tr><th>#</th><th>Customer</th><th>Status</th><th>Total</th><th>Placed</th></tr></thead>
+      <tbody id="orders-body"><tr><td colspan="5" class="admin-empty">Loading…</td></tr></tbody>
+    </table>
+  </div>
+`);
+
+(async function () {
+  try {
+    const d = await adminFetch('/api/admin/orders');
+    const body = document.getElementById('orders-body');
+    if (!d.orders.length) {
+      body.innerHTML = '<tr><td colspan="5" class="admin-empty">No orders yet.</td></tr>';
+      return;
+    }
+    body.innerHTML = d.orders.map(o => `
+      <tr>
+        <td>#${o.id}</td>
+        <td>${o.customer_email || '—'}</td>
+        <td><span class="badge active">${o.status}</span></td>
+        <td>${centsToDollars(o.total_cents)}</td>
+        <td>${fmtDate(o.created_at)}</td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    document.getElementById('orders-body').innerHTML = `<tr><td colspan="5" class="admin-empty">${err.message}</td></tr>`;
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Login — Fuel & Free Time</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/admin/css/admin.css">
+</head>
+<body>
+  <div class="admin-login-wrap">
+    <div class="admin-login-card">
+      <div class="admin-login-logo">FUEL<span>&</span>FREE TIME</div>
+      <div class="admin-login-sub">Admin Dashboard</div>
+      <form id="login-form">
+        <div class="admin-form-row">
+          <label for="email">Email</label>
+          <input type="email" id="email" required autocomplete="username">
+        </div>
+        <div class="admin-form-row">
+          <label for="password">Password</label>
+          <input type="password" id="password" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn primary" id="login-btn">Log In</button>
+        <div class="admin-note error" id="login-note" style="display:none;"></div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('login-form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var note = document.getElementById('login-note');
+      var btn = document.getElementById('login-btn');
+      note.style.display = 'none';
+      btn.disabled = true;
+      try {
+        var res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('email').value.trim(),
+            password: document.getElementById('password').value,
+          }),
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Login failed');
+        window.location.href = '/admin/dashboard.html';
+      } catch (err) {
+        note.textContent = err.message;
+        note.style.display = 'block';
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

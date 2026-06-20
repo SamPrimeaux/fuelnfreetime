@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Account — Fuel & Free Time Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/admin/css/admin.css">
+</head>
+<body>
+<script src="/admin/js/shell.js"></script>
+<script>
+renderShell('/admin/account.html', `
+  <h1 class="admin-page-title">Account</h1>
+  <p class="admin-page-sub">Change your admin password.</p>
+
+  <div class="admin-card" style="max-width:420px;">
+    <form id="pw-form">
+      <div class="admin-form-row">
+        <label for="current_password">Current Password</label>
+        <input id="current_password" type="password" required autocomplete="current-password">
+      </div>
+      <div class="admin-form-row">
+        <label for="new_password">New Password</label>
+        <input id="new_password" type="password" required minlength="8" autocomplete="new-password">
+      </div>
+      <button type="submit" class="btn primary">Update Password</button>
+      <div class="admin-note" id="pw-note" style="display:none;"></div>
+    </form>
+  </div>
+`);
+
+document.getElementById('pw-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const note = document.getElementById('pw-note');
+  try {
+    await adminFetch('/api/admin/account/password', {
+      method: 'POST',
+      body: JSON.stringify({
+        current_password: document.getElementById('current_password').value,
+        new_password: document.getElementById('new_password').value,
+      }),
+    });
+    note.textContent = 'Password updated.';
+    note.className = 'admin-note success';
+    note.style.display = 'block';
+    document.getElementById('pw-form').reset();
+  } catch (err) {
+    note.textContent = err.message;
+    note.className = 'admin-note error';
+    note.style.display = 'block';
+  }
+});
+</script>
+</body>
+</html>
