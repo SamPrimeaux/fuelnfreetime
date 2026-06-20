@@ -2,6 +2,35 @@ const ICONS = {
   star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"></path></svg>',
 };
 
+const MAIL_DEFAULTS = {
+  gmailAddress: "",
+  gmailDisplayName: "",
+  gmailSyncWindow: "Last 30 days",
+  gmailReadMeta: true,
+  gmailReadBodies: true,
+  gmailSend: true,
+  gmailDrafts: true,
+  resendFrom: "hello@fuelnfreetime.com",
+  resendDomain: "fuelnfreetime.com",
+  resendReplyTo: "",
+  resendApiKey: "",
+  resendTransactional: true,
+  resendCampaign: false,
+  resendTracking: false,
+  resendWebhooks: true,
+  defaultInbox: "Gmail",
+  defaultSender: "Gmail for replies, Resend for app mail",
+  syncCadence: "Every 15 minutes",
+  agentMode: "Draft only",
+  autoLabel: true,
+  clientPriority: true,
+  reviewBeforeSend: true,
+};
+
+function normalizeSettings(settings) {
+  return { ...MAIL_DEFAULTS, ...(settings || {}) };
+}
+
 let messages = [];
 let selectedId = null;
 let activeFilter = "all";
@@ -91,16 +120,17 @@ function collectSettings() {
 }
 
 function hydrateSettings(settings) {
-  Object.entries(settings).forEach(([key, value]) => {
+  const merged = normalizeSettings(settings);
+  Object.entries(merged).forEach(([key, value]) => {
     const el = $(key);
     if (!el) return;
     if (el.type === "checkbox") el.checked = !!value;
     else el.value = value;
   });
-  renderAccounts(settings);
-  updateSettingsPreview();
-  updateRailStatus(settings);
-  updateComposeFromOptions(settings);
+  renderAccounts(merged);
+  updateSettingsPreview(merged);
+  updateRailStatus(merged);
+  updateComposeFromOptions(merged);
 }
 
 async function loadRemoteSettings() {
@@ -121,7 +151,7 @@ async function loadRemoteSettings() {
     $("resendStatus") && ($("resendStatus").textContent = data.providers?.resend === "configured" ? "Configured" : "Pending");
   } catch (err) {
     console.warn("Mail settings:", err);
-    hydrateSettings({});
+    hydrateSettings(MAIL_DEFAULTS);
   }
 }
 
@@ -152,7 +182,7 @@ async function persistSettings(section) {
   }
 }
 
-function buildPayload(settings = collectSettings(), section = "preview") {
+function buildPayload(settings = normalizeSettings(collectSettings()), section = "preview") {
   return {
     section,
     accounts: [
@@ -194,21 +224,26 @@ function buildPayload(settings = collectSettings(), section = "preview") {
   };
 }
 
-function updateSettingsPreview() {
+function updateSettingsPreview(settings = normalizeSettings(collectSettings())) {
   const preview = $("payloadPreview");
-  if (preview) preview.textContent = JSON.stringify(buildPayload(), null, 2);
+  if (preview) preview.textContent = JSON.stringify(buildPayload(settings), null, 2);
 }
 
-function updateRailStatus(settings = collectSettings()) {
+function updateRailStatus(settings = normalizeSettings(collectSettings())) {
+  const inbox = settings.defaultInbox || MAIL_DEFAULTS.defaultInbox;
   const resendPart = settings.resendTransactional ? "Resend sends store mail." : "Resend paused.";
   const route = $("railRouteLabel");
-  if (route) route.textContent = `${settings.defaultInbox} receives. ${resendPart}`;
+  if (route) route.textContent = `${inbox} receives. ${resendPart}`;
   const sync = $("railSyncText");
-  if (sync) sync.textContent = settings.gmailAddress ? settings.syncCadence : "Configure Gmail or Resend";
+  if (sync) {
+    sync.textContent = settings.gmailAddress
+      ? settings.syncCadence || MAIL_DEFAULTS.syncCadence
+      : "Configure Gmail or Resend";
+  }
   $("syncDot")?.classList.toggle("warning", !settings.gmailAddress || !settings.resendTransactional);
 }
 
-function updateComposeFromOptions(settings = collectSettings()) {
+function updateComposeFromOptions(settings = normalizeSettings(collectSettings())) {
   const select = $("composeFrom");
   if (!select) return;
   const options = [];
@@ -224,7 +259,7 @@ function updateComposeFromOptions(settings = collectSettings()) {
   select.innerHTML = options.join("");
 }
 
-function renderAccounts(settings = collectSettings()) {
+function renderAccounts(settings = normalizeSettings(collectSettings())) {
   const list = $("accountsList");
   if (!list) return;
   list.innerHTML = `
@@ -579,16 +614,14 @@ function bindMailEvents() {
   $("addResendAccount")?.addEventListener("click", () => switchSettingsTab("resend"));
 
   document.querySelectorAll(".mail-root .settings-modal input, .mail-root .settings-modal select").forEach((el) => {
-    el.addEventListener("input", () => {
-      updateSettingsPreview();
-      renderAccounts(collectSettings());
-      updateRailStatus(collectSettings());
-    });
-    el.addEventListener("change", () => {
-      updateSettingsPreview();
-      renderAccounts(collectSettings());
-      updateRailStatus(collectSettings());
-    });
+    const refresh = () => {
+      const current = normalizeSettings(collectSettings());
+      updateSettingsPreview(current);
+      renderAccounts(current);
+      updateRailStatus(current);
+    };
+    el.addEventListener("input", refresh);
+    el.addEventListener("change", refresh);
   });
 
   $("railToggle")?.addEventListener("click", () => {
