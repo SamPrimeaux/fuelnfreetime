@@ -286,8 +286,13 @@ Gmail OAuth client credentials will likely be secrets + Workers KV/D1 when imple
 ### Check propagation
 
 ```bash
-npm run dns:check
+npm run dns:check          # public DNS (dig)
+npm run cf:status          # zone + Worker domains (uses break-glass token)
 ```
+
+Admin API calls use `CLOUDFLARE_BREAK_GLASS_ADMIN_TOKEN` from `~/inneranimalmedia/.env.cloudflare` via [`scripts/with-cf-admin-env.sh`](scripts/with-cf-admin-env.sh). Deploy defaults to that wrapper; `npm run deploy:plain` skips it.
+
+**Note:** DNS Records API returns auth errors while the zone is **pending** — normal. Custom domains on the Worker (`fuelnfreetime.com` + `www`) are already enabled; Cloudflare will publish DNS records when the zone activates.
 
 ### At your registrar (tomorrow)
 
