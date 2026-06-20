@@ -44,6 +44,19 @@ async function handleNewsletter(request, env) {
   return Response.json({ ok: true });
 }
 
+// Serve an object straight out of the media R2 bucket. Public — these are
+// product/marketing images meant to be viewed on the storefront.
+async function handleMediaServe(request, env, key) {
+  const object = await env.WEBSITE_ASSETS.get(key);
+  if (!object) return new Response("Not found", { status: 404 });
+
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  headers.set("etag", object.httpEtag);
+  headers.set("cache-control", "public, max-age=31536000, immutable");
+  return new Response(object.body, { headers });
+}
+
 // Any response tied to admin session state must never be cached at the
 // edge — otherwise one user's authenticated page can get served to the
 // next unauthenticated visitor straight from cache.
@@ -80,6 +93,10 @@ export default {
 
     if (path.startsWith("/api/admin/")) {
       return noStore(await handleAdminApi(request, env, url));
+    }
+
+    if (path.startsWith("/media/")) {
+      return handleMediaServe(request, env, path.slice("/media/".length));
     }
 
     // /admin and /admin/ resolve based on session state

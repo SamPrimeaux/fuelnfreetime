@@ -1,6 +1,7 @@
 const NAV_ITEMS = [
   { href: "/admin/dashboard.html", label: "Dashboard" },
   { href: "/admin/products.html", label: "Products" },
+  { href: "/admin/media.html", label: "Media" },
   { href: "/admin/inventory.html", label: "Inventory" },
   { href: "/admin/orders.html", label: "Orders" },
   { href: "/admin/subscribers.html", label: "Subscribers" },

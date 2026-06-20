@@ -6,6 +6,15 @@ import {
   getSessionUser,
   destroySession,
 } from "../lib/auth.js";
+import {
+  uploadMedia,
+  listMedia,
+  deleteMedia,
+  listProductImages,
+  attachProductImage,
+  detachProductImage,
+  setPrimaryProductImage,
+} from "./media.js";
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -341,6 +350,22 @@ export async function handleAdminApi(request, env, url) {
   if (path === "/api/admin/inventory" && method === "GET") return listInventory(request, env);
   if (path === "/api/admin/orders" && method === "GET") return listOrders(request, env);
   if (path === "/api/admin/subscribers" && method === "GET") return listSubscribers(request, env);
+
+  if (path === "/api/admin/media" && method === "POST") return uploadMedia(request, env);
+  if (path === "/api/admin/media" && method === "GET") return listMedia(request, env, url);
+
+  m = path.match(/^\/api\/admin\/media\/(\d+)$/);
+  if (m && method === "DELETE") return deleteMedia(request, env, m[1]);
+
+  m = path.match(/^\/api\/admin\/products\/(\d+)\/images$/);
+  if (m && method === "GET") return listProductImages(request, env, m[1]);
+  if (m && method === "POST") return attachProductImage(request, env, m[1]);
+
+  m = path.match(/^\/api\/admin\/products\/(\d+)\/images\/(\d+)$/);
+  if (m && method === "DELETE") return detachProductImage(request, env, m[1], m[2]);
+
+  m = path.match(/^\/api\/admin\/products\/(\d+)\/images\/(\d+)\/primary$/);
+  if (m && method === "POST") return setPrimaryProductImage(request, env, m[1], m[2]);
 
   return json({ error: "Not found" }, { status: 404 });
 }

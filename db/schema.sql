@@ -69,3 +69,27 @@ CREATE TABLE IF NOT EXISTS order_items (
   qty          INTEGER NOT NULL DEFAULT 1,
   price_cents  INTEGER NOT NULL DEFAULT 0
 );
+
+-- ===== Media library (R2-backed, CMS-reusable across products) =====
+
+CREATE TABLE IF NOT EXISTS media_assets (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  r2_key        TEXT NOT NULL UNIQUE,
+  url           TEXT NOT NULL,
+  filename      TEXT NOT NULL,
+  content_type  TEXT,
+  size_bytes    INTEGER,
+  category      TEXT,
+  alt_text      TEXT,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS product_images (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_id      INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  media_asset_id  INTEGER NOT NULL REFERENCES media_assets(id) ON DELETE CASCADE,
+  position        INTEGER NOT NULL DEFAULT 0,
+  is_primary      INTEGER NOT NULL DEFAULT 0,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(product_id, media_asset_id)
+);

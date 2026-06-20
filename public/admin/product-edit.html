@@ -8,6 +8,28 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/admin/css/admin.css">
+<style>
+  .drop-zone {
+    border: 2px dashed var(--line);
+    border-radius: var(--radius);
+    padding: 28px 20px;
+    text-align: center;
+    color: var(--smoke);
+    font-size: 13px;
+    margin-bottom: 18px;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .drop-zone.is-dragover { border-color: var(--fire-orange); background: rgba(255,69,0,0.06); color: var(--white); }
+  .drop-zone input[type="file"] { display: none; }
+  .img-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .img-card { background: var(--asphalt); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; position: relative; }
+  .img-card.is-primary { border-color: var(--fire-orange); }
+  .img-card .thumb { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: #000; }
+  .img-card .primary-tag { position: absolute; top: 6px; left: 6px; background: var(--fire-orange); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
+  .img-card .actions { display: flex; gap: 4px; padding: 6px; }
+  .img-card .actions .btn { flex: 1; padding: 4px 6px; font-size: 11px; }
+  .library-toggle { margin-bottom: 10px; }
+</style>
 </head>
 <body>
 <script src="/admin/js/shell.js"></script>
@@ -55,20 +77,28 @@ renderShell('/admin/products.html', `
           </select>
         </div>
       </div>
-      <div class="admin-form-grid">
-        <div class="admin-form-row">
-          <label for="price">Price (USD)</label>
-          <input id="price" type="number" step="0.01" min="0" required>
-        </div>
-        <div class="admin-form-row">
-          <label for="image_url">Image URL</label>
-          <input id="image_url" placeholder="https://...">
-        </div>
+      <div class="admin-form-row">
+        <label for="price">Price (USD)</label>
+        <input id="price" type="number" step="0.01" min="0" required>
       </div>
       <button type="submit" class="btn primary" id="save-btn">${isNew ? 'Create Product' : 'Save Changes'}</button>
       ${isNew ? '' : '<button type="button" class="btn danger" id="delete-btn" style="margin-left:10px;">Delete Product</button>'}
       <div class="admin-note" id="form-note" style="display:none;"></div>
     </form>
+  </div>
+
+  <div class="admin-card" id="images-card" style="${isNew ? 'display:none;' : ''}">
+    <div class="admin-card-title">Images</div>
+    <div class="img-grid" id="attached-grid"><div class="admin-empty">Loading…</div></div>
+
+    <div class="drop-zone" id="drop-zone">
+      <div id="drop-zone-label">Drag and drop images here to upload &amp; attach to this product</div>
+      <input type="file" id="file-input" multiple accept="image/*">
+    </div>
+    <div class="admin-note" id="img-note" style="display:none;"></div>
+
+    <button type="button" class="btn ghost library-toggle" id="library-toggle">Choose from Media Library instead</button>
+    <div id="library-grid" class="img-grid" style="display:none;"></div>
   </div>
 
   <div class="admin-card" id="variants-card" style="${isNew ? 'display:none;' : ''}">
@@ -97,6 +127,137 @@ function note(id, msg, isError) {
   el.className = 'admin-note ' + (isError ? 'error' : 'success');
   el.style.display = 'block';
 }
+
+let productSlug = '';
+
+// ----- Images -----
+
+async function loadImages() {
+  if (isNew) return;
+  const grid = document.getElementById('attached-grid');
+  try {
+    const d = await adminFetch(`/api/admin/products/${productId}/images`);
+    if (!d.images.length) {
+      grid.innerHTML = '<div class="admin-empty">No images attached yet.</div>';
+    } else {
+      grid.innerHTML = d.images.map(img => `
+        <div class="img-card ${img.is_primary ? 'is-primary' : ''}" data-asset-id="${img.id}">
+          ${img.is_primary ? '<span class="primary-tag">Primary</span>' : ''}
+          <img class="thumb" src="${img.url}" alt="${img.filename}">
+          <div class="actions">
+            ${img.is_primary ? '' : '<button class="btn ghost small set-primary-btn">Primary</button>'}
+            <button class="btn danger small remove-btn">Remove</button>
+          </div>
+        </div>
+      `).join('');
+
+      grid.querySelectorAll('.img-card').forEach(card => {
+        const assetId = card.dataset.assetId;
+        const primaryBtn = card.querySelector('.set-primary-btn');
+        if (primaryBtn) {
+          primaryBtn.addEventListener('click', async () => {
+            await adminFetch(`/api/admin/products/${productId}/images/${assetId}/primary`, { method: 'POST' });
+            loadImages();
+          });
+        }
+        card.querySelector('.remove-btn').addEventListener('click', async () => {
+          await adminFetch(`/api/admin/products/${productId}/images/${assetId}`, { method: 'DELETE' });
+          loadImages();
+        });
+      });
+    }
+  } catch (err) {
+    grid.innerHTML = `<div class="admin-empty">${err.message}</div>`;
+  }
+}
+
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+if (dropZone) {
+  dropZone.addEventListener('click', () => fileInput.click());
+  ['dragenter', 'dragover'].forEach(evt =>
+    dropZone.addEventListener(evt, (e) => { e.preventDefault(); dropZone.classList.add('is-dragover'); })
+  );
+  ['dragleave', 'drop'].forEach(evt =>
+    dropZone.addEventListener(evt, (e) => { e.preventDefault(); dropZone.classList.remove('is-dragover'); })
+  );
+  dropZone.addEventListener('drop', (e) => {
+    if (e.dataTransfer.files.length) uploadAndAttach(e.dataTransfer.files);
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) uploadAndAttach(fileInput.files);
+    fileInput.value = '';
+  });
+}
+
+async function uploadAndAttach(fileList) {
+  const label = document.getElementById('drop-zone-label');
+  const form = new FormData();
+  for (const f of fileList) form.append('files', f);
+  form.append('prefix', `products/${productSlug || 'misc'}/`);
+  form.append('category', 'product');
+
+  label.textContent = 'Uploading…';
+  try {
+    const res = await fetch('/api/admin/media', { method: 'POST', body: form });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Upload failed');
+    for (const asset of data.assets) {
+      await adminFetch(`/api/admin/products/${productId}/images`, {
+        method: 'POST',
+        body: JSON.stringify({ media_asset_id: asset.id }),
+      });
+    }
+    note('img-note', 'Uploaded and attached ' + data.assets.length + ' image(s).', false);
+    loadImages();
+  } catch (err) {
+    note('img-note', err.message, true);
+  } finally {
+    label.textContent = 'Drag and drop images here to upload & attach to this product';
+  }
+}
+
+const libraryToggle = document.getElementById('library-toggle');
+if (libraryToggle) {
+  libraryToggle.addEventListener('click', async () => {
+    const grid = document.getElementById('library-grid');
+    const showing = grid.style.display !== 'none';
+    if (showing) { grid.style.display = 'none'; return; }
+    grid.style.display = 'grid';
+    grid.innerHTML = '<div class="admin-empty">Loading…</div>';
+    try {
+      const d = await adminFetch('/api/admin/media');
+      if (!d.assets.length) {
+        grid.innerHTML = '<div class="admin-empty">No assets in the library yet.</div>';
+        return;
+      }
+      grid.innerHTML = d.assets.map(a => `
+        <div class="img-card" data-id="${a.id}">
+          <img class="thumb" src="${a.url}" alt="${a.filename}">
+          <div class="actions"><button class="btn ghost small attach-btn">Attach</button></div>
+        </div>
+      `).join('');
+      grid.querySelectorAll('.attach-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const id = e.target.closest('.img-card').dataset.id;
+          try {
+            await adminFetch(`/api/admin/products/${productId}/images`, {
+              method: 'POST',
+              body: JSON.stringify({ media_asset_id: id }),
+            });
+            loadImages();
+          } catch (err) {
+            note('img-note', err.message, true);
+          }
+        });
+      });
+    } catch (err) {
+      grid.innerHTML = `<div class="admin-empty">${err.message}</div>`;
+    }
+  });
+}
+
+// ----- Variants -----
 
 function renderVariants(variants) {
   const body = document.getElementById('variants-body');
@@ -155,12 +316,13 @@ async function loadProduct() {
     const d = await adminFetch(`/api/admin/products/${productId}`);
     document.getElementById('title').value = d.product.title;
     document.getElementById('slug').value = d.product.slug;
+    productSlug = d.product.slug;
     document.getElementById('description').value = d.product.description || '';
     document.getElementById('collection').value = d.product.collection || '';
     document.getElementById('status').value = d.product.status;
     document.getElementById('price').value = (d.product.price_cents / 100).toFixed(2);
-    document.getElementById('image_url').value = d.product.image_url || '';
     renderVariants(d.variants);
+    loadImages();
   } catch (err) {
     note('form-note', err.message, true);
   }
@@ -176,7 +338,6 @@ document.getElementById('product-form').addEventListener('submit', async (e) => 
     collection: document.getElementById('collection').value.trim(),
     status: document.getElementById('status').value,
     price_cents: Math.round(parseFloat(document.getElementById('price').value || '0') * 100),
-    image_url: document.getElementById('image_url').value.trim(),
   };
   try {
     if (isNew) {
