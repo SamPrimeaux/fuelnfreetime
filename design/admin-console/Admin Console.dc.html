@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  ::-webkit-scrollbar { width: 11px; height: 11px; }
+  ::-webkit-scrollbar-thumb { background: #cfcfcf; border-radius: 6px; border: 3px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background: #b3b3b3; background-clip: content-box; }
+</style>
+</helmet>
+
+<div style="height:100vh;width:100%;display:flex;flex-direction:column;font-family:Inter,system-ui,-apple-system,sans-serif;background:#f1f1f1;color:#1a1a1a;overflow:hidden;">
+
+  <sc-if value="{{ showShell }}" hint-placeholder-val="{{ true }}">
+  <div style="display:flex;flex-direction:column;height:100vh;">
+
+    <!-- ===================== TOPBAR ===================== -->
+    <div style="height:56px;flex:none;background:#141414;display:flex;align-items:center;justify-content:space-between;padding:0 16px;position:relative;z-index:40;">
+      <!-- left: admin monogram -->
+      <div style="display:flex;align-items:center;gap:10px;width:212px;flex:none;">
+        <div style="width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,#ffffff,#dcdcdc);display:flex;align-items:center;justify-content:center;flex:none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2 21 7v10l-9 5-9-5V7z" stroke="#141414" stroke-width="2" stroke-linejoin="round"/><path d="M12 7v10M7.5 9.5l9 5M16.5 9.5l-9 5" stroke="#141414" stroke-width="1.6"/></svg>
+        </div>
+        <span style="color:#e8e8e8;font-size:13px;font-weight:600;letter-spacing:.2px;">Admin</span>
+      </div>
+      <!-- center: search pill -->
+      <div style="position:absolute;left:50%;transform:translateX(-50%);width:100%;max-width:560px;padding:0 16px;">
+        <div style="height:34px;background:#262626;border-radius:8px;display:flex;align-items:center;gap:10px;padding:0 12px;cursor:text;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#9b9b9b" stroke-width="1.8"/><path d="m20 20-3.2-3.2" stroke="#9b9b9b" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span style="color:#9b9b9b;font-size:13px;flex:1;">Search</span>
+          <span style="color:#7e7e7e;font-size:12px;background:#333;border-radius:5px;padding:2px 7px;font-weight:500;">&#8984;K</span>
+        </div>
+      </div>
+      <!-- right -->
+      <div style="display:flex;align-items:center;gap:6px;flex:none;">
+        <button style="width:32px;height:32px;border-radius:8px;border:none;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:#262626;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z" stroke="#cfcfcf" stroke-width="1.5" stroke-linejoin="round"/><path d="M18 14l.7 1.9L20.6 16.6l-1.9.7L18 19.2l-.7-1.9L15.4 16.6l1.9-.7z" fill="#cfcfcf"/></svg>
+        </button>
+        <button style="width:32px;height:32px;border-radius:8px;border:none;background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;" style-hover="background:#262626;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z" stroke="#cfcfcf" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 19a2 2 0 0 0 4 0" stroke="#cfcfcf" stroke-width="1.5"/></svg>
+          <span style="position:absolute;top:5px;right:6px;min-width:14px;height:14px;background:#d72c0d;border-radius:7px;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px;border:1.5px solid #141414;">3</span>
+        </button>
+        <div style="width:1px;height:24px;background:#3a3a3a;margin:0 6px;"></div>
+        <div style="position:relative;">
+          <button onClick="{{ toggleStore }}" style="display:flex;align-items:center;gap:9px;background:#262626;border:none;border-radius:9px;padding:4px 9px 4px 5px;cursor:pointer;" style-hover="background:#313131;">
+            <img src="{{ logo }}" alt="Fuel & Free Time" style="width:28px;height:28px;border-radius:6px;object-fit:cover;flex:none;" />
+            <span style="color:#f0f0f0;font-size:13px;font-weight:600;white-space:nowrap;">Fuel &amp; Free Time</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="#9b9b9b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <sc-if value="{{ storeMenuOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;top:42px;right:0;width:272px;background:#fff;border:1px solid #e3e3e3;border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.18);padding:8px;z-index:60;">
+              <div style="display:flex;align-items:center;gap:10px;padding:8px 8px 10px;border-bottom:1px solid #eee;margin-bottom:6px;">
+                <img src="{{ logo }}" style="width:36px;height:36px;border-radius:8px;object-fit:cover;" />
+                <div><div style="font-size:13px;font-weight:600;">Fuel &amp; Free Time</div><div style="font-size:12px;color:#6b6b6b;">fuelnfreetime.com</div></div>
+              </div>
+              <div style="font-size:13px;color:#1a1a1a;padding:9px 8px;border-radius:7px;cursor:pointer;display:flex;align-items:center;gap:9px;" style-hover="background:#f4f4f4;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="#5a5a5a" stroke-width="1.6"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" stroke="#5a5a5a" stroke-width="1.6" stroke-linecap="round"/></svg>Store settings</div>
+              <div style="font-size:13px;color:#1a1a1a;padding:9px 8px;border-radius:7px;cursor:pointer;display:flex;align-items:center;gap:9px;" style-hover="background:#f4f4f4;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 8 3 12l4 4M3 12h12M14 4h5v16h-5" stroke="#5a5a5a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Switch store</div>
+              <div style="height:1px;background:#eee;margin:6px 4px;"></div>
+              <div style="font-size:13px;color:#1a1a1a;padding:9px 8px;border-radius:7px;cursor:pointer;display:flex;align-items:center;gap:9px;" style-hover="background:#f4f4f4;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 4h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3M10 8l4 4-4 4M14 12H3" stroke="#5a5a5a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Log out</div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== BODY ===================== -->
+    <div style="flex:1;display:flex;min-height:0;">
+
+      <!-- ============ SIDENAV ============ -->
+      <div style="width:240px;flex:none;background:#fafafa;border-right:1px solid #e5e5e5;display:flex;flex-direction:column;padding:10px 8px 8px;overflow-y:auto;">
+        <div style="display:flex;flex-direction:column;gap:1px;">
+          <div onClick="{{ h.goHome }}" style="display:flex;align-items:center;gap:11px;height:36px;padding:0 10px;border-radius:8px;cursor:pointer;font-size:14px;{{ nav.home }}" style-hover="background:#f0eeee;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 11 12 4l8 7M6 9.5V20h12V9.5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>Home</div>
+          <div onClick="{{ h.goOrders }}" style="display:flex;align-items:center;gap:11px;height:36px;padding:0 10px;border-radius:8px;cursor:pointer;font-size:14px;{{ nav.orders }}" style-hover="background:#f0eeee;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 8h14l-1 12H6L5 8Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 8V6a3 3 0 0 1 6 0v2" stroke="currentColor" stroke-width="1.6"/></svg>Orders</div>
+
+          <!-- Products (parent w/ children) -->
+          <div onClick="{{ h.goProducts }}" style="display:flex;align-items:center;gap:11px;height:36px;padding:0 10px;border-radius:8px;cursor:pointer;font-size:14px;{{ nav.products }}" style-hover="background:#f0eeee;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 13 11 6h7v7l-7 7-7-7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="15" cy="9" r="1.4" fill="currentColor"/></svg>
+            <span style="flex:1;">Products</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div style="{{ nav.prodChildren }}">
+            <div style="padding:1px 0 1px 4px;display:flex;flex-direction:column;gap:1px;">
+              <div onClick="{{ h.goProducts }}" style="display:flex;align-items:center;gap:7px;height:32px;padding:0 10px 0 36px;border-radius:8px;cursor:pointer;font-size:13px;position:relative;{{ nav.prodAll }}" style-hover="background:#f0eeee;"><sc-if value="{{ nav.prodAllActive }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:22px;color:#9b9b9b;font-size:13px;">&#8627;</span></sc-if>All products</div>
+              <div onClick="{{ h.goCollections }}" style="display:flex;align-items:center;gap:7px;height:32px;padding:0 10px 0 36px;border-radius:8px;cursor:pointer;font-size:13px;position:relative;{{ nav.prodCollections }}" style-hover="background:#f0eeee;"><sc-if value="{{ nav.prodCollectionsActive }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:22px;color:#9b9b9b;font-size:13px;">&#8627;</span></sc-if>Collections</div>
+              <div onClick="{{ h.goInventory }}" style="display:flex;align-items:center;gap:7px;height:32px;padding:0 10px 0 36px;border-radius:8px;cursor:pointer;font-size:13px;position:relative;{{ nav.prodInventory }}" style-hover="background:#f0eeee;"><sc-if value="{{ nav.prodInventoryActive }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:22px;color:#9b9b9b;font-size:13px;">&#8627;</span></sc-if>Inventory</div>
+            </div>
+          </div>
+
+          <div onClick="{{ h.goCustomers }}" style="display:flex;align-items:center;gap:11px;height:36px;padding:0 10px;border-radius:8px;cursor:pointer;font-size:14px;{{ nav.customers }}" style-hover="background:#f0eeee;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.2" stroke="currentColor" stroke-width="1.6"/><path d="M5 20c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Customers</div>
+          <div onClick="{{ h.goGrowth }}" style="display:flex;align-items:center;gap:11px;height:36px;padding:0 10px;border-radius:8px;cursor:pointer;font-size:14px;{{ nav.growth }}" style-hover="background:#f0eeee;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.6"/><path d="m9 13 2 2 4-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Growth</div>
+          <div onClick="{{ h.goDiscounts }}" style="display:flex;align-items:center;gap:11px;height:36px;padding:0 10px;border-radius:8px;cursor:pointer;font-size:14px;{{ nav.discounts }}" style-hover="background:#f0eeee;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 9V6a2 2 0 0 1 2-2h3l11 11a2 2 0 0 1 0 3l-4 4a2 2 0 0 1-3 0L2 11" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/></svg>Discounts</div>
+          <div onClick="{{ h.goContent }}" style="display:flex;align-items:center;gap:11px;height:36px;padding:0 10px;border-radius:8px;cursor:pointer;font-size:14px;{{ nav.content }}" style-hover="background:#f0eeee;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M7 4h7l4 4v12H7z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M13 4v5h5M10 13h5M10 16h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Content</div>
+          <div onClick="{{ h.goMarkets }}" style="display:flex;align-items:center;gap:11px;height:36px;padding:0 10px;border-radius:8px;cursor:pointer;font-size:14px;{{ nav.markets }}" style-hover="background:#f0eeee;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.6"/><path d="M4 12h16M12 4c2.5 2 2.5 14 0 16M12 4c-2.5 2-2.5 14 0 16" stroke="currentColor" stroke-width="1.4"/></svg>Markets</div>
+          <div onClick="{{ h.goFinance }}" style="display:flex;align-items:center;gap:11px;height:36px;padding:0 10px;border-radius:8px;cursor:pointer;font-size:14px;{{ nav.finance }}" style-hover="background:#f0eeee;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 9 12 4l8 5M5 9v9h14V9M9 18v-5M12 18v-5M15 18v-5M3 20h18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Finance</div>
+          <div onClick="{{ h.goAnalytics }}" style="display:flex;align-items:center;gap:11px;height:36px;padding:0 10px;border-radius:8px;cursor:pointer;font-size:14px;{{ nav.analytics }}" style-hover="background:#f0eeee;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 20V10M12 20V4M19 20v-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Analytics</div>
+        </div>
+
+        <!-- Sales channels -->
+        <div style="display:flex;align-items:center;gap:6px;padding:14px 10px 6px;font-size:12px;color:#8a8a8a;font-weight:600;">Sales channels <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="m9 6 6 6-6 6" stroke="#8a8a8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div style="display:flex;flex-direction:column;gap:1px;">
+          <div onClick="{{ h.goThemes }}" style="display:flex;align-items:center;gap:11px;height:36px;padding:0 10px;border-radius:8px;cursor:pointer;font-size:14px;{{ nav.onlineStore }}" style-hover="background:#f0eeee;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 9 5 5h14l1 4M4 9h16v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM5.5 13V20h13v-7" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            <span style="flex:1;">Online Store</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div style="{{ nav.osChildren }}">
+            <div style="padding:1px 0 1px 4px;display:flex;flex-direction:column;gap:1px;">
+              <div onClick="{{ h.goThemes }}" style="display:flex;align-items:center;gap:7px;height:32px;padding:0 10px 0 36px;border-radius:8px;cursor:pointer;font-size:13px;position:relative;{{ nav.osThemes }}" style-hover="background:#f0eeee;"><sc-if value="{{ nav.osThemesActive }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:22px;color:#9b9b9b;font-size:13px;">&#8627;</span></sc-if>Themes</div>
+              <div onClick="{{ h.goPages }}" style="display:flex;align-items:center;gap:7px;height:32px;padding:0 10px 0 36px;border-radius:8px;cursor:pointer;font-size:13px;position:relative;{{ nav.osPages }}" style-hover="background:#f0eeee;"><sc-if value="{{ nav.osPagesActive }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;left:22px;color:#9b9b9b;font-size:13px;">&#8627;</span></sc-if>Pages</div>
+            </div>
+          </div>
+          <div onClick="{{ h.goPos }}" style="display:flex;align-items:center;gap:11px;height:36px;padding:0 10px;border-radius:8px;cursor:pointer;font-size:14px;{{ nav.pos }}" style-hover="background:#f0eeee;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="6" y="3" width="12" height="18" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M10 18h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Point of Sale</div>
+          <div onClick="{{ h.goAgentic }}" style="display:flex;align-items:center;gap:11px;height:36px;padding:0 10px;border-radius:8px;cursor:pointer;font-size:14px;{{ nav.agentic }}" style-hover="background:#f0eeee;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="5" y="8" width="14" height="11" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M12 4v4M9 13h.01M15 13h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Agentic</div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:6px;padding:14px 10px 6px;font-size:12px;color:#8a8a8a;font-weight:600;">Apps <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="m9 6 6 6-6 6" stroke="#8a8a8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+
+        <!-- bottom pinned -->
+        <div style="margin-top:auto;padding-top:14px;">
+          <div style="font-size:11px;color:#9b9b9b;font-weight:600;text-transform:uppercase;letter-spacing:.4px;padding:0 10px 6px;">Recent activity</div>
+          <div style="font-size:12px;color:#6b6b6b;padding:5px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" style-hover="background:#f0eeee;">Sidekick conversations</div>
+          <div style="font-size:12px;color:#6b6b6b;padding:5px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" style-hover="background:#f0eeee;">Turning off DNSSEC for Shopif…</div>
+          <div style="height:1px;background:#e5e5e5;margin:8px 6px;"></div>
+          <div onClick="{{ h.goSettings }}" style="display:flex;align-items:center;gap:11px;height:36px;padding:0 10px;border-radius:8px;cursor:pointer;font-size:14px;{{ nav.settings }}" style-hover="background:#f0eeee;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M12 2.5v2.5M12 19v2.5M21.5 12H19M5 12H2.5M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8M18.4 18.4l-1.8-1.8M7.4 7.4 5.6 5.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Settings</div>
+        </div>
+      </div>
+
+      <!-- ============ CONTENT CANVAS ============ -->
+      <div onClick="{{ closeStore }}" style="flex:1;min-width:0;overflow-y:auto;background:#f1f1f1;">
+
+        <!-- ===== HOME ===== -->
+        <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:1080px;margin:0 auto;padding:28px 32px 64px;display:flex;flex-direction:column;gap:24px;">
+          <div style="font-size:24px;font-weight:600;">Good morning, Dax</div>
+          <!-- stat row -->
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
+            <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:16px 18px;">
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Sessions</div>
+              <div style="font-size:26px;font-weight:600;margin-top:6px;">1,248</div>
+              <div style="font-size:12px;color:#0f5c3e;font-weight:600;margin-top:2px;">&#9650; 12%</div>
+            </div>
+            <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:16px 18px;">
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Total sales</div>
+              <div style="font-size:26px;font-weight:600;margin-top:6px;">$8,420</div>
+              <div style="font-size:12px;color:#0f5c3e;font-weight:600;margin-top:2px;">&#9650; 8%</div>
+            </div>
+            <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:16px 18px;">
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Orders</div>
+              <div style="font-size:26px;font-weight:600;margin-top:6px;">86</div>
+              <div style="font-size:12px;color:#0f5c3e;font-weight:600;margin-top:2px;">&#9650; 5%</div>
+            </div>
+            <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:16px 18px;">
+              <div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Conversion rate</div>
+              <div style="font-size:26px;font-weight:600;margin-top:6px;">2.4%</div>
+              <div style="font-size:12px;color:#d72c0d;font-weight:600;margin-top:2px;">&#9660; 0.3%</div>
+            </div>
+          </div>
+          <!-- greeting / ask card -->
+          <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:22px;">
+            <div style="display:flex;align-items:center;gap:9px;margin-bottom:14px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z" stroke="#5c2d91" stroke-width="1.5" stroke-linejoin="round"/></svg><span style="font-size:17px;font-weight:600;">What can I help you with?</span></div>
+            <div style="display:flex;align-items:center;gap:10px;border:1px solid #d6d6d6;border-radius:10px;padding:11px 14px;">
+              <input placeholder="Ask anything about your store&#8230;" style="flex:1;border:none;outline:none;font-size:14px;font-family:inherit;background:transparent;" />
+              <button style="width:32px;height:32px;border-radius:8px;border:none;background:#1a1a1a;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:#000;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h13M12 5l7 7-7 7" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+              <span style="font-size:12.5px;color:#4a4a4a;border:1px solid #e0e0e0;border-radius:999px;padding:6px 12px;cursor:pointer;" style-hover="background:#f4f4f4;">Summarize today&#8217;s orders</span>
+              <span style="font-size:12.5px;color:#4a4a4a;border:1px solid #e0e0e0;border-radius:999px;padding:6px 12px;cursor:pointer;" style-hover="background:#f4f4f4;">Which products are low on stock?</span>
+              <span style="font-size:12.5px;color:#4a4a4a;border:1px solid #e0e0e0;border-radius:999px;padding:6px 12px;cursor:pointer;" style-hover="background:#f4f4f4;">Draft a discount for returning riders</span>
+            </div>
+          </div>
+          <!-- getting started cards -->
+          <div style="font-size:16px;font-weight:600;margin-top:4px;">Set up your store</div>
+          <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:0;display:flex;overflow:hidden;">
+            <div style="flex:1;padding:24px;">
+              <div style="font-size:16px;font-weight:600;">Customize your theme</div>
+              <div style="font-size:14px;color:#5a5a5a;margin-top:8px;line-height:1.5;max-width:440px;">Make the storefront yours. Edit the Dawn theme to match the Fuel &amp; Free Time look — dark, rugged, built for the road.</div>
+              <button onClick="{{ h.goThemes }}" style="margin-top:16px;background:#1a1a1a;color:#fff;border:none;border-radius:7px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;" style-hover="background:#000;">Customize theme</button>
+            </div>
+            <div style="width:300px;flex:none;background:linear-gradient(135deg,#1a1310,#2a1c12);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;">
+              <div style="font-size:10px;letter-spacing:3px;color:#c9c9c9;">TIME IS THE</div>
+              <div style="font-size:24px;font-weight:800;background:linear-gradient(90deg,#f59e0b,#ea580c);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:1px;">HORSEPOWER</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:22px;">
+              <div style="width:40px;height:40px;border-radius:9px;background:#f0e8de;display:flex;align-items:center;justify-content:center;margin-bottom:14px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 13 11 6h7v7l-7 7-7-7Z" stroke="#8a5a00" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+              <div style="font-size:15px;font-weight:600;">Add your first products</div>
+              <div style="font-size:13.5px;color:#5a5a5a;margin-top:6px;line-height:1.5;">Build out the catalog with rich descriptions, media, and AI-suggested metafields.</div>
+              <button onClick="{{ h.goProducts }}" style="margin-top:14px;background:#fff;border:1px solid #c9c9c9;border-radius:7px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;" style-hover="background:#f6f6f6;">View products</button>
+            </div>
+            <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:22px;">
+              <div style="width:40px;height:40px;border-radius:9px;background:#e2efe7;display:flex;align-items:center;justify-content:center;margin-bottom:14px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.2" stroke="#0f5c3e" stroke-width="1.6"/><path d="M5 20c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="#0f5c3e" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+              <div style="font-size:15px;font-weight:600;">Understand your customers</div>
+              <div style="font-size:13.5px;color:#5a5a5a;margin-top:6px;line-height:1.5;">See who&#8217;s buying, where they ride from, and what keeps them coming back.</div>
+              <button onClick="{{ h.goCustomers }}" style="margin-top:14px;background:#fff;border:1px solid #c9c9c9;border-radius:7px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;" style-hover="background:#f6f6f6;">View customers</button>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ===== PRODUCTS LIST ===== -->
+        <sc-if value="{{ isProducts }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1080px;margin:0 auto;padding:28px 32px 64px;display:flex;flex-direction:column;gap:20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
+            <div style="font-size:24px;font-weight:600;">Products</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <button style="background:#fff;border:1px solid #c9c9c9;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;color:#1a1a1a;cursor:pointer;font-family:inherit;" style-hover="background:#f6f6f6;">Export</button>
+              <button style="background:#fff;border:1px solid #c9c9c9;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;color:#1a1a1a;cursor:pointer;font-family:inherit;" style-hover="background:#f6f6f6;">Import</button>
+              <button style="background:#fff;border:1px solid #c9c9c9;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;color:#1a1a1a;cursor:pointer;font-family:inherit;" style-hover="background:#f6f6f6;">More actions</button>
+              <button style="background:#1a1a1a;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;" style-hover="background:#000;">Add product</button>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+            <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:16px 18px;"><div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Sell-through rate</div><div style="font-size:24px;font-weight:600;margin-top:6px;">68%</div><div style="font-size:12px;color:#0f5c3e;font-weight:600;margin-top:2px;">&#9650; 4%</div></div>
+            <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:16px 18px;"><div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Days of inventory left</div><div style="font-size:24px;font-weight:600;margin-top:6px;">42 days</div><div style="font-size:12px;color:#6b6b6b;font-weight:500;margin-top:2px;">&#8212;</div></div>
+            <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:16px 18px;"><div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">ABC analysis</div><div style="font-size:24px;font-weight:600;margin-top:6px;">A 12 &#183; B 24 &#183; C 31</div><div style="font-size:12px;color:#6b6b6b;font-weight:500;margin-top:2px;">by revenue</div></div>
+          </div>
+          <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;overflow:hidden;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #ececec;">
+              <div style="display:flex;gap:2px;">
+                <span style="font-size:13px;font-weight:600;color:#1a1a1a;padding:6px 12px;border-radius:7px;background:#f0eeee;cursor:pointer;">All</span>
+                <span style="font-size:13px;color:#5a5a5a;padding:6px 12px;border-radius:7px;cursor:pointer;" style-hover="background:#f4f4f4;">Active</span>
+                <span style="font-size:13px;color:#5a5a5a;padding:6px 12px;border-radius:7px;cursor:pointer;" style-hover="background:#f4f4f4;">Draft</span>
+                <span style="font-size:13px;color:#5a5a5a;padding:6px 12px;border-radius:7px;cursor:pointer;" style-hover="background:#f4f4f4;">Archived</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <div style="display:flex;align-items:center;gap:7px;border:1px solid #d6d6d6;border-radius:8px;padding:6px 10px;width:220px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#9b9b9b" stroke-width="1.8"/><path d="m20 20-3.2-3.2" stroke="#9b9b9b" stroke-width="1.8" stroke-linecap="round"/></svg><input placeholder="Search products" style="border:none;outline:none;font-size:13px;font-family:inherit;flex:1;background:transparent;" /></div>
+                <button style="width:33px;height:33px;border:1px solid #d6d6d6;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:#f6f6f6;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 5h16M7 12h10M10 19h4" stroke="#5a5a5a" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+                <button style="width:33px;height:33px;border:1px solid #d6d6d6;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:#f6f6f6;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M7 4v16M7 4 4 7M7 4l3 3M17 20V4M17 20l-3-3M17 20l3-3" stroke="#5a5a5a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              </div>
+            </div>
+            <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;min-width:880px;">
+              <thead><tr style="border-bottom:1px solid #ececec;">
+                <th style="width:42px;padding:10px 0 10px 16px;"><input type="checkbox" style="width:15px;height:15px;accent-color:#1a1a1a;cursor:pointer;" /></th>
+                <th style="text-align:left;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Product</th>
+                <th style="text-align:left;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Status</th>
+                <th style="text-align:left;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Inventory</th>
+                <th style="text-align:left;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Category</th>
+                <th style="text-align:left;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Channels</th>
+                <th style="text-align:left;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Type</th>
+                <th style="text-align:left;padding:10px 16px 10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Vendor</th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ productsView }}" as="row" hint-placeholder-count="6">
+                  <tr onClick="{{ row.open }}" style="border-bottom:1px solid #f1f1f1;cursor:pointer;" style-hover="background:#fafafa;">
+                    <td style="padding:11px 0 11px 16px;" onClick="{{ closeStore }}"><input type="checkbox" style="width:15px;height:15px;accent-color:#1a1a1a;cursor:pointer;" /></td>
+                    <td style="padding:11px 12px;"><div style="display:flex;align-items:center;gap:11px;"><div style="width:38px;height:38px;border-radius:7px;background:{{ row.color }};display:flex;align-items:center;justify-content:center;color:#e8d9c8;font-size:12px;font-weight:700;letter-spacing:.5px;flex:none;">{{ row.init }}</div><span style="font-size:14px;font-weight:500;color:#1a1a1a;">{{ row.title }}</span></div></td>
+                    <td style="padding:11px 12px;"><span style="display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px;background:{{ row.badge.bg }};color:{{ row.badge.fg }};">{{ row.badge.label }}</span></td>
+                    <td style="padding:11px 12px;font-size:13.5px;{{ row.invStyle }}">{{ row.invLabel }}</td>
+                    <td style="padding:11px 12px;font-size:13.5px;color:#4a4a4a;">{{ row.category }}</td>
+                    <td style="padding:11px 12px;font-size:13.5px;color:#4a4a4a;">{{ row.channelsLabel }}</td>
+                    <td style="padding:11px 12px;font-size:13.5px;color:#4a4a4a;">{{ row.type }}</td>
+                    <td style="padding:11px 16px 11px 12px;font-size:13.5px;color:#4a4a4a;">{{ row.vendor }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ===== COLLECTIONS ===== -->
+        <sc-if value="{{ isCollections }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1080px;margin:0 auto;padding:28px 32px 64px;display:flex;flex-direction:column;gap:20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
+            <div style="font-size:24px;font-weight:600;">Collections</div>
+            <button style="background:#1a1a1a;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;" style-hover="background:#000;">Create collection</button>
+          </div>
+          <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;overflow:hidden;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #ececec;">
+              <div style="display:flex;align-items:center;gap:7px;border:1px solid #d6d6d6;border-radius:8px;padding:6px 10px;width:240px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#9b9b9b" stroke-width="1.8"/><path d="m20 20-3.2-3.2" stroke="#9b9b9b" stroke-width="1.8" stroke-linecap="round"/></svg><input placeholder="Search collections" style="border:none;outline:none;font-size:13px;font-family:inherit;flex:1;background:transparent;" /></div>
+              <button style="width:33px;height:33px;border:1px solid #d6d6d6;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:#f6f6f6;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 5h16M7 12h10M10 19h4" stroke="#5a5a5a" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+            </div>
+            <table style="width:100%;border-collapse:collapse;">
+              <thead><tr style="border-bottom:1px solid #ececec;">
+                <th style="width:42px;padding:10px 0 10px 16px;"><input type="checkbox" style="width:15px;height:15px;accent-color:#1a1a1a;cursor:pointer;" /></th>
+                <th style="text-align:left;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Title</th>
+                <th style="text-align:left;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Products</th>
+                <th style="text-align:left;padding:10px 16px 10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Product conditions</th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ collections }}" as="row" hint-placeholder-count="5">
+                  <tr style="border-bottom:1px solid #f1f1f1;cursor:pointer;" style-hover="background:#fafafa;">
+                    <td style="padding:11px 0 11px 16px;"><input type="checkbox" style="width:15px;height:15px;accent-color:#1a1a1a;cursor:pointer;" /></td>
+                    <td style="padding:11px 12px;"><div style="display:flex;align-items:center;gap:11px;"><div style="width:38px;height:38px;border-radius:7px;background:{{ row.color }};display:flex;align-items:center;justify-content:center;color:#e8d9c8;font-size:12px;font-weight:700;flex:none;">{{ row.init }}</div><span style="font-size:14px;font-weight:500;color:#1a1a1a;">{{ row.title }}</span></div></td>
+                    <td style="padding:11px 12px;font-size:13.5px;color:#4a4a4a;">{{ row.count }}</td>
+                    <td style="padding:11px 16px 11px 12px;font-size:13.5px;color:#4a4a4a;">{{ row.conditions }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ===== INVENTORY ===== -->
+        <sc-if value="{{ isInventory }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1080px;margin:0 auto;padding:28px 32px 64px;display:flex;flex-direction:column;gap:20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
+            <div style="font-size:24px;font-weight:600;">Inventory</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <button style="background:#fff;border:1px solid #c9c9c9;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;color:#1a1a1a;cursor:pointer;font-family:inherit;" style-hover="background:#f6f6f6;">Export</button>
+              <button style="background:#fff;border:1px solid #c9c9c9;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;color:#1a1a1a;cursor:pointer;font-family:inherit;" style-hover="background:#f6f6f6;">Import</button>
+            </div>
+          </div>
+          <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;overflow:hidden;">
+            <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;min-width:720px;">
+              <thead><tr style="border-bottom:1px solid #ececec;">
+                <th style="text-align:left;padding:10px 16px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Product</th>
+                <th style="text-align:left;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">SKU</th>
+                <th style="text-align:right;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Unavailable</th>
+                <th style="text-align:right;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Committed</th>
+                <th style="text-align:right;padding:10px 16px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Available</th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ inventoryView }}" as="row" hint-placeholder-count="6">
+                  <tr onClick="{{ row.open }}" style="border-bottom:1px solid #f1f1f1;cursor:pointer;" style-hover="background:#fafafa;">
+                    <td style="padding:11px 16px;"><div style="display:flex;align-items:center;gap:11px;"><div style="width:34px;height:34px;border-radius:7px;background:{{ row.color }};display:flex;align-items:center;justify-content:center;color:#e8d9c8;font-size:11px;font-weight:700;flex:none;">{{ row.init }}</div><span style="font-size:14px;font-weight:500;color:#1a1a1a;">{{ row.title }}</span></div></td>
+                    <td style="padding:11px 12px;font-size:13px;color:#4a4a4a;font-family:ui-monospace,Menlo,monospace;">{{ row.sku }}</td>
+                    <td style="padding:11px 12px;font-size:13.5px;color:#4a4a4a;text-align:right;">{{ row.unavailable }}</td>
+                    <td style="padding:11px 12px;font-size:13.5px;color:#4a4a4a;text-align:right;">{{ row.committed }}</td>
+                    <td style="padding:11px 16px;font-size:13.5px;text-align:right;{{ row.availStyle }}">{{ row.inventory }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ===== ORDERS ===== -->
+        <sc-if value="{{ isOrders }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1080px;margin:0 auto;padding:28px 32px 64px;display:flex;flex-direction:column;gap:20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
+            <div style="font-size:24px;font-weight:600;">Orders</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <button style="background:#fff;border:1px solid #c9c9c9;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;color:#1a1a1a;cursor:pointer;font-family:inherit;" style-hover="background:#f6f6f6;">Export</button>
+              <button style="background:#1a1a1a;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;" style-hover="background:#000;">Create order</button>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+            <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:16px 18px;"><div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Orders today</div><div style="font-size:24px;font-weight:600;margin-top:6px;">14</div><div style="font-size:12px;color:#0f5c3e;font-weight:600;margin-top:2px;">&#9650; 3 vs yesterday</div></div>
+            <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:16px 18px;"><div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Fulfilled</div><div style="font-size:24px;font-weight:600;margin-top:6px;">9</div><div style="font-size:12px;color:#6b6b6b;font-weight:500;margin-top:2px;">&#8212;</div></div>
+            <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:16px 18px;"><div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Awaiting fulfillment</div><div style="font-size:24px;font-weight:600;margin-top:6px;">5</div><div style="font-size:12px;color:#8a5a00;font-weight:600;margin-top:2px;">Needs attention</div></div>
+          </div>
+          <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;overflow:hidden;">
+            <div style="display:flex;align-items:center;gap:2px;padding:8px 12px;border-bottom:1px solid #ececec;">
+              <span style="font-size:13px;font-weight:600;color:#1a1a1a;padding:6px 12px;border-radius:7px;background:#f0eeee;cursor:pointer;">All</span>
+              <span style="font-size:13px;color:#5a5a5a;padding:6px 12px;border-radius:7px;cursor:pointer;" style-hover="background:#f4f4f4;">Unfulfilled</span>
+              <span style="font-size:13px;color:#5a5a5a;padding:6px 12px;border-radius:7px;cursor:pointer;" style-hover="background:#f4f4f4;">Unpaid</span>
+              <span style="font-size:13px;color:#5a5a5a;padding:6px 12px;border-radius:7px;cursor:pointer;" style-hover="background:#f4f4f4;">Open</span>
+            </div>
+            <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;min-width:760px;">
+              <thead><tr style="border-bottom:1px solid #ececec;">
+                <th style="width:42px;padding:10px 0 10px 16px;"><input type="checkbox" style="width:15px;height:15px;accent-color:#1a1a1a;cursor:pointer;" /></th>
+                <th style="text-align:left;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Order</th>
+                <th style="text-align:left;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Date</th>
+                <th style="text-align:left;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Customer</th>
+                <th style="text-align:left;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Payment</th>
+                <th style="text-align:left;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Fulfillment</th>
+                <th style="text-align:right;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Total</th>
+                <th style="text-align:left;padding:10px 16px 10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Items</th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ ordersView }}" as="row" hint-placeholder-count="6">
+                  <tr style="border-bottom:1px solid #f1f1f1;cursor:pointer;" style-hover="background:#fafafa;">
+                    <td style="padding:11px 0 11px 16px;"><input type="checkbox" style="width:15px;height:15px;accent-color:#1a1a1a;cursor:pointer;" /></td>
+                    <td style="padding:11px 12px;font-size:14px;font-weight:600;color:#2c6ecb;">{{ row.id }}</td>
+                    <td style="padding:11px 12px;font-size:13.5px;color:#4a4a4a;">{{ row.date }}</td>
+                    <td style="padding:11px 12px;font-size:13.5px;color:#1a1a1a;">{{ row.customer }}</td>
+                    <td style="padding:11px 12px;"><span style="display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px;background:{{ row.payB.bg }};color:{{ row.payB.fg }};">{{ row.payB.label }}</span></td>
+                    <td style="padding:11px 12px;"><span style="display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px;background:{{ row.fulB.bg }};color:{{ row.fulB.fg }};">{{ row.fulB.label }}</span></td>
+                    <td style="padding:11px 12px;font-size:13.5px;color:#1a1a1a;text-align:right;font-weight:500;">{{ row.total }}</td>
+                    <td style="padding:11px 16px 11px 12px;font-size:13.5px;color:#4a4a4a;">{{ row.items }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ===== CUSTOMERS ===== -->
+        <sc-if value="{{ isCustomers }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1080px;margin:0 auto;padding:28px 32px 64px;display:flex;flex-direction:column;gap:20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
+            <div style="font-size:24px;font-weight:600;">Customers</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <button style="background:#fff;border:1px solid #c9c9c9;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;color:#1a1a1a;cursor:pointer;font-family:inherit;" style-hover="background:#f6f6f6;">Export</button>
+              <button style="background:#1a1a1a;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;" style-hover="background:#000;">Add customer</button>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;">
+            <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:16px 18px;"><div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Total customers</div><div style="font-size:24px;font-weight:600;margin-top:6px;">1,204</div><div style="font-size:12px;color:#0f5c3e;font-weight:600;margin-top:2px;">&#9650; 36 this month</div></div>
+            <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:16px 18px;"><div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Returning customer rate</div><div style="font-size:24px;font-weight:600;margin-top:6px;">31%</div><div style="font-size:12px;color:#0f5c3e;font-weight:600;margin-top:2px;">&#9650; 2%</div></div>
+          </div>
+          <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;overflow:hidden;">
+            <div style="display:flex;align-items:center;padding:8px 12px;border-bottom:1px solid #ececec;">
+              <div style="display:flex;align-items:center;gap:7px;border:1px solid #d6d6d6;border-radius:8px;padding:6px 10px;width:260px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#9b9b9b" stroke-width="1.8"/><path d="m20 20-3.2-3.2" stroke="#9b9b9b" stroke-width="1.8" stroke-linecap="round"/></svg><input placeholder="Search customers" style="border:none;outline:none;font-size:13px;font-family:inherit;flex:1;background:transparent;" /></div>
+            </div>
+            <table style="width:100%;border-collapse:collapse;">
+              <thead><tr style="border-bottom:1px solid #ececec;">
+                <th style="width:42px;padding:10px 0 10px 16px;"><input type="checkbox" style="width:15px;height:15px;accent-color:#1a1a1a;cursor:pointer;" /></th>
+                <th style="text-align:left;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Customer</th>
+                <th style="text-align:left;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Email</th>
+                <th style="text-align:left;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Location</th>
+                <th style="text-align:right;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Orders</th>
+                <th style="text-align:right;padding:10px 16px 10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Amount spent</th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ customers }}" as="row" hint-placeholder-count="6">
+                  <tr style="border-bottom:1px solid #f1f1f1;cursor:pointer;" style-hover="background:#fafafa;">
+                    <td style="padding:11px 0 11px 16px;"><input type="checkbox" style="width:15px;height:15px;accent-color:#1a1a1a;cursor:pointer;" /></td>
+                    <td style="padding:11px 12px;"><div style="display:flex;align-items:center;gap:11px;"><div style="width:34px;height:34px;border-radius:50%;background:{{ row.color }};display:flex;align-items:center;justify-content:center;color:#e8d9c8;font-size:12px;font-weight:700;flex:none;">{{ row.init }}</div><span style="font-size:14px;font-weight:500;color:#1a1a1a;">{{ row.name }}</span></div></td>
+                    <td style="padding:11px 12px;font-size:13.5px;color:#2c6ecb;">{{ row.email }}</td>
+                    <td style="padding:11px 12px;font-size:13.5px;color:#4a4a4a;">{{ row.location }}</td>
+                    <td style="padding:11px 12px;font-size:13.5px;color:#4a4a4a;text-align:right;">{{ row.orders }}</td>
+                    <td style="padding:11px 16px 11px 12px;font-size:13.5px;color:#1a1a1a;text-align:right;font-weight:500;">{{ row.spent }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ===== PAGES ===== -->
+        <sc-if value="{{ isPages }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1080px;margin:0 auto;padding:28px 32px 64px;display:flex;flex-direction:column;gap:20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
+            <div style="font-size:24px;font-weight:600;">Pages</div>
+            <button style="background:#1a1a1a;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;" style-hover="background:#000;">Add page</button>
+          </div>
+          <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;overflow:hidden;">
+            <div style="display:flex;align-items:center;padding:8px 12px;border-bottom:1px solid #ececec;">
+              <div style="display:flex;align-items:center;gap:7px;border:1px solid #d6d6d6;border-radius:8px;padding:6px 10px;width:240px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#9b9b9b" stroke-width="1.8"/><path d="m20 20-3.2-3.2" stroke="#9b9b9b" stroke-width="1.8" stroke-linecap="round"/></svg><input placeholder="Search pages" style="border:none;outline:none;font-size:13px;font-family:inherit;flex:1;background:transparent;" /></div>
+            </div>
+            <table style="width:100%;border-collapse:collapse;">
+              <thead><tr style="border-bottom:1px solid #ececec;">
+                <th style="width:42px;padding:10px 0 10px 16px;"><input type="checkbox" style="width:15px;height:15px;accent-color:#1a1a1a;cursor:pointer;" /></th>
+                <th style="text-align:left;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Title</th>
+                <th style="text-align:left;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Visibility</th>
+                <th style="text-align:left;padding:10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Content</th>
+                <th style="text-align:left;padding:10px 16px 10px 12px;font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Updated</th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ pagesView }}" as="row" hint-placeholder-count="6">
+                  <tr style="border-bottom:1px solid #f1f1f1;cursor:pointer;" style-hover="background:#fafafa;">
+                    <td style="padding:11px 0 11px 16px;"><input type="checkbox" style="width:15px;height:15px;accent-color:#1a1a1a;cursor:pointer;" /></td>
+                    <td style="padding:11px 12px;font-size:14px;font-weight:500;color:#2c6ecb;">{{ row.title }}</td>
+                    <td style="padding:11px 12px;"><span style="display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px;background:{{ row.badge.bg }};color:{{ row.badge.fg }};">{{ row.badge.label }}</span></td>
+                    <td style="padding:11px 12px;font-size:13px;color:#6b6b6b;max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ row.preview }}</td>
+                    <td style="padding:11px 16px 11px 12px;font-size:13.5px;color:#4a4a4a;">{{ row.updated }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ===== THEMES ===== -->
+        <sc-if value="{{ isThemes }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1080px;margin:0 auto;padding:28px 32px 64px;display:flex;flex-direction:column;gap:24px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
+            <div style="display:flex;align-items:center;gap:10px;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 9 5 5h14l1 4M4 9h16v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM5.5 13V20h13v-7" stroke="#1a1a1a" stroke-width="1.5" stroke-linejoin="round"/></svg><span style="font-size:24px;font-weight:600;">Online Store</span></div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <button style="display:flex;align-items:center;gap:6px;background:#f0eeee;border:1px solid #e0e0e0;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:600;color:#1a1a1a;cursor:pointer;font-family:inherit;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#0f5c3e" stroke-width="1.6"/><circle cx="12" cy="12" r="3" stroke="#0f5c3e" stroke-width="1.6"/></svg>Public <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="#5a5a5a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <button style="background:#fff;border:1px solid #c9c9c9;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;color:#1a1a1a;cursor:pointer;font-family:inherit;" style-hover="background:#f6f6f6;">View store</button>
+            </div>
+          </div>
+          <!-- perf stat row -->
+          <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;display:flex;align-items:stretch;">
+            <div style="display:flex;align-items:center;gap:10px;padding:18px 20px;border-right:1px solid #ececec;flex:none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="4" y="6" width="16" height="14" rx="2" stroke="#5a5a5a" stroke-width="1.6"/><path d="M4 10h16M8 3v4M16 3v4" stroke="#5a5a5a" stroke-width="1.6" stroke-linecap="round"/></svg><span style="font-size:13px;font-weight:600;color:#1a1a1a;">30 days</span></div>
+            <div style="flex:1;padding:14px 20px;border-right:1px solid #ececec;"><div style="font-size:13px;color:#6b6b6b;">LCP P75</div><div style="font-size:18px;font-weight:600;margin-top:3px;">1.6 s <span style="font-size:12px;color:#0f5c3e;font-weight:600;">&#9650;</span></div></div>
+            <div style="flex:1;padding:14px 20px;border-right:1px solid #ececec;"><div style="font-size:13px;color:#6b6b6b;">INP P75</div><div style="font-size:18px;font-weight:600;margin-top:3px;">90 ms <span style="font-size:12px;color:#0f5c3e;font-weight:600;">&#9650;</span></div></div>
+            <div style="flex:1;padding:14px 20px;border-right:1px solid #ececec;"><div style="font-size:13px;color:#6b6b6b;">Cumulative Layout Shift</div><div style="font-size:18px;font-weight:600;margin-top:3px;">0.02</div></div>
+            <div style="flex:1.2;padding:14px 20px;"><div style="font-size:13px;color:#6b6b6b;">Sessions by Device Type</div><div style="font-size:15px;font-weight:600;margin-top:3px;"><span style="color:#2c6ecb;border-bottom:2px solid #2c6ecb;padding-bottom:2px;">812 Desktop</span> &#160; <span style="color:#5c2d91;border-bottom:2px solid #5c2d91;padding-bottom:2px;">436 Mobile</span></div></div>
+          </div>
+          <!-- active theme -->
+          <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:20px;">
+            <div style="display:flex;gap:14px;align-items:flex-end;">
+              <!-- desktop preview -->
+              <div style="flex:1;aspect-ratio:16/10;border-radius:8px;overflow:hidden;border:1px solid #e3e3e3;background:#120c09;position:relative;display:flex;flex-direction:column;">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;"><div style="font-size:8px;font-weight:800;color:#d98a3a;line-height:1;text-align:center;">FUEL&amp;FREE<br/>TIME</div><div style="display:flex;gap:14px;font-size:8px;letter-spacing:1px;color:#cfcfcf;"><span style="color:#d98a3a;">HOME</span><span>SHOP</span><span>ABOUT</span><span>COMMUNITY</span></div></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:0 20px;">
+                  <div style="font-size:9px;letter-spacing:3px;color:#bdbdbd;">TIME IS THE</div>
+                  <div style="font-size:30px;font-weight:800;letter-spacing:1px;line-height:.95;text-align:center;background:linear-gradient(90deg,#f59e0b,#ea580c);-webkit-background-clip:text;background-clip:text;color:transparent;">REAL<br/>HORSEPOWER</div>
+                  <div style="font-size:8px;color:#9b9b9b;text-align:center;max-width:200px;margin-top:2px;">For those who&#8217;ve earned their freedom &#8212; on two wheels, four wheels, water, or in the garage.</div>
+                  <div style="margin-top:8px;background:linear-gradient(90deg,#d98a3a,#c2410c);color:#fff;font-size:8px;font-weight:700;letter-spacing:1px;padding:6px 14px;border-radius:999px;box-shadow:0 0 16px rgba(217,138,58,.5);">EXPLORE MORE &#8594;</div>
+                </div>
+              </div>
+              <!-- mobile preview -->
+              <div style="width:128px;flex:none;aspect-ratio:9/17;border-radius:12px;overflow:hidden;border:1px solid #e3e3e3;background:#120c09;display:flex;flex-direction:column;">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;"><div style="font-size:6px;font-weight:800;color:#d98a3a;line-height:1;text-align:center;">FUEL&amp;FREE<br/>TIME</div><div style="font-size:10px;color:#cfcfcf;">&#9776;</div></div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:0 12px;">
+                  <div style="font-size:6px;letter-spacing:2px;color:#bdbdbd;">TIME IS THE</div>
+                  <div style="font-size:18px;font-weight:800;line-height:.95;text-align:center;background:linear-gradient(90deg,#f59e0b,#ea580c);-webkit-background-clip:text;background-clip:text;color:transparent;">REAL<br/>HORSEPOWER</div>
+                  <div style="margin-top:6px;background:linear-gradient(90deg,#d98a3a,#c2410c);color:#fff;font-size:6px;font-weight:700;letter-spacing:1px;padding:4px 10px;border-radius:999px;">EXPLORE MORE</div>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-top:18px;">
+              <div>
+                <div style="display:flex;align-items:center;gap:10px;"><span style="font-size:17px;font-weight:600;">Dawn</span><span style="font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px;background:#d1f7e0;color:#0f5c3e;">Active</span></div>
+                <div style="font-size:13.5px;color:#5a5a5a;margin-top:8px;">Last saved: Oct 18 at 12:34 pm</div>
+                <div style="display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:600;color:#1a1a1a;margin-top:8px;"><span style="width:8px;height:8px;border-radius:50%;background:#2c6ecb;"></span>Version 15.5.0 available <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="#5a5a5a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <button style="width:34px;height:34px;border:1px solid #c9c9c9;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:#f6f6f6;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.6" fill="#5a5a5a"/><circle cx="12" cy="12" r="1.6" fill="#5a5a5a"/><circle cx="19" cy="12" r="1.6" fill="#5a5a5a"/></svg></button>
+                <button onClick="{{ h.goEditor }}" style="background:#1a1a1a;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;" style-hover="background:#000;">Edit theme</button>
+              </div>
+            </div>
+          </div>
+          <!-- draft themes -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
+            <div><div style="font-size:18px;font-weight:600;">Draft themes</div><div style="font-size:13.5px;color:#6b6b6b;margin-top:4px;">These themes are only visible to you. Publishing a theme from your library will switch it to your current theme.</div></div>
+            <button style="display:flex;align-items:center;gap:6px;background:#fff;border:1px solid #c9c9c9;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;color:#1a1a1a;cursor:pointer;font-family:inherit;" style-hover="background:#f6f6f6;">Import <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="#5a5a5a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+          <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;overflow:hidden;">
+            <sc-for list="{{ themes.drafts }}" as="t" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:16px;padding:16px;border-bottom:1px solid #f1f1f1;">
+                <div style="width:88px;height:56px;flex:none;border-radius:6px;overflow:hidden;border:1px solid #e3e3e3;background:#161616;display:flex;align-items:center;justify-content:center;"><span style="font-size:13px;font-weight:800;background:linear-gradient(90deg,#f59e0b,#ea580c);-webkit-background-clip:text;background-clip:text;color:transparent;">F&amp;FT</span></div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:14.5px;font-weight:600;color:#1a1a1a;">{{ t.name }}</div>
+                  <div style="font-size:13px;color:#6b6b6b;margin-top:4px;">{{ t.added }}</div>
+                  <div style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:#1a1a1a;margin-top:6px;"><span style="width:7px;height:7px;border-radius:50%;background:#2c6ecb;"></span>Version {{ t.version }} available</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex:none;">
+                  <button style="width:32px;height:32px;border:1px solid #c9c9c9;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:#f6f6f6;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.5" fill="#5a5a5a"/><circle cx="12" cy="12" r="1.5" fill="#5a5a5a"/><circle cx="19" cy="12" r="1.5" fill="#5a5a5a"/></svg></button>
+                  <button style="background:#fff;border:1px solid #c9c9c9;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;color:#1a1a1a;cursor:pointer;font-family:inherit;" style-hover="background:#f6f6f6;">Publish</button>
+                  <button onClick="{{ h.goEditor }}" style="background:#fff;border:1px solid #c9c9c9;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;color:#1a1a1a;cursor:pointer;font-family:inherit;" style-hover="background:#f6f6f6;">Edit theme</button>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ===== ANALYTICS ===== -->
+        <sc-if value="{{ isAnalytics }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1080px;margin:0 auto;padding:28px 32px 64px;display:flex;flex-direction:column;gap:20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
+            <div style="font-size:24px;font-weight:600;">Analytics</div>
+            <button style="display:flex;align-items:center;gap:6px;background:#fff;border:1px solid #c9c9c9;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:600;color:#1a1a1a;cursor:pointer;font-family:inherit;" style-hover="background:#f6f6f6;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="4" y="6" width="16" height="14" rx="2" stroke="#5a5a5a" stroke-width="1.6"/><path d="M4 10h16M8 3v4M16 3v4" stroke="#5a5a5a" stroke-width="1.6" stroke-linecap="round"/></svg>Last 12 months <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="#5a5a5a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
+            <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:16px 18px;"><div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Total sales</div><div style="font-size:24px;font-weight:600;margin-top:6px;">$84,210</div><div style="font-size:12px;color:#0f5c3e;font-weight:600;margin-top:2px;">&#9650; 18%</div></div>
+            <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:16px 18px;"><div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Sessions</div><div style="font-size:24px;font-weight:600;margin-top:6px;">10,210</div><div style="font-size:12px;color:#0f5c3e;font-weight:600;margin-top:2px;">&#9650; 12%</div></div>
+            <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:16px 18px;"><div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Avg order value</div><div style="font-size:24px;font-weight:600;margin-top:6px;">$78.40</div><div style="font-size:12px;color:#0f5c3e;font-weight:600;margin-top:2px;">&#9650; 4%</div></div>
+            <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:16px 18px;"><div style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#6b6b6b;font-weight:600;">Conversion rate</div><div style="font-size:24px;font-weight:600;margin-top:6px;">2.6%</div><div style="font-size:12px;color:#d72c0d;font-weight:600;margin-top:2px;">&#9660; 0.2%</div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;">
+            <!-- line chart -->
+            <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:18px 20px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;"><span style="font-size:15px;font-weight:600;">Sessions over time</span><span style="font-size:13px;color:#6b6b6b;">10,210 total</span></div>
+              <svg viewBox="0 0 620 180" style="width:100%;height:200px;margin-top:14px;overflow:visible;">
+                <line x1="8" y1="44" x2="612" y2="44" stroke="#f0f0f0" stroke-width="1"/>
+                <line x1="8" y1="88" x2="612" y2="88" stroke="#f0f0f0" stroke-width="1"/>
+                <line x1="8" y1="132" x2="612" y2="132" stroke="#f0f0f0" stroke-width="1"/>
+                <polygon points="{{ areaSessions }}" fill="#2c6ecb" fill-opacity="0.08"/>
+                <polyline points="{{ ptsSessions }}" fill="none" stroke="#2c6ecb" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+              </svg>
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:#9b9b9b;margin-top:8px;padding:0 4px;"><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span><span>Nov</span><span>Dec</span></div>
+            </div>
+            <!-- bar chart -->
+            <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:18px 20px;">
+              <div style="font-size:15px;font-weight:600;">Top products by units sold</div>
+              <div style="display:flex;flex-direction:column;gap:14px;margin-top:18px;">
+                <sc-for list="{{ barsView }}" as="b" hint-placeholder-count="5">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px;"><span style="color:#4a4a4a;">{{ b.label }}</span><span style="color:#1a1a1a;font-weight:600;">{{ b.value }}</span></div>
+                    <div style="height:9px;background:#f1f1f1;border-radius:5px;overflow:hidden;"><div style="height:100%;width:{{ b.pct }}%;background:linear-gradient(90deg,#d98a3a,#c2410c);border-radius:5px;"></div></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ===== SETTINGS ===== -->
+        <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1000px;margin:0 auto;padding:28px 32px 64px;">
+          <div style="font-size:24px;font-weight:600;margin-bottom:20px;">Settings</div>
+          <div style="display:flex;gap:24px;align-items:flex-start;">
+            <!-- sub-nav with hook pattern -->
+            <div style="width:230px;flex:none;background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:1px;">
+              <sc-for list="{{ settingsTabs }}" as="t" hint-placeholder-count="5">
+                <div onClick="{{ t.select }}" style="display:flex;align-items:center;gap:8px;height:36px;padding:0 10px;border-radius:7px;cursor:pointer;font-size:13.5px;position:relative;{{ t.style }}" style-hover="background:#f6f6f6;">
+                  <sc-if value="{{ t.active }}" hint-placeholder-val="{{ false }}"><span style="color:#9b9b9b;font-size:13px;">&#8627;</span></sc-if>
+                  {{ t.label }}
+                </div>
+              </sc-for>
+            </div>
+            <!-- form card -->
+            <div style="flex:1;min-width:0;">
+              <sc-if value="{{ isSetStore }}" hint-placeholder-val="{{ true }}">
+              <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:20px;">
+                <div style="font-size:16px;font-weight:600;">Store details</div>
+                <div><label style="font-size:13px;font-weight:600;color:#1a1a1a;display:block;margin-bottom:6px;">Store name</label><input value="Fuel & Free Time" style="width:100%;border:1px solid #c9c9c9;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;" /></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                  <div><label style="font-size:13px;font-weight:600;color:#1a1a1a;display:block;margin-bottom:6px;">Store email</label><input value="shop@fuelnfreetime.com" style="width:100%;border:1px solid #c9c9c9;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;" /></div>
+                  <div><label style="font-size:13px;font-weight:600;color:#1a1a1a;display:block;margin-bottom:6px;">Phone</label><input value="(337) 555-0142" style="width:100%;border:1px solid #c9c9c9;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;" /></div>
+                </div>
+                <div><label style="font-size:13px;font-weight:600;color:#1a1a1a;display:block;margin-bottom:6px;">Billing address</label><input value="412 Jefferson St, Lafayette, LA 70501" style="width:100%;border:1px solid #c9c9c9;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;" /></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                  <div><label style="font-size:13px;font-weight:600;color:#1a1a1a;display:block;margin-bottom:6px;">Currency</label><div style="display:flex;align-items:center;justify-content:space-between;border:1px solid #c9c9c9;border-radius:6px;padding:9px 12px;font-size:14px;">USD $ <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="#5a5a5a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+                  <div><label style="font-size:13px;font-weight:600;color:#1a1a1a;display:block;margin-bottom:6px;">Time zone</label><div style="display:flex;align-items:center;justify-content:space-between;border:1px solid #c9c9c9;border-radius:6px;padding:9px 12px;font-size:14px;">(GMT-06:00) Central <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="#5a5a5a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+                </div>
+                <div style="display:flex;justify-content:flex-end;"><button style="background:#1a1a1a;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;" style-hover="background:#000;">Save</button></div>
+              </div>
+              </sc-if>
+              <sc-if value="{{ isSetPayments }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:16px;">
+                <div style="font-size:16px;font-weight:600;">Payments</div>
+                <div style="border:1px solid #e3e3e3;border-radius:8px;padding:16px;display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:14px;font-weight:600;">Default payment provider</div><div style="font-size:13px;color:#6b6b6b;margin-top:3px;">Visa, Mastercard, Amex &#183; 2.9% + 30&#162;</div></div><span style="font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px;background:#d1f7e0;color:#0f5c3e;">Active</span></div>
+                <div style="border:1px solid #e3e3e3;border-radius:8px;padding:16px;display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:14px;font-weight:600;">PayPal</div><div style="font-size:13px;color:#6b6b6b;margin-top:3px;">Express checkout</div></div><button style="background:#fff;border:1px solid #c9c9c9;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Activate</button></div>
+              </div>
+              </sc-if>
+              <sc-if value="{{ isSetShipping }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:16px;">
+                <div style="font-size:16px;font-weight:600;">Shipping and delivery</div>
+                <div style="border:1px solid #e3e3e3;border-radius:8px;padding:16px;"><div style="font-size:14px;font-weight:600;">Domestic</div><div style="font-size:13px;color:#6b6b6b;margin-top:4px;">Standard (5&#8211;7 days) &#183; $6.00 &#160;|&#160; Free over $75</div></div>
+                <div style="border:1px solid #e3e3e3;border-radius:8px;padding:16px;"><div style="font-size:14px;font-weight:600;">Rest of world</div><div style="font-size:13px;color:#6b6b6b;margin-top:4px;">Calculated at checkout</div></div>
+                <div style="display:flex;justify-content:flex-end;"><button style="background:#fff;border:1px solid #c9c9c9;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Add shipping zone</button></div>
+              </div>
+              </sc-if>
+              <sc-if value="{{ isSetCheckout }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:18px;">
+                <div style="font-size:16px;font-weight:600;">Checkout</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;"><div style="font-size:14px;color:#1a1a1a;">Require customer accounts</div><div style="width:38px;height:22px;border-radius:999px;background:#d6d6d6;position:relative;cursor:pointer;"><div style="position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;"></div></div></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;"><div style="font-size:14px;color:#1a1a1a;">Collect marketing consent at checkout</div><div style="width:38px;height:22px;border-radius:999px;background:#1a1a1a;position:relative;cursor:pointer;"><div style="position:absolute;top:2px;left:18px;width:18px;height:18px;border-radius:50%;background:#fff;"></div></div></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;"><div style="font-size:14px;color:#1a1a1a;">Enable tipping</div><div style="width:38px;height:22px;border-radius:999px;background:#d6d6d6;position:relative;cursor:pointer;"><div style="position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;"></div></div></div>
+              </div>
+              </sc-if>
+              <sc-if value="{{ isSetDomains }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:16px;">
+                <div style="font-size:16px;font-weight:600;">Domains</div>
+                <div style="border:1px solid #e3e3e3;border-radius:8px;padding:16px;display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:14px;font-weight:600;">fuelnfreetime.com</div><div style="font-size:13px;color:#6b6b6b;margin-top:3px;">Primary &#183; Managed by Fuel & Free Time</div></div><span style="font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px;background:#d1f7e0;color:#0f5c3e;">Connected</span></div>
+                <div style="display:flex;justify-content:flex-end;"><button style="background:#fff;border:1px solid #c9c9c9;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Buy new domain</button></div>
+              </div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ===== GENERIC (Growth/Discounts/etc) ===== -->
+        <sc-if value="{{ isGeneric }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1080px;margin:0 auto;padding:28px 32px 64px;display:flex;flex-direction:column;gap:20px;">
+          <div style="font-size:24px;font-weight:600;">{{ genericTitle }}</div>
+          <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:64px 24px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;">
+            <div style="width:56px;height:56px;border-radius:14px;background:#f0eeee;display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z" stroke="#8a5a00" stroke-width="1.5" stroke-linejoin="round"/></svg></div>
+            <div style="font-size:17px;font-weight:600;">{{ genericTitle }} is ready when you are</div>
+            <div style="font-size:14px;color:#6b6b6b;max-width:420px;line-height:1.5;">This section is part of the build scaffold. Connect your data to start managing {{ genericTitle }} for Fuel &amp; Free Time.</div>
+            <button style="margin-top:6px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;" style-hover="background:#000;">Get started</button>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ===== PRODUCT DETAIL ===== -->
+        <sc-if value="{{ isProductDetail }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1080px;margin:0 auto;padding:22px 32px 64px;">
+          <!-- breadcrumb + header -->
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px;">
+            <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+              <button onClick="{{ h.goInventory }}" style="width:32px;height:32px;border:1px solid #d6d6d6;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;" style-hover="background:#f6f6f6;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <span style="font-size:21px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ pd.title }}</span>
+              <span style="font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px;background:{{ pdBadge.bg }};color:{{ pdBadge.fg }};flex:none;">{{ pdBadge.label }}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex:none;">
+              <button style="background:#fff;border:1px solid #c9c9c9;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:600;color:#1a1a1a;cursor:pointer;font-family:inherit;" style-hover="background:#f6f6f6;">Duplicate</button>
+              <button style="background:#fff;border:1px solid #c9c9c9;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:600;color:#1a1a1a;cursor:pointer;font-family:inherit;" style-hover="background:#f6f6f6;">Preview</button>
+              <button style="width:32px;height:32px;border:1px solid #c9c9c9;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:#f6f6f6;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.6" fill="#5a5a5a"/><circle cx="12" cy="12" r="1.6" fill="#5a5a5a"/><circle cx="19" cy="12" r="1.6" fill="#5a5a5a"/></svg></button>
+              <div style="display:flex;flex-direction:column;border:1px solid #c9c9c9;border-radius:8px;overflow:hidden;"><button style="border:none;background:#fff;width:30px;height:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-bottom:1px solid #e3e3e3;" style-hover="background:#f6f6f6;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="m6 15 6-6 6 6" stroke="#5a5a5a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button style="border:none;background:#fff;width:30px;height:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:#f6f6f6;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="#5a5a5a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start;">
+            <!-- LEFT -->
+            <div style="display:flex;flex-direction:column;gap:16px;min-width:0;">
+              <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:18px;display:flex;flex-direction:column;gap:14px;">
+                <div><label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Title</label><input value="{{ pd.title }}" style="width:100%;border:1px solid #c9c9c9;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;" /></div>
+                <div>
+                  <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Description</label>
+                  <div style="border:1px solid #c9c9c9;border-radius:6px;overflow:hidden;">
+                    <div style="display:flex;align-items:center;gap:2px;padding:6px 8px;border-bottom:1px solid #e3e3e3;background:#fafafa;flex-wrap:wrap;">
+                      <span style="font-size:13px;color:#5a5a5a;padding:4px 8px;border-radius:5px;cursor:pointer;" style-hover="background:#ececec;">Paragraph &#9662;</span>
+                      <div style="width:1px;height:18px;background:#dcdcdc;margin:0 4px;"></div>
+                      <span style="font-weight:700;font-size:13px;color:#5a5a5a;padding:4px 8px;border-radius:5px;cursor:pointer;width:26px;text-align:center;" style-hover="background:#ececec;">B</span>
+                      <span style="font-style:italic;font-size:13px;color:#5a5a5a;padding:4px 8px;border-radius:5px;cursor:pointer;width:26px;text-align:center;" style-hover="background:#ececec;">I</span>
+                      <span style="text-decoration:underline;font-size:13px;color:#5a5a5a;padding:4px 8px;border-radius:5px;cursor:pointer;width:26px;text-align:center;" style-hover="background:#ececec;">U</span>
+                      <div style="width:1px;height:18px;background:#dcdcdc;margin:0 4px;"></div>
+                      <span style="padding:4px 8px;border-radius:5px;cursor:pointer;" style-hover="background:#ececec;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" stroke="#5a5a5a" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+                      <span style="padding:4px 8px;border-radius:5px;cursor:pointer;" style-hover="background:#ececec;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M10 7h10M10 12h10M10 17h10M4 7h.01M4 12h.01M4 17h.01" stroke="#5a5a5a" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+                      <span style="padding:4px 8px;border-radius:5px;cursor:pointer;" style-hover="background:#ececec;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 7 4 12l5 5M15 7l5 5-5 5" stroke="#5a5a5a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                      <span style="padding:4px 8px;border-radius:5px;cursor:pointer;" style-hover="background:#ececec;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1" stroke="#5a5a5a" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+                    </div>
+                    <div style="padding:12px;font-size:14px;color:#3a3a3a;line-height:1.6;min-height:90px;">Built for the long haul. Waxed-cotton shell, broken-in from day one, with room for layers underneath. Wears in, never out &#8212; the kind of jacket you reach for on every ride.</div>
+                  </div>
+                </div>
+              </div>
+              <!-- media -->
+              <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:18px;">
+                <div style="font-size:14px;font-weight:600;margin-bottom:12px;">Media</div>
+                <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;">
+                  <div style="aspect-ratio:1;border-radius:8px;background:{{ pd.color }};display:flex;align-items:center;justify-content:center;color:#e8d9c8;font-size:18px;font-weight:700;grid-row:span 2;grid-column:span 2;">{{ pd.init }}</div>
+                  <div style="aspect-ratio:1;border-radius:8px;background:#efe6dc;"></div>
+                  <div style="aspect-ratio:1;border-radius:8px;background:#e3e7e6;"></div>
+                  <div style="aspect-ratio:1;border-radius:8px;background:#e8e1ea;"></div>
+                  <div style="aspect-ratio:1;border-radius:8px;background:#e7e2dc;"></div>
+                  <div style="aspect-ratio:1;border-radius:8px;border:1.5px dashed #c9c9c9;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:#fafafa;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#9b9b9b" stroke-width="2" stroke-linecap="round"/></svg></div>
+                </div>
+              </div>
+              <!-- category -->
+              <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:18px;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="font-size:14px;font-weight:600;">Category</span><span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#5c2d91;background:#f4f1fb;border:1px dashed #b5a8e0;border-radius:999px;padding:2px 8px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9z" fill="#5c2d91"/></svg>AI suggested</span></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;border:1px solid #c9c9c9;border-radius:6px;padding:9px 12px;font-size:14px;">Apparel &amp; Accessories &#8250; Clothing &#8250; Outerwear <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="#5a5a5a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              </div>
+              <!-- pricing -->
+              <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:18px;">
+                <div style="font-size:14px;font-weight:600;margin-bottom:12px;">Pricing</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                  <div><label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Price</label><div style="display:flex;align-items:center;border:1px solid #c9c9c9;border-radius:6px;padding:0 12px;"><span style="font-size:14px;color:#6b6b6b;">$</span><input value="{{ pd.price }}" style="border:none;outline:none;font-size:14px;font-family:inherit;padding:9px 6px;flex:1;" /></div></div>
+                  <div><label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Compare-at price</label><div style="display:flex;align-items:center;border:1px solid #c9c9c9;border-radius:6px;padding:0 12px;"><span style="font-size:14px;color:#6b6b6b;">$</span><input placeholder="0.00" style="border:none;outline:none;font-size:14px;font-family:inherit;padding:9px 6px;flex:1;" /></div></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:12px;"><input type="checkbox" style="width:15px;height:15px;accent-color:#1a1a1a;" /><span style="font-size:13.5px;color:#3a3a3a;">Charge tax on this product</span></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px;padding-top:14px;border-top:1px solid #f1f1f1;">
+                  <div><label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Cost per item</label><div style="display:flex;align-items:center;border:1px solid #c9c9c9;border-radius:6px;padding:0 12px;"><span style="font-size:14px;color:#6b6b6b;">$</span><input placeholder="0.00" style="border:none;outline:none;font-size:14px;font-family:inherit;padding:9px 6px;flex:1;" /></div></div>
+                  <div><label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Profit margin</label><input value="—" disabled style="width:100%;border:1px solid #e3e3e3;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;background:#fafafa;color:#9b9b9b;" /></div>
+                </div>
+              </div>
+              <!-- inventory -->
+              <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:18px;">
+                <div style="font-size:14px;font-weight:600;margin-bottom:12px;">Inventory</div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;"><input type="checkbox" checked style="width:15px;height:15px;accent-color:#1a1a1a;" /><span style="font-size:13.5px;color:#3a3a3a;">Track quantity</span></div>
+                <table style="width:100%;border-collapse:collapse;">
+                  <thead><tr style="border-bottom:1px solid #ececec;"><th style="text-align:left;padding:8px 0;font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:#6b6b6b;font-weight:600;">Location</th><th style="text-align:right;padding:8px 0;font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:#6b6b6b;font-weight:600;">Available</th></tr></thead>
+                  <tbody>
+                    <tr style="border-bottom:1px solid #f1f1f1;"><td style="padding:11px 0;font-size:13.5px;">Lafayette Workshop</td><td style="padding:11px 0;text-align:right;"><input value="{{ pd.inventory }}" style="width:70px;border:1px solid #c9c9c9;border-radius:6px;padding:6px 10px;font-size:13.5px;text-align:right;font-family:inherit;outline:none;" /></td></tr>
+                    <tr><td style="padding:11px 0;font-size:13.5px;">Pop-up &#183; Festival Intl</td><td style="padding:11px 0;text-align:right;"><input value="0" style="width:70px;border:1px solid #c9c9c9;border-radius:6px;padding:6px 10px;font-size:13.5px;text-align:right;font-family:inherit;outline:none;" /></td></tr>
+                  </tbody>
+                </table>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;padding-top:14px;border-top:1px solid #f1f1f1;">
+                  <div><label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">SKU</label><input value="{{ pd.sku }}" style="width:100%;border:1px solid #c9c9c9;border-radius:6px;padding:9px 12px;font-size:14px;font-family:ui-monospace,monospace;outline:none;" /></div>
+                  <div><label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Barcode</label><input placeholder="ISBN, UPC, GTIN" style="width:100%;border:1px solid #c9c9c9;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;" /></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:12px;"><input type="checkbox" style="width:15px;height:15px;accent-color:#1a1a1a;" /><span style="font-size:13.5px;color:#3a3a3a;">Continue selling when out of stock</span></div>
+              </div>
+              <!-- shipping -->
+              <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:18px;">
+                <div style="font-size:14px;font-weight:600;margin-bottom:12px;">Shipping</div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;"><input type="checkbox" checked style="width:15px;height:15px;accent-color:#1a1a1a;" /><span style="font-size:13.5px;color:#3a3a3a;">This is a physical product</span></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+                  <div><label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Weight</label><div style="display:flex;align-items:center;border:1px solid #c9c9c9;border-radius:6px;padding:0 12px;"><input value="1.4" style="border:none;outline:none;font-size:14px;font-family:inherit;padding:9px 6px;width:100%;" /><span style="font-size:13px;color:#6b6b6b;">lb</span></div></div>
+                  <div><label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">Country of origin</label><div style="display:flex;align-items:center;justify-content:space-between;border:1px solid #c9c9c9;border-radius:6px;padding:9px 12px;font-size:13.5px;">United States <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="#5a5a5a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+                  <div><label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px;">HS code</label><input placeholder="6201.40" style="width:100%;border:1px solid #c9c9c9;border-radius:6px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;" /></div>
+                </div>
+              </div>
+              <!-- variants -->
+              <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:18px;">
+                <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Variants</div>
+                <div style="border:1.5px dashed #d6d6d6;border-radius:8px;padding:18px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;color:#2c6ecb;font-size:13.5px;font-weight:600;" style-hover="background:#fafafa;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#2c6ecb" stroke-width="2" stroke-linecap="round"/></svg>Add options like size or color</div>
+              </div>
+              <!-- AI suggestions / metafields -->
+              <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;overflow:hidden;">
+                <div onClick="{{ toggleSuggest }}" style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;cursor:pointer;background:linear-gradient(90deg,#f7f4fc,#fff);">
+                  <div style="display:flex;align-items:center;gap:10px;"><div style="width:28px;height:28px;border-radius:8px;background:#f4f1fb;border:1px solid #e3d9f5;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9z" fill="#5c2d91"/></svg></div><div><div style="font-size:14px;font-weight:600;">Category metafields</div><sc-if value="{{ pdAllAccepted }}" hint-placeholder-val="{{ false }}"><div style="font-size:12.5px;color:#0f5c3e;margin-top:2px;">All suggestions accepted</div></sc-if><sc-if value="{{ pdRemaining }}" hint-placeholder-val="{{ true }}"><div style="font-size:12.5px;color:#5c2d91;margin-top:2px;">{{ pdRemaining }} AI suggestions available</div></sc-if></div></div>
+                  <button onClick="{{ acceptAllMeta }}" style="background:#5c2d91;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;" style-hover="background:#4a2475;">Accept all</button>
+                </div>
+                <sc-if value="{{ pdSuggestOpen }}" hint-placeholder-val="{{ true }}">
+                <div style="padding:0 18px 18px;display:flex;flex-direction:column;gap:10px;">
+                  <sc-for list="{{ metaView }}" as="m" hint-placeholder-count="7">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                      <div style="flex:1;display:flex;align-items:center;gap:10px;border:1px dashed #b5a8e0;background:#f4f1fb;border-radius:8px;padding:9px 12px;">
+                        <span style="font-size:13px;font-weight:600;color:#5c2d91;min-width:110px;">{{ m.label }}</span>
+                        <span style="font-size:13px;color:#3a3a3a;">{{ m.value }}</span>
+                      </div>
+                      <sc-if value="{{ m.accepted }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;color:#0f5c3e;width:88px;justify-content:center;flex:none;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4 10-12" stroke="#0f5c3e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Added</span></sc-if>
+                      <sc-if value="{{ m.pending }}" hint-placeholder-val="{{ true }}"><button onClick="{{ m.accept }}" style="width:88px;flex:none;background:#fff;border:1px solid #c9c9c9;border-radius:8px;padding:7px 0;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;" style-hover="background:#f6f6f6;">Accept</button></sc-if>
+                    </div>
+                  </sc-for>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+                    <span style="font-size:12.5px;color:#4a4a4a;border:1px solid #e0e0e0;border-radius:999px;padding:5px 12px;cursor:pointer;" style-hover="background:#f4f4f4;">+ Material</span>
+                    <span style="font-size:12.5px;color:#4a4a4a;border:1px solid #e0e0e0;border-radius:999px;padding:5px 12px;cursor:pointer;" style-hover="background:#f4f4f4;">+ Care instructions</span>
+                    <span style="font-size:12.5px;color:#4a4a4a;border:1px solid #e0e0e0;border-radius:999px;padding:5px 12px;cursor:pointer;" style-hover="background:#f4f4f4;">+ Season</span>
+                  </div>
+                </div>
+                </sc-if>
+              </div>
+              <!-- product metafields -->
+              <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:18px;display:flex;align-items:center;justify-content:space-between;">
+                <div><div style="font-size:14px;font-weight:600;">Metafields</div><div style="font-size:13px;color:#6b6b6b;margin-top:3px;">Add custom fields to store extra product info.</div></div>
+                <button style="background:#fff;border:1px solid #c9c9c9;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;" style-hover="background:#f6f6f6;">Add definition</button>
+              </div>
+            </div>
+            <!-- RIGHT -->
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:18px;">
+                <div style="font-size:14px;font-weight:600;margin-bottom:10px;">Status</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;border:1px solid #c9c9c9;border-radius:6px;padding:9px 12px;font-size:14px;"><span style="display:flex;align-items:center;gap:8px;"><span style="width:8px;height:8px;border-radius:50%;background:#0f5c3e;"></span>{{ pdBadge.label }}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="#5a5a5a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              </div>
+              <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:18px;">
+                <div style="font-size:14px;font-weight:600;margin-bottom:12px;">Publishing</div>
+                <div style="display:flex;align-items:center;gap:10px;font-size:13.5px;color:#3a3a3a;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M4 9 5 5h14l1 4M4 9h16v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM5.5 13V20h13v-7" stroke="#5a5a5a" stroke-width="1.5" stroke-linejoin="round"/></svg>Online Store</div>
+                <div style="display:flex;align-items:center;gap:10px;font-size:13.5px;color:#3a3a3a;margin-top:10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="6" y="3" width="12" height="18" rx="2" stroke="#5a5a5a" stroke-width="1.5"/></svg>Point of Sale</div>
+              </div>
+              <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:18px;">
+                <div style="font-size:14px;font-weight:600;margin-bottom:8px;">Sales</div>
+                <div style="font-size:13.5px;color:#6b6b6b;">No recent sales for this product.</div>
+                <div style="font-size:13.5px;color:#2c6ecb;font-weight:600;margin-top:8px;cursor:pointer;">View details</div>
+              </div>
+              <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:18px;display:flex;flex-direction:column;gap:14px;">
+                <div style="font-size:14px;font-weight:600;">Product organization</div>
+                <div><label style="font-size:12.5px;font-weight:600;color:#6b6b6b;display:block;margin-bottom:5px;">Type</label><input value="{{ pd.type }}" style="width:100%;border:1px solid #c9c9c9;border-radius:6px;padding:8px 11px;font-size:13.5px;font-family:inherit;outline:none;" /></div>
+                <div><label style="font-size:12.5px;font-weight:600;color:#6b6b6b;display:block;margin-bottom:5px;">Vendor</label><input value="{{ pd.vendor }}" style="width:100%;border:1px solid #c9c9c9;border-radius:6px;padding:8px 11px;font-size:13.5px;font-family:inherit;outline:none;" /></div>
+                <div><label style="font-size:12.5px;font-weight:600;color:#6b6b6b;display:block;margin-bottom:5px;">Collections</label><input value="Riding Gear" style="width:100%;border:1px solid #c9c9c9;border-radius:6px;padding:8px 11px;font-size:13.5px;font-family:inherit;outline:none;" /></div>
+                <div><label style="font-size:12.5px;font-weight:600;color:#6b6b6b;display:block;margin-bottom:5px;">Tags</label><div style="display:flex;gap:6px;flex-wrap:wrap;"><span style="font-size:12px;background:#f0eeee;border-radius:6px;padding:4px 9px;color:#3a3a3a;">waxed</span><span style="font-size:12px;background:#f0eeee;border-radius:6px;padding:4px 9px;color:#3a3a3a;">moto</span><span style="font-size:12px;background:#f0eeee;border-radius:6px;padding:4px 9px;color:#3a3a3a;">new</span></div></div>
+              </div>
+              <div style="background:#fff;border:1px solid #e3e3e3;border-radius:8px;padding:18px;">
+                <div style="font-size:14px;font-weight:600;margin-bottom:10px;">Theme template</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;border:1px solid #c9c9c9;border-radius:6px;padding:9px 12px;font-size:14px;">Default product <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="#5a5a5a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+        <!--PAGES-->
+
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ================= THEME EDITOR ================= -->
+  <sc-if value="{{ showEditor }}" hint-placeholder-val="{{ false }}">
+  <div style="display:flex;flex-direction:column;height:100vh;background:#e8e8e8;">
+    <!-- editor topbar -->
+    <div style="height:52px;flex:none;background:#fff;border-bottom:1px solid #e0e0e0;display:flex;align-items:center;justify-content:space-between;padding:0 12px;">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <button onClick="{{ h.goThemes }}" style="width:34px;height:34px;border:none;background:transparent;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:#f0f0f0;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 5 4 10l5 5M4 10h11a5 5 0 0 1 0 10H9" stroke="#1a1a1a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div style="width:1px;height:24px;background:#e0e0e0;margin:0 4px;"></div>
+        <button style="width:34px;height:34px;border:none;background:#eef2f9;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="7" height="16" rx="1.5" stroke="#2c6ecb" stroke-width="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.5" stroke="#2c6ecb" stroke-width="1.6"/></svg></button>
+        <button style="width:34px;height:34px;border:none;background:transparent;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:#f0f0f0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="#5a5a5a" stroke-width="1.6"/><path d="M12 3v3M12 18v3M21 12h-3M6 12H3M18.4 5.6l-2 2M7.6 16.4l-2 2M18.4 18.4l-2-2M7.6 7.6l-2-2" stroke="#5a5a5a" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+        <button style="width:34px;height:34px;border:none;background:transparent;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:#f0f0f0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="7" height="7" rx="1.5" stroke="#5a5a5a" stroke-width="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.5" stroke="#5a5a5a" stroke-width="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.5" stroke="#5a5a5a" stroke-width="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.5" stroke="#5a5a5a" stroke-width="1.6"/></svg></button>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="4" y="9" width="16" height="11" rx="1.5" stroke="#5a5a5a" stroke-width="1.6"/><path d="M8 9V6a4 4 0 0 1 8 0v3" stroke="#5a5a5a" stroke-width="1.6"/></svg><span style="font-size:13.5px;font-weight:600;">Dawn</span><span style="font-size:11px;font-weight:600;border-radius:999px;padding:2px 8px;background:#d1f7e0;color:#0f5c3e;">Active</span></div>
+        <div style="width:1px;height:22px;background:#e0e0e0;"></div>
+        <div style="display:flex;align-items:center;gap:7px;border:1px solid #d6d6d6;border-radius:8px;padding:5px 11px;cursor:pointer;" style-hover="background:#f6f6f6;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 11 12 4l8 7M6 9.5V20h12V9.5" stroke="#5a5a5a" stroke-width="1.6" stroke-linejoin="round"/></svg><span style="font-size:13px;">Home page</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="#5a5a5a" stroke-width="2" stroke-linecap="round"/></svg></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;">
+        <button style="width:34px;height:34px;border:none;background:transparent;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:#f0f0f0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9z" stroke="#5c2d91" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+        <button style="width:34px;height:34px;border:none;background:#eef2f9;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 4l7 16 2-7 7-2z" stroke="#2c6ecb" stroke-width="1.6" stroke-linejoin="round"/></svg></button>
+        <button onClick="{{ toggleEdMobile }}" style="width:34px;height:34px;border:none;background:transparent;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;{{ edMobileBtnStyle }}" style-hover="background:#f0f0f0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><rect x="7" y="3" width="10" height="18" rx="2" stroke="#5a5a5a" stroke-width="1.6"/><path d="M11 18h2" stroke="#5a5a5a" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+        <div style="width:1px;height:22px;background:#e0e0e0;margin:0 4px;"></div>
+        <button style="width:34px;height:34px;border:none;background:transparent;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:#f0f0f0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10" stroke="#9b9b9b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button style="width:34px;height:34px;border:none;background:transparent;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:#f0f0f0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 7l5 5-5 5M20 12H9a5 5 0 0 0 0-10" stroke="#9b9b9b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button style="width:34px;height:34px;border:none;background:transparent;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:#f0f0f0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.6" fill="#5a5a5a"/><circle cx="12" cy="12" r="1.6" fill="#5a5a5a"/><circle cx="19" cy="12" r="1.6" fill="#5a5a5a"/></svg></button>
+        <div style="width:1px;height:22px;background:#e0e0e0;margin:0 4px;"></div>
+        <button style="background:#fff;border:1px solid #c9c9c9;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;color:#1a1a1a;cursor:pointer;font-family:inherit;" style-hover="background:#f6f6f6;">Publish</button>
+        <button style="border:none;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:600;font-family:inherit;{{ saveStyle }}">Save</button>
+      </div>
+    </div>
+
+    <!-- editor body -->
+    <div style="flex:1;display:flex;min-height:0;">
+      <!-- LEFT PANE -->
+      <div style="width:288px;flex:none;background:#fff;border-right:1px solid #e0e0e0;overflow-y:auto;position:relative;">
+
+        <!-- TREE -->
+        <sc-if value="{{ edInTree }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:8px;">
+          <div style="font-size:13px;font-weight:600;padding:8px 8px 4px;">Home page</div>
+          <!-- Header group -->
+          <div style="font-size:12px;font-weight:600;color:#6b6b6b;padding:10px 8px 4px;">Header</div>
+          <div onClick="{{ h.selAnnouncement }}" style="display:flex;align-items:center;gap:9px;height:34px;padding:0 8px;border-radius:7px;cursor:pointer;font-size:13.5px;{{ edRow.announcement }}" style-hover="background:#f6f6f6;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M8 6 4 12l4 6M16 6l4 6-4 6" stroke="#7a7a7a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="flex:1;">Announcement bar</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="#b0b0b0" stroke-width="1.5"/><circle cx="12" cy="12" r="2.5" stroke="#b0b0b0" stroke-width="1.5"/></svg></div>
+          <div onClick="{{ h.selHeader }}" style="display:flex;align-items:center;gap:9px;height:34px;padding:0 8px;border-radius:7px;cursor:pointer;font-size:13.5px;{{ edRow.header }}" style-hover="background:#f6f6f6;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="6" rx="1.5" stroke="#7a7a7a" stroke-width="1.6"/></svg><span style="flex:1;">Header</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="#b0b0b0" stroke-width="1.5"/><circle cx="12" cy="12" r="2.5" stroke="#b0b0b0" stroke-width="1.5"/></svg></div>
+          <div onClick="{{ toggleEdSearch }}" style="display:flex;align-items:center;gap:7px;height:32px;padding:0 8px;border-radius:7px;cursor:pointer;font-size:13px;color:#2c6ecb;font-weight:600;" style-hover="background:#f6f6f6;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#2c6ecb" stroke-width="2" stroke-linecap="round"/></svg>Add section</div>
+          <div style="height:1px;background:#f0f0f0;margin:8px 4px;"></div>
+          <!-- Template group -->
+          <div style="font-size:12px;font-weight:600;color:#6b6b6b;padding:6px 8px 4px;">Template</div>
+          <div onClick="{{ h.selHero }}" style="display:flex;align-items:center;gap:9px;height:34px;padding:0 8px;border-radius:7px;cursor:pointer;font-size:13.5px;{{ edRow.hero }}" style-hover="background:#f6f6f6;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="1.5" stroke="#7a7a7a" stroke-width="1.6"/><path d="m3 15 5-4 4 3 3-2 6 4" stroke="#7a7a7a" stroke-width="1.5" stroke-linejoin="round"/><circle cx="8" cy="9" r="1.4" fill="#7a7a7a"/></svg><span style="flex:1;">Image banner</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="#b0b0b0" stroke-width="1.5"/><circle cx="12" cy="12" r="2.5" stroke="#b0b0b0" stroke-width="1.5"/></svg></div>
+          <div onClick="{{ h.selFeatured }}" style="display:flex;align-items:center;gap:9px;height:34px;padding:0 8px;border-radius:7px;cursor:pointer;font-size:13.5px;{{ edRow.featured }}" style-hover="background:#f6f6f6;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="7" height="7" rx="1" stroke="#7a7a7a" stroke-width="1.6"/><rect x="14" y="4" width="7" height="7" rx="1" stroke="#7a7a7a" stroke-width="1.6"/><rect x="3" y="14" width="7" height="6" rx="1" stroke="#7a7a7a" stroke-width="1.6"/><rect x="14" y="14" width="7" height="6" rx="1" stroke="#7a7a7a" stroke-width="1.6"/></svg><span style="flex:1;">Featured collection</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="#b0b0b0" stroke-width="1.5"/><circle cx="12" cy="12" r="2.5" stroke="#b0b0b0" stroke-width="1.5"/></svg></div>
+          <div onClick="{{ h.selRich }}" style="display:flex;align-items:center;gap:9px;height:34px;padding:0 8px;border-radius:7px;cursor:pointer;font-size:13.5px;{{ edRow.rich }}" style-hover="background:#f6f6f6;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 6h14M5 10h14M5 14h9M5 18h6" stroke="#7a7a7a" stroke-width="1.6" stroke-linecap="round"/></svg><span style="flex:1;">Rich text</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="#b0b0b0" stroke-width="1.5"/><circle cx="12" cy="12" r="2.5" stroke="#b0b0b0" stroke-width="1.5"/></svg></div>
+          <div onClick="{{ toggleEdSearch }}" style="display:flex;align-items:center;gap:7px;height:32px;padding:0 8px;border-radius:7px;cursor:pointer;font-size:13px;color:#2c6ecb;font-weight:600;" style-hover="background:#f6f6f6;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="#2c6ecb" stroke-width="2" stroke-linecap="round"/></svg>Add section</div>
+          <div style="height:1px;background:#f0f0f0;margin:8px 4px;"></div>
+          <!-- Footer group -->
+          <div style="font-size:12px;font-weight:600;color:#6b6b6b;padding:6px 8px 4px;">Footer</div>
+          <div onClick="{{ h.selNewsletter }}" style="display:flex;align-items:center;gap:9px;height:34px;padding:0 8px;border-radius:7px;cursor:pointer;font-size:13.5px;{{ edRow.newsletter }}" style-hover="background:#f6f6f6;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="12" rx="1.5" stroke="#7a7a7a" stroke-width="1.6"/><path d="m3 8 9 6 9-6" stroke="#7a7a7a" stroke-width="1.5"/></svg><span style="flex:1;">Email signup</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="#b0b0b0" stroke-width="1.5"/><circle cx="12" cy="12" r="2.5" stroke="#b0b0b0" stroke-width="1.5"/></svg></div>
+          <div onClick="{{ h.selFooter }}" style="display:flex;align-items:center;gap:9px;height:34px;padding:0 8px;border-radius:7px;cursor:pointer;font-size:13.5px;{{ edRow.footer }}" style-hover="background:#f6f6f6;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="13" width="18" height="6" rx="1.5" stroke="#7a7a7a" stroke-width="1.6"/></svg><span style="flex:1;">Footer</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="#b0b0b0" stroke-width="1.5"/><circle cx="12" cy="12" r="2.5" stroke="#b0b0b0" stroke-width="1.5"/></svg></div>
+        </div>
+        </sc-if>
+
+        <!-- SETTINGS PANEL -->
+        <sc-if value="{{ edInSettings }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;height:100%;">
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 10px;border-bottom:1px solid #f0f0f0;">
+            <button onClick="{{ edBackToTree }}" style="width:30px;height:30px;border:none;background:transparent;border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:#f0f0f0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <span style="font-size:14px;font-weight:600;">{{ edSectionLabel }}</span>
+          </div>
+          <div style="padding:14px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;">
+            <div>
+              <label style="font-size:12.5px;font-weight:600;color:#1a1a1a;display:block;margin-bottom:6px;">Custom Liquid</label>
+              <textarea oninput="{{ markDirty }}" style="width:100%;height:96px;border:1px solid #c9c9c9;border-radius:6px;padding:10px;font-size:12px;font-family:ui-monospace,Menlo,monospace;color:#1a1a1a;line-height:1.5;outline:none;resize:vertical;background:#fbfbfb;">{% section 'image-banner' %}
+  &lt;h1&gt;&#123;&#123; section.settings.heading &#125;&#125;&lt;/h1&gt;
+{% endsection %}</textarea>
+            </div>
+            <div>
+              <label style="font-size:12.5px;font-weight:600;color:#1a1a1a;display:block;margin-bottom:8px;">Color scheme</label>
+              <div style="display:flex;gap:8px;">
+                <div onClick="{{ markDirty }}" style="width:42px;height:42px;border-radius:8px;background:#120c09;color:#d98a3a;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 0 0 2px #2c6ecb,0 0 0 4px #fff;">Aa</div>
+                <div onClick="{{ markDirty }}" style="width:42px;height:42px;border-radius:8px;background:#1a1a1a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 0 0 1px #e0e0e0;">Aa</div>
+                <div onClick="{{ markDirty }}" style="width:42px;height:42px;border-radius:8px;background:#fff;color:#1a1a1a;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 0 0 1px #e0e0e0;">Aa</div>
+                <div onClick="{{ markDirty }}" style="width:42px;height:42px;border-radius:8px;background:#efe6dc;color:#7a4a18;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 0 0 1px #e0e0e0;">Aa</div>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;"><label style="font-size:12.5px;font-weight:600;color:#1a1a1a;">Top padding</label><input value="120" oninput="{{ markDirty }}" style="width:54px;border:1px solid #c9c9c9;border-radius:5px;padding:4px 8px;font-size:12.5px;text-align:right;font-family:inherit;outline:none;" /></div>
+              <input type="range" min="0" max="200" value="120" oninput="{{ markDirty }}" style="width:100%;accent-color:#2c6ecb;" />
+            </div>
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;"><label style="font-size:12.5px;font-weight:600;color:#1a1a1a;">Bottom padding</label><input value="80" oninput="{{ markDirty }}" style="width:54px;border:1px solid #c9c9c9;border-radius:5px;padding:4px 8px;font-size:12.5px;text-align:right;font-family:inherit;outline:none;" /></div>
+              <input type="range" min="0" max="200" value="80" oninput="{{ markDirty }}" style="width:100%;accent-color:#2c6ecb;" />
+            </div>
+            <div style="border:1px solid #e3e3e3;border-radius:8px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 12px;cursor:pointer;"><span style="font-size:12.5px;font-weight:600;">Custom CSS</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="#5a5a5a" stroke-width="2" stroke-linecap="round"/></svg></div>
+            </div>
+            <div onClick="{{ markDirty }}" style="font-size:13px;color:#d72c0d;font-weight:600;cursor:pointer;padding:4px 2px;">Remove section</div>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ADD-SECTION POPOVER -->
+        <sc-if value="{{ edSearch }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;top:54px;left:8px;width:272px;background:#fff;border:1px solid #e0e0e0;border-radius:12px;box-shadow:0 14px 38px rgba(0,0,0,.18);z-index:30;overflow:hidden;">
+          <div style="padding:10px;border-bottom:1px solid #f0f0f0;"><div style="display:flex;align-items:center;gap:7px;border:1px solid #d6d6d6;border-radius:8px;padding:7px 10px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#9b9b9b" stroke-width="1.8"/><path d="m20 20-3.2-3.2" stroke="#9b9b9b" stroke-width="1.8" stroke-linecap="round"/></svg><input placeholder="Search sections" style="border:none;outline:none;font-size:13px;font-family:inherit;flex:1;" /></div></div>
+          <div style="display:flex;gap:2px;padding:6px 10px;border-bottom:1px solid #f0f0f0;"><span style="font-size:12.5px;font-weight:600;color:#1a1a1a;padding:5px 11px;border-radius:6px;background:#f0eeee;cursor:pointer;">Sections</span><span style="font-size:12.5px;color:#5a5a5a;padding:5px 11px;border-radius:6px;cursor:pointer;" style-hover="background:#f4f4f4;">Apps</span></div>
+          <div style="padding:6px;max-height:280px;overflow-y:auto;">
+            <div onClick="{{ edBackToTree }}" style="display:flex;align-items:center;gap:9px;font-size:13px;color:#5c2d91;font-weight:600;padding:9px 8px;border-radius:7px;cursor:pointer;" style-hover="background:#f7f4fc;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9z" fill="#5c2d91"/></svg>Generate a section</div>
+            <div onClick="{{ edBackToTree }}" style="display:flex;align-items:center;gap:9px;font-size:13px;padding:9px 8px;border-radius:7px;cursor:pointer;" style-hover="background:#f6f6f6;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M8 6 4 12l4 6M16 6l4 6-4 6" stroke="#5a5a5a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Custom Liquid</div>
+            <div onClick="{{ edBackToTree }}" style="display:flex;align-items:center;gap:9px;font-size:13px;padding:9px 8px;border-radius:7px;cursor:pointer;" style-hover="background:#f6f6f6;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="7" width="18" height="4" rx="1" stroke="#5a5a5a" stroke-width="1.6"/></svg>Announcement bar</div>
+            <div onClick="{{ edBackToTree }}" style="display:flex;align-items:center;gap:9px;font-size:13px;padding:9px 8px;border-radius:7px;cursor:pointer;" style-hover="background:#f6f6f6;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="1.5" stroke="#5a5a5a" stroke-width="1.6"/><circle cx="8" cy="9" r="1.4" fill="#5a5a5a"/></svg>Image with text</div>
+            <div onClick="{{ edBackToTree }}" style="display:flex;align-items:center;gap:9px;font-size:13px;padding:9px 8px;border-radius:7px;cursor:pointer;" style-hover="background:#f6f6f6;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 6h14M5 10h14M5 14h9" stroke="#5a5a5a" stroke-width="1.6" stroke-linecap="round"/></svg>Collapsible content</div>
+            <div onClick="{{ edBackToTree }}" style="display:flex;align-items:center;gap:9px;font-size:13px;padding:9px 8px;border-radius:7px;cursor:pointer;" style-hover="background:#f6f6f6;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 4v16M4 8l8-4 8 4" stroke="#5a5a5a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Multicolumn</div>
+          </div>
+        </div>
+        </sc-if>
+      </div>
+
+      <!-- CENTER PREVIEW -->
+      <div style="flex:1;min-width:0;overflow-y:auto;display:flex;justify-content:center;padding:18px;">
+        <div style="width:100%;background:#120c09;overflow:hidden;box-shadow:0 2px 14px rgba(0,0,0,.12);{{ edPreviewWrap }}">
+          <!-- nav -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 36px;">
+            <div style="font-size:12px;font-weight:800;color:#d98a3a;line-height:1.05;text-align:center;">FUEL&amp;FREE<br/>TIME</div>
+            <div style="display:flex;gap:28px;font-size:12px;letter-spacing:1.5px;color:#cfcfcf;"><span style="color:#d98a3a;border-bottom:1.5px solid #d98a3a;padding-bottom:3px;">HOME</span><span>SHOP</span><span>ABOUT</span><span>COMMUNITY</span></div>
+          </div>
+          <!-- hero (selectable) -->
+          <div onClick="{{ h.selHero }}" style="position:relative;cursor:pointer;{{ edHeroOutline }}">
+            <sc-if value="{{ edHeroSelected }}" hint-placeholder-val="{{ true }}">
+              <div style="position:absolute;top:0;left:0;background:#2c6ecb;color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:0 0 6px 0;z-index:5;">Image banner</div>
+              <div style="position:absolute;top:10px;right:10px;display:flex;align-items:center;gap:2px;background:#1a1a1a;border-radius:8px;padding:3px;z-index:6;box-shadow:0 4px 14px rgba(0,0,0,.3);">
+                <button style="width:30px;height:30px;border:none;background:transparent;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:#333;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="11" height="11" rx="2" stroke="#fff" stroke-width="1.6"/><path d="M5 15V5a2 2 0 0 1 2-2h8" stroke="#fff" stroke-width="1.6"/></svg></button>
+                <button style="width:30px;height:30px;border:none;background:transparent;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:#333;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="#fff" stroke-width="1.5"/><circle cx="12" cy="12" r="2.5" stroke="#fff" stroke-width="1.5"/></svg></button>
+                <button style="height:30px;border:none;background:transparent;border-radius:6px;display:flex;align-items:center;gap:5px;padding:0 9px;cursor:pointer;color:#fff;font-size:11.5px;font-weight:600;font-family:inherit;" style-hover="background:#333;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9z" stroke="#c9a8f0" stroke-width="1.5" stroke-linejoin="round"/></svg>Ask for changes</button>
+                <button style="width:30px;height:30px;border:none;background:transparent;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;" style-hover="background:#333;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 7h14M9 7V5h6v2M7 7l1 13h8l1-13" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              </div>
+            </sc-if>
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:96px 36px 80px;">
+              <div style="font-size:18px;letter-spacing:6px;color:#bdbdbd;">TIME IS THE</div>
+              <div style="font-size:64px;font-weight:800;letter-spacing:1px;line-height:.92;text-align:center;background:linear-gradient(90deg,#f59e0b,#ea580c);-webkit-background-clip:text;background-clip:text;color:transparent;">REAL<br/>HORSEPOWER</div>
+              <div style="font-size:15px;color:#9b9b9b;text-align:center;max-width:440px;line-height:1.5;margin-top:6px;">For those who&#8217;ve earned their freedom &#8212; on two wheels, four wheels, water, or in the garage.</div>
+              <div style="margin-top:14px;background:linear-gradient(90deg,#d98a3a,#c2410c);color:#fff;font-size:13px;font-weight:700;letter-spacing:1.5px;padding:14px 30px;border-radius:999px;box-shadow:0 0 26px rgba(217,138,58,.5);">EXPLORE MORE &#8594;</div>
+            </div>
+          </div>
+          <!-- featured strip -->
+          <div onClick="{{ h.selFeatured }}" style="padding:48px 36px;background:#0d0907;cursor:pointer;">
+            <div style="text-align:center;font-size:12px;letter-spacing:3px;color:#d98a3a;margin-bottom:20px;">LAFAYETTE, LOUISIANA &#183; EST. 2025</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:680px;margin:0 auto;">
+              <div style="aspect-ratio:3/4;border-radius:8px;background:#241813;"></div>
+              <div style="aspect-ratio:3/4;border-radius:8px;background:#1f201a;"></div>
+              <div style="aspect-ratio:3/4;border-radius:8px;background:#241a20;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = {
+    route: 'home',
+    storeMenuOpen: false,
+    settingsTab: 'store-details',
+    edSection: 'header',
+    edPanel: 'tree',
+    edSearch: false,
+    edMobile: false,
+    edDirty: false,
+    pdId: 'p1',
+    pdSuggestOpen: true,
+    pdAccepted: [],
+  };
+
+  logo = 'https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ad23b2d9-e2e4-4ad6-eb81-9e4c983df000/thumbnail';
+  store = { name: 'Fuel & Free Time' };
+
+  products = [
+    { id:'p1', title:'Trailblazer Riding Jacket', init:'TR', color:'#4a3b32', status:'active', inventory:0,   category:'Apparel',     channels:2, type:'Jacket',  vendor:'F&FT Workshop', sku:'FFT-JKT-001', price:'189.00', unavailable:6, committed:4 },
+    { id:'p2', title:'Open Road Tee',            init:'OR', color:'#2f4140', status:'active', inventory:124, category:'Apparel',     channels:2, type:'T-Shirt', vendor:'Fuel & Free Time', sku:'FFT-TEE-014', price:'34.00', unavailable:0, committed:8 },
+    { id:'p3', title:'Horsepower Hoodie',        init:'HH', color:'#3a2f3f', status:'active', inventory:58,  category:'Apparel',     channels:2, type:'Hoodie',  vendor:'Fuel & Free Time', sku:'FFT-HDY-007', price:'68.00', unavailable:2, committed:5 },
+    { id:'p4', title:'Garage Day Cap',           init:'GC', color:'#3f3a2f', status:'draft',  inventory:0,   category:'Accessories', channels:1, type:'Hat',     vendor:'Ironhead Co.',  sku:'FFT-HAT-022', price:'28.00', unavailable:0, committed:0 },
+    { id:'p5', title:'Two Wheels Bandana',       init:'TW', color:'#2f343f', status:'active', inventory:312, category:'Accessories', channels:2, type:'Bandana', vendor:'Fuel & Free Time', sku:'FFT-BND-003', price:'16.00', unavailable:0, committed:14 },
+    { id:'p6', title:'Free Time Flannel',        init:'FF', color:'#403330', status:'active', inventory:27,  category:'Apparel',     channels:2, type:'Shirt',   vendor:'Bayou Supply',  sku:'FFT-FLN-011', price:'74.00', unavailable:1, committed:3 },
+    { id:'p7', title:'Lafayette Long Sleeve',    init:'LL', color:'#2f3a3a', status:'active', inventory:89,  category:'Apparel',     channels:2, type:'T-Shirt', vendor:'Fuel & Free Time', sku:'FFT-LSL-018', price:'42.00', unavailable:0, committed:6 },
+    { id:'p8', title:'Throttle Gloves',          init:'TG', color:'#3a302f', status:'draft',  inventory:14,  category:'Accessories', channels:1, type:'Gloves',  vendor:'Ironhead Co.',  sku:'FFT-GLV-009', price:'54.00', unavailable:0, committed:2 },
+  ];
+
+  collections = [
+    { id:'c1', title:'Riding Gear',   init:'RG', color:'#4a3b32', count:14, conditions:'Product type is Jacket, Gloves' },
+    { id:'c2', title:'Tees & Tops',   init:'TT', color:'#2f4140', count:22, conditions:'Product type is T-Shirt, Hoodie' },
+    { id:'c3', title:'Headwear',      init:'HW', color:'#3f3a2f', count:8,  conditions:'Product type is Hat' },
+    { id:'c4', title:'New Arrivals',  init:'NA', color:'#3a2f3f', count:11, conditions:'Tag is new' },
+    { id:'c5', title:'Sale',          init:'SA', color:'#403330', count:6,  conditions:'Manually selected' },
+  ];
+
+  themes = {
+    active: { id:'t1', name:'Dawn', lastSaved:'Oct 18 at 12:34 pm', version:'15.5.0' },
+    drafts: [
+      { id:'t2', name:'Copy of Dawn', added:'Added: Oct 27 at 1:11 pm', version:'15.5.0', variant:'dark' },
+      { id:'t3', name:'Copy of Dawn', added:'Last saved: Aug 28 at 2:45 am', version:'15.5.0', variant:'plain' },
+      { id:'t4', name:'Savor',        added:'Last saved: Aug 14 at 5:12 pm', version:'3.5.1',  variant:'camo' },
+      { id:'t5', name:'Rise',         added:'Last saved: Aug 14 at 5:04 pm', version:'15.5.0', variant:'grid' },
+    ],
+  };
+
+  pages = [
+    { id:'pg1', title:'Home page',           visibility:'Visible', preview:'Time is the real horsepower — for those who\u2019ve earned their freedom.', updated:'Oct 18' },
+    { id:'pg2', title:'About',               visibility:'Visible', preview:'Lafayette-born, built for the open road and the long weekend.',        updated:'Sep 30' },
+    { id:'pg3', title:'Shipping & Returns',  visibility:'Visible', preview:'We ship Monday\u2013Friday. Free returns within 30 days of delivery.',  updated:'Sep 12' },
+    { id:'pg4', title:'Contact',             visibility:'Hidden',  preview:'Get in touch with the shop \u2014 we read every message.',             updated:'Aug 28' },
+    { id:'pg5', title:'Privacy Policy',      visibility:'Visible', preview:'How we collect, use, and protect your information.',                  updated:'Jul 02' },
+    { id:'pg6', title:'Terms of Service',    visibility:'Visible', preview:'The terms that govern your use of fuelnfreetime.com.',                updated:'Jul 02' },
+  ];
+
+  orders = [
+    { id:'#1042', customer:'Marcus Boudreaux', date:'Jun 20', pay:'Paid',    fulfill:'Unfulfilled', total:'$223.00', items:'3 items' },
+    { id:'#1041', customer:'Delia Fontenot',   date:'Jun 20', pay:'Paid',    fulfill:'Fulfilled',   total:'$68.00',  items:'1 item' },
+    { id:'#1040', customer:'Theo Landry',      date:'Jun 19', pay:'Pending', fulfill:'Unfulfilled', total:'$102.00', items:'2 items' },
+    { id:'#1039', customer:'Renee Hebert',     date:'Jun 19', pay:'Paid',    fulfill:'Fulfilled',   total:'$16.00',  items:'1 item' },
+    { id:'#1038', customer:'Cole Arceneaux',   date:'Jun 18', pay:'Paid',    fulfill:'Fulfilled',   total:'$257.00', items:'4 items' },
+    { id:'#1037', customer:'Mira Guidry',      date:'Jun 18', pay:'Refunded',fulfill:'Fulfilled',   total:'$42.00',  items:'1 item' },
+  ];
+
+  customers = [
+    { id:'u1', name:'Marcus Boudreaux', init:'MB', color:'#4a3b32', email:'marcus.b@gmail.com',   location:'Lafayette, LA', orders:7, spent:'$1,284.00' },
+    { id:'u2', name:'Delia Fontenot',   init:'DF', color:'#2f4140', email:'delia.f@outlook.com',  location:'Baton Rouge, LA', orders:3, spent:'$412.00' },
+    { id:'u3', name:'Theo Landry',      init:'TL', color:'#3f3a2f', email:'theo.landry@me.com',   location:'Houston, TX', orders:1, spent:'$102.00' },
+    { id:'u4', name:'Renee Hebert',     init:'RH', color:'#3a2f3f', email:'renee.h@gmail.com',    location:'New Orleans, LA', orders:5, spent:'$688.00' },
+    { id:'u5', name:'Cole Arceneaux',   init:'CA', color:'#403330', email:'cole.a@proton.me',     location:'Austin, TX', orders:9, spent:'$2,041.00' },
+    { id:'u6', name:'Mira Guidry',      init:'MG', color:'#2f3a3a', email:'mira.guidry@gmail.com',location:'Mobile, AL', orders:2, spent:'$214.00' },
+  ];
+
+  metafields = [
+    { key:'color',     label:'Color',          value:'Charcoal, Rust' },
+    { key:'fabric',    label:'Fabric',         value:'Waxed cotton, Cordura' },
+    { key:'age',       label:'Age group',      value:'Adults' },
+    { key:'neckline',  label:'Neckline',       value:'Stand collar' },
+    { key:'sleeve',    label:'Sleeve length',  value:'Long' },
+    { key:'gender',    label:'Target gender',  value:'Unisex' },
+    { key:'toplength', label:'Top length',     value:'Hip' },
+  ];
+
+  edSections = {
+    header: [
+      { id:'announcement', label:'Announcement bar', icon:'code', vis:true },
+      { id:'header',       label:'Header',           icon:'header', vis:true },
+    ],
+    template: [
+      { id:'hero',     label:'Image banner', icon:'img', vis:true },
+      { id:'featured', label:'Featured collection', icon:'grid', vis:true },
+      { id:'rich',     label:'Rich text', icon:'code', vis:true },
+    ],
+    footer: [
+      { id:'newsletter', label:'Email signup', icon:'code', vis:true },
+      { id:'footer',     label:'Footer', icon:'footer', vis:true },
+    ],
+  };
+
+  go = (route) => this.setState({ route, storeMenuOpen:false, edSearch:false });
+  toggleStore = () => this.setState(s => ({ storeMenuOpen: !s.storeMenuOpen }));
+  closeStore = () => this.setState({ storeMenuOpen:false });
+  openProduct = (id) => this.setState({ route:'product-detail', pdId:id, storeMenuOpen:false });
+  selectSection = (id) => this.setState({ edSection:id, edPanel:'settings' });
+  edBackToTree = () => this.setState({ edPanel:'tree' });
+  toggleEdSearch = () => this.setState(s => ({ edSearch: !s.edSearch }));
+  toggleEdMobile = () => this.setState(s => ({ edMobile: !s.edMobile }));
+  markDirty = () => this.setState({ edDirty:true });
+  setSettingsTab = (t) => this.setState({ settingsTab:t });
+  acceptMeta = (k) => this.setState(s => s.pdAccepted.includes(k) ? s : ({ pdAccepted:[...s.pdAccepted, k] }));
+  acceptAllMeta = () => this.setState({ pdAccepted: this.metafields.map(m => m.key) });
+  toggleSuggest = () => this.setState(s => ({ pdSuggestOpen: !s.pdSuggestOpen }));
+
+  statusBadge(status) {
+    if (status === 'active')  return { bg:'#d1f7e0', fg:'#0f5c3e', label:'Active' };
+    if (status === 'draft')   return { bg:'#fff0d6', fg:'#8a5a00', label:'Draft' };
+    return { bg:'#ececec', fg:'#5a5a5a', label:status };
+  }
+  visBadge(v) {
+    if (v === 'Visible') return { bg:'#d1f7e0', fg:'#0f5c3e', label:'Visible' };
+    return { bg:'#ececec', fg:'#5a5a5a', label:'Hidden' };
+  }
+  payBadge(p) {
+    if (p === 'Paid')     return { bg:'#d1f7e0', fg:'#0f5c3e', label:'Paid' };
+    if (p === 'Pending')  return { bg:'#fff0d6', fg:'#8a5a00', label:'Pending' };
+    if (p === 'Refunded') return { bg:'#ececec', fg:'#5a5a5a', label:'Refunded' };
+    return { bg:'#ececec', fg:'#5a5a5a', label:p };
+  }
+  fulfillBadge(f) {
+    if (f === 'Fulfilled') return { bg:'#d1f7e0', fg:'#0f5c3e', label:'Fulfilled' };
+    return { bg:'#fbe3df', fg:'#8a2818', label:'Unfulfilled' };
+  }
+
+  navStyles() {
+    const r = this.state.route;
+    const prodRoutes = ['products','collections','inventory','product-detail'];
+    const osRoutes   = ['themes','pages','theme-editor'];
+    const inProd = prodRoutes.includes(r);
+    const inOs   = osRoutes.includes(r);
+    const activePill   = 'background:#ffffff;box-shadow:0 1px 2px rgba(20,20,20,.10);color:#1a1a1a;font-weight:600;';
+    const inactiveRow  = 'color:#4a4a4a;font-weight:500;';
+    const childActive  = 'background:#f0eeee;color:#1a1a1a;font-weight:600;';
+    const childRow     = 'color:#5a5a5a;font-weight:400;';
+    const leaf = (id) => (r === id) ? activePill : inactiveRow;
+    const expandStyle = (open) => 'overflow:hidden;transition:max-height .22s ease,opacity .2s ease;' + (open ? 'max-height:180px;opacity:1;' : 'max-height:0;opacity:0;');
+    return {
+      home: leaf('home'), orders: leaf('orders'), customers: leaf('customers'),
+      growth: leaf('growth'), discounts: leaf('discounts'), content: leaf('content'),
+      markets: leaf('markets'), finance: leaf('finance'), analytics: leaf('analytics'),
+      pos: leaf('pos'), agentic: leaf('agentic'), settings: leaf('settings'),
+      products: inProd ? activePill : inactiveRow,
+      onlineStore: inOs ? activePill : inactiveRow,
+      prodChildren: expandStyle(inProd),
+      osChildren: expandStyle(inOs),
+      prodAll: (r==='products'||r==='product-detail') ? childActive : childRow,
+      prodCollections: r==='collections' ? childActive : childRow,
+      prodInventory: r==='inventory' ? childActive : childRow,
+      osThemes: (r==='themes'||r==='theme-editor') ? childActive : childRow,
+      osPages: r==='pages' ? childActive : childRow,
+      prodAllActive: (r==='products'||r==='product-detail'),
+      prodCollectionsActive: r==='collections',
+      prodInventoryActive: r==='inventory',
+      osThemesActive: (r==='themes'||r==='theme-editor'),
+      osPagesActive: r==='pages',
+    };
+  }
+
+  renderVals() {
+    const r = this.state.route;
+    const ns = this.navStyles();
+    const p = this.products.find(x => x.id === this.state.pdId) || this.products[0];
+    const accepted = this.state.pdAccepted;
+
+    const productsView = this.products.map(x => ({ ...x, badge: this.statusBadge(x.status),
+      invStyle: x.inventory === 0 ? 'color:#d72c0d;font-weight:600;' : 'color:#1a1a1a;', invLabel: x.inventory === 0 ? '0 in stock' : (x.inventory + ' in stock'), channelsLabel: x.channels + (x.channels===1?' channel':' channels'), open: () => this.openProduct(x.id) }));
+    const inventoryView = this.products.map(x => ({ ...x, availStyle: x.inventory === 0 ? 'color:#d72c0d;font-weight:600;' : 'color:#1a1a1a;', open: () => this.openProduct(x.id) }));
+    const pagesView = this.pages.map(x => ({ ...x, badge: this.visBadge(x.visibility) }));
+    const ordersView = this.orders.map(x => ({ ...x, payB: this.payBadge(x.pay), fulB: this.fulfillBadge(x.fulfill) }));
+    const metaView = this.metafields.map(m => ({ ...m, accepted: accepted.includes(m.key), pending: !accepted.includes(m.key), accept: () => this.acceptMeta(m.key) }));
+
+    // chart data
+    const sessionsRaw = [620,540,710,680,820,760,910,1040,980,1120,1180,1248];
+    const months = ['Jul','','Aug','','Sep','','Oct','','Nov','','Dec',''];
+    const maxS = 1300, W=620, H=180, PAD=8;
+    const ptsSessions = sessionsRaw.map((v,i)=>{ const x=PAD+(i*((W-2*PAD)/(sessionsRaw.length-1))); const y=H-PAD-((v/maxS)*(H-2*PAD)); return x.toFixed(1)+','+y.toFixed(1); }).join(' ');
+    const salesRaw = [4200,3800,5100,4900,6200,5600,7100,8600,7900,9400,9900,10200];
+    const ptsSales = salesRaw.map((v,i)=>{ const x=PAD+(i*((W-2*PAD)/(salesRaw.length-1))); const y=H-PAD-((v/11000)*(H-2*PAD)); return x.toFixed(1)+','+y.toFixed(1); }).join(' ');
+    const areaSessions = ptsSessions + ' ' + (W-PAD)+','+(H-PAD) + ' ' + PAD+','+(H-PAD);
+    const topProducts = [
+      { label:'Open Road Tee', value:312 },
+      { label:'Two Wheels Bandana', value:268 },
+      { label:'Horsepower Hoodie', value:194 },
+      { label:'Lafayette Long Sleeve', value:142 },
+      { label:'Free Time Flannel', value:96 },
+    ];
+    const maxBar = 340;
+    const barsView = topProducts.map(b => ({ ...b, pct: ((b.value/maxBar)*100).toFixed(1) }));
+
+    const settingsTabs = [
+      { id:'store-details', label:'Store details' },
+      { id:'payments', label:'Payments' },
+      { id:'shipping', label:'Shipping and delivery' },
+      { id:'checkout', label:'Checkout' },
+      { id:'domains', label:'Domains' },
+    ].map(t => ({ ...t, active: this.state.settingsTab === t.id,
+      style: this.state.settingsTab === t.id ? 'background:#f0eeee;color:#1a1a1a;font-weight:600;' : 'color:#5a5a5a;font-weight:400;', select: () => this.setSettingsTab(t.id) }));
+    const mk = (rt) => () => this.go(rt);
+    const sk = (id) => () => this.selectSection(id);
+    const h = {
+      goHome:mk('home'), goOrders:mk('orders'), goProducts:mk('products'), goCollections:mk('collections'),
+      goInventory:mk('inventory'), goCustomers:mk('customers'), goGrowth:mk('growth'), goDiscounts:mk('discounts'),
+      goContent:mk('content'), goMarkets:mk('markets'), goFinance:mk('finance'), goAnalytics:mk('analytics'),
+      goThemes:mk('themes'), goPages:mk('pages'), goPos:mk('pos'), goAgentic:mk('agentic'),
+      goSettings:mk('settings'), goEditor:mk('theme-editor'),
+      selAnnouncement:sk('announcement'), selHeader:sk('header'), selHero:sk('hero'), selFeatured:sk('featured'),
+      selRich:sk('rich'), selNewsletter:sk('newsletter'), selFooter:sk('footer'),
+    };
+
+    const edLabels = { announcement:'Announcement bar', header:'Header', hero:'Image banner', featured:'Featured collection', rich:'Rich text', newsletter:'Email signup', footer:'Footer' };
+    const sel = this.state.edSection;
+    const rowStyle = (id) => sel === id ? 'background:#eaf1fb;color:#1a1a1a;font-weight:600;' : 'color:#1a1a1a;font-weight:400;';
+    const edRow = { announcement:rowStyle('announcement'), header:rowStyle('header'), hero:rowStyle('hero'), featured:rowStyle('featured'), rich:rowStyle('rich'), newsletter:rowStyle('newsletter'), footer:rowStyle('footer') };
+
+    return {
+      store: this.store, logo: this.logo, nav: ns,
+      storeMenuOpen: this.state.storeMenuOpen,
+      toggleStore: this.toggleStore, closeStore: this.closeStore, h,
+
+      isHome: r==='home', isOrders: r==='orders', isProducts: r==='products',
+      isCollections: r==='collections', isInventory: r==='inventory',
+      isProductDetail: r==='product-detail', isCustomers: r==='customers',
+      isAnalytics: r==='analytics', isThemes: r==='themes', isPages: r==='pages',
+      isSettings: r==='settings',
+      isGrowth: r==='growth', isDiscounts: r==='discounts', isContent: r==='content',
+      isMarkets: r==='markets', isFinance: r==='finance', isPos: r==='pos', isAgentic: r==='agentic',
+      isGeneric: ['growth','discounts','content','markets','finance','pos','agentic'].includes(r),
+      genericTitle: { growth:'Growth', discounts:'Discounts', content:'Content', markets:'Markets', finance:'Finance', pos:'Point of Sale', agentic:'Agentic' }[r] || '',
+      showShell: r !== 'theme-editor',
+      showEditor: r === 'theme-editor',
+
+      productsView, inventoryView, pagesView, ordersView, customers: this.customers,
+      collections: this.collections, themes: this.themes,
+
+      // product detail
+      pd: p, pdBadge: this.statusBadge(p.status), metaView,
+      pdSuggestOpen: this.state.pdSuggestOpen,
+      pdRemaining: this.metafields.length - accepted.length,
+      pdAllAccepted: accepted.length === this.metafields.length,
+      acceptMeta: this.acceptMeta, acceptAllMeta: this.acceptAllMeta, toggleSuggest: this.toggleSuggest,
+
+      // charts
+      ptsSessions, areaSessions, ptsSales, barsView, months,
+
+      // settings
+      settingsTabs, setSettingsTab: this.setSettingsTab,
+      isSetStore: this.state.settingsTab==='store-details',
+      isSetPayments: this.state.settingsTab==='payments',
+      isSetShipping: this.state.settingsTab==='shipping',
+      isSetCheckout: this.state.settingsTab==='checkout',
+      isSetDomains: this.state.settingsTab==='domains',
+
+      // theme editor
+      edPanel: this.state.edPanel, edSection: this.state.edSection,
+      edSearch: this.state.edSearch, edMobile: this.state.edMobile, edDirty: this.state.edDirty,
+      edInTree: this.state.edPanel === 'tree', edInSettings: this.state.edPanel === 'settings',
+      selectSection: this.selectSection, edBackToTree: this.edBackToTree,
+      toggleEdSearch: this.toggleEdSearch, toggleEdMobile: this.toggleEdMobile, markDirty: this.markDirty,
+      saveStyle: this.state.edDirty ? 'background:#1a1a1a;color:#fff;cursor:pointer;' : 'background:#d6d6d6;color:#fff;cursor:default;',
+      edRow, edSectionLabel: edLabels[sel] || 'Section', edHeroSelected: sel === 'hero',
+      edHeroOutline: sel === 'hero' ? 'outline:2px solid #2c6ecb;outline-offset:-2px;' : '',
+      edPreviewWrap: this.state.edMobile ? 'max-width:390px;margin:0 auto;border-radius:18px;' : 'max-width:none;border-radius:0;',
+      edMobileBtnStyle: this.state.edMobile ? 'background:#eef2f9;' : '',
+    };
+  }
+}
+</script>
+</body>
+</html>

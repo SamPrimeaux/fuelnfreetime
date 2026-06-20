@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Content — Fuel & Free Time Admin</title>
+<link rel="stylesheet" href="/admin/css/admin.css">
+<link rel="stylesheet" href="/admin/css/console.css">
+<style>
+  .drop-zone {
+    border: 2px dashed var(--c-line);
+    border-radius: var(--c-radius);
+    padding: 36px 20px;
+    text-align: center;
+    color: var(--c-muted);
+    font-size: 14px;
+    margin-bottom: 24px;
+    transition: border-color 0.15s, background 0.15s;
+    background: var(--c-surface);
+  }
+  .drop-zone.is-dragover { border-color: #2c6ecb; background: #eef2f9; }
+  .drop-zone input[type="file"] { display: none; }
+  .media-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 14px;
+  }
+  .media-card {
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: var(--c-radius);
+    overflow: hidden;
+  }
+  .media-card .thumb { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; background: #000; }
+  .media-card .meta { padding: 8px 10px; }
+  .media-card .fname { font-size: 12px; word-break: break-all; color: var(--c-ink-2); margin-bottom: 6px; }
+  .media-card .row { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .media-card .cat { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--c-muted); }
+</style>
+</head>
+<body>
+<script src="/admin/js/shell.js"></script>
+<script>
+renderShell("/admin/content.html", `
+  <div class="console-page">
+    <h1 class="admin-page-title">Content</h1>
+    <p class="admin-page-sub">Media library — every uploaded image can attach to products or CMS page sections.</p>
+
+    <div class="drop-zone" id="drop-zone">
+      <div id="drop-zone-label">Drag and drop images here, or click to choose files</div>
+      <input type="file" id="file-input" multiple accept="image/*">
+    </div>
+    <div class="admin-note" id="upload-note" style="display:none;"></div>
+
+    <div class="admin-card">
+      <div class="admin-card-title">All assets</div>
+      <div class="media-grid" id="media-grid"><div class="admin-empty">Loading…</div></div>
+    </div>
+  </div>
+`);
+
+const dropZone = document.getElementById("drop-zone");
+const fileInput = document.getElementById("file-input");
+
+dropZone.addEventListener("click", () => fileInput.click());
+["dragenter", "dragover"].forEach((evt) =>
+  dropZone.addEventListener(evt, (e) => { e.preventDefault(); dropZone.classList.add("is-dragover"); })
+);
+["dragleave", "drop"].forEach((evt) =>
+  dropZone.addEventListener(evt, (e) => { e.preventDefault(); dropZone.classList.remove("is-dragover"); })
+);
+dropZone.addEventListener("drop", (e) => {
+  if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files);
+});
+fileInput.addEventListener("change", () => {
+  if (fileInput.files.length) uploadFiles(fileInput.files);
+  fileInput.value = "";
+});
+
+async function uploadFiles(fileList) {
+  const note = document.getElementById("upload-note");
+  const label = document.getElementById("drop-zone-label");
+  const form = new FormData();
+  for (const f of fileList) form.append("files", f);
+  form.append("prefix", "uploads/");
+
+  label.textContent = "Uploading " + fileList.length + " file(s)…";
+  note.style.display = "none";
+  try {
+    const res = await fetch("/api/admin/media", { method: "POST", body: form });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Upload failed");
+    note.textContent = "Uploaded " + data.assets.length + " file(s).";
+    note.className = "admin-note success";
+    note.style.display = "block";
+    loadMedia();
+  } catch (err) {
+    note.textContent = err.message;
+    note.className = "admin-note error";
+    note.style.display = "block";
+  } finally {
+    label.textContent = "Drag and drop images here, or click to choose files";
+  }
+}
+
+async function loadMedia() {
+  const grid = document.getElementById("media-grid");
+  try {
+    const d = await adminFetch("/api/admin/media");
+    if (!d.assets.length) {
+      grid.innerHTML = '<div class="admin-empty">No uploads yet — drag some images in above.</div>';
+      return;
+    }
+    grid.innerHTML = d.assets
+      .map(
+        (a) => `
+      <div class="media-card" data-id="${a.id}">
+        <img class="thumb" src="${a.url}" alt="${a.filename}" loading="lazy">
+        <div class="meta">
+          <div class="fname">${a.filename}</div>
+          <div class="row">
+            <span class="cat">${a.category || "uploads"}</span>
+            <button class="btn danger small del-btn">Delete</button>
+          </div>
+        </div>
+      </div>`
+      )
+      .join("");
+
+    grid.querySelectorAll(".media-card").forEach((card) => {
+      const id = card.dataset.id;
+      card.querySelector(".del-btn").addEventListener("click", async () => {
+        if (!confirm("Delete this image? This removes it from R2 permanently.")) return;
+        try {
+          await adminFetch(`/api/admin/media/${id}`, { method: "DELETE" });
+          loadMedia();
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+    });
+  } catch (err) {
+    grid.innerHTML = `<div class="admin-empty">${err.message}</div>`;
+  }
+}
+loadMedia();
+</script>
+</body>
+</html>

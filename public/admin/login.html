@@ -8,8 +8,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/admin/css/admin.css">
+<link rel="stylesheet" href="/admin/css/console.css">
 </head>
-<body>
+<body class="console-theme">
   <div class="admin-login-wrap">
     <div class="admin-login-card">
       <div class="admin-login-logo">
@@ -49,7 +50,7 @@
         });
         var data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Login failed');
-        window.location.href = '/admin/dashboard/overview.html';
+        window.location.href = '/admin/home.html';
       } catch (err) {
         note.textContent = err.message;
         note.style.display = 'block';
