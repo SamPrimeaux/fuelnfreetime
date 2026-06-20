@@ -22,3 +22,8 @@ bucket_name = "fuelnfreetime"
 [[kv_namespaces]]
 binding = "CMS_CACHE"
 id = "bc3b4e3f272e4b46b3c92df6dff85bff"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+html_handling = "none"
