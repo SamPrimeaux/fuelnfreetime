@@ -1,6 +1,8 @@
 (function () {
   const CART_KEY = "fnf_cart";
 
+  const CART_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6 5 3H2"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg>`;
+
   function money(cents) {
     return "$" + (Number(cents) / 100).toFixed(2);
   }
@@ -14,14 +16,31 @@
     else localStorage.setItem(CART_KEY, JSON.stringify(items));
     render();
     updateBadge();
+    window.FNF_SHELL?.updateCartBadge?.();
   }
 
   function updateBadge() {
-    const n = getCart().reduce((sum, i) => sum + i.qty, 0);
+    const cart = getCart();
+    const n = cart.reduce((sum, i) => sum + i.qty, 0);
     document.querySelectorAll("[data-cart-count]").forEach((el) => {
       el.textContent = String(n);
       el.hidden = n === 0;
     });
+    const countEl = document.getElementById("cart-item-count");
+    if (countEl) {
+      countEl.textContent = n === 1 ? "1 item" : `${n} items`;
+    }
+  }
+
+  function renderCheckoutLines(cart) {
+    const lines = document.getElementById("checkout-lines");
+    if (!lines) return;
+    lines.innerHTML = cart
+      .map(
+        (item) =>
+          `<div class="checkout-line"><span>${item.qty}× ${item.title}${item.size ? " · " + item.size : ""}</span><strong>${money((item.price_cents || 0) * item.qty)}</strong></div>`
+      )
+      .join("");
   }
 
   function render() {
@@ -30,10 +49,16 @@
     if (!root) return;
 
     const cart = getCart();
+    updateBadge();
+
     if (!cart.length) {
       root.innerHTML = `
-        <p class="cart-empty">Your cart is empty.</p>
-        <a class="store-btn primary" href="/shop.html">Continue shopping</a>`;
+        <div class="cart-empty">
+          <div class="cart-empty-icon">${CART_SVG}</div>
+          <h2>Your cart is empty</h2>
+          <p>Add something from the shop — your picks stay saved on this device until checkout.</p>
+          <a class="store-btn" href="/shop.html">Browse the shop</a>
+        </div>`;
       if (form) form.hidden = true;
       return;
     }
@@ -44,26 +69,30 @@
       .map((item, idx) => {
         const line = (item.price_cents || 0) * item.qty;
         total += line;
+        const productHref = item.slug ? `/products/${item.slug}` : "/shop.html";
         return `
         <article class="cart-line" data-idx="${idx}">
-          <img src="${item.image || ""}" alt="">
+          <a href="${productHref}"><img src="${item.image || ""}" alt=""></a>
           <div class="cart-line-body">
-            <h2>${item.title}</h2>
-            <p>${item.size ? "Size " + item.size : ""} · ${money(item.price_cents)}</p>
+            <h2><a href="${productHref}">${item.title}</a></h2>
+            <p class="cart-line-meta">${item.size ? "Size " + item.size : "One size"} · ${money(item.price_cents)} each</p>
             <div class="cart-qty">
-              <button type="button" data-dec aria-label="Decrease">−</button>
+              <button type="button" data-dec aria-label="Decrease quantity">−</button>
               <span>${item.qty}</span>
-              <button type="button" data-inc aria-label="Increase">+</button>
+              <button type="button" data-inc aria-label="Increase quantity">+</button>
             </div>
           </div>
-          <div class="cart-line-total">${money(line)}</div>
-          <button type="button" class="cart-remove" data-remove aria-label="Remove">×</button>
+          <div class="cart-line-side">
+            <div class="cart-line-total">${money(line)}</div>
+            <button type="button" class="cart-remove" data-remove>Remove</button>
+          </div>
         </article>`;
       })
       .join("");
 
     const totalEl = document.getElementById("cart-total");
     if (totalEl) totalEl.textContent = money(total);
+    renderCheckoutLines(cart);
 
     root.querySelectorAll("[data-dec]").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -119,6 +148,7 @@
       setCart([]);
       status.textContent = `Order #${data.order_id} received — ${data.message}`;
       status.className = "checkout-status ok";
+      btn.textContent = "Order placed";
     } catch (err) {
       status.textContent = err.message || "Checkout failed";
       status.className = "checkout-status err";

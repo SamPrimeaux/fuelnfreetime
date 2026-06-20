@@ -135,7 +135,7 @@
           ${sizeSection}
           <div class="pdp-actions">
             <button type="button" class="pdp-btn primary" id="pdp-add" ${canBuy ? "" : "disabled"}>${canBuy ? "Add to Cart" : "Unavailable"}</button>
-            <a class="pdp-btn ghost" href="/cart.html">View Cart (<span id="pdp-cart-n">0</span>)</a>
+            ${cartIconButton()}
           </div>
           <p class="pdp-note" id="pdp-stock"></p>
           ${canBuy ? `<p class="pdp-checkout-note">Secure checkout — payment processing coming online next.</p>` : ""}
@@ -235,12 +235,17 @@
 
   function updateCartBadge() {
     const n = window.FNF_STORE?.cartCount() || 0;
-    const el = document.getElementById("pdp-cart-n");
-    if (el) el.textContent = String(n);
     document.querySelectorAll("[data-cart-count]").forEach((badge) => {
       badge.textContent = String(n);
       badge.hidden = n === 0;
     });
+    window.FNF_SHELL?.updateCartBadge?.();
+  }
+
+  function cartIconButton() {
+    const svg = window.FNF_SHELL?.CART_SVG || `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6 5 3H2"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg>`;
+    const n = window.FNF_STORE?.cartCount() || 0;
+    return `<a class="pdp-btn icon" href="/cart.html" aria-label="View cart">${svg}<span class="fnf-cart-count" data-cart-count ${n ? "" : "hidden"}>${n}</span></a>`;
   }
 
   document.addEventListener("fnf:cart-updated", updateCartBadge);

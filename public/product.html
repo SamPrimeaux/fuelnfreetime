@@ -8,23 +8,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/store-shell.css">
   <link rel="stylesheet" href="/css/store-pdp.css">
 </head>
 <body>
-  <header class="store-header">
-    <a class="store-logo" href="/">
-      <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ad23b2d9-e2e4-4ad6-eb81-9e4c983df000/thumbnail" alt="Fuel & Free Time" width="256" height="68">
-    </a>
-    <nav class="store-nav" aria-label="Store">
-      <a href="/">Home</a>
-      <a href="/shop.html" class="is-active">Shop</a>
-      <a class="cart-pill" href="/cart.html">Cart <span data-cart-count hidden>0</span></a>
-    </nav>
-  </header>
-  <main class="pdp-page" id="pdp-root">
-    <p style="color:#888;padding:2rem 0">Loading product…</p>
+  <div id="fnf-store-mount"></div>
+  <main class="store-page pdp-page" id="pdp-root">
+    <p class="pdp-loading-text">Loading product…</p>
   </main>
   <script src="/js/store-catalog.js" defer></script>
+  <script src="/js/store-shell.js" defer></script>
   <script src="/js/store-cart.js" defer></script>
   <script src="/js/store-product.js" defer></script>
 </body>
