@@ -564,6 +564,15 @@
 }
 
 @media (max-width: 820px) {
+  .mail-root .stage {
+    padding:
+      max(58px, calc(env(safe-area-inset-top, 0px) + 50px))
+      max(14px, env(safe-area-inset-right, 0px))
+      12px
+      max(14px, env(safe-area-inset-left, 0px));
+    grid-template-rows: auto 1fr;
+    gap: 10px;
+  }
   .mail-root { overflow: hidden; }
   .mail-root .stage { width: 100vw; height: 100dvh; margin: 0; padding: 10px; grid-template-rows: auto 1fr; gap: 10px; }
   .mail-root .mobile-tabs { display: grid; grid-template-columns: repeat(3, 1fr); height: 46px; border-radius: var(--radius-md); padding: 4px; background: var(--fnf-steel); border: 1px solid var(--fnf-line); }
