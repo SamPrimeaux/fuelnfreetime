@@ -1,13 +1,37 @@
 /**
- * AgentSam full-page chat — single input, intelligent routing.
+ * AgentSam full-page chat — single input, intelligent routing, file attachments.
  */
 
 const TOOL_PROMPTS = {
-  attach: "Review this attachment for Fuel & Free Time brand fit and suggest edits.",
   image: "Generate a premium collection banner direction for Fuel n Freetime — rugged motorsports aesthetic.",
   research: "Deep research: what content and products should fuelnfreetime.com prioritize this quarter?",
   web: "Look up current motorsports apparel trends we should reflect on the shop.",
 };
+
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
+const MAX_INLINE_IMAGE_BYTES = 3 * 1024 * 1024;
+const MAX_ATTACHMENTS = 6;
+const MAX_TEXT_CHARS = 12000;
+const TEXT_EXTENSIONS = new Set([
+  "txt",
+  "md",
+  "csv",
+  "json",
+  "html",
+  "css",
+  "js",
+  "ts",
+  "tsx",
+  "jsx",
+  "xml",
+  "yaml",
+  "yml",
+  "sql",
+  "log",
+]);
+
+/** @type {Array<any>} */
+let pendingAttachments = [];
 
 function $(id) {
   return document.getElementById(id);
@@ -25,7 +49,175 @@ function showThread() {
   if (hero) hero.style.display = "none";
 }
 
-function appendBubble(role, text, routing) {
+function formatBytes(n) {
+  if (!n) return "";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function fileExtension(name) {
+  const parts = String(name || "").split(".");
+  return parts.length > 1 ? parts.pop().toLowerCase() : "";
+}
+
+function isImageFile(file) {
+  return file.type.startsWith("image/") || /\.(png|jpe?g|gif|webp|svg|bmp|avif)$/i.test(file.name || "");
+}
+
+function isTextFile(file) {
+  if (file.type.startsWith("text/")) return true;
+  if (file.type === "application/json" || file.type === "application/javascript") return true;
+  return TEXT_EXTENSIONS.has(fileExtension(file.name));
+}
+
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("read_failed"));
+    reader.readAsText(file);
+  });
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("read_failed"));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadImageToMedia(file) {
+  const form = new FormData();
+  form.append("files", file, file.name);
+  form.append("prefix", "agentsam/chat/");
+
+  const res = await fetch("/api/admin/media", {
+    method: "POST",
+    credentials: "include",
+    body: form,
+  });
+  const data = await res.json();
+  if (!res.ok || !data.ok || !data.assets?.length) {
+    throw new Error(data.error || "Upload failed");
+  }
+  return data.assets[0];
+}
+
+async function buildAttachmentFromFile(file) {
+  if (file.size > MAX_FILE_BYTES) {
+    throw new Error(`${file.name} is too large (max ${formatBytes(MAX_FILE_BYTES)}).`);
+  }
+
+  if (isImageFile(file)) {
+    const previewUrl = URL.createObjectURL(file);
+    const attachment = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: file.name,
+      mime_type: file.type || "image/jpeg",
+      kind: "image",
+      size_bytes: file.size,
+      preview_url: previewUrl,
+      url: null,
+      image_base64: null,
+    };
+
+    if (file.size <= MAX_INLINE_IMAGE_BYTES) {
+      const dataUrl = await readFileAsDataUrl(file);
+      attachment.image_base64 = dataUrl.replace(/^data:[^;]+;base64,/, "");
+    } else {
+      const asset = await uploadImageToMedia(file);
+      attachment.url = asset.url;
+    }
+
+    return attachment;
+  }
+
+  if (isTextFile(file)) {
+    const text = (await readFileAsText(file)).slice(0, MAX_TEXT_CHARS);
+    return {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: file.name,
+      mime_type: file.type || "text/plain",
+      kind: "text",
+      size_bytes: file.size,
+      text_content: text,
+    };
+  }
+
+  if (file.type === "application/pdf" || fileExtension(file.name) === "pdf") {
+    throw new Error(`${file.name}: PDF text extraction is not supported yet. Paste text or attach an image.`);
+  }
+
+  throw new Error(`${file.name}: unsupported file type. Try images or text files (.txt, .md, .csv, .json).`);
+}
+
+function attachmentPayload(attachment) {
+  const payload = {
+    name: attachment.name,
+    mime_type: attachment.mime_type,
+    kind: attachment.kind,
+    size_bytes: attachment.size_bytes,
+  };
+  if (attachment.url) payload.url = attachment.url;
+  if (attachment.image_base64) payload.image_base64 = attachment.image_base64;
+  if (attachment.text_content) payload.text_content = attachment.text_content;
+  return payload;
+}
+
+function renderAttachmentTray() {
+  const tray = $("agentsam-attachments");
+  if (!tray) return;
+
+  tray.innerHTML = "";
+  if (!pendingAttachments.length) {
+    tray.hidden = true;
+    return;
+  }
+
+  tray.hidden = false;
+
+  pendingAttachments.forEach((attachment) => {
+    const chip = document.createElement("div");
+    chip.className = "agentsam-page-attachment";
+
+    if (attachment.kind === "image" && attachment.preview_url) {
+      const img = document.createElement("img");
+      img.className = "agentsam-page-attachment-thumb";
+      img.src = attachment.preview_url;
+      img.alt = attachment.name;
+      chip.appendChild(img);
+    } else {
+      const icon = document.createElement("div");
+      icon.className = "agentsam-page-attachment-icon";
+      icon.textContent = attachment.kind === "text" ? "TXT" : "FILE";
+      chip.appendChild(icon);
+    }
+
+    const meta = document.createElement("div");
+    meta.className = "agentsam-page-attachment-meta";
+    meta.innerHTML = `<strong>${attachment.name}</strong><span>${formatBytes(attachment.size_bytes)}</span>`;
+    chip.appendChild(meta);
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "agentsam-page-attachment-remove";
+    remove.setAttribute("aria-label", `Remove ${attachment.name}`);
+    remove.textContent = "×";
+    remove.addEventListener("click", () => {
+      if (attachment.preview_url) URL.revokeObjectURL(attachment.preview_url);
+      pendingAttachments = pendingAttachments.filter((item) => item.id !== attachment.id);
+      renderAttachmentTray();
+    });
+    chip.appendChild(remove);
+
+    tray.appendChild(chip);
+  });
+}
+
+function appendBubble(role, text, routing, attachments = []) {
   showThread();
   const thread = $("agentsam-thread");
   if (!thread) return null;
@@ -57,6 +249,27 @@ function appendBubble(role, text, routing) {
     if (route.childElementCount) wrap.appendChild(route);
   }
 
+  if (attachments.length) {
+    const media = document.createElement("div");
+    media.className = "agentsam-page-bubble-attachments";
+
+    attachments.forEach((attachment) => {
+      if (attachment.kind === "image" && attachment.preview_url) {
+        const img = document.createElement("img");
+        img.src = attachment.preview_url;
+        img.alt = attachment.name;
+        media.appendChild(img);
+      } else {
+        const file = document.createElement("div");
+        file.className = "agentsam-page-bubble-file";
+        file.textContent = `${attachment.name} · ${formatBytes(attachment.size_bytes)}`;
+        media.appendChild(file);
+      }
+    });
+
+    wrap.appendChild(media);
+  }
+
   const body = document.createElement("div");
   body.textContent = text;
   wrap.appendChild(body);
@@ -68,15 +281,24 @@ function appendBubble(role, text, routing) {
 function setBusy(busy) {
   const send = $("agentsam-page-send");
   const input = $("agentsam-page-input");
+  const fileInput = $("agentsam-file-input");
   if (send) send.disabled = busy;
   if (input) input.disabled = busy;
+  if (fileInput) fileInput.disabled = busy;
 }
 
-async function sendMessage(text) {
-  const message = (text || "").trim();
-  if (!message) return;
+function setStatus(message) {
+  const status = $("agentsam-page-status");
+  if (status && message) status.textContent = message;
+}
 
-  appendBubble("user", message);
+async function sendMessage(text, attachments = pendingAttachments) {
+  const message = (text || "").trim();
+  const outgoing = attachments.map(attachmentPayload);
+  if (!message && !outgoing.length) return;
+
+  const displayAttachments = attachments.slice();
+  appendBubble("user", message || "Review attached file(s).", null, displayAttachments);
   setBusy(true);
 
   const typing = appendBubble("assistant", "Thinking…");
@@ -89,7 +311,11 @@ async function sendMessage(text) {
       credentials: "include",
       body: JSON.stringify({
         message,
-        context: { page: "/admin/agentsam" },
+        attachments: outgoing,
+        context: {
+          page: "/admin/agentsam",
+          has_image: outgoing.some((a) => a.kind === "image" || a.image_base64 || a.url),
+        },
       }),
     });
     const data = await res.json();
@@ -104,6 +330,12 @@ async function sendMessage(text) {
     if (data.stub && status) {
       status.textContent = "Workers AI not bound — routing works; bind AGENTSAM_WAI for live replies.";
     }
+
+    pendingAttachments.forEach((attachment) => {
+      if (attachment.preview_url) URL.revokeObjectURL(attachment.preview_url);
+    });
+    pendingAttachments = [];
+    renderAttachmentTray();
   } catch (err) {
     typing?.remove();
     appendBubble("assistant", err.message || "Something went wrong.");
@@ -116,6 +348,46 @@ async function sendMessage(text) {
       input.focus();
     }
   }
+}
+
+function openFilePicker() {
+  const input = $("agentsam-file-input");
+  if (!input) return;
+  input.value = "";
+  input.click();
+}
+
+async function handleFilesSelected(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+
+  const remaining = MAX_ATTACHMENTS - pendingAttachments.length;
+  if (remaining <= 0) {
+    setStatus(`Maximum ${MAX_ATTACHMENTS} attachments per message.`);
+    return;
+  }
+
+  const batch = files.slice(0, remaining);
+  const errors = [];
+
+  for (const file of batch) {
+    try {
+      const attachment = await buildAttachmentFromFile(file);
+      pendingAttachments.push(attachment);
+    } catch (err) {
+      errors.push(err.message || String(err));
+    }
+  }
+
+  renderAttachmentTray();
+
+  if (errors.length) {
+    setStatus(errors.join(" "));
+  } else {
+    setStatus("Attachments ready — add a prompt or send to review.");
+  }
+
+  $("agentsam-page-input")?.focus();
 }
 
 function closeToolMenu() {
@@ -169,6 +441,7 @@ function bindUi() {
   const input = $("agentsam-page-input");
   const plus = $("agentsam-plus");
   const menu = $("agentsam-tool-menu");
+  const fileInput = $("agentsam-file-input");
 
   form?.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -188,10 +461,18 @@ function bindUi() {
     toggleToolMenu();
   });
 
+  fileInput?.addEventListener("change", () => {
+    handleFilesSelected(fileInput.files);
+  });
+
   menu?.querySelectorAll("[data-tool]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const key = btn.getAttribute("data-tool");
       closeToolMenu();
+      if (key === "attach") {
+        openFilePicker();
+        return;
+      }
       const prompt = TOOL_PROMPTS[key];
       if (prompt) sendMessage(prompt);
     });
@@ -257,7 +538,7 @@ async function boot() {
   } catch {
     renderChips([
       { label: "Create an image", prompt: TOOL_PROMPTS.image },
-      { label: "Write or edit", prompt: TOOL_PROMPTS.attach.replace("attachment", "shop hero copy") },
+      { label: "Write or edit", prompt: "Draft shop hero copy for the new collection drop." },
       { label: "Look something up", prompt: TOOL_PROMPTS.web },
     ]);
   }

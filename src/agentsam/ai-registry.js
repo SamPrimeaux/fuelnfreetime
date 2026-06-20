@@ -107,11 +107,16 @@ export function resolveAIRouting(classification, message, context = {}) {
     classification?.workflow_key || context.workflow_key || "fnf_agentsam_chat";
   const hay = String(message || "").toLowerCase();
 
+  const attachmentImage = (context.attachments || []).find(
+    (a) => a?.image_base64 || (a?.kind === "image" && a?.url)
+  );
+
   const hasImage = Boolean(
     context.has_image ||
       context.attachment_url ||
       context.image_url ||
-      context.image_base64
+      context.image_base64 ||
+      attachmentImage
   );
 
   const wantsImage =
@@ -149,8 +154,8 @@ export function resolveAIRouting(classification, message, context = {}) {
     repo_related: repoRelated,
     content_related: contentRelated,
     message,
-    image_url: context.attachment_url || context.image_url || null,
-    image_base64: context.image_base64 || null,
+    image_url: context.attachment_url || context.image_url || attachmentImage?.url || null,
+    image_base64: context.image_base64 || attachmentImage?.image_base64 || null,
   };
 
   if (/\b(moderation|unsafe|policy violation|content guard|llama guard)\b/.test(hay)) {

@@ -35,8 +35,12 @@ renderShell("/admin/agentsam", `
               <div class="agentsam-page-menu-label">Connections</div>
               <div id="agentsam-mcp-list"></div>
             </div>
+            <input type="file" id="agentsam-file-input" hidden multiple accept="image/*,.txt,.md,.csv,.json,.html,.css,.js,.ts,.tsx,.jsx,.xml,.yaml,.yml,.pdf">
           </div>
-          <textarea id="agentsam-page-input" rows="1" placeholder="Ask anything" autocomplete="off"></textarea>
+          <div class="agentsam-page-composer-main">
+            <div class="agentsam-page-attachments" id="agentsam-attachments" hidden></div>
+            <textarea id="agentsam-page-input" rows="1" placeholder="Ask anything" autocomplete="off"></textarea>
+          </div>
           <button type="submit" class="agentsam-page-send" id="agentsam-page-send" aria-label="Send">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12h13M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>

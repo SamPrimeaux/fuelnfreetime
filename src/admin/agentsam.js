@@ -1,3 +1,9 @@
+import {
+  defaultMessageForAttachments,
+  enrichContextFromAttachments,
+  formatAttachmentsForPrompt,
+  normalizeAttachments,
+} from "../agentsam/attachments.js";
 import { runAgentSamAi } from "../agentsam/ai-run.js";
 import {
   createAnalyticsIds,
@@ -80,11 +86,17 @@ ${stockLines || "(none)"}`;
 export async function agentsamChat(request, env, executionCtx = null) {
   const chatStarted = Date.now();
   const body = await readJson(request);
-  const message = (body?.message || "").trim();
-  if (!message) return json({ error: "message required" }, { status: 400 });
+  const rawContext = body?.context || {};
+  const attachments = normalizeAttachments(body?.attachments || rawContext.attachments || []);
+  const context = await enrichContextFromAttachments(env, rawContext, attachments, request.url);
+  const message =
+    (body?.message || "").trim() ||
+    (attachments.length ? defaultMessageForAttachments(attachments) : "");
+  if (!message) {
+    return json({ error: "message or attachment required" }, { status: 400 });
+  }
 
   const user = await getSessionUser(request, env);
-  const context = body?.context || {};
   const ids = createAnalyticsIds(body, context);
   const trackBase = {
     ctx: executionCtx,
@@ -196,11 +208,19 @@ export async function agentsamChat(request, env, executionCtx = null) {
 
   const connectUrls = mcpConnectUrls(env);
 
+  const attachmentBlock = formatAttachmentsForPrompt(attachments);
+  const imageNames = attachments
+    .filter((a) => a.kind === "image" || a.image_base64 || String(a.mime_type || "").startsWith("image/"))
+    .map((a) => a.name)
+    .join(", ");
+
   const systemPrompt = [
     SYSTEM_PROMPT,
     context.page ? `Admin UI path: ${context.page}.` : "",
     context.slug ? `Editing CMS page slug: ${context.slug}.` : "",
     context.workflow_key ? `Selected workflow: ${context.workflow_key}.` : "",
+    imageNames ? `User attached image(s): ${imageNames}. Use vision analysis when an image is present.` : "",
+    attachmentBlock,
     await liveStoreContext(env),
     mcpContext,
     connectUrls.fnf_github_oauth
@@ -231,6 +251,9 @@ export async function agentsamChat(request, env, executionCtx = null) {
 
   const ai = await runAgentSamAi(env, systemPrompt, message, {
     ...aiRouting,
+    has_image: aiRouting.has_image || context.has_image,
+    image_base64: aiRouting.image_base64 || context.image_base64,
+    image_url: aiRouting.image_url || context.image_url,
     workflow_key: workflowKey,
     intent: routing.classification.intent,
     analytics: {
