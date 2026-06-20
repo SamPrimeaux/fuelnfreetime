@@ -85,7 +85,8 @@ Registry source of truth: [`src/cms/registry.js`](src/cms/registry.js)
 | `media_assets` | R2 library metadata |
 | `store_settings` | SEO title, meta description, social image |
 | `orders` / `order_items` | Checkout (Stripe pending) |
-| `admin_users` / `admin_sessions` | Admin auth |
+| `auth_users` / `auth_sessions` | Admin auth (IAM-parity; canonical) |
+| `admin_users` / `admin_sessions` | Legacy auth (kept for migration fallback) |
 
 ---
 
@@ -125,6 +126,9 @@ npm run deploy              # build admin SPA + wrangler deploy
 
 # Database
 npm run db:migrate          # apply schema (remote)
+npm run db:migrate:auth-users  # IAM auth_users + migrate legacy admin_users
+npm run admin:create -- <email> <password> [role] [display_name]  # create auth_users row
+npm run db:seed:auth-display-names  # canonical display names for known users
 npm run cms:bootstrap       # seed full CMS + tee product from registry
 npm run cms:republish       # clear stale KV + rebuild from D1
 

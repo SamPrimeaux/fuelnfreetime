@@ -31,6 +31,8 @@
     "db:seed:ctx-fuelnfreetime": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-agentsam-project-context.sql && ./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/seed-ctx-fuelnfreetime-worker.sql",
     "db:seed:ctx-fuelnfreetime:iam": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute inneranimalmedia-business --remote -c ../inneranimalmedia/wrangler.production.toml --file=db/seed-ctx-fuelnfreetime-iam.sql",
     "db:seed:ctx-fuelnfreetime:all": "npm run db:seed:ctx-fuelnfreetime && npm run db:seed:ctx-fuelnfreetime:iam",
+    "db:migrate:auth-users": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-auth-users.sql",
+    "db:seed:auth-display-names": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/seed-auth-display-names.sql",
     "admin:create": "node scripts/create-admin.mjs",
     "r2:cors": "./scripts/with-cf-admin-env.sh npx wrangler r2 bucket cors set fuelnfreetime --file=scripts/r2-cors.json -y",
     "analytics:unpack": "node scripts/unpack-analytics.mjs",

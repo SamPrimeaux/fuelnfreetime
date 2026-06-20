@@ -5,6 +5,7 @@ import {
   clearSessionCookie,
   getSessionUser,
   destroySession,
+  findAuthUserByEmail,
 } from "../lib/auth.js";
 import {
   getMailSettings,
@@ -57,19 +58,17 @@ async function login(request, env) {
     return json({ error: "Email and password required" }, { status: 400 });
   }
 
-  const user = await env.DB.prepare(
-    `SELECT id, email, password_hash, password_salt FROM admin_users WHERE email = ?`
-  )
-    .bind(body.email.trim().toLowerCase())
-    .first();
-
+  const user = await findAuthUserByEmail(env, body.email.trim().toLowerCase());
   if (!user) return json({ error: "Invalid credentials" }, { status: 401 });
 
-  const ok = await verifyPassword(body.password, user.password_hash, user.password_salt);
+  const ok = await verifyPassword(body.password, user.password_hash, user.salt);
   if (!ok) return json({ error: "Invalid credentials" }, { status: 401 });
 
   const cookie = await createSession(env, user.id);
-  return json({ ok: true, email: user.email }, { headers: { "set-cookie": cookie } });
+  return json(
+    { ok: true, email: user.email, role: user.role },
+    { headers: { "set-cookie": cookie } }
+  );
 }
 
 async function logout(request, env) {
@@ -78,7 +77,12 @@ async function logout(request, env) {
 }
 
 async function me(request, env, user) {
-  return json({ ok: true, email: user.email });
+  return json({
+    ok: true,
+    email: user.email,
+    role: user.role || "member",
+    display_name: user.display_name || user.email,
+  });
 }
 
 async function changePassword(request, env, user) {
@@ -90,17 +94,19 @@ async function changePassword(request, env, user) {
     return json({ error: "New password must be at least 8 characters" }, { status: 400 });
   }
 
-  const row = await env.DB.prepare(
-    `SELECT password_hash, password_salt FROM admin_users WHERE id = ?`
-  )
+  const row = await env.DB.prepare(`SELECT password_hash, salt FROM auth_users WHERE id = ?`)
     .bind(user.id)
     .first();
 
-  const ok = await verifyPassword(body.current_password, row.password_hash, row.password_salt);
+  if (!row) return json({ error: "User not found" }, { status: 404 });
+
+  const ok = await verifyPassword(body.current_password, row.password_hash, row.salt);
   if (!ok) return json({ error: "Current password is incorrect" }, { status: 401 });
 
   const { hash, salt } = await hashPassword(body.new_password);
-  await env.DB.prepare(`UPDATE admin_users SET password_hash = ?, password_salt = ? WHERE id = ?`)
+  await env.DB.prepare(
+    `UPDATE auth_users SET password_hash = ?, salt = ?, updated_at = datetime('now') WHERE id = ?`
+  )
     .bind(hash, salt, user.id)
     .run();
 

@@ -1,7 +1,8 @@
 /**
- * Admin auth helpers — PBKDF2 password hashing (Web Crypto, no deps)
- * and D1-backed session tokens via httpOnly cookie.
+ * Admin auth — IAM-parity auth_users + auth_sessions (PBKDF2, httpOnly cookie).
  */
+
+import { FNF_TENANT_ID, FNF_WORKSPACE_ID } from "../agentsam/constants.js";
 
 const ITERATIONS = 100000;
 const SESSION_DAYS = 7;
@@ -38,6 +39,10 @@ async function pbkdf2(password, saltBytes) {
   return toHex(bits);
 }
 
+export function newAuthUserId() {
+  return `au_fnf_${toHex(crypto.getRandomValues(new Uint8Array(8)))}`;
+}
+
 export async function hashPassword(password) {
   const saltBytes = crypto.getRandomValues(new Uint8Array(16));
   const salt = toHex(saltBytes);
@@ -71,19 +76,30 @@ export function parseCookies(request) {
   return out;
 }
 
+async function touchLogin(env, userId) {
+  await env.DB.prepare(
+    `UPDATE auth_users
+     SET last_login_at = ?, login_count = COALESCE(login_count, 0) + 1, updated_at = datetime('now')
+     WHERE id = ?`
+  )
+    .bind(Math.floor(Date.now() / 1000), userId)
+    .run();
+}
+
 export async function createSession(env, userId) {
   const token = randomToken();
   const tokenHash = await sha256Hex(token);
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 86400000).toISOString();
 
   await env.DB.prepare(
-    `INSERT INTO admin_sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)`
+    `INSERT INTO auth_sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)`
   )
-    .bind(tokenHash, userId, expiresAt)
+    .bind(tokenHash, String(userId), expiresAt)
     .run();
 
-  const cookie = `${COOKIE_NAME}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${SESSION_DAYS * 86400}`;
-  return cookie;
+  await touchLogin(env, userId);
+
+  return `${COOKIE_NAME}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${SESSION_DAYS * 86400}`;
 }
 
 export function clearSessionCookie() {
@@ -96,7 +112,20 @@ export async function getSessionUser(request, env) {
   if (!token) return null;
 
   const tokenHash = await sha256Hex(token);
+
   const row = await env.DB.prepare(
+    `SELECT u.id, u.email, u.role, u.display_name, u.tenant_id, u.active_workspace_id
+     FROM auth_sessions s
+     JOIN auth_users u ON u.id = s.user_id
+     WHERE s.token_hash = ? AND s.expires_at > datetime('now') AND u.status = 'active'`
+  )
+    .bind(tokenHash)
+    .first();
+
+  if (row) return row;
+
+  // Legacy fallback during migration window
+  const legacy = await env.DB.prepare(
     `SELECT u.id, u.email
      FROM admin_sessions s
      JOIN admin_users u ON u.id = s.user_id
@@ -105,7 +134,7 @@ export async function getSessionUser(request, env) {
     .bind(tokenHash)
     .first();
 
-  return row || null;
+  return legacy || null;
 }
 
 export async function destroySession(request, env) {
@@ -113,7 +142,18 @@ export async function destroySession(request, env) {
   const token = cookies[COOKIE_NAME];
   if (!token) return;
   const tokenHash = await sha256Hex(token);
-  await env.DB.prepare(`DELETE FROM admin_sessions WHERE token_hash = ?`)
-    .bind(tokenHash)
-    .run();
+  await env.DB.prepare(`DELETE FROM auth_sessions WHERE token_hash = ?`).bind(tokenHash).run();
+  await env.DB.prepare(`DELETE FROM admin_sessions WHERE token_hash = ?`).bind(tokenHash).run();
 }
+
+export async function findAuthUserByEmail(env, email) {
+  return env.DB.prepare(
+    `SELECT id, email, password_hash, salt, role, status
+     FROM auth_users
+     WHERE email = ? AND status = 'active'`
+  )
+    .bind(email.trim().toLowerCase())
+    .first();
+}
+
+export { FNF_TENANT_ID, FNF_WORKSPACE_ID };

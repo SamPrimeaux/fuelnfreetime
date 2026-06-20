@@ -40,7 +40,7 @@ INSERT OR REPLACE INTO agentsam_project_context (
   '["P0: Stripe Checkout Sessions + webhooks per RUNTIME-CONTRACTS-STRIPE.md","P1: Order confirmation email (Resend)","P1: Admin order detail API + line items","P2: CMS hydration slots on about/shop/community beyond hero","P2: Gmail OAuth for admin mail","P3: Store password / B2B gates enforcement"]',
   '["Follow docs/RUNTIME-CONTRACTS-*.md and AGENTS.md — extend contract before bypassing","D1 is SoT for catalog/orders; R2 for media + skill markdown; KV for published CMS only","Never commit secrets — wrangler secret put STRIPE_* RESEND_*","Checkout v1 decrements inventory immediately — change when Stripe ships","agentsam_skill bodies live in R2 agentsam/skills/ (retrieval_strategy=r2)","Connor agents: pull main, read AGENTS.md, npm run agentsam:skills:sync after skill edits"]',
   '["Stripe not wired — checkout creates pending orders without payment","Order confirmation email not sent","Admin orders list has no line-item detail endpoint","Gmail OAuth stubbed in mail UI","Store password prefs saved but not enforced on storefront"]',
-  'products,product_variants,product_images,orders,order_items,media_assets,pages,page_sections,agentsam_skill,agentsam_skill_file,agentsam_hook,agentsam_webhooks,agentsam_webhook_events,agentsam_mcp_workflows,store_settings,admin_users,admin_sessions',
+  'products,product_variants,product_images,orders,order_items,media_assets,pages,page_sections,agentsam_skill,agentsam_skill_file,agentsam_hook,agentsam_webhooks,agentsam_webhook_events,agentsam_mcp_workflows,store_settings,auth_users,auth_sessions',
   'newsletter_subscribers,mail_settings,agentsam_project_context',
   'fuelnfreetime',
   'fuelnfreetime',

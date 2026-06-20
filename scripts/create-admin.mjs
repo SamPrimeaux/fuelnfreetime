@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Create or update an admin user in remote D1.
- * Usage: node scripts/create-admin.mjs <email> <password>
- * Or:    ADMIN_EMAIL=... ADMIN_PASSWORD=... node scripts/create-admin.mjs
+ * Create or update an auth_users row in remote D1.
+ * Usage: node scripts/create-admin.mjs <email> <password> [role] [display_name]
+ * Or:    ADMIN_EMAIL=... ADMIN_PASSWORD=... AUTH_DISPLAY_NAME=... node scripts/create-admin.mjs
  */
 import { webcrypto as crypto } from "node:crypto";
 import { execSync } from "node:child_process";
@@ -11,6 +11,8 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const ITERATIONS = 100000;
+const TENANT_ID = "tenant_fuelnfreetime";
+const WORKSPACE_ID = "ws_fuelnfreetime";
 
 function toHex(buf) {
   return Array.from(new Uint8Array(buf))
@@ -54,21 +56,55 @@ function sqlEscape(s) {
   return String(s).replace(/'/g, "''");
 }
 
+function newAuthUserId() {
+  return `au_fnf_${toHex(crypto.getRandomValues(new Uint8Array(8)))}`;
+}
+
 const email = (process.argv[2] || process.env.ADMIN_EMAIL || "").trim().toLowerCase();
 const password = process.argv[3] || process.env.ADMIN_PASSWORD || "";
+const role = (process.argv[4] || process.env.AUTH_ROLE || "admin").trim().toLowerCase();
+const displayName = (process.argv[5] || process.env.AUTH_DISPLAY_NAME || "").trim();
 
 if (!email || !password) {
-  console.error("Usage: node scripts/create-admin.mjs <email> <password>");
+  console.error("Usage: node scripts/create-admin.mjs <email> <password> [role] [display_name]");
   process.exit(1);
 }
 
 const { hash, salt } = await hashPassword(password);
-const sql = `-- generated admin user (do not commit)
-INSERT INTO admin_users (email, password_hash, password_salt)
-VALUES ('${sqlEscape(email)}', '${sqlEscape(hash)}', '${sqlEscape(salt)}')
+const id = newAuthUserId();
+const resolvedDisplayName = displayName || email.split("@")[0];
+
+const sql = `-- generated auth user (do not commit)
+INSERT INTO auth_users (
+  id, email, name, password_hash, salt, tenant_id, role, display_name,
+  active_tenant_id, active_workspace_id, default_workspace_id,
+  is_verified, verified_at, status, timezone, account_type, updated_at
+) VALUES (
+  '${sqlEscape(id)}',
+  '${sqlEscape(email)}',
+  '${sqlEscape(resolvedDisplayName)}',
+  '${sqlEscape(hash)}',
+  '${sqlEscape(salt)}',
+  '${TENANT_ID}',
+  '${sqlEscape(role)}',
+  '${sqlEscape(resolvedDisplayName)}',
+  '${TENANT_ID}',
+  '${WORKSPACE_ID}',
+  '${WORKSPACE_ID}',
+  1,
+  unixepoch(),
+  'active',
+  'America/Chicago',
+  'human',
+  datetime('now')
+)
 ON CONFLICT(email) DO UPDATE SET
   password_hash = excluded.password_hash,
-  password_salt = excluded.password_salt;
+  salt = excluded.salt,
+  role = excluded.role,
+  name = excluded.name,
+  display_name = excluded.display_name,
+  updated_at = datetime('now');
 `;
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -80,7 +116,7 @@ try {
     stdio: "inherit",
     cwd: join(root, ".."),
   });
-  console.log(`Admin user ready: ${email}`);
+  console.log(`Auth user ready: ${email} (role=${role}, display_name=${resolvedDisplayName})`);
 } finally {
   try {
     unlinkSync(tmp);
