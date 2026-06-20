@@ -20,6 +20,7 @@ const isNew = !productId;
 let productSlug = "";
 let dirty = false;
 let saveInFlight = false;
+let variantCount = 0;
 /** @type {{ id: number, url: string, filename?: string }[]} */
 let pendingImages = [];
 
@@ -552,6 +553,7 @@ function renderInventory(variants) {
 }
 
 function renderVariants(variants) {
+  variantCount = variants.length;
   const empty = document.getElementById("variants-empty");
   const wrap = document.getElementById("variants-table-wrap");
   const form = document.getElementById("variant-form");
@@ -672,6 +674,20 @@ async function saveProduct() {
   if (!payload.title) {
     showNote("form-note", "Title is required.", "error");
     return;
+  }
+
+  if (payload.status === "active" && !isNew) {
+    const issues = [];
+    if (variantCount === 0) issues.push("Add at least one size variant so customers can purchase");
+    if (payload.price_cents <= 0 && variantCount === 0) issues.push("Set a base price or variant pricing");
+    if (issues.length) {
+      const ok = confirm(
+        "This product is active but not ready for checkout:\n\n• " +
+          issues.join("\n• ") +
+          "\n\nCustomers will see the product page but cannot add to cart. Save anyway?"
+      );
+      if (!ok) return;
+    }
   }
 
   saveInFlight = true;
