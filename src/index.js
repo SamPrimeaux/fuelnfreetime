@@ -10,6 +10,7 @@
  */
 
 import { handleAdminApi } from "./admin/api.js";
+import { handleStoreApi } from "./store/api.js";
 import { getSessionUser } from "./lib/auth.js";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -91,6 +92,10 @@ export default {
       return handleNewsletter(request, env);
     }
 
+    if (path.startsWith("/api/store/")) {
+      return handleStoreApi(request, env, url);
+    }
+
     if (path.startsWith("/api/admin/")) {
       return noStore(await handleAdminApi(request, env, url));
     }
@@ -116,6 +121,19 @@ export default {
         }
       }
       return noStore(await env.ASSETS.fetch(request));
+    }
+
+    // Shopify-style /pages/* routes on custom domain
+    if (path === "/pages/shop" || path === "/pages/shop/") {
+      return Response.redirect(new URL("/shop.html", request.url), 301);
+    }
+
+    const productMatch = path.match(/^\/products\/([^/]+)\/?$/);
+    if (productMatch) {
+      const productUrl = new URL(request.url);
+      productUrl.pathname = "/product.html";
+      productUrl.searchParams.set("slug", productMatch[1]);
+      return env.ASSETS.fetch(new Request(productUrl, request));
     }
 
     // html_handling = "none" means Cloudflare won't auto-map "/" to
