@@ -1,4 +1,5 @@
 import { hydrateSkillRowFromR2, hydrateSkillWithFiles, hydrateSkillsFromR2 } from "./skill-r2.js";
+import { FNF_TENANT_ID } from "./constants.js";
 
 function parseJsonArray(raw, fallback = []) {
   try {
@@ -10,15 +11,33 @@ function parseJsonArray(raw, fallback = []) {
   }
 }
 
+function parseMetadata(row) {
+  try {
+    const raw = row?.metadata_json;
+    if (!raw) return {};
+    return typeof raw === "string" ? JSON.parse(raw) : raw;
+  } catch {
+    return {};
+  }
+}
+
+function skillDomain(row) {
+  const meta = parseMetadata(row);
+  return meta.skill_domain || meta.domain || "";
+}
+
 export async function listAgentSamSkills(env, { hydrate = false } = {}) {
   const { results } = await env.DB.prepare(
     `SELECT id, slug, name, description, file_path, scope, slash_trigger,
-            tags_json, globs_json, task_types_json, metadata_json,
-            retrieval_strategy, sort_order, version, is_active, updated_at
+            globs, tags_json, task_types_json, route_keys_json, metadata_json,
+            retrieval_strategy, sort_order, version, is_active, updated_at,
+            tenant_id, workspace_id, access_mode, always_apply
      FROM agentsam_skill
-     WHERE is_active = 1
+     WHERE is_active = 1 AND tenant_id = ?
      ORDER BY sort_order ASC, name ASC`
-  ).all();
+  )
+    .bind(FNF_TENANT_ID)
+    .all();
 
   if (!hydrate) return results || [];
   return hydrateSkillsFromR2(env, results || []);
@@ -26,9 +45,9 @@ export async function listAgentSamSkills(env, { hydrate = false } = {}) {
 
 export async function getAgentSamSkill(env, slug, { includeReferences = false } = {}) {
   const row = await env.DB.prepare(
-    `SELECT * FROM agentsam_skill WHERE slug = ? AND is_active = 1 LIMIT 1`
+    `SELECT * FROM agentsam_skill WHERE slug = ? AND tenant_id = ? AND is_active = 1 LIMIT 1`
   )
-    .bind(slug)
+    .bind(slug, FNF_TENANT_ID)
     .first();
 
   if (!row) return null;
@@ -52,8 +71,10 @@ export async function getAgentSamSkill(env, slug, { includeReferences = false } 
  */
 export async function resolveSkillsForChat(env, message, context = {}) {
   const { results: rows } = await env.DB.prepare(
-    `SELECT * FROM agentsam_skill WHERE is_active = 1 ORDER BY sort_order ASC`
-  ).all();
+    `SELECT * FROM agentsam_skill WHERE is_active = 1 AND tenant_id = ? ORDER BY sort_order ASC`
+  )
+    .bind(FNF_TENANT_ID)
+    .all();
 
   if (!rows?.length) return [];
 
@@ -72,9 +93,8 @@ export async function resolveSkillsForChat(env, message, context = {}) {
     let score = 0;
     const tags = parseJsonArray(row.tags_json);
     const tasks = parseJsonArray(row.task_types_json);
-    const globs = parseJsonArray(row.globs_json);
+    const domain = skillDomain(row).toLowerCase();
     const slug = String(row.slug || "").toLowerCase();
-    const scope = String(row.scope || "").toLowerCase();
 
     for (const tag of tags) {
       if (haystack.includes(String(tag).toLowerCase())) score += 3;
@@ -85,9 +105,10 @@ export async function resolveSkillsForChat(env, message, context = {}) {
     if (slug && haystack.includes(slug.replace(/-/g, " "))) score += 2;
     if (slug && haystack.includes(slug)) score += 3;
 
-    if (context.page?.includes("product") && scope === "commerce") score += 4;
-    if (context.page?.includes("order") && scope === "commerce") score += 4;
-    if (/(stripe|payment|checkout|webhook)/i.test(haystack) && scope === "stripe") score += 5;
+    if (domain === "commerce" && /product|inventory|order|shop|cart/.test(haystack)) score += 4;
+    if (domain === "stripe" && /stripe|payment|checkout|webhook/.test(haystack)) score += 5;
+
+    if (row.always_apply) score += 8;
 
     if (row.slash_trigger && haystack.includes(String(row.slash_trigger).toLowerCase())) {
       score += 6;
@@ -114,7 +135,6 @@ export async function resolveSkillsForChat(env, message, context = {}) {
     );
   }
 
-  // Default: commerce + stripe baseline when user asks store questions
   if (/(product|inventory|order|shop|checkout|stripe|payment)/i.test(haystack)) {
     const slugs = ["fnf-commerce-runtime", "stripe-best-practices"];
     const picked = rows.filter((r) => slugs.includes(r.slug)).slice(0, 2);
