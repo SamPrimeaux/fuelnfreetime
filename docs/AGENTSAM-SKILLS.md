@@ -25,7 +25,20 @@ Aligned with **inneranimalmedia** `agentsam_skill` / `agentsam_hook` / `agentsam
 
 Skill domain (`stripe`, `commerce`, `platform`) lives in `metadata_json.skill_domain` — IAM `scope` is always `tenant` for this project.
 
-## Commands
+## Project context (Layer 0 compass)
+
+| Database | Row ID | Tenant / workspace |
+|----------|--------|-------------------|
+| **fuelnfreetime** (worker) | `ctx_fuelnfreetime` | `tenant_fuelnfreetime` / `ws_fuelnfreetime` |
+| **inneranimalmedia-business** (IAM) | `ctx_fuelnfreetime` | `tenant_sam_primeaux` / `ws_inneranimalmedia` |
+
+```bash
+npm run db:seed:ctx-fuelnfreetime:all
+```
+
+Schema: `db/migrate-agentsam-project-context.sql` · Seeds: `db/seed-ctx-fuelnfreetime-worker.sql`, `db/seed-ctx-fuelnfreetime-iam.sql`
+
+---
 
 ```bash
 # Full platform schema (destructive to agentsam_skill — re-seed after)

@@ -27,6 +27,7 @@ This file is the entry point for human and AI collaborators (including Connor's 
 | **Stripe** — ordered implementation checklist | [`docs/RUNTIME-CONTRACTS-STRIPE.md`](docs/RUNTIME-CONTRACTS-STRIPE.md) | Not started |
 | **Stripe agent skills** | [`.cursor/skills/stripe-best-practices/SKILL.md`](.cursor/skills/stripe-best-practices/SKILL.md) | Vendored from [stripe/ai](https://github.com/stripe/ai) |
 | **Agent Sam skills (R2 + D1)** | [`docs/AGENTSAM-SKILLS.md`](docs/AGENTSAM-SKILLS.md) | Sync with `npm run agentsam:skills:sync` |
+| **Project context** | D1 `agentsam_project_context.id = ctx_fuelnfreetime` | Worker + IAM registry — `npm run db:seed:ctx-fuelnfreetime:all` |
 | **CMS** — pages, sections, publish, KV, R2 bodies, live editor | [`docs/FNF-CMS-SPRINT-2026-06-20.md`](docs/FNF-CMS-SPRINT-2026-06-20.md) | Live |
 
 If a feature does not fit an existing contract, **update the contract first** (or in the same PR), then implement.
