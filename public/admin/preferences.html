@@ -12,6 +12,7 @@
 <script src="/admin/js/shell.js"></script>
 <script>
 let settings = {};
+let navItems = [];
 let dirty = false;
 let domain = "fuelnfreetime.com";
 
@@ -85,6 +86,31 @@ renderShell("/admin/preferences", `
           </div>
         </div>
       </div>
+    </section>
+
+    <section class="prefs-card">
+      <h2>Site navigation</h2>
+      <p style="margin:0 0 1rem;color:var(--muted,#888);max-width:60ch">Header logo, brand accent, and menu links for every storefront page. Add a row when you publish a new page — no code changes required.</p>
+      <div class="prefs-seo-grid" style="grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+        <div class="prefs-field">
+          <label for="nav-logo-url">Logo URL</label>
+          <input type="url" id="nav-logo-url" placeholder="https://…">
+        </div>
+        <div class="prefs-field">
+          <label for="nav-logo-height">Logo height (px)</label>
+          <input type="number" id="nav-logo-height" min="40" max="120" step="1">
+        </div>
+        <div class="prefs-field">
+          <label for="nav-brand-accent">Brand accent</label>
+          <input type="color" id="nav-brand-accent" style="height:42px;padding:4px">
+        </div>
+        <div class="prefs-field">
+          <label for="nav-brand-accent-light">Accent highlight</label>
+          <input type="color" id="nav-brand-accent-light" style="height:42px;padding:4px">
+        </div>
+      </div>
+      <div id="nav-items-root"></div>
+      <button type="button" class="btn ghost small" id="nav-add-item" style="margin-top:.75rem">+ Add menu link</button>
     </section>
 
     <section class="prefs-card">
@@ -195,9 +221,62 @@ function togglePasswordField() {
   document.getElementById("password-field").hidden = !on;
 }
 
+function renderNavItems() {
+  const root = document.getElementById("nav-items-root");
+  if (!root) return;
+  root.innerHTML = navItems
+    .map(
+      (item, idx) => `
+    <div class="prefs-nav-row" data-idx="${idx}" data-id="${item.id || `nav-${idx}`}" style="display:grid;grid-template-columns:1fr 1.2fr 1.4fr auto auto;gap:.5rem;align-items:end;margin-bottom:.65rem;padding:.65rem;border:1px solid rgba(255,255,255,.08);border-radius:8px">
+      <div class="prefs-field" style="margin:0">
+        <label>Label</label>
+        <input type="text" class="nav-label" value="${item.label || ""}" maxlength="40">
+      </div>
+      <div class="prefs-field" style="margin:0">
+        <label>Link (href)</label>
+        <input type="text" class="nav-href" value="${item.href || ""}" placeholder="/about.html">
+      </div>
+      <div class="prefs-field" style="margin:0">
+        <label>Match prefixes (comma-separated)</label>
+        <input type="text" class="nav-prefixes" value="${(item.matchPrefixes || []).join(", ")}" placeholder="/about">
+      </div>
+      <label class="prefs-switch" title="Visible in menu" style="margin-bottom:.35rem"><input type="checkbox" class="nav-visible" ${item.visible !== false ? "checked" : ""}><span class="prefs-switch-slider"></span></label>
+      <button type="button" class="btn ghost small nav-remove" aria-label="Remove">×</button>
+    </div>`
+    )
+    .join("");
+
+  root.querySelectorAll(".nav-label, .nav-href, .nav-prefixes, .nav-visible").forEach((el) => {
+    el.addEventListener("input", () => setDirty(true));
+    el.addEventListener("change", () => setDirty(true));
+  });
+  root.querySelectorAll(".nav-remove").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const idx = Number(btn.closest(".prefs-nav-row").dataset.idx);
+      navItems.splice(idx, 1);
+      renderNavItems();
+      setDirty(true);
+    });
+  });
+}
+
+function collectNavItemsFromDom() {
+  return Array.from(document.querySelectorAll(".prefs-nav-row")).map((row) => ({
+    id: row.dataset.id || `nav-${row.dataset.idx}`,
+    label: row.querySelector(".nav-label")?.value.trim() || "",
+    href: row.querySelector(".nav-href")?.value.trim() || "",
+    matchPrefixes: (row.querySelector(".nav-prefixes")?.value || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+    visible: row.querySelector(".nav-visible")?.checked !== false,
+  }));
+}
+
 function applySettings(data) {
   settings = data.settings || {};
   domain = data.domain || domain;
+  navItems = (data.nav?.items || settings.navItems || []).map((item) => ({ ...item }));
   document.getElementById("social-domain").textContent = domain.toUpperCase();
 
   document.getElementById("password-protection").checked = !!settings.passwordProtection;
@@ -212,6 +291,13 @@ function applySettings(data) {
   document.getElementById("social-image-url").value = settings.socialImageUrl || "";
   document.getElementById("store-password").value = settings.storePassword || "";
 
+  document.getElementById("nav-logo-url").value = data.nav?.logoUrl || settings.navLogoUrl || "";
+  document.getElementById("nav-logo-height").value = data.nav?.logoHeight || settings.navLogoHeight || 68;
+  document.getElementById("nav-brand-accent").value = data.nav?.brandAccent || settings.navBrandAccent || "#ff4500";
+  document.getElementById("nav-brand-accent-light").value =
+    data.nav?.brandAccentLight || settings.navBrandAccentLight || "#E5A558";
+
+  renderNavItems();
   togglePasswordField();
   updateCounters();
   updateSocialImage();
@@ -230,8 +316,30 @@ function collectSettings() {
     metaDescription: document.getElementById("meta-description").value.trim(),
     socialImageUrl: document.getElementById("social-image-url").value.trim(),
     storePassword: document.getElementById("store-password").value,
+    navLogoUrl: document.getElementById("nav-logo-url").value.trim(),
+    navLogoHeight: Number(document.getElementById("nav-logo-height").value || 68),
+    navBrandAccent: document.getElementById("nav-brand-accent").value,
+    navBrandAccentLight: document.getElementById("nav-brand-accent-light").value,
+    navItems: collectNavItemsFromDom(),
   };
 }
+
+document.getElementById("nav-add-item")?.addEventListener("click", () => {
+  navItems.push({
+    id: `nav-${Date.now()}`,
+    label: "New page",
+    href: "/",
+    matchPrefixes: ["/"],
+    visible: true,
+  });
+  renderNavItems();
+  setDirty(true);
+});
+
+["nav-logo-url", "nav-logo-height", "nav-brand-accent", "nav-brand-accent-light"].forEach((id) => {
+  document.getElementById(id)?.addEventListener("input", () => setDirty(true));
+  document.getElementById(id)?.addEventListener("change", () => setDirty(true));
+});
 
 document.querySelectorAll("[data-pref]").forEach((el) => {
   el.addEventListener("input", () => {

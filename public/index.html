@@ -1558,39 +1558,12 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="/css/store-shell.css">
 </head>
 <body>
     <!-- FNF Header + Home Hero (scoped, v1.5.0) -->
     <div class="fnf-shell" id="fnfApp">
-        <!-- Header -->
-        <header class="fnf-header" id="fnfHeader">
-            <div class="fnf-row">
-                <a class="fnf-logo" href="/" aria-label="Fuel & Free Time">
-                    <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ad23b2d9-e2e4-4ad6-eb81-9e4c983df000/thumbnail" alt="Fuel & Free Time" width="256" height="68" />
-                </a>
-                <nav class="fnf-primary" aria-label="Primary">
-                    <ul class="fnf-nav">
-                        <li><a href="./">Home</a></li>
-                        <li><a href="./shop.html">Shop</a></li>
-                        <li><a href="./about.html">About</a></li>
-                        <li><a href="./community.html">Community</a></li>
-                    </ul>
-                </nav>
-                <button class="fnf-burger" id="fnfBurger" aria-label="Open menu" aria-controls="fnfMobile" aria-expanded="false">
-                    <span></span><span></span><span></span>
-                </button>
-            </div>
-        </header>
-
-        <!-- Mobile Menu -->
-        <nav class="fnf-mobile" id="fnfMobile" aria-label="Mobile">
-            <ul>
-                <li><a href="./">Home</a></li>
-                <li><a href="./shop.html">Shop</a></li>
-                <li><a href="./about.html">About</a></li>
-                <li><a href="./community.html">Community</a></li>
-            </ul>
-        </nav>
+        <div id="fnf-header-mount"></div>
 
         <!-- Home-only Hero -->
         <section class="fnf-hero fnf-bg-grad" id="fnfHero">
@@ -1898,9 +1871,6 @@
             const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
 
             const app = $('#fnfApp');
-            const header = $('#fnfHeader');
-            const burger = $('#fnfBurger');
-            const mobile = $('#fnfMobile');
             const hero = $('#fnfHero');
             const spacer = $('#fnfSpacer');
 
@@ -1935,58 +1905,6 @@
             } else {
                 spacer.style.display = 'block';
             }
-
-            // ACTIVE LINK: only current page underlined
-            const norm = (u)=>u.replace(/\/+$/,'') || '/';
-            function setActive(anchors){
-                anchors.forEach(a=>a.classList.remove('is-active'));
-                const here = norm(location.pathname);
-                let best = null, bestLen = -1;
-                anchors.forEach(a=>{
-                    const href = norm(a.getAttribute('href')||'/');
-                    if(href==='/' && here!=='/') return;
-                    if(href==='/' && here==='/'){ best=a; bestLen=1; return; }
-                    if(href!=='/' && here.startsWith(href) && href.length>bestLen){ best=a; bestLen=href.length; }
-                });
-                if(!best && here==='/'){ best = anchors.find(a=>norm(a.getAttribute('href')||'/')==='/'); }
-                if(best){ best.classList.add('is-active'); }
-            }
-            setActive($$('.fnf-nav a')); setActive($$('#fnfMobile a'));
-
-            // Header behavior: blur on scroll, hide on strong downward scroll
-            let lastY = window.scrollY;
-            const onScroll = ()=>{
-                const y = window.scrollY, down = y > lastY;
-                header.classList.toggle('is-scrolling', y>10);
-                header.classList.toggle('is-hidden', y>120 && down);
-                lastY = y;
-            };
-            window.addEventListener('scroll', onScroll, {passive:true}); onScroll();
-
-            // Mobile menu + underline tap animation
-            const closeMenu = ()=>{
-                burger.classList.remove('is-open');
-                mobile.classList.remove('is-open');
-                burger.setAttribute('aria-expanded','false');
-            };
-            burger.addEventListener('click', ()=>{
-                const open = !burger.classList.contains('is-open');
-                burger.classList.toggle('is-open', open);
-                mobile.classList.toggle('is-open', open);
-                burger.setAttribute('aria-expanded', String(open));
-            });
-            document.addEventListener('click', (e)=>{
-                if(!mobile.contains(e.target) && !burger.contains(e.target)) closeMenu();
-            });
-            document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeMenu(); });
-
-            $$('#fnfMobile a').forEach(a=>{
-                a.addEventListener('click', ()=>{
-                    a.classList.add('tap-anim');
-                    setTimeout(()=>a.classList.remove('tap-anim'), 350);
-                    closeMenu();
-                });
-            });
 
             // (Optional) save-data users: keep poster, skip heavy GLB init
             const saveData = 'connection' in navigator && navigator.connection && navigator.connection.saveData;
@@ -2082,6 +2000,9 @@
             });
         })();
     </script>
+    <script src="/js/store-catalog.js" defer></script>
+    <script src="/js/store-shell.js" defer></script>
+    <script src="/js/store-cart.js" defer></script>
     <script src="/js/fnf-head.js" defer></script>
     <script src="/js/cms-hydrate.js" defer></script>
     <script src="/js/fnf-newsletter.js" defer></script>

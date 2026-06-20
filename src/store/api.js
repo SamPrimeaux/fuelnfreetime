@@ -190,6 +190,11 @@ export async function handleStoreApi(request, env, url) {
     });
   }
 
+  if (path === "/api/store/nav" && method === "GET") {
+    const { getStoreNav } = await import("../admin/store.js");
+    return getStoreNav(env);
+  }
+
   if (path === "/api/store/products" && method === "GET") {
     return listStoreProducts(env);
   }

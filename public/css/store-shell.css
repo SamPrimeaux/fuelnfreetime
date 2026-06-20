@@ -1,15 +1,19 @@
-/* Shared Fuel & Free Time storefront chrome (header + cart icon) */
+/* Sitewide storefront header — single source (store-shell.js + D1 nav config) */
 
 :root {
   --fnf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --fnf-bronze-light: #e5a558;
   --fnf-ink: #fff;
   --fnf-muted: #c8cdd2;
-  --fnf-orange: #ff4500;
+  --fnf-accent: #ff4500;
+  --fnf-accent-light: #e5a558;
   --fnf-teal: #00a6a6;
   --fnf-header: 80px;
   --fnf-header-md: 70px;
   --fnf-maxw: 1440px;
+}
+
+body.fnf-nav-open {
+  overflow: hidden;
 }
 
 .fnf-shell {
@@ -27,17 +31,19 @@
   inset: 0 0 auto 0;
   height: var(--fnf-header);
   z-index: 10000;
-  background: rgba(10, 10, 10, 0.86);
+  background: rgba(10, 10, 10, 0.72);
   box-shadow: 0 1px 0 rgba(255, 69, 0, 0.06);
-  transition: transform 0.28s var(--fnf-ease), backdrop-filter 0.28s var(--fnf-ease);
+  transition: transform 0.32s var(--fnf-ease), backdrop-filter 0.32s var(--fnf-ease),
+    background 0.32s var(--fnf-ease);
 }
 
 @supports (backdrop-filter: blur(1px)) {
   .fnf-header {
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(12px) saturate(1.15);
   }
   .fnf-header.is-scrolling {
-    backdrop-filter: blur(14px);
+    backdrop-filter: blur(18px) saturate(1.2);
+    background: rgba(10, 10, 10, 0.88);
   }
 }
 
@@ -49,31 +55,35 @@
   max-width: var(--fnf-maxw);
   margin: 0 auto;
   height: 100%;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   gap: 1rem;
   padding: 0 clamp(1rem, 4vw, 3.5rem);
 }
 
 .fnf-logo {
-  height: 68px;
+  height: var(--fnf-logo-height, 68px);
   display: flex;
   align-items: center;
   text-decoration: none;
-  flex-shrink: 0;
+  justify-self: start;
 }
 
 .fnf-logo img {
   height: 100%;
   width: auto;
   display: block;
+  filter: brightness(0.96);
+  transition: filter 0.25s var(--fnf-ease);
+}
+
+.fnf-logo:hover img {
+  filter: brightness(1.05);
 }
 
 .fnf-primary {
-  flex: 1;
-  display: flex;
-  justify-content: center;
+  justify-self: center;
 }
 
 .fnf-nav {
@@ -102,9 +112,10 @@
   right: 0;
   bottom: -4px;
   height: 2px;
-  background: linear-gradient(90deg, var(--fnf-orange), var(--fnf-bronze-light));
+  background: linear-gradient(90deg, var(--fnf-accent), var(--fnf-accent-light));
   transform: scaleX(0);
   transition: transform 0.25s var(--fnf-ease);
+  transform-origin: center;
 }
 
 .fnf-nav a:hover,
@@ -122,132 +133,181 @@
 .fnf-actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
+  gap: 0.35rem;
+  justify-self: end;
 }
 
-.fnf-cart-btn {
+.fnf-cart-btn,
+.fnf-burger {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--fnf-ink);
+  padding: 6px;
+  border: none;
+  background: transparent;
+  color: var(--fnf-accent);
   text-decoration: none;
-  transition: border-color 0.2s, background 0.2s, color 0.2s;
+  cursor: pointer;
+  line-height: 0;
+  transition: opacity 0.2s, transform 0.2s;
 }
 
 .fnf-cart-btn:hover,
-.fnf-cart-btn.is-active {
-  border-color: rgba(0, 166, 166, 0.55);
-  background: rgba(0, 166, 166, 0.12);
-  color: var(--fnf-teal);
+.fnf-burger:hover {
+  opacity: 0.85;
 }
 
 .fnf-cart-btn svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   display: block;
 }
 
 .fnf-cart-count {
   position: absolute;
-  top: -4px;
-  right: -4px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
+  top: 0;
+  right: 0;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
   border-radius: 999px;
   background: var(--fnf-teal);
   color: #001;
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 900;
-  line-height: 18px;
+  line-height: 16px;
   text-align: center;
+  pointer-events: none;
 }
 
 .fnf-cart-count[hidden] {
   display: none !important;
 }
 
-.fnf-burger {
-  display: none;
-  background: none;
-  border: 0;
-  padding: 10px;
-  cursor: pointer;
-}
-
 .fnf-burger span {
   display: block;
-  width: 24px;
+  width: 22px;
   height: 2px;
-  background: var(--fnf-orange);
-  margin: 5px 0;
-  transition: transform 0.25s, opacity 0.25s;
+  background: currentColor;
+  margin: 4px 0;
+  transition: transform 0.28s var(--fnf-ease), opacity 0.2s;
+  transform-origin: center;
 }
 
 .fnf-burger.is-open span:nth-child(1) {
-  transform: rotate(45deg) translate(5px, 6px);
+  transform: translateY(6px) rotate(45deg);
 }
 
 .fnf-burger.is-open span:nth-child(2) {
   opacity: 0;
+  transform: scaleX(0);
 }
 
 .fnf-burger.is-open span:nth-child(3) {
-  transform: rotate(-45deg) translate(6px, -6px);
+  transform: translateY(-6px) rotate(-45deg);
 }
 
+/* Mobile drawer — glass slide-in from right */
 .fnf-mobile {
   position: fixed;
-  left: 0;
-  right: 0;
-  top: var(--fnf-header);
-  background: rgba(15, 15, 15, 0.98);
-  transform: translateY(-120%);
-  opacity: 0;
-  visibility: hidden;
-  transition: transform 0.28s var(--fnf-ease), opacity 0.28s;
+  inset: 0;
   z-index: 9999;
-  padding: 22px;
-  border-bottom: 1px solid rgba(255, 69, 0, 0.14);
+  pointer-events: none;
+  visibility: hidden;
 }
 
 .fnf-mobile.is-open {
-  transform: translateY(0);
-  opacity: 1;
+  pointer-events: auto;
   visibility: visible;
+}
+
+.fnf-mobile-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transition: opacity 0.32s var(--fnf-ease);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .fnf-mobile-backdrop {
+    backdrop-filter: blur(6px);
+  }
+}
+
+.fnf-mobile.is-open .fnf-mobile-backdrop {
+  opacity: 1;
+}
+
+.fnf-mobile-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(320px, 88vw);
+  padding: calc(var(--fnf-header) + 1.25rem) 1.5rem 1.5rem;
+  background: rgba(16, 16, 18, 0.78);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.35);
+  transform: translateX(104%);
+  transition: transform 0.34s var(--fnf-ease);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .fnf-mobile-panel {
+    backdrop-filter: blur(22px) saturate(1.25);
+  }
+}
+
+.fnf-mobile.is-open .fnf-mobile-panel {
+  transform: translateX(0);
 }
 
 .fnf-mobile ul {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 0.35rem;
   margin: 0;
   padding: 0;
 }
 
 .fnf-mobile a {
+  display: block;
   color: var(--fnf-ink);
   text-decoration: none;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-weight: 800;
   font-size: 0.95rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  position: relative;
+}
+
+.fnf-mobile a::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0.65rem;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--fnf-accent), var(--fnf-accent-light));
+  transition: width 0.25s var(--fnf-ease);
 }
 
 .fnf-mobile a.is-active {
-  color: var(--fnf-teal);
+  color: var(--fnf-accent-light);
+}
+
+.fnf-mobile a.is-active::before {
+  width: 2rem;
 }
 
 .fnf-spacer {
   height: var(--fnf-header);
+  display: block;
 }
 
 .store-page {
@@ -259,15 +319,25 @@
     --fnf-header: var(--fnf-header-md);
   }
 
+  .fnf-row {
+    grid-template-columns: 1fr auto;
+  }
+
   .fnf-primary {
     display: none;
   }
 
   .fnf-burger {
-    display: block;
+    display: inline-flex;
   }
 
   .fnf-logo {
-    height: 56px;
+    height: min(var(--fnf-logo-height, 68px), 56px);
+  }
+}
+
+@media (min-width: 961px) {
+  .fnf-burger {
+    display: none;
   }
 }

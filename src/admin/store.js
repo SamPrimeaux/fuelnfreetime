@@ -1,4 +1,10 @@
 import { M } from "../cms/media-paths.js";
+import {
+  DEFAULT_LOGO_URL,
+  DEFAULT_NAV_ITEMS,
+  resolveNavConfig,
+  sanitizeNavItems,
+} from "../lib/site-nav.js";
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -44,6 +50,11 @@ const DEFAULT_STORE_PREFERENCES = {
   languageRedirect: false,
   hcaptchaContact: true,
   hcaptchaAccount: true,
+  navLogoUrl: DEFAULT_LOGO_URL,
+  navLogoHeight: 68,
+  navBrandAccent: "#ff4500",
+  navBrandAccentLight: "#E5A558",
+  navItems: DEFAULT_NAV_ITEMS,
 };
 
 const KV_PREFS_KEY = "store:preferences";
@@ -81,6 +92,22 @@ async function saveStorePreferences(env, incoming) {
     socialImageUrl: String(incoming.socialImageUrl ?? current.socialImageUrl).slice(0, 2048),
   };
 
+  if (incoming.navLogoUrl != null) {
+    next.navLogoUrl = String(incoming.navLogoUrl).slice(0, 2048);
+  }
+  if (incoming.navLogoHeight != null) {
+    next.navLogoHeight = Math.min(120, Math.max(40, Number(incoming.navLogoHeight) || 68));
+  }
+  if (incoming.navBrandAccent != null) {
+    next.navBrandAccent = String(incoming.navBrandAccent).slice(0, 32);
+  }
+  if (incoming.navBrandAccentLight != null) {
+    next.navBrandAccentLight = String(incoming.navBrandAccentLight).slice(0, 32);
+  }
+  if (incoming.navItems != null) {
+    next.navItems = sanitizeNavItems(incoming.navItems);
+  }
+
   if (incoming.storePassword != null && incoming.storePassword !== "" && incoming.storePassword !== "••••••••") {
     next.storePassword = String(incoming.storePassword).slice(0, 128);
   }
@@ -106,7 +133,12 @@ async function saveStorePreferences(env, incoming) {
   return next;
 }
 
-export { loadStorePreferences };
+export { loadStorePreferences, resolveNavConfig };
+
+export async function getStoreNav(env) {
+  const settings = await loadStorePreferences(env);
+  return json({ ok: true, nav: resolveNavConfig(settings) });
+}
 
 export async function getStorePreferences(env) {
   const domain = env.APP_DOMAIN || "fuelnfreetime.com";
@@ -114,6 +146,7 @@ export async function getStorePreferences(env) {
   return json({
     ok: true,
     domain,
+    nav: resolveNavConfig(settings),
     settings: {
       ...settings,
       storePassword: settings.storePassword ? "••••••••" : "",
@@ -139,6 +172,7 @@ export async function postStorePreferences(request, env) {
       storePassword: saved.storePassword ? "••••••••" : "",
       hasStorePassword: !!saved.storePassword,
     },
+    nav: resolveNavConfig(saved),
   });
 }
 
