@@ -1,3 +1,5 @@
+import { sendResendEmail, resendConfigured, getResendDomainStatus } from "../lib/resend.js";
+
 const DEFAULT_SETTINGS = {
   gmailAddress: "",
   gmailDisplayName: "",
@@ -177,10 +179,13 @@ async function saveSettings(env, settings) {
   return next;
 }
 
-function providerStatus(settings) {
+function providerStatus(settings, env) {
+  const resendReady =
+    resendConfigured(env) && settings.resendFrom && settings.resendTransactional;
   return {
     gmail: settings.gmailAddress ? "connected" : "disconnected",
-    resend: settings.resendFrom && settings.resendTransactional ? "configured" : "pending",
+    resend: resendReady ? "configured" : resendConfigured(env) ? "pending" : "pending",
+    resend_domain: resendConfigured(env) ? "check_dashboard" : "no_api_key",
   };
 }
 
@@ -189,7 +194,7 @@ export async function getMailSettings(env) {
   return {
     ok: true,
     settings: redactSettings(settings),
-    providers: providerStatus(settings),
+    providers: providerStatus(settings, env),
   };
 }
 
@@ -204,7 +209,7 @@ export async function postMailSettings(request, env) {
   return Response.json({
     ok: true,
     settings: redactSettings(saved),
-    providers: providerStatus(saved),
+    providers: providerStatus(saved, env),
     section: body.section || "all",
   });
 }
@@ -220,23 +225,97 @@ export async function sendMailPreview(request, env) {
   }
 
   const settings = await loadSettings(env);
-  const provider =
-    body.fromProvider === "gmail" ? "gmail" : "resend";
+  const provider = body.fromProvider === "gmail" ? "gmail" : "resend";
+  const payload = {
+    from:
+      provider === "gmail"
+        ? settings.gmailAddress || "(gmail not configured)"
+        : settings.resendFrom,
+    to: body.to,
+    subject: body.subject,
+    replyTo: settings.resendReplyTo || settings.gmailAddress || null,
+    body: body.body || "",
+  };
+
+  if (provider === "gmail") {
+    return Response.json({
+      ok: true,
+      preview: true,
+      sent: false,
+      provider,
+      payload,
+      message: "Gmail send not wired yet — preview only.",
+    });
+  }
+
+  if (!settings.resendTransactional) {
+    return Response.json({
+      ok: false,
+      preview: true,
+      sent: false,
+      provider,
+      payload,
+      error: "Resend transactional sending is disabled in mail settings.",
+    }, { status: 400 });
+  }
+
+  if (!resendConfigured(env)) {
+    return Response.json({
+      ok: true,
+      preview: true,
+      sent: false,
+      provider,
+      payload,
+      message: "Preview only — run: wrangler secret put RESEND_API_KEY",
+    });
+  }
+
+  const html = payload.body.includes("<")
+    ? payload.body
+    : `<p>${payload.body.replace(/\n/g, "<br>")}</p>`;
+
+  const result = await sendResendEmail(env, {
+    from: settings.resendFrom,
+    to: body.to,
+    subject: body.subject,
+    html,
+    text: payload.body,
+    replyTo: payload.replyTo,
+    tags: body.test ? ["admin-test"] : ["admin-compose"],
+  });
+
+  if (!result.ok) {
+    return Response.json({
+      ok: false,
+      preview: false,
+      sent: false,
+      provider,
+      payload,
+      error: result.error,
+      details: result.details,
+    }, { status: 502 });
+  }
 
   return Response.json({
     ok: true,
-    preview: true,
+    preview: false,
+    sent: true,
     provider,
-    payload: {
-      from:
-        provider === "gmail"
-          ? settings.gmailAddress || "(gmail not configured)"
-          : settings.resendFrom,
-      to: body.to,
-      subject: body.subject,
-      replyTo: settings.resendReplyTo || settings.gmailAddress || null,
-      body: body.body || "",
-    },
-    message: "Send preview accepted — wire Resend/Gmail in Worker when ready.",
+    payload,
+    resend_id: result.id,
+    message: `Sent via Resend (${result.id})`,
+  });
+}
+
+export async function getResendStatus(env) {
+  const settings = await loadSettings(env);
+  const domain = settings.resendDomain || "fuelnfreetime.com";
+  const status = await getResendDomainStatus(env, domain);
+  return Response.json({
+    ok: true,
+    configured: resendConfigured(env),
+    domain,
+    resend: status,
+    providers: providerStatus(settings, env),
   });
 }

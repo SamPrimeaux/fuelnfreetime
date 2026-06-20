@@ -176,7 +176,9 @@ async function loadRemoteSettings() {
     $("gmailStatus")?.classList.toggle("connected", data.providers?.gmail === "connected");
     $("gmailStatus") && ($("gmailStatus").textContent = data.providers?.gmail === "connected" ? "Connected" : "Disconnected");
     $("resendStatus")?.classList.toggle("connected", data.providers?.resend === "configured");
-    $("resendStatus") && ($("resendStatus").textContent = data.providers?.resend === "configured" ? "Configured" : "Pending");
+    $("resendStatus") &&
+      ($("resendStatus").textContent =
+        data.providers?.resend === "configured" ? "Connected" : "Pending DNS / API key");
   } catch (err) {
     console.warn("Mail settings:", err);
     hydrateSettings(MAIL_DEFAULTS);
@@ -465,7 +467,7 @@ async function sendCompose() {
       body: JSON.stringify({ to, subject, body, fromProvider }),
     });
     $("composeSheet")?.classList.remove("open");
-    showToast(data.message || "Send queued (preview)");
+    showToast(data.sent ? data.message || "Sent" : data.message || data.error || "Preview only");
   } catch (err) {
     showToast(err.message || "Send failed");
   }
@@ -619,7 +621,29 @@ function bindMailEvents() {
   $("saveResend")?.addEventListener("click", () => persistSettings("resend"));
   $("saveRouting")?.addEventListener("click", () => persistSettings("routing"));
   $("connectGmail")?.addEventListener("click", () => showToast("Gmail OAuth route: /api/admin/mail/oauth/gmail (next)"));
-  $("testResend")?.addEventListener("click", () => showToast("Resend test — save API key first"));
+  $("testResend")?.addEventListener("click", async () => {
+    const settings = normalizeSettings(collectSettings());
+    const to = settings.resendFrom || settings.resendReplyTo;
+    if (!to) {
+      showToast("Set a Resend from address first");
+      return;
+    }
+    try {
+      const data = await adminFetch("/api/admin/mail/send", {
+        method: "POST",
+        body: JSON.stringify({
+          to,
+          subject: "Fuel & Free Time — Resend test",
+          body: "If you received this, Resend is wired correctly for fuelnfreetime.com.",
+          fromProvider: "resend",
+          test: true,
+        }),
+      });
+      showToast(data.sent ? data.message || "Test sent" : data.message || data.error || "Test preview");
+    } catch (err) {
+      showToast(err.message || "Test failed");
+    }
+  });
   $("copyPayload")?.addEventListener("click", async () => {
     try {
       await navigator.clipboard.writeText($("payloadPreview")?.textContent || "");

@@ -23,6 +23,8 @@ import {
 } from "./lib/admin-routes.js";
 import { redirectWww, resolveStorefrontPath, serveStaticAlias, STORE_HTML_REDIRECTS, PAGES_CLEAN_REDIRECTS } from "./lib/routes.js";
 
+import { handleResendWebhook } from "./webhooks/resend.js";
+
 export { CmsEditorRoom } from "./do/CmsEditorRoom.js";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -216,6 +218,10 @@ export default {
 
     if (path === "/api/newsletter" && request.method === "POST") {
       return handleNewsletter(request, env);
+    }
+
+    if (path === "/api/agentsam/webhooks/resend" && request.method === "POST") {
+      return handleResendWebhook(request, env);
     }
 
     if (path === "/api/internal/agentsam/compaction/run" && request.method === "POST") {

@@ -72,6 +72,8 @@
     "r2:cors": "./scripts/with-cf-admin-env.sh npx wrangler r2 bucket cors set fuelnfreetime --file=scripts/r2-cors.json -y",
     "analytics:unpack": "node scripts/unpack-analytics.mjs",
     "dns:check": "node scripts/check-dns.mjs",
+    "dns:setup:resend": "./scripts/with-cf-admin-env.sh node scripts/setup-resend-dns.mjs",
+    "dns:setup:resend:dry": "node scripts/setup-resend-dns.mjs --dry-run",
     "cf:status": "./scripts/with-cf-admin-env.sh node scripts/cf-status.mjs"
   },
   "devDependencies": {

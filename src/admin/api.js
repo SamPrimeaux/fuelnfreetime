@@ -12,6 +12,7 @@ import {
   postMailSettings,
   listMailMessages,
   sendMailPreview,
+  getResendStatus,
 } from "./mail.js";
 import {
   uploadMedia,
@@ -459,6 +460,7 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   if (path === "/api/admin/mail/settings" && method === "POST") return postMailSettings(request, env);
   if (path === "/api/admin/mail/messages" && method === "GET") return listMailMessages();
   if (path === "/api/admin/mail/send" && method === "POST") return sendMailPreview(request, env);
+  if (path === "/api/admin/mail/resend/status" && method === "GET") return getResendStatus(env);
 
   if (path === "/api/admin/agentsam/chat" && method === "POST") {
     return agentsamChat(request, env, executionCtx);
