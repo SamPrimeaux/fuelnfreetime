@@ -104,7 +104,8 @@ async function assembleSystemPrompt(env, routing, context, message, attachments,
     });
     promptPack = await getOrBuildPromptPack(env, routing, context, {
       tool_hash: toolHash,
-      context_hash: contextPack.contextHash,
+      context_hash: contextPack.stableContextHash || contextPack.contextHash,
+      stable_context_hash: contextPack.stableContextHash || contextPack.contextHash,
     });
   } catch (err) {
     console.error("prompt assembly fallback", err?.message || err);
@@ -426,28 +427,23 @@ export async function agentsamChat(request, env, executionCtx = null) {
     (promptPack.cache_hit ? promptPack.estimatedTokens : 0) +
     (contextPack.cache_hit ? contextPack.estimatedTokens : 0);
 
-  logPromptUsage(
-    env,
-    {
-      conversation_id: conversationId,
-      message_id: ids.message_id,
-      run_id: ids.run_id,
-      workflow_key: workflowKey,
-      route_lane: aiRouting.lane || aiRouting.model_lane,
-      task_type: aiRouting.task_type,
-      prompt_cache_key: promptPack.cache_key,
-      context_cache_key: contextPack.cache_key,
-      prompt_cache_hit: promptPack.cache_hit,
-      context_cache_hit: contextPack.cache_hit,
-      prompt_tokens_estimated: promptPack.estimatedTokens,
-      context_tokens_estimated: contextPack.estimatedTokens,
-      build_duration_ms: assembled.buildDurationMs,
-      cache_lookup_ms: (promptPack.cache_lookup_ms || 0) + (contextPack.cache_lookup_ms || 0),
-      saved_tokens_estimated: savedTokens,
-      status: promptPack.cache_hit && contextPack.cache_hit ? "success" : "miss",
-    },
-    trackBase
-  );
+  const logUsageBase = {
+    conversation_id: conversationId,
+    message_id: ids.message_id,
+    run_id: ids.run_id,
+    workflow_key: workflowKey,
+    route_lane: aiRouting.lane || aiRouting.model_lane,
+    task_type: aiRouting.task_type,
+    prompt_cache_key: promptPack.cache_key,
+    context_cache_key: contextPack.cache_key,
+    prompt_cache_hit: promptPack.cache_hit,
+    context_cache_hit: contextPack.cache_hit,
+    prompt_tokens_estimated: promptPack.estimatedTokens,
+    context_tokens_estimated: contextPack.estimatedTokens,
+    build_duration_ms: assembled.buildDurationMs,
+    cache_lookup_ms: (promptPack.cache_lookup_ms || 0) + (contextPack.cache_lookup_ms || 0),
+    saved_tokens_estimated: savedTokens,
+  };
 
   if (aiRouting.task_type === "image_generation") {
     await trackAgentSamEvent(
@@ -472,6 +468,10 @@ export async function agentsamChat(request, env, executionCtx = null) {
     has_image: aiRouting.has_image || context.has_image,
     image_base64: aiRouting.image_base64 || context.image_base64,
     image_url: aiRouting.image_url || context.image_url,
+    image_mime_type:
+      aiRouting.image_mime_type ||
+      attachments.find((a) => a.mime_type?.startsWith("image/"))?.mime_type ||
+      null,
     workflow_key: workflowKey,
     intent: routing.classification.intent,
     prompt_meta: {
@@ -509,6 +509,12 @@ export async function agentsamChat(request, env, executionCtx = null) {
   }
 
   if (!ai.ok) {
+    const gracefulReply =
+      ai.user_reply ||
+      (ai.recoverable
+        ? "I couldn't complete that request right now. Please try again in a moment."
+        : null);
+
     await trackAgentSamEvent(
       env,
       {
@@ -525,9 +531,59 @@ export async function agentsamChat(request, env, executionCtx = null) {
         ai_latency_ms: ai.ai_latency_ms,
         attempted_models: ai.attempted_models,
         prompt_text: message,
+        metadata: { recoverable: Boolean(ai.recoverable), graceful_reply: Boolean(gracefulReply) },
       },
       trackBase
     );
+
+    logPromptUsage(
+      env,
+      {
+        ...logUsageBase,
+        model_id: ai.selected_model || ai.attempted_models?.slice(-1)?.[0]?.model_id || null,
+        status: "ai_failed",
+        error_message: ai.error || "ai_failed",
+        metadata: { attempted_models: ai.attempted_models },
+      },
+      trackBase
+    );
+
+    if (gracefulReply) {
+      persistChatExchange(env, {
+        conversationId,
+        messageId: ids.message_id,
+        userMessage: message,
+        assistantReply: gracefulReply,
+        attachments,
+        toolCalls,
+        routing,
+        ai: { ok: false, reply: gracefulReply },
+        ctx: executionCtx,
+      });
+
+      return json({
+        ok: true,
+        reply: gracefulReply,
+        conversation_id: conversationId,
+        ai_degraded: true,
+        route_chips: routeChipsFromRouting(routing, toolCalls),
+        tool_calls: toolCalls,
+        ai: {
+          selected_model: ai.selected_model,
+          attempted_models: ai.attempted_models,
+          task_type: ai.task_type,
+          recoverable: true,
+        },
+        routing,
+        mcp: { bridge: bridgeConfigured(env), github_context: !!mcpContext },
+        analytics: {
+          session_id: ids.session_id,
+          message_id: ids.message_id,
+          conversation_id: conversationId,
+          tracked: true,
+        },
+      });
+    }
 
     console.error("agentsam chat ai failure", ai.error);
     return json(
@@ -539,6 +595,19 @@ export async function agentsamChat(request, env, executionCtx = null) {
       { status: 502 }
     );
   }
+
+  logPromptUsage(
+    env,
+    {
+      ...logUsageBase,
+      model_id: ai.selected_model,
+      input_tokens: ai.input_tokens,
+      output_tokens: ai.output_tokens,
+      total_tokens: ai.total_tokens,
+      status: promptPack.cache_hit && contextPack.cache_hit ? "success" : "miss",
+    },
+    trackBase
+  );
 
   await trackAgentSamEvent(
     env,
@@ -652,6 +721,7 @@ export async function agentsamStatus(env, userId = null) {
     ok: true,
     bound: !!env.AGENTSAM_WAI,
     name: "Agent Sam",
+    features: getAgentFeatures(),
     skills_registered: skillCount,
     workflows_registered: workflowCount,
     skills_storage: "D1 agentsam_skill + R2 agentsam/skills/",

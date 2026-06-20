@@ -8,6 +8,7 @@ import { estimateTokens } from "./analytics.js";
 const PREVIEW_MAX = 480;
 const BASE_FRAGMENT_KEYS = [
   "fnf_scope",
+  "fnf_feature_gates",
   "agentsam_response_style",
   "agentsam_tool_policy",
   "agentsam_storage_policy",

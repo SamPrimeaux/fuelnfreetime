@@ -42,7 +42,6 @@ export function buildContextCacheKey(parts = {}) {
     parts.route_lane || "_",
     parts.task_type || "_",
     parts.source_hash || "_",
-    parts.conversation_id || "_",
     parts.has_attachments ? "att1" : "att0",
   ].join(":");
 }
@@ -186,31 +185,41 @@ export async function buildContextPack(env, routing = {}, message = "", options 
 
   const convSummary = await loadConversationSummary(env, options.conversation_id);
   if (convSummary) {
-    blocks.push(convSummary);
     sourceTables.push("agentsam_conversations");
   }
 
   if (options.repo_context && (intent === "code" || routeLane === "code")) {
-    blocks.push(String(options.repo_context).slice(0, 2000));
     sourceTables.push("github");
   }
 
   if (options.attachment_hint) {
-    blocks.push(options.attachment_hint);
     sourceTables.push("agentsam_attachments");
   }
 
   if (options.page) blocks.push(`Admin UI path: ${options.page}.`);
   if (options.slug) blocks.push(`Editing CMS page slug: ${options.slug}.`);
 
-  const contextText = blocks.filter(Boolean).join("\n\n");
+  const stableContextText = blocks.filter(Boolean).join("\n\n");
+  const volatileBlocks = [];
+  if (convSummary) volatileBlocks.push(convSummary);
+  if (options.repo_context && (intent === "code" || routeLane === "code")) {
+    volatileBlocks.push(String(options.repo_context).slice(0, 2000));
+  }
+  if (options.attachment_hint) volatileBlocks.push(options.attachment_hint);
+
+  const volatileContextText = volatileBlocks.filter(Boolean).join("\n\n");
+  const contextText = [stableContextText, volatileContextText].filter(Boolean).join("\n\n");
+  const stableContextHash = await hashText(stableContextText);
   const contextHash = await hashText(contextText);
   const contextType =
     intent === "code" ? "repo" : options.conversation_id ? "mixed" : workflowKey ? "workflow" : "project";
 
   return {
     contextText,
+    stableContextText,
+    volatileContextText,
     contextHash,
+    stableContextHash,
     contextType,
     sourceTables: [...new Set(sourceTables)],
     sourceKeys,
@@ -378,8 +387,7 @@ export async function getOrBuildContextPack(env, routing, message, options = {})
     workflow_key: built.workflow_key,
     route_lane: built.route_lane,
     task_type: built.task_type,
-    source_hash: built.contextHash,
-    conversation_id: options.conversation_id || "",
+    source_hash: built.stableContextHash,
     has_attachments: Boolean(options.attachment_hint),
   });
 
@@ -391,19 +399,27 @@ export async function getOrBuildContextPack(env, routing, message, options = {})
   }
 
   if (cached?.contextText && !options.repo_context && !options.attachment_hint) {
+    const mergedContext = built.volatileContextText
+      ? `${cached.contextText}\n\n${built.volatileContextText}`
+      : cached.contextText;
     return {
       ...built,
-      contextText: cached.contextText,
+      contextText: mergedContext,
       cache_hit: true,
       cache_key: cacheKey,
       cache_lookup_ms: Date.now() - started,
+      estimatedTokens: estimateTokens(mergedContext),
     };
   }
 
-  await putContextCache(env, built, {
-    cache_key: cacheKey,
-    ttl_seconds: ttlForContext(built),
-  });
+  try {
+    await putContextCache(env, { ...built, contextText: built.stableContextText }, {
+      cache_key: cacheKey,
+      ttl_seconds: ttlForContext(built),
+    });
+  } catch {
+    /* non-blocking */
+  }
 
   return {
     ...built,

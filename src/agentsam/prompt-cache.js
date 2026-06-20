@@ -230,9 +230,23 @@ export async function getOrBuildPromptPack(env, routing, context, options = {}) 
   const routeLane = aiRouting.lane || aiRouting.model_lane;
   const taskType = aiRouting.task_type;
 
-  const catalogPack = await buildPromptPack(env, routing, context, options);
+  let catalogPack;
+  try {
+    catalogPack = await buildPromptPack(env, routing, context, options);
+  } catch (err) {
+    console.error("buildPromptPack failed", err?.message || err);
+    catalogPack = {
+      systemPrompt: "You are Agent Sam for Fuel & Free Time. Be direct, scoped, and helpful.",
+      promptKeys: ["fnf_agentsam_base_system"],
+      fragmentKeys: [],
+      promptHash: "fallback",
+      estimatedTokens: 40,
+      compiledPreview: "Agent Sam fallback prompt",
+    };
+  }
+
   const toolHash = options.tool_hash || "";
-  const contextHash = options.context_hash || "";
+  const contextHash = options.context_hash || options.stable_context_hash || "";
 
   const cacheKey = buildPromptCacheKey({
     workspace_id: FNF_WORKSPACE_ID,
@@ -263,17 +277,21 @@ export async function getOrBuildPromptPack(env, routing, context, options = {}) 
     };
   }
 
-  await putPromptCache(env, catalogPack, {
-    cache_key: cacheKey,
-    context_hash: contextHash,
-    tool_hash: toolHash,
-    workflow_key: workflowKey,
-    route_lane: routeLane,
-    task_type: taskType,
-    model_id: options.model_id,
-    tool_keys: (routing.tools || []).map((t) => t.tool_key),
-    ttl_seconds: ttlForPack(routing),
-  });
+  try {
+    await putPromptCache(env, catalogPack, {
+      cache_key: cacheKey,
+      context_hash: contextHash,
+      tool_hash: toolHash,
+      workflow_key: workflowKey,
+      route_lane: routeLane,
+      task_type: taskType,
+      model_id: options.model_id,
+      tool_keys: (routing.tools || []).map((t) => t.tool_key),
+      ttl_seconds: ttlForPack(routing),
+    });
+  } catch {
+    /* non-blocking */
+  }
 
   return {
     ...catalogPack,

@@ -4,11 +4,23 @@
 
 import { trackAgentSamEvent, estimateCostUsd, estimateTokens } from "./analytics.js";
 import {
+  EMERGENCY_FALLBACK_MODELS,
   getFallbackChain,
   normalizeChatRouting,
 } from "./ai-registry.js";
 
 const MAX_SYSTEM_CHARS = 12000;
+
+const USER_REPLIES = {
+  vision_no_image:
+    "I see you want image review, but I couldn't load the attachment for visual analysis. Try re-uploading the image, or describe what you'd like me to review.",
+  vision_failed:
+    "I couldn't analyze the image right now. Try again in a moment, re-upload the image, or describe what you want reviewed in text.",
+  image_gen_failed:
+    "I couldn't generate an image right now. Try again in a moment or simplify the prompt.",
+  all_models_failed:
+    "I hit a temporary issue reaching the AI models. Please try again in a moment.",
+};
 
 function parseJson(raw, fallback = null) {
   try {
@@ -64,6 +76,71 @@ function normalizeImageBytes(result) {
   return null;
 }
 
+function resolveImageDataUrl(routing) {
+  if (routing.image_base64) {
+    const raw = String(routing.image_base64).replace(/^data:[^;]+;base64,/, "");
+    const mime = routing.image_mime_type || "image/jpeg";
+    return `data:${mime};base64,${raw}`;
+  }
+  if (routing.image_url) {
+    const url = String(routing.image_url);
+    if (url.startsWith("http") || url.startsWith("data:")) return url;
+    return url;
+  }
+  return null;
+}
+
+function hasVisionInput(routing) {
+  return Boolean(resolveImageDataUrl(routing));
+}
+
+function isModelCompatible(model, taskType, routing) {
+  const modelTask = model.task_type || taskType;
+  if (taskType === "image_generation") return modelTask === "image_generation";
+  if (taskType === "image_to_text") {
+    if (modelTask !== "image_to_text") return false;
+    if (!hasVisionInput(routing) && !model.supports_vision) return false;
+    return true;
+  }
+  if (modelTask === "image_generation" || modelTask === "image_to_text") return false;
+  if (modelTask === "embedding" || modelTask === "rerank" || modelTask === "safety") return false;
+  return modelTask === taskType || modelTask === "text_generation" || modelTask === "code_generation";
+}
+
+function buildVisionPayload(model, systemPrompt, userMessage, routing, defaults) {
+  const user = String(userMessage || "").slice(0, 4000);
+  const imageUrl = resolveImageDataUrl(routing);
+  if (!imageUrl) throw new Error("vision_requires_image");
+
+  const useMessagesFormat = model.supports_vision !== false;
+  if (useMessagesFormat) {
+    return {
+      messages: [
+        { role: "system", content: trimSystem(systemPrompt) },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: user },
+            { type: "image_url", image_url: { url: imageUrl } },
+          ],
+        },
+      ],
+      max_tokens: defaults.max_tokens || 1200,
+      ...defaults,
+    };
+  }
+
+  return {
+    messages: [
+      { role: "system", content: trimSystem(systemPrompt) },
+      { role: "user", content: user },
+    ],
+    image: imageUrl,
+    max_tokens: defaults.max_tokens || 1200,
+    ...defaults,
+  };
+}
+
 async function executeModel(env, model, systemPrompt, userMessage, routing) {
   const defaults =
     model.request_defaults ||
@@ -92,24 +169,7 @@ async function executeModel(env, model, systemPrompt, userMessage, routing) {
   }
 
   if (taskType === "image_to_text") {
-    const image = routing.image_base64 || routing.image_url;
-    if (!image) throw new Error("vision_requires_image");
-
-    const payload = {
-      messages: [
-        { role: "system", content: trimSystem(systemPrompt) },
-        { role: "user", content: user },
-      ],
-      max_tokens: defaults.max_tokens || 1200,
-      ...defaults,
-    };
-
-    if (routing.image_base64) {
-      payload.image = routing.image_base64;
-    } else {
-      payload.image = { url: routing.image_url };
-    }
-
+    const payload = buildVisionPayload(model, systemPrompt, userMessage, routing, defaults);
     const result = await env.AGENTSAM_WAI.run(model.model_id, payload);
     const reply = extractReply(result).trim();
     if (reply) return { reply };
@@ -148,13 +208,99 @@ function analyticsBase(routing) {
   };
 }
 
+function preflightAiRequest(routing) {
+  const taskType = routing.task_type;
+
+  if (taskType === "image_to_text" && !hasVisionInput(routing)) {
+    return {
+      ok: false,
+      user_reply: USER_REPLIES.vision_no_image,
+      error: "vision_requires_image",
+      recoverable: true,
+    };
+  }
+
+  return { ok: true };
+}
+
+async function runTextFallback(env, systemPrompt, userMessage, routing, trackOpts) {
+  const textRouting = normalizeChatRouting({
+    ...routing,
+    task_type: routing.repo_related ? "code_generation" : "text_generation",
+    lane: routing.repo_related ? "code" : "general",
+    has_image: false,
+    image_base64: null,
+    image_url: null,
+    vision_downgraded: true,
+  });
+
+  const chain = await getFallbackChain(env, textRouting);
+  const compatible = chain.filter((m) => isModelCompatible(m, textRouting.task_type, textRouting));
+  const models = compatible.length ? compatible : EMERGENCY_FALLBACK_MODELS.map((m) => ({
+    ...m,
+    request_defaults: parseJson(m.request_defaults_json, {}),
+    emergency: true,
+  }));
+
+  for (const model of models) {
+    try {
+      const output = await executeModel(env, model, systemPrompt, userMessage, textRouting);
+      if (output?.reply) {
+        await trackAgentSamEvent(
+          env,
+          {
+            event_type: "ai_model",
+            event_name: "vision_downgraded_to_text",
+            status: "success",
+            model_id: model.model_id,
+            task_type: textRouting.task_type,
+            metadata: { original_task_type: routing.task_type },
+          },
+          trackOpts
+        );
+        return {
+          ok: true,
+          reply: output.reply,
+          model: model.model_id,
+          selected_model: model.model_id,
+          model_lane: model.lane,
+          task_type: textRouting.task_type,
+          auxiliary_task_type: routing.task_type,
+          vision_downgraded: true,
+          fallback_used: true,
+          registry: !model.emergency,
+          attempted_models: [{ model_id: model.model_id, ok: true, vision_downgrade: true }],
+        };
+      }
+    } catch {
+      /* try next */
+    }
+  }
+
+  return null;
+}
+
 export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}) {
   if (!env.AGENTSAM_WAI) {
     return { ok: false, stub: true, error: "AGENTSAM_WAI not bound" };
   }
 
   const normalized = normalizeChatRouting(routing);
+  const preflight = preflightAiRequest(normalized);
+  if (!preflight.ok) {
+    return {
+      ok: false,
+      recoverable: true,
+      user_reply: preflight.user_reply,
+      error: preflight.error,
+      task_type: normalized.task_type,
+      attempted_models: [],
+    };
+  }
+
   const chain = await getFallbackChain(env, normalized);
+  const compatibleChain = chain.filter((m) => isModelCompatible(m, normalized.task_type, normalized));
+
   const attemptedModels = [];
   let selectedModel = null;
   let lastError = null;
@@ -162,8 +308,19 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
   const aiStarted = Date.now();
   const trackOpts = analyticsBase(routing);
 
-  for (let index = 0; index < chain.length; index += 1) {
-    const model = chain[index];
+  const modelsToTry =
+    compatibleChain.length > 0
+      ? compatibleChain
+      : normalized.task_type === "text_generation" || normalized.task_type === "code_generation"
+        ? EMERGENCY_FALLBACK_MODELS.map((m) => ({
+            ...m,
+            request_defaults: parseJson(m.request_defaults_json, {}),
+            emergency: true,
+          }))
+        : [];
+
+  for (let index = 0; index < modelsToTry.length; index += 1) {
+    const model = modelsToTry[index];
     const started = Date.now();
 
     try {
@@ -288,8 +445,46 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
     }
   }
 
+  if (normalized.task_type === "image_to_text") {
+    const downgrade = await runTextFallback(env, systemPrompt, userMessage, normalized, trackOpts);
+    if (downgrade?.ok) {
+      return {
+        ...downgrade,
+        input_tokens: estimateTokens(userMessage) + estimateTokens(systemPrompt),
+        output_tokens: estimateTokens(downgrade.reply),
+        ai_latency_ms: Date.now() - aiStarted,
+        estimated_cost_usd: 0,
+      };
+    }
+  }
+
+  const userReply =
+    normalized.task_type === "image_generation"
+      ? USER_REPLIES.image_gen_failed
+      : normalized.task_type === "image_to_text"
+        ? USER_REPLIES.vision_failed
+        : USER_REPLIES.all_models_failed;
+
+  await trackAgentSamEvent(
+    env,
+    {
+      event_type: "error",
+      event_name: "all_models_failed",
+      status: "failed",
+      task_type: normalized.task_type,
+      error_code: lastError?.message || "all_models_failed",
+      error_message: lastError?.message || "all_models_failed",
+      error_stage: "ai_run",
+      attempted_models: attemptedModels,
+      ai_latency_ms: Date.now() - aiStarted,
+    },
+    trackOpts
+  );
+
   return {
     ok: false,
+    recoverable: true,
+    user_reply: userReply,
     error: lastError?.message || "all_models_failed",
     selected_model: selectedModel?.model_id || null,
     model_lane: normalized.lane,
