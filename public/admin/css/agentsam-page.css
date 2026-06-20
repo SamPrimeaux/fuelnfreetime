@@ -311,6 +311,29 @@ body.agentsam-page-body .console-main--bleed {
   max-width: 560px;
 }
 
+.agentsam-page-github {
+  text-align: center;
+  font-size: 12px;
+  margin: 10px auto 0;
+  max-width: 640px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: rgba(59, 130, 246, 0.08);
+  color: #93c5fd;
+}
+
+.agentsam-page-github a {
+  color: #bfdbfe;
+  font-weight: 600;
+}
+
+.agentsam-page-github.is-ok {
+  border-color: rgba(34, 197, 94, 0.25);
+  background: rgba(34, 197, 94, 0.08);
+  color: #86efac;
+}
+
 @media (max-width: 640px) {
   .agentsam-page-stage {
     padding-bottom: 200px;

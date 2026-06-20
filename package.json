@@ -31,6 +31,7 @@
     "db:seed:agentsam-workflow-nodes-studio": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/seed-agentsam-workflow-nodes-studio.sql",
     "db:install:agentsam-workflows": "npm run db:migrate:agentsam-workflows && npm run db:seed:agentsam-workflows",
     "db:install:agentsam-studio": "npm run db:migrate:agentsam-workflows-v2 && npm run db:seed:agentsam-workflows-studio && npm run db:seed:agentsam-workflow-nodes-studio",
+    "db:migrate:admin-github": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-admin-github-oauth.sql",
     "db:migrate:agentsam-skills": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-agentsam-platform.sql",
     "db:migrate:cms-r2": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-cms-r2.sql",
     "agentsam:skills:sync": "node scripts/sync-agentsam-skills.mjs",

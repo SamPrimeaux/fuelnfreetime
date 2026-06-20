@@ -3,6 +3,7 @@
  */
 
 import { FNF_GITHUB_REPO, FNF_TENANT_ID, FNF_WORKSPACE_ID } from "./constants.js";
+import { fetchGithubContextForAgent, githubStatus } from "./github-client.js";
 
 const DEFAULT_MCP_URL = "https://mcp.inneranimalmedia.com/mcp";
 const DEFAULT_IAM_ORIGIN = "https://inneranimalmedia.com";
@@ -114,46 +115,37 @@ export async function probeGitHubViaBridge(env) {
   return { connected: body?.ok !== false, has_fnf_repo: hasFnf, sample: body };
 }
 
-export async function fetchGithubContextForChat(env, message) {
+export async function fetchGithubContextForChat(env, message, userId = null) {
+  const direct = await fetchGithubContextForAgent(env, message, userId);
+  if (direct) return direct;
+
   if (!bridgeConfigured(env)) return null;
 
   const hay = message.toLowerCase();
   const repo = String(env.FNF_GITHUB_REPO || FNF_GITHUB_REPO);
 
   if (/github|repo|commit|branch|pr|pull request|code|deploy|worker|migration/.test(hay)) {
-    const branches = await callMcpTool(env, "agentsam_github_branch_list", { repo });
-    const branchBody = parseToolText(branches);
-    if (branchBody?.ok === false && branchBody?.error === "github_not_connected") {
-      return "GITHUB MCP: not connected — connect GitHub via IAM integrations (see MCP connect URLs in admin).";
+    const listed = await callMcpTool(env, "agentsam_github_repo_list", {});
+    const body = parseToolText(listed);
+    if (body?.ok === false && body?.error === "github_not_connected") {
+      return "GITHUB MCP (bridge): not connected — set FNF_GITHUB_TOKEN or connect GitHub OAuth in AgentSam.";
     }
-    if (branchBody?.ok !== false) {
-      const names = (branchBody?.branches || [])
-        .slice(0, 6)
-        .map((b) => b.name)
-        .filter(Boolean);
-      return `GITHUB MCP (via bridge):\nRepo: ${repo}\nBranches: ${names.join(", ") || "(none listed)"}`;
-    }
-  }
-
-  if (/search|find|where is|locate/.test(hay)) {
-    const q = message.replace(/\b(search|find|where is|locate|in repo|github)\b/gi, "").trim().slice(0, 120);
-    if (q.length > 2) {
-      const search = await callMcpTool(env, "agentsam_github_search_code", {
-        repo,
-        query: `${q} repo:${repo}`,
-      });
-      const searchBody = parseToolText(search);
-      if (searchBody?.ok !== false && searchBody?.items) {
-        const hits = searchBody.items
-          .slice(0, 5)
-          .map((i) => `- ${i.path}`)
-          .join("\n");
-        return `GITHUB CODE SEARCH:\n${hits || "(no hits)"}`;
-      }
+    if (body?.ok !== false) {
+      const hasFnf = (body?.repos || []).some((r) => String(r.full_name || "").toLowerCase() === repo.toLowerCase());
+      return `GITHUB MCP (bridge):\nRepo: ${repo}\nAccessible: ${hasFnf ? "yes" : "check token scope"}`;
     }
   }
 
   return null;
+}
+
+export async function probeGitHubConnection(env, userId = null) {
+  const direct = await githubStatus(env, userId);
+  if (direct.connected) return { ...direct, path: "direct" };
+
+  if (!bridgeConfigured(env)) return { connected: false, path: "none" };
+  const bridge = await probeGitHubViaBridge(env);
+  return { ...bridge, path: "bridge" };
 }
 
 export function mcpConnectUrls(env) {
@@ -163,6 +155,7 @@ export function mcpConnectUrls(env) {
     iam_mcp_connect: `${mcpBase}/auth/connect`,
     iam_mcp_authorize: `${mcpBase}/auth/authorize`,
     iam_github_oauth: `${iam}/api/oauth/github/start?return_to=${encodeURIComponent("/dashboard/settings/integrations")}`,
+    fnf_github_oauth: "/api/admin/agentsam/github/start",
     iam_integrations: `${iam}/dashboard/settings/integrations`,
   };
 }

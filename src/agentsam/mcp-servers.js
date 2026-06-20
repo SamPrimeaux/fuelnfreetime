@@ -8,7 +8,7 @@ import {
   mcpConnectUrls,
   mcpUrl,
   probeBridge,
-  probeGitHubViaBridge,
+  probeGitHubConnection,
 } from "./mcp-client.js";
 
 export const MCP_SERVERS = [
@@ -38,7 +38,7 @@ export const MCP_SERVERS = [
   },
 ];
 
-export async function listMcpServersForUi(env) {
+export async function listMcpServersForUi(env, userId = null) {
   const bridge = bridgeConfigured(env);
   let bridgeReady = false;
   let githubReady = false;
@@ -46,11 +46,10 @@ export async function listMcpServersForUi(env) {
   if (bridge) {
     const probe = await probeBridge(env);
     bridgeReady = probe.ok;
-    if (bridgeReady) {
-      const gh = await probeGitHubViaBridge(env);
-      githubReady = gh.connected;
-    }
   }
+
+  const gh = await probeGitHubConnection(env, userId);
+  githubReady = gh.connected === true;
 
   const urls = mcpConnectUrls(env);
 

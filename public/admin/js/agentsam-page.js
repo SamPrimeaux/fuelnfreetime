@@ -210,14 +210,49 @@ function bindUi() {
   }
 }
 
+function renderGithubBanner(gh, connectUrls) {
+  const box = $("agentsam-page-github");
+  if (!box) return;
+
+  const params = new URLSearchParams(location.search);
+  const flash = params.get("github");
+
+  if (gh?.connected) {
+    box.hidden = false;
+    box.className = "agentsam-page-github is-ok";
+    box.textContent = `GitHub connected (${gh.scoped_repo}) · ${gh.login || gh.source || "ready"}`;
+    if (flash) history.replaceState(null, "", "/admin/agentsam");
+    return;
+  }
+
+  box.hidden = false;
+  box.className = "agentsam-page-github";
+  const connect = connectUrls?.fnf_github_oauth || "/api/admin/agentsam/github/start";
+  let msg = `GitHub not connected for ${gh?.scoped_repo || "SamPrimeaux/fuelnfreetime"}. `;
+  if (flash === "oauth_not_configured") {
+    msg = "GitHub OAuth app not configured yet (FNF_GITHUB_CLIENT_ID/SECRET). Service token may still work. ";
+  } else if (flash === "no_repo_access") {
+    msg = "GitHub account connected but cannot access fuelnfreetime repo. ";
+  } else if (flash === "connected") {
+    msg = "GitHub connected. ";
+  }
+  box.innerHTML = `${msg}<a href="${connect}">Connect GitHub</a> (repo-scoped)`;
+  if (flash) history.replaceState(null, "", "/admin/agentsam");
+}
+
 async function boot() {
   bindUi();
   try {
-    const res = await fetch("/api/admin/agentsam/tools", { credentials: "include" });
-    const data = await res.json();
+    const [toolsRes, ghRes] = await Promise.all([
+      fetch("/api/admin/agentsam/tools", { credentials: "include" }),
+      fetch("/api/admin/agentsam/github/status", { credentials: "include" }),
+    ]);
+    const data = await toolsRes.json();
+    const gh = await ghRes.json();
     if (data.ok) {
       renderMcpList(data.mcp_servers);
       renderChips(data.quick_actions);
+      renderGithubBanner(gh, data.connect_urls);
     }
   } catch {
     renderChips([

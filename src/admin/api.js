@@ -37,6 +37,12 @@ import {
   agentsamTools,
   agentsamWorkflowsList,
 } from "./agentsam.js";
+import {
+  agentsamGithubOAuthCallback,
+  agentsamGithubOAuthDisconnect,
+  agentsamGithubOAuthStart,
+  agentsamGithubOAuthStatus,
+} from "./agentsam-github.js";
 import { onlineStoreOverview, getStorePreferences, postStorePreferences } from "./store.js";
 
 function json(data, init = {}) {
@@ -439,13 +445,27 @@ export async function handleAdminApi(request, env, url) {
     return agentsamChat(request, env);
   }
   if (path === "/api/admin/agentsam/status" && method === "GET") {
-    return agentsamStatus(env);
+    const user = await getSessionUser(request, env);
+    return agentsamStatus(env, user?.id || null);
   }
   if (path === "/api/admin/agentsam/tools" && method === "GET") {
     return agentsamTools(env);
   }
   if (path === "/api/admin/agentsam/mcp/status" && method === "GET") {
-    return agentsamMcpStatus(env);
+    const user = await getSessionUser(request, env);
+    return agentsamMcpStatus(env, user?.id || null);
+  }
+  if (path === "/api/admin/agentsam/github/start" && method === "GET") {
+    return agentsamGithubOAuthStart(request, env);
+  }
+  if (path === "/api/admin/agentsam/github/callback" && method === "GET") {
+    return agentsamGithubOAuthCallback(request, env);
+  }
+  if (path === "/api/admin/agentsam/github/status" && method === "GET") {
+    return agentsamGithubOAuthStatus(request, env);
+  }
+  if (path === "/api/admin/agentsam/github/disconnect" && method === "POST") {
+    return agentsamGithubOAuthDisconnect(request, env);
   }
   if (path === "/api/admin/agentsam/workflows" && method === "GET") {
     return agentsamWorkflowsList(env);

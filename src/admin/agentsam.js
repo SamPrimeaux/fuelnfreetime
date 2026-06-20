@@ -1,23 +1,23 @@
+import { runAgentSamAi } from "../agentsam/ai-run.js";
 import {
   bridgeConfigured,
   fetchGithubContextForChat,
   mcpConnectUrls,
   probeBridge,
-  probeGitHubViaBridge,
+  probeGitHubConnection,
 } from "../agentsam/mcp-client.js";
 import { listMcpServersForUi, mcpRuntimeConfig } from "../agentsam/mcp-servers.js";
 import { listDrawerWorkflows, listStudioWorkflows, routeAgentsamRequest } from "../agentsam/router.js";
 import { getAgentSamSkill, listAgentSamSkills } from "../agentsam/skills.js";
-
-const AGENTSAM_MODEL = "@cf/meta/llama-3.1-8b-instruct";
+import { getSessionUser } from "../lib/auth.js";
 
 const SYSTEM_PROMPT = `You are Agent Sam for Fuel & Free Time (fuelnfreetime.com).
 You handle everything through one conversation: store ops, content writing, creative direction, brand work, email drafts, brainstorming, and repo/code guidance.
 Be concise, practical, and on-brand — rugged, earned freedom, motorsports and garage culture.
-Use LIVE STORE DATA, routed WORKFLOW/SKILLS, and MCP/GITHUB context when present.
+Use LIVE STORE DATA, routed WORKFLOW/SKILLS, and GITHUB context when present.
 Do not invent inventory, orders, or prices.
 For image/logo/code tasks: produce clear deliverables, steps, or drafts; note when live publish or asset replacement needs owner approval.
-When GitHub MCP context says not connected, tell the user to connect GitHub in IAM integrations (link provided in routing).`;
+GitHub access is scoped to SamPrimeaux/fuelnfreetime only.`;
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -29,17 +29,6 @@ async function readJson(request) {
   } catch {
     return null;
   }
-}
-
-function extractReply(result) {
-  if (!result) return "";
-  if (typeof result.response === "string") return result.response;
-  if (typeof result.content === "string") return result.content;
-  if (Array.isArray(result.messages)) {
-    const last = result.messages[result.messages.length - 1];
-    if (last?.content) return String(last.content);
-  }
-  return JSON.stringify(result);
 }
 
 async function liveStoreContext(env) {
@@ -82,27 +71,31 @@ export async function agentsamChat(request, env) {
   const message = (body?.message || "").trim();
   if (!message) return json({ error: "message required" }, { status: 400 });
 
+  const user = await getSessionUser(request, env);
   const context = body?.context || {};
   const routing = await routeAgentsamRequest(env, message, context);
 
-  const mcpContext = bridgeConfigured(env) ? await fetchGithubContextForChat(env, message) : null;
+  const mcpContext = await fetchGithubContextForChat(env, message, user?.id || null);
   const connectUrls = mcpConnectUrls(env);
 
-  const contextLines = [
+  const systemPrompt = [
+    SYSTEM_PROMPT,
     context.page ? `Admin UI path: ${context.page}.` : "",
     context.slug ? `Editing CMS page slug: ${context.slug}.` : "",
     context.workflow_key ? `Selected workflow: ${context.workflow_key}.` : "",
     await liveStoreContext(env),
     mcpContext,
-    connectUrls.iam_integrations
-      ? `IAM integrations (GitHub OAuth): ${connectUrls.iam_integrations}`
+    connectUrls.fnf_github_oauth
+      ? `GitHub OAuth (FNF-scoped): ${new URL(connectUrls.fnf_github_oauth, request.url).toString()}`
       : "",
     ...routing.system_blocks,
   ]
     .filter(Boolean)
     .join("\n\n");
 
-  if (!env.AGENTSAM_WAI) {
+  const ai = await runAgentSamAi(env, systemPrompt, message);
+
+  if (ai.stub) {
     return json({
       ok: true,
       reply:
@@ -113,36 +106,27 @@ export async function agentsamChat(request, env) {
     });
   }
 
-  try {
-    const result = await env.AGENTSAM_WAI.run(AGENTSAM_MODEL, {
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "system", content: contextLines },
-        { role: "user", content: message.slice(0, 4000) },
-      ],
-    });
-
-    const reply = extractReply(result).trim() || "I couldn't generate a response. Try again.";
-    return json({
-      ok: true,
-      reply,
-      model: AGENTSAM_MODEL,
-      routing,
-      mcp: { bridge: bridgeConfigured(env), github_context: !!mcpContext },
-    });
-  } catch (err) {
-    console.error("agentsam chat error", err);
+  if (!ai.ok) {
+    console.error("agentsam chat ai failure", ai.error, ai.detail);
     return json(
       {
         error: "Agent Sam could not reach Workers AI. Try again in a moment.",
-        detail: err?.message || String(err),
+        detail: ai.error,
       },
       { status: 502 }
     );
   }
+
+  return json({
+    ok: true,
+    reply: ai.reply,
+    model: ai.model,
+    routing,
+    mcp: { bridge: bridgeConfigured(env), github_context: !!mcpContext },
+  });
 }
 
-export async function agentsamStatus(env) {
+export async function agentsamStatus(env, userId = null) {
   let skillCount = 0;
   let workflowCount = 0;
   try {
@@ -158,37 +142,38 @@ export async function agentsamStatus(env) {
     /* tables may not exist yet */
   }
 
-  const mcpServers = await listMcpServersForUi(env);
+  const mcpServers = await listMcpServersForUi(env, userId);
   const bridgeProbe = bridgeConfigured(env) ? await probeBridge(env) : null;
+  const github = await probeGitHubConnection(env, userId);
 
   return json({
     ok: true,
     bound: !!env.AGENTSAM_WAI,
-    model: AGENTSAM_MODEL,
     name: "Agent Sam",
     skills_registered: skillCount,
     workflows_registered: workflowCount,
     skills_storage: "D1 agentsam_skill + R2 agentsam/skills/",
     bridge_configured: bridgeConfigured(env),
     bridge_ready: bridgeProbe?.ok ?? false,
+    github,
     mcp_servers: mcpServers,
     connect_urls: mcpConnectUrls(env),
   });
 }
 
-export async function agentsamMcpStatus(env) {
+export async function agentsamMcpStatus(env, userId = null) {
   const bridge = bridgeConfigured(env);
   const probe = bridge ? await probeBridge(env) : null;
-  const github = bridge && probe?.ok ? await probeGitHubViaBridge(env) : null;
+  const github = await probeGitHubConnection(env, userId);
 
   return json({
     ok: true,
     ...mcpRuntimeConfig(env),
     bridge_ready: probe?.ok ?? false,
     tool_count: probe?.tool_count ?? 0,
-    github: github || { connected: false },
+    github,
     connect_urls: mcpConnectUrls(env),
-    mcp_servers: await listMcpServersForUi(env),
+    mcp_servers: await listMcpServersForUi(env, userId),
   });
 }
 
@@ -209,7 +194,7 @@ export async function agentsamTools(env) {
       { label: "Create an image", prompt: "Generate a premium collection banner direction for Fuel n Freetime" },
       { label: "Write or edit", prompt: "Draft product copy for our latest tee — rugged, earned freedom tone" },
       { label: "Look something up", prompt: "What should we publish next on fuelnfreetime.com?" },
-      { label: "Repo work", prompt: "Summarize what changed in the fuelnfreetime repo and what to verify before deploy" },
+      { label: "Repo work", prompt: "Summarize recent commits on fuelnfreetime and what to verify before deploy" },
     ],
   });
 }
