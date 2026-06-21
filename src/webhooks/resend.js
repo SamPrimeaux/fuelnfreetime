@@ -89,6 +89,22 @@ async function applyInboundEvent(env, event, apiKey) {
   }
 
   const preview = (bodyText || subject || "Inbound message").slice(0, 240);
+  const mailboxes = await (async () => {
+    try {
+      const { listMailboxes } = await import("../lib/mail-mailboxes.js");
+      return listMailboxes(env);
+    } catch {
+      return [];
+    }
+  })();
+  const mailbox = mailboxes.find((b) => {
+    const addr = b.address.toLowerCase();
+    return (toEmail || "").toLowerCase().includes(addr);
+  });
+  const labels = mailbox
+    ? ["inbound", mailbox.kind === "payments" ? "payments" : "primary", mailbox.label.toLowerCase()]
+    : ["inbound", "primary"];
+
   await env.DB.prepare(
     `INSERT INTO mail_messages (
        id, direction, from_email, to_email, subject, preview, body_text, body_html,
@@ -105,8 +121,13 @@ async function applyInboundEvent(env, event, apiKey) {
       bodyText,
       bodyHtml,
       providerId,
-      JSON.stringify(["inbound", "primary"]),
-      JSON.stringify({ source: "resend.inbound", event })
+      JSON.stringify(labels),
+      JSON.stringify({
+        source: "resend.inbound",
+        mailbox_id: mailbox?.id || null,
+        mailbox_address: mailbox?.address || null,
+        event,
+      })
     )
     .run()
     .catch(() => {});

@@ -1,4 +1,5 @@
 import { sendResendEmail, resendConfigured, getResendDomainStatus } from "../lib/resend.js";
+import { getMailboxBySlug, listMailboxes, matchMailboxForMessage } from "../lib/mail-mailboxes.js";
 
 const DEFAULT_SETTINGS = {
   gmailAddress: "",
@@ -9,6 +10,7 @@ const DEFAULT_SETTINGS = {
   gmailSend: true,
   gmailDrafts: true,
   resendFrom: "hello@fuelnfreetime.com",
+  resendPaymentsFrom: "payments@fuelnfreetime.com",
   resendDomain: "fuelnfreetime.com",
   resendReplyTo: "",
   resendApiKey: "",
@@ -110,10 +112,14 @@ function formatMailDate(iso) {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-function rowToMessage(row, index) {
+function rowToMessage(row, mailboxes = []) {
   const labels = JSON.parse(row.labels_json || "[]");
   const from = row.from_email || "Unknown";
   const senderName = from.includes("@") ? from.split("@")[0] : from;
+  const metadata = JSON.parse(row.metadata_json || "{}");
+  const mailbox = metadata.mailbox_id
+    ? mailboxes.find((b) => b.id === metadata.mailbox_id)
+    : matchMailboxForMessage(row, mailboxes);
   return {
     id: row.id,
     db_id: row.id,
@@ -142,12 +148,15 @@ function rowToMessage(row, index) {
     body_html: row.body_html || "",
     status: row.status,
     provider_id: row.provider_id,
-    _sort: index,
+    mailbox_id: mailbox?.id || metadata.mailbox_id || null,
+    mailbox_label: mailbox?.label || null,
+    mailbox_address: mailbox?.address || null,
   };
 }
 
-async function recordOutboundMessage(env, { id, from, to, subject, body, status = "sent" }) {
+async function recordOutboundMessage(env, { id, from, to, subject, body, status = "sent", mailbox = null }) {
   const preview = (body || subject || "").slice(0, 240);
+  const labels = mailbox?.kind === "payments" ? ["payments", "sent"] : ["primary", "sent"];
   await env.DB.prepare(
     `INSERT INTO mail_messages (
        id, direction, from_email, to_email, subject, preview, body_text,
@@ -156,18 +165,44 @@ async function recordOutboundMessage(env, { id, from, to, subject, body, status 
   )
     .bind(
       `out_${id}`,
-      from,
+      from.includes("@") ? from.match(/<([^>]+)>/)?.[1] || from : from,
       to,
       subject,
       preview,
       body,
       status,
       id,
-      JSON.stringify(["primary", "sent"]),
-      JSON.stringify({ source: "admin.compose" })
+      JSON.stringify(labels),
+      JSON.stringify({
+        source: "admin.compose",
+        mailbox_id: mailbox?.id || null,
+        mailbox_address: mailbox?.address || null,
+      })
     )
     .run()
     .catch(() => {});
+}
+
+async function resolveSendFrom(env, settings, body) {
+  const slug = body.fromMailbox || body.mailbox || null;
+  if (slug) {
+    const mailbox = await getMailboxBySlug(env, slug);
+    if (mailbox) {
+      return {
+        from: `${mailbox.resend_from_name || mailbox.label} <${mailbox.address}>`,
+        mailbox,
+      };
+    }
+  }
+  if (body.fromProvider === "payments") {
+    const mailbox = await getMailboxBySlug(env, "payments");
+    const addr = settings.resendPaymentsFrom || mailbox?.address || "payments@fuelnfreetime.com";
+    return {
+      from: `${mailbox?.resend_from_name || "Fuel & Free Time Payments"} <${addr}>`,
+      mailbox,
+    };
+  }
+  return { from: settings.resendFrom, mailbox: null };
 }
 
 export async function getMailSettings(env) {
@@ -208,23 +243,46 @@ export async function getMailPartial(request, env) {
   });
 }
 
-export async function listMailMessages(env) {
+export async function getMailMailboxes(env) {
+  const mailboxes = await listMailboxes(env);
+  return Response.json({ ok: true, mailboxes });
+}
+
+export async function listMailMessages(env, url) {
+  const mailboxSlug = url?.searchParams?.get("mailbox") || "";
+  const mailboxes = await listMailboxes(env);
+  const mailbox = mailboxSlug ? await getMailboxBySlug(env, mailboxSlug) : null;
+
   try {
-    const { results } = await env.DB.prepare(
-      `SELECT id, direction, from_email, to_email, subject, preview, body_text, body_html,
-              status, provider, provider_id, labels_json, created_at
-       FROM mail_messages
-       ORDER BY datetime(created_at) DESC
-       LIMIT 100`
-    ).all();
+    let sql = `SELECT id, direction, from_email, to_email, subject, preview, body_text, body_html,
+              status, provider, provider_id, labels_json, metadata_json, created_at
+       FROM mail_messages`;
+    const binds = [];
+
+    if (mailbox) {
+      const addr = mailbox.address.toLowerCase();
+      const local = addr.split("@")[0];
+      sql += ` WHERE (
+        (direction = 'inbound' AND (LOWER(to_email) LIKE ? OR LOWER(to_email) = ?))
+        OR (direction = 'outbound' AND (LOWER(from_email) = ? OR LOWER(from_email) LIKE ?))
+        OR json_extract(metadata_json, '$.mailbox_id') = ?
+      )`;
+      binds.push(`%${addr}%`, addr, addr, `%${local}@%`, mailbox.id);
+    }
+
+    sql += ` ORDER BY datetime(created_at) DESC LIMIT 100`;
+
+    const stmt = binds.length ? env.DB.prepare(sql).bind(...binds) : env.DB.prepare(sql);
+    const { results } = await stmt.all();
 
     return Response.json({
       ok: true,
-      messages: (results || []).map(rowToMessage),
+      messages: (results || []).map((row) => rowToMessage(row, mailboxes)),
       source: "d1",
+      mailbox: mailbox?.id || null,
     });
   } catch {
-    return Response.json({ ok: true, messages: [], source: "d1" });
+    return Response.json({ ok: true, messages: [], source: "d1", mailbox: null });
   }
 }
 
@@ -236,11 +294,12 @@ export async function sendMailPreview(request, env) {
 
   const settings = await loadSettings(env);
   const provider = body.fromProvider === "gmail" ? "gmail" : "resend";
+  const { from: resolvedFrom, mailbox } = await resolveSendFrom(env, settings, body);
   const payload = {
     from:
       provider === "gmail"
         ? settings.gmailAddress || "(gmail not configured)"
-        : settings.resendFrom,
+        : resolvedFrom,
     to: body.to,
     subject: body.subject,
     replyTo: settings.resendReplyTo || settings.gmailAddress || null,
@@ -285,7 +344,7 @@ export async function sendMailPreview(request, env) {
     : `<p>${payload.body.replace(/\n/g, "<br>")}</p>`;
 
   const result = await sendResendEmail(env, {
-    from: settings.resendFrom,
+    from: resolvedFrom,
     to: body.to,
     subject: body.subject,
     html,
@@ -308,11 +367,12 @@ export async function sendMailPreview(request, env) {
 
   await recordOutboundMessage(env, {
     id: result.id,
-    from: settings.resendFrom,
+    from: resolvedFrom,
     to: body.to,
     subject: body.subject,
     body: payload.body,
     status: "sent",
+    mailbox,
   });
 
   return Response.json({

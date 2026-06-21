@@ -11,6 +11,7 @@ import {
   getMailSettings,
   postMailSettings,
   listMailMessages,
+  getMailMailboxes,
   sendMailPreview,
   getResendStatus,
   getMailPartial,
@@ -460,7 +461,8 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   if (path === "/api/admin/mail/settings" && method === "GET") return getMailSettings(env);
   if (path === "/api/admin/mail/settings" && method === "POST") return postMailSettings(request, env);
   if (path === "/api/admin/mail/partial" && method === "GET") return getMailPartial(request, env);
-  if (path === "/api/admin/mail/messages" && method === "GET") return listMailMessages(env);
+  if (path === "/api/admin/mail/messages" && method === "GET") return listMailMessages(env, url);
+  if (path === "/api/admin/mail/mailboxes" && method === "GET") return getMailMailboxes(env);
   if (path === "/api/admin/mail/send" && method === "POST") return sendMailPreview(request, env);
   if (path === "/api/admin/mail/resend/status" && method === "GET") return getResendStatus(env);
 

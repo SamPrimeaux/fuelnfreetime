@@ -16,13 +16,29 @@ let messageSource = "d1";
 let selectedId = null;
 let activeFilter = "all";
 let activeFolder = "inbox";
+let activeMailbox = "";
 let selectedContextId = null;
 let toastTimer;
 let adminEmail = "";
 let composeSettings = { resendFrom: "hello@fuelnfreetime.com", gmailAddress: "" };
+let composeMailboxes = [];
 
 function getActiveFolder() {
   return new URLSearchParams(window.location.search).get("folder") || "inbox";
+}
+
+function getActiveMailbox() {
+  return new URLSearchParams(window.location.search).get("mailbox") || "";
+}
+
+function mailMessagesUrl() {
+  const params = new URLSearchParams();
+  const mb = getActiveMailbox();
+  const folder = getActiveFolder();
+  if (mb) params.set("mailbox", mb);
+  if (folder && folder !== "inbox") params.set("folder", folder);
+  const qs = params.toString();
+  return `/api/admin/mail/messages${qs ? `?${qs}` : ""}`;
 }
 
 async function loadMailPartialHtml() {
@@ -78,6 +94,7 @@ async function bootMailApp() {
 
 async function initMailApp() {
   activeFolder = getActiveFolder();
+  activeMailbox = getActiveMailbox();
   try {
     bindMailEvents();
   } catch (err) {
@@ -92,7 +109,7 @@ async function initMailApp() {
   }
 
   try {
-    const data = await adminFetch("/api/admin/mail/messages");
+    const data = await adminFetch(mailMessagesUrl());
     messages = data.messages || [];
     messageSource = data.source || "d1";
   } catch {
@@ -131,8 +148,12 @@ function showToast(message) {
 
 async function loadComposeSettings() {
   try {
-    const data = await adminFetch("/api/admin/mail/settings");
-    composeSettings = data.settings || composeSettings;
+    const [settingsRes, boxesRes] = await Promise.all([
+      adminFetch("/api/admin/mail/settings"),
+      adminFetch("/api/admin/mail/mailboxes").catch(() => ({ mailboxes: [] })),
+    ]);
+    composeSettings = settingsRes.settings || composeSettings;
+    composeMailboxes = boxesRes.mailboxes || [];
   } catch {
     /* defaults */
   }
@@ -140,8 +161,12 @@ async function loadComposeSettings() {
 }
 
 function syncFolderChrome() {
-  const label = FOLDER_LABELS[activeFolder] || "Inbox";
-  if ($("folderTitle")) $("folderTitle").textContent = label;
+  const mailbox = composeMailboxes.find(
+    (b) => b.id === `mb_${activeMailbox}` || b.address.split("@")[0] === activeMailbox
+  );
+  const folderLabel = FOLDER_LABELS[activeFolder] || "Inbox";
+  const title = mailbox ? `${mailbox.label} · ${folderLabel}` : folderLabel;
+  if ($("folderTitle")) $("folderTitle").textContent = title;
 }
 
 function updateComposeFromOptions() {
@@ -149,10 +174,15 @@ function updateComposeFromOptions() {
   if (!select) return;
   const settings = composeSettings;
   const options = [];
+  for (const box of composeMailboxes) {
+    options.push(
+      `<option value="mailbox:${box.id.replace(/^mb_/, "")}">${box.resend_from_name || box.label} &lt;${box.address}&gt;</option>`
+    );
+  }
   if (settings.gmailAddress) {
     options.push(`<option value="gmail">${settings.gmailAddress} via Gmail</option>`);
   }
-  if (settings.resendFrom) {
+  if (settings.resendFrom && !composeMailboxes.some((b) => b.address === settings.resendFrom)) {
     options.push(`<option value="resend">${settings.resendFrom} via Resend</option>`);
   }
   if (!options.length) {
@@ -315,7 +345,11 @@ async function sendCompose() {
   const to = $("composeTo")?.value.trim();
   const subject = $("composeSubject")?.value.trim();
   const body = $("composeText")?.value.trim();
-  const fromProvider = $("composeFrom")?.value || "resend";
+  const fromValue = $("composeFrom")?.value || "resend";
+  let fromProvider = "resend";
+  let fromMailbox = null;
+  if (fromValue === "gmail") fromProvider = "gmail";
+  else if (fromValue.startsWith("mailbox:")) fromMailbox = fromValue.slice("mailbox:".length);
 
   if (!to || !subject) {
     showToast("To and subject required");
@@ -325,12 +359,12 @@ async function sendCompose() {
   try {
     const data = await adminFetch("/api/admin/mail/send", {
       method: "POST",
-      body: JSON.stringify({ to, subject, body, fromProvider }),
+      body: JSON.stringify({ to, subject, body, fromProvider, fromMailbox }),
     });
     $("composeSheet")?.classList.remove("open");
     showToast(data.sent ? data.message || "Sent" : data.message || data.error || "Preview only");
     if (data.sent) {
-      const refreshed = await adminFetch("/api/admin/mail/messages");
+      const refreshed = await adminFetch(mailMessagesUrl());
       messages = refreshed.messages || messages;
       messageSource = refreshed.source || messageSource;
       selectedId = messages[0]?.id ?? selectedId;
@@ -445,7 +479,7 @@ function bindMailEvents() {
   });
   $("refreshButton")?.addEventListener("click", async () => {
     try {
-      const data = await adminFetch("/api/admin/mail/messages");
+      const data = await adminFetch(mailMessagesUrl());
       messages = data.messages || messages;
       messageSource = data.source || messageSource;
       renderRows();

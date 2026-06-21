@@ -11,8 +11,8 @@
 <link rel="stylesheet" href="/admin/css/account-mail.css">
 </head>
 <body>
-<script src="/admin/js/shell.js?v=20260623"></script>
-<script src="/admin/js/account-settings.js?v=20260623"></script>
+<script src="/admin/js/shell.js?v=20260624"></script>
+<script src="/admin/js/account-settings.js?v=20260624"></script>
 <script>
 renderShell('/admin/account', `
 <div class="account-page">
@@ -79,6 +79,12 @@ renderShell('/admin/account', `
     <div class="account-panel active" id="mail-panel-accounts">
       <div class="account-card full">
         <div class="account-card-title">
+          <div><strong>@fuelnfreetime.com mailboxes</strong><span>Resend catch-all inbound routes by recipient address. Each inbox filters in Admin → Email.</span></div>
+        </div>
+        <div id="mailboxList" class="account-webhook-list"></div>
+      </div>
+      <div class="account-card full">
+        <div class="account-card-title">
           <div><strong>Connected sources</strong><span>Configure providers below. API keys for Resend are stored as Worker secrets — not in the browser.</span></div>
         </div>
         <div id="accountsList"></div>
@@ -126,6 +132,7 @@ renderShell('/admin/account', `
           </div>
           <div class="account-form-grid">
             <div class="account-field full"><label for="resendFrom">Default from email</label><input id="resendFrom" type="email" placeholder="hello@fuelnfreetime.com"></div>
+            <div class="account-field full"><label for="resendPaymentsFrom">Payments from email</label><input id="resendPaymentsFrom" type="email" placeholder="payments@fuelnfreetime.com"></div>
             <div class="account-field"><label for="resendDomain">Verified domain</label><input id="resendDomain" placeholder="fuelnfreetime.com"></div>
             <div class="account-field"><label for="resendReplyTo">Reply-to</label><input id="resendReplyTo" type="email" placeholder="support@fuelnfreetime.com"></div>
             <div class="account-field full"><label for="resendApiKey">API key (optional — prefer Worker secret)</label><input id="resendApiKey" type="password" placeholder="re_••••••••••••••••" autocomplete="off"></div>

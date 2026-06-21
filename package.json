@@ -77,6 +77,9 @@
     "dns:setup:resend": "./scripts/with-cf-admin-env.sh node scripts/setup-resend-dns.mjs",
     "dns:setup:resend:dry": "node scripts/setup-resend-dns.mjs --dry-run",
     "db:migrate:mail-inbox": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-mail-inbox.sql",
+    "db:migrate:mail-mailboxes": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-mail-mailboxes.sql",
+    "db:seed:mail-mailboxes": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/seed-mail-mailboxes.sql",
+    "mail:provision": "node scripts/provision-mailboxes.mjs",
     "mail:e2e": "node scripts/send-mail-e2e.mjs",
     "cf:status": "./scripts/with-cf-admin-env.sh node scripts/cf-status.mjs"
   },

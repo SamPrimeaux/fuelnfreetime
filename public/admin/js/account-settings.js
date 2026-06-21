@@ -7,6 +7,7 @@ const MAIL_DEFAULTS = {
   gmailSend: true,
   gmailDrafts: true,
   resendFrom: "hello@fuelnfreetime.com",
+  resendPaymentsFrom: "payments@fuelnfreetime.com",
   resendDomain: "fuelnfreetime.com",
   resendReplyTo: "",
   resendApiKey: "",
@@ -58,6 +59,7 @@ function collectSettings() {
     gmailSend: checkbox("gmailSend"),
     gmailDrafts: checkbox("gmailDrafts"),
     resendFrom: get("resendFrom")?.value.trim() || "",
+    resendPaymentsFrom: get("resendPaymentsFrom")?.value.trim() || "payments@fuelnfreetime.com",
     resendDomain: get("resendDomain")?.value.trim() || "",
     resendReplyTo: get("resendReplyTo")?.value.trim() || "",
     resendApiKey: get("resendApiKey")?.value.trim() || "",
@@ -112,13 +114,35 @@ function switchMailPanel(tab) {
   history.replaceState(null, "", tab === "accounts" ? "/admin/account#mail" : `/admin/account#mail-${tab}`);
 }
 
+function renderMailboxes(mailboxes = []) {
+  const list = $("mailboxList");
+  if (!list) return;
+  if (!mailboxes.length) {
+    list.innerHTML = `<p style="margin:0;color:#64748b;font-size:13px">No mailboxes seeded yet. Run <code>npm run mail:provision</code>.</p>`;
+    return;
+  }
+  list.innerHTML = mailboxes
+    .map(
+      (box) => `
+    <div class="account-webhook-row">
+      <div><strong>${box.label}</strong> <span>${box.kind}</span></div>
+      <code>${box.address}</code>
+      <span style="font-size:12px;color:#64748b">${box.owner_name || "Shared"}${box.owner_auth_email ? ` · notifies ${box.owner_auth_email}` : ""}</span>
+      <a href="/admin/email?mailbox=${box.address.split("@")[0]}" style="font-size:12px;font-weight:600">Open inbox →</a>
+    </div>`
+    )
+    .join("");
+}
+
 async function loadMailSettings() {
   try {
-    const [settingsRes, statusRes] = await Promise.all([
+    const [settingsRes, statusRes, boxesRes] = await Promise.all([
       adminFetch("/api/admin/mail/settings"),
       adminFetch("/api/admin/mail/resend/status").catch(() => null),
+      adminFetch("/api/admin/mail/mailboxes").catch(() => ({ mailboxes: [] })),
     ]);
     hydrateSettings(settingsRes.settings || {});
+    renderMailboxes(boxesRes.mailboxes || []);
 
     const pill = $("accountStatusPill");
     if (pill && settingsRes.providers) {

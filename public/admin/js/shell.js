@@ -72,12 +72,13 @@ const NAV = {
       icon: "email",
       href: "/admin/email",
       children: [
-        { href: "/admin/email", label: "Inbox" },
+        { href: "/admin/email", label: "All mail" },
+        { href: "/admin/email?mailbox=sam", label: "Sam @fuelnfreetime" },
+        { href: "/admin/email?mailbox=connor", label: "Connor @fuelnfreetime" },
+        { href: "/admin/email?mailbox=payments", label: "Payments @fuelnfreetime" },
         { href: "/admin/email?folder=sent", label: "Sent" },
         { href: "/admin/email?folder=starred", label: "Starred" },
         { href: "/admin/email?folder=needs", label: "Needs reply" },
-        { href: "/admin/email?folder=drafts", label: "Drafts" },
-        { href: "/admin/email?folder=archived", label: "Archived" },
       ],
     },
   ],
@@ -152,12 +153,15 @@ function adminPathBase(href) {
   return base;
 }
 
-function mailFolderFromHref(href) {
+function mailNavFromHref(href) {
   try {
     const u = new URL(href || "/admin/email", "https://fuelnfreetime.com");
-    return u.searchParams.get("folder") || "inbox";
+    return {
+      folder: u.searchParams.get("folder") || "inbox",
+      mailbox: u.searchParams.get("mailbox") || "all",
+    };
   } catch {
-    return "inbox";
+    return { folder: "inbox", mailbox: "all" };
   }
 }
 
@@ -165,7 +169,9 @@ function navActive(href, activeHref) {
   const baseHref = adminPathBase(href);
   const baseActive = adminPathBase(activeHref);
   if (baseHref === "/admin/email" && baseActive === "/admin/email") {
-    return mailFolderFromHref(href) === mailFolderFromHref(activeHref);
+    const h = mailNavFromHref(href);
+    const a = mailNavFromHref(activeHref);
+    return h.folder === a.folder && h.mailbox === a.mailbox;
   }
   if (baseHref === baseActive) return true;
   if (href === activeHref) return true;
