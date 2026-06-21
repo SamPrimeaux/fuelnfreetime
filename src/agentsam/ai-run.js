@@ -154,36 +154,38 @@ async function executeModel(env, model, systemPrompt, userMessage, routing) {
     if (!env.CLOUDFLARE_API_TOKEN) {
       throw new Error("image_generation_requires_cloudflare_api_token");
     }
-    // CF AI Gateway dynamic route — OpenAI-compatible images endpoint
-    // dynamic/agentsam-images routes: gpt-image-2 primary, gemini-3-pro-image fallback
+    // Direct OpenAI images endpoint via CF AI Gateway (logging/caching)
+    // Uses OPENAI_API_KEY for auth, gpt-image-2 model
+    if (!env.OPENAI_API_KEY) throw new Error("image_generation_requires_openai_api_key");
+
     const gatewayBase = "https://gateway.ai.cloudflare.com/v1/ede6590ac0d2fb7daf155b35653457b2/fuelnfreetime-agentsam";
     const imgRes = await fetch(`${gatewayBase}/openai/images/generations`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+        "Authorization": `Bearer ${env.OPENAI_API_KEY}`,
         "Content-Type": "application/json",
-        "cf-aig-model": "dynamic/agentsam-images",
       },
       body: JSON.stringify({
-        model: "dynamic/agentsam-images",
+        model: defaults.model || "gpt-image-2",
         prompt: user,
         n: 1,
         size: defaults.size || "1024x1024",
         response_format: "b64_json",
+        quality: defaults.quality || "standard",
       }),
     });
 
     if (!imgRes.ok) {
       const err = await imgRes.text().catch(() => String(imgRes.status));
-      console.error("[image_gen] gateway error", imgRes.status, err);
-      throw new Error(`gateway_image_failed: ${imgRes.status}`);
+      console.error("[image_gen] openai error", imgRes.status, err);
+      throw new Error(`image_gen_failed: ${imgRes.status}`);
     }
 
     const imgData = await imgRes.json();
     const b64 = imgData?.data?.[0]?.b64_json;
     if (b64) {
       return {
-        reply: "Here's the generated image.",
+        reply: "Here\'s your generated image.",
         image_base64: b64,
         mime_type: "image/png",
       };
