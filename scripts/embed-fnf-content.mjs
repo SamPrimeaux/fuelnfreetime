@@ -34,6 +34,8 @@ const REPO_DOC_PATHS = [
   "docs/RUNTIME-CONTRACTS-COMMERCE.md",
   "docs/RUNTIME-CONTRACTS-STRIPE.md",
   "docs/FNF-CMS-SPRINT-2026-06-20.md",
+  "docs/cms-deploy-hooks.md",
+  "docs/FNF-RUNTIME-OPS-2026-06-21.md",
 ];
 
 const args = process.argv.slice(2);
