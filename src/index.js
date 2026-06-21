@@ -12,6 +12,7 @@
 import { handleAdminApi } from "./admin/api.js";
 import { runAgentsamCompaction } from "./agentsam/compaction.js";
 import { handleStoreApi } from "./store/api.js";
+import { handleAttributionApi } from "./attribution/api.js";
 import { handlePublicCmsApi } from "./cms/api.js";
 import { handleCmsWarmInternal } from "./cms/deploy.js";
 import {
@@ -228,6 +229,14 @@ export default {
 
     if (path === "/api/newsletter" && request.method === "POST") {
       return handleNewsletter(request, env);
+    }
+
+    if (path === "/api/attribution/visit" && request.method === "POST") {
+      return handleAttributionApi(request, env, url);
+    }
+
+    if (path === "/go" && request.method === "GET") {
+      return handleAttributionApi(request, env, url);
     }
 
     if (path === "/api/webhooks/resend/outbound" && request.method === "POST") {

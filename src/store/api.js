@@ -2,6 +2,8 @@
  * Public storefront API — no auth required.
  */
 
+import { attributionFromCookie, parseCookies, attachAttributionToOrder } from "../lib/attribution.js";
+
 function json(data, init = {}) {
   return Response.json(data, init);
 }
@@ -148,6 +150,24 @@ export async function createStoreCheckout(request, env) {
     .run();
 
   const orderId = orderResult.meta.last_row_id;
+
+  const cookies = parseCookies(request.headers.get("Cookie"));
+  const attribution =
+    body.attribution ||
+    attributionFromCookie(cookies) ||
+    (body.utm_campaign
+      ? {
+          campaign_id: body.campaign_id || null,
+          utm_source: body.utm_source || null,
+          utm_medium: body.utm_medium || null,
+          utm_campaign: body.utm_campaign || null,
+          visit_id: body.visit_id || null,
+        }
+      : null);
+
+  if (attribution) {
+    await attachAttributionToOrder(env, orderId, attribution);
+  }
 
   for (const { variant, qty, unitCents } of lineItems) {
     await env.DB.prepare(

@@ -134,12 +134,15 @@
     status.className = "checkout-status";
 
     try {
+      const attribution = window.fnfAttribution?.getAttribution?.() || {};
       const res = await fetch("/api/store/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({
           email,
           items: cart.map((i) => ({ variant_id: i.variant_id, qty: i.qty })),
+          attribution,
         }),
       });
       const data = await res.json();

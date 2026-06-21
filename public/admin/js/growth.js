@@ -272,12 +272,50 @@ function renderPackPreview(app, campaign) {
   const checklist = app.querySelector(".fnf-checklist");
   if (checklist) {
     const channels = campaign?.channels || [];
-    const hasUtm = Boolean(pack.utm_campaign);
+    const hasUtm = Boolean(pack.utm_links?.homepage || pack.utm_campaign);
+    const isActive = campaign?.status === "active";
     checklist.innerHTML = `
-      <div class="fnf-check"><span>Homepage banner</span><strong>${pack.homepage_banner ? "Ready" : channels.includes("homepage_banner") ? "Pending" : "Off"}</strong></div>
-      <div class="fnf-check"><span>Email draft</span><strong>${pack.email_subject ? "Ready" : channels.includes("email") ? "Pending" : "Off"}</strong></div>
+      <div class="fnf-check"><span>Homepage banner</span><strong>${isActive && channels.includes("homepage_banner") ? "Live" : pack.homepage_banner ? "Ready" : channels.includes("homepage_banner") ? "Pending" : "Off"}</strong></div>
+      <div class="fnf-check"><span>Email draft</span><strong>${isActive && channels.includes("email") ? "Published" : pack.email_subject ? "Ready" : channels.includes("email") ? "Pending" : "Off"}</strong></div>
       <div class="fnf-check"><span>UTM links</span><strong>${hasUtm ? "Ready" : "Needed"}</strong></div>
-      <div class="fnf-check"><span>Approval gate</span><strong>${campaign?.approval_mode === "draft_only" ? "On" : "Review"}</strong></div>`;
+      <div class="fnf-check"><span>Status</span><strong>${fmtStatus(campaign?.status)}</strong></div>`;
+  }
+
+  renderUtmLinks(app, pack);
+  updatePublishButtons(app, campaign);
+}
+
+function renderUtmLinks(app, pack) {
+  const box = app.querySelector("#fnfUtmLinks");
+  if (!box) return;
+  const links = pack?.utm_links || {};
+  const entries = Object.entries(links);
+  if (!entries.length) {
+    box.innerHTML = '<p class="fnf-muted">Generate a pack to create tracked links.</p>';
+    return;
+  }
+  box.innerHTML = entries
+    .map(
+      ([channel, href]) =>
+        `<div class="fnf-link-row"><span>${channel}</span><a href="${escapeHtml(href)}" target="_blank" rel="noopener">${escapeHtml(href)}</a></div>`
+    )
+    .join("");
+}
+
+function updatePublishButtons(app, campaign) {
+  const canPublish = Boolean(campaign?.pack?.generated_at || campaign?.pack?.homepage_banner);
+  const isReview = campaign?.status === "review" || campaign?.status === "active";
+  app.querySelectorAll("[data-publish], [data-publish-test]").forEach((btn) => {
+    btn.hidden = !canPublish;
+    btn.disabled = campaign?.status === "generating";
+    if (btn.hasAttribute("data-publish") && campaign?.status === "active") {
+      btn.textContent = "Re-publish campaign";
+    }
+  });
+  if (!isReview && campaign?.status === "draft") {
+    app.querySelectorAll("[data-publish]").forEach((btn) => {
+      btn.title = "Generate a pack and move to review before publishing";
+    });
   }
 }
 
@@ -359,6 +397,57 @@ async function refreshOverview(app) {
   }
 }
 
+async function publishCampaign(app, { emailMode = "draft" } = {}) {
+  let id = growthState.activeCampaignId;
+  if (!id) {
+    await saveCampaign(app, { generate: false });
+    id = growthState.activeCampaignId;
+  }
+  if (!id) return;
+
+  const buttons = app.querySelectorAll("[data-publish], [data-publish-test]");
+  buttons.forEach((b) => {
+    b.disabled = true;
+  });
+
+  try {
+    if (emailMode !== "draft") {
+      await growthFetch(`/api/admin/growth/campaigns/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(readCreateForm(app)),
+      });
+    }
+
+    const data = await growthFetch(`/api/admin/growth/campaigns/${id}/publish`, {
+      method: "POST",
+      body: JSON.stringify({ email_mode: emailMode }),
+    });
+
+    fillCreateForm(app, data.campaign);
+    await refreshOverview(app);
+
+    const pub = data.publish || {};
+    let message = "Campaign published.";
+    if (pub.homepage?.ok) message += " Homepage hero is live.";
+    if (pub.email?.mode === "draft") message += " Email saved as draft in mail.";
+    if (pub.email?.sent) message += ` Email sent to ${pub.email.sent} recipient(s).`;
+    if (pub.email?.error) message += ` Email note: ${pub.email.error}`;
+
+    alert(message);
+    window.openAgentsamDrawer?.();
+    window.sendAgentsamMessage?.(
+      `Campaign "${data.campaign.name}" was published. Summarize what went live and what to monitor in attribution.`
+    );
+  } catch (err) {
+    console.error("[growth/publish]", err);
+    alert(err.message || "Publish failed");
+  } finally {
+    buttons.forEach((b) => {
+      b.disabled = false;
+    });
+  }
+}
+
 async function saveCampaign(app, { generate = false } = {}) {
   const body = readCreateForm(app);
   if (!body.name) {
@@ -436,6 +525,17 @@ function bindGrowthApp(app) {
 
   app.querySelectorAll("[data-save-draft]").forEach((button) => {
     button.addEventListener("click", () => saveCampaign(app, { generate: false }));
+  });
+
+  app.querySelectorAll("[data-publish]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (!confirm("Publish this campaign to the live homepage (and save email draft)?")) return;
+      publishCampaign(app, { emailMode: "draft" });
+    });
+  });
+
+  app.querySelectorAll("[data-publish-test]").forEach((button) => {
+    button.addEventListener("click", () => publishCampaign(app, { emailMode: "test" }));
   });
 }
 

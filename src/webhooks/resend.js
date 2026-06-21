@@ -16,6 +16,8 @@ const OUTBOUND_EVENTS = new Set([
   "email.bounced",
   "email.complained",
   "email.failed",
+  "email.opened",
+  "email.clicked",
 ]);
 
 async function logMailWebhookEvent(env, channel, event) {
@@ -62,6 +64,8 @@ async function applyOutboundEvent(env, event) {
     "email.bounced": "bounced",
     "email.complained": "complained",
     "email.failed": "failed",
+    "email.opened": "opened",
+    "email.clicked": "clicked",
   };
   const status = statusMap[type];
   if (!status) return;

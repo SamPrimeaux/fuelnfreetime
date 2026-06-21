@@ -283,6 +283,8 @@
 
       <div class="fnf-actions">
         <button class="fnf-btn" type="button" data-go="overview">Cancel</button>
+        <button class="fnf-btn" type="button" data-publish-test hidden>Send test email</button>
+        <button class="fnf-btn orange" type="button" data-publish hidden>Publish campaign</button>
         <button class="fnf-btn primary" type="button" data-generate>Generate draft</button>
       </div>
     </header>
@@ -451,6 +453,12 @@
         </section>
 
         <section class="fnf-card fnf-preview-card">
+          <h3>Tracked links</h3>
+          <p>Campaign URLs with first-party attribution via <code>/go</code>.</p>
+          <div class="fnf-link-list" id="fnfUtmLinks"></div>
+        </section>
+
+        <section class="fnf-card fnf-preview-card">
           <h3>Email preview</h3>
           <p><strong>Subject:</strong> <span id="fnfPreviewSubject">Built for the ones who move first.</span></p>
           <p style="margin-top:8px;"><strong>Preview:</strong> <span id="fnfPreviewEmailPreview">A clean drop campaign for the next Fuel &amp; Free Time push.</span></p>
@@ -462,6 +470,8 @@
 
     <div class="fnf-sticky-actions">
       <button class="fnf-btn" type="button" data-save-draft>Save as draft</button>
+      <button class="fnf-btn" type="button" data-publish-test>Send test email</button>
+      <button class="fnf-btn orange" type="button" data-publish>Publish campaign</button>
       <button class="fnf-btn primary" type="button" data-generate>Generate campaign pack</button>
     </div>
   </main>
