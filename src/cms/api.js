@@ -502,6 +502,11 @@ export async function handleAdminCmsApi(request, env, url) {
   const path = url.pathname;
   const method = request.method;
 
+  if (path === "/api/admin/cms/warm" && method === "POST") {
+    const { warmAllCmsPages } = await import("./deploy.js");
+    return json(await warmAllCmsPages(env));
+  }
+
   if (path === "/api/admin/cms/registry" && method === "GET") {
     return json(registryForAdmin());
   }

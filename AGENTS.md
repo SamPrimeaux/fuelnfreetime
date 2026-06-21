@@ -75,6 +75,8 @@ npm run db:migrate             # apply schema.sql remote
 npm run db:seed:tee            # sample product + variants
 npm run cms:bootstrap          # seed CMS from registry
 npm run cms:republish          # rebuild KV snapshots
+npm run cms:post-deploy        # warm KV after deploy (uses CMS_WARM_SECRET)
+npm run cms:deploy-hook        # trigger Workers Builds deploy hook (CMS_DEPLOY_HOOK_URL)
 npm run cf:status              # Cloudflare account sanity check
 ```
 

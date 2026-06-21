@@ -13,6 +13,12 @@ import { handleAdminApi } from "./admin/api.js";
 import { runAgentsamCompaction } from "./agentsam/compaction.js";
 import { handleStoreApi } from "./store/api.js";
 import { handlePublicCmsApi } from "./cms/api.js";
+import { handleCmsWarmInternal } from "./cms/deploy.js";
+import {
+  serveStorefrontPage,
+  slugForAssetPath,
+  slugForStorefrontPath,
+} from "./cms/html-rewriter.js";
 import { getSessionUser } from "./lib/auth.js";
 import {
   adminCleanUrl,
@@ -236,6 +242,10 @@ export default {
       return handleResendWebhookLegacy(request, env);
     }
 
+    if (path === "/api/internal/cms/warm" && request.method === "POST") {
+      return handleCmsWarmInternal(request, env);
+    }
+
     if (path === "/api/internal/agentsam/compaction/run" && request.method === "POST") {
       const secret = request.headers.get("X-Agentsam-Compaction-Secret") || "";
       if (!env.AGENTSAM_COMPACTION_SECRET || secret !== env.AGENTSAM_COMPACTION_SECRET) {
@@ -370,6 +380,8 @@ export default {
     // Shopify-style paths and legacy URLs on custom domain
     const alias = resolveStorefrontPath(path);
     if (alias) {
+      const slug = slugForStorefrontPath(path) || slugForAssetPath(alias);
+      if (slug) return serveStorefrontPage(request, env, alias, slug);
       return serveStaticAlias(request, env, alias);
     }
 
@@ -384,9 +396,12 @@ export default {
     // html_handling = "none" means Cloudflare won't auto-map "/" to
     // index.html, so do it ourselves before falling through to ASSETS.
     if (path === "/") {
-      const indexUrl = new URL(request.url);
-      indexUrl.pathname = "/index.html";
-      return env.ASSETS.fetch(new Request(indexUrl, request));
+      return serveStorefrontPage(request, env, "/index.html", "home");
+    }
+
+    const marketingSlug = slugForStorefrontPath(path);
+    if (marketingSlug && path.endsWith(".html")) {
+      return serveStorefrontPage(request, env, path, marketingSlug);
     }
 
     // Everything else falls through to the static site in /public

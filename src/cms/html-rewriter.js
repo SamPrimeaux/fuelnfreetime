@@ -1,0 +1,142 @@
+/**
+ * Edge HTML transformation for marketing pages (HTMLRewriter is built into Workers).
+ * Injects store SEO + page title from D1/KV before the browser parses <head>.
+ */
+
+import { PAGE_REGISTRY } from "./registry.js";
+
+const PATH_TO_SLUG = new Map([
+  ["/", "home"],
+  ["/index.html", "home"],
+  ["/shop", "shop"],
+  ["/shop.html", "shop"],
+  ["/about", "about"],
+  ["/about.html", "about"],
+  ["/community", "community"],
+  ["/community.html", "community"],
+]);
+
+function escapeAttr(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;");
+}
+
+export function slugForStorefrontPath(pathname) {
+  return PATH_TO_SLUG.get(pathname) || null;
+}
+
+export function slugForAssetPath(assetPath) {
+  if (assetPath === "/index.html") return "home";
+  const base = String(assetPath || "")
+    .replace(/^\//, "")
+    .replace(/\.html$/i, "");
+  return PAGE_REGISTRY[base] ? base : null;
+}
+
+export function isMarketingHtmlRequest(pathname, assetPath) {
+  const slug = slugForStorefrontPath(pathname) || slugForAssetPath(assetPath);
+  return Boolean(slug);
+}
+
+async function buildHeadContext(env, slug) {
+  const { loadStorePreferences } = await import("../admin/store.js");
+  const prefs = await loadStorePreferences(env);
+
+  let pageTitle = null;
+  if (slug && slug !== "site") {
+    try {
+      const { getPublishedPage } = await import("./api.js");
+      const page = await getPublishedPage(env, slug);
+      pageTitle = page?.title || null;
+    } catch {
+      /* prefs-only fallback */
+    }
+  }
+
+  const siteTitle = prefs.homeTitle || "Fuel & Free Time";
+  const title =
+    pageTitle && slug !== "home" ? `${pageTitle} — ${siteTitle}` : siteTitle;
+
+  return {
+    title,
+    description:
+      prefs.metaDescription ||
+      "Earned-not-given lifestyle apparel — built in Lafayette, Louisiana.",
+    socialImageUrl: prefs.socialImageUrl || "",
+  };
+}
+
+class TitleHandler {
+  constructor(title) {
+    this.title = title;
+  }
+  element(el) {
+    if (this.title) el.setInnerContent(this.title);
+  }
+}
+
+class MetaContentHandler {
+  constructor(value) {
+    this.value = value;
+  }
+  element(el) {
+    if (this.value) el.setAttribute("content", this.value);
+  }
+}
+
+class HeadSeoAppendHandler {
+  constructor(head) {
+    this.head = head;
+  }
+  element(el) {
+    const { title, description, socialImageUrl } = this.head;
+    const imgTags = socialImageUrl
+      ? `<meta property="og:image" content="${escapeAttr(socialImageUrl)}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="${escapeAttr(socialImageUrl)}">`
+      : `<meta name="twitter:card" content="summary">`;
+
+    el.append(
+      `<meta name="cms-edge-seo" content="1">
+<meta name="description" content="${escapeAttr(description)}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="${escapeAttr(title)}">
+<meta property="og:description" content="${escapeAttr(description)}">
+<meta name="twitter:title" content="${escapeAttr(title)}">
+<meta name="twitter:description" content="${escapeAttr(description)}">
+${imgTags}`,
+      { html: true }
+    );
+  }
+}
+
+export async function transformStorefrontHtml(response, env, slug) {
+  const contentType = response.headers.get("content-type") || "";
+  if (response.status !== 200 || !contentType.includes("text/html")) {
+    return response;
+  }
+
+  const head = await buildHeadContext(env, slug);
+
+  return new HTMLRewriter()
+    .on("title", new TitleHandler(head.title))
+    .on('meta[name="description"]', new MetaContentHandler(head.description))
+    .on('meta[property="og:title"]', new MetaContentHandler(head.title))
+    .on('meta[property="og:description"]', new MetaContentHandler(head.description))
+    .on('meta[property="og:image"]', new MetaContentHandler(head.socialImageUrl))
+    .on('meta[name="twitter:title"]', new MetaContentHandler(head.title))
+    .on('meta[name="twitter:description"]', new MetaContentHandler(head.description))
+    .on('meta[name="twitter:image"]', new MetaContentHandler(head.socialImageUrl))
+    .on("head", new HeadSeoAppendHandler(head))
+    .transform(response);
+}
+
+export async function serveStorefrontPage(request, env, assetPath, slug) {
+  const url = new URL(request.url);
+  url.pathname = assetPath;
+  url.search = "";
+  const res = await env.ASSETS.fetch(new Request(url, request));
+  return transformStorefrontHtml(res, env, slug);
+}

@@ -1,0 +1,73 @@
+# CMS deploy hooks + HTMLRewriter
+
+## HTMLRewriter (edge SEO)
+
+**No npm install** — `HTMLRewriter` is built into the Cloudflare Workers runtime.
+
+Marketing pages (`/`, `/shop`, `/about`, `/community`) are served through the Worker, which:
+
+1. Fetches static HTML from Workers Assets
+2. Rewrites `<title>`, meta description, Open Graph, and Twitter tags from **store prefs + published CMS page title**
+3. Returns HTML with SEO visible to crawlers (no JS required)
+
+Implementation: `src/cms/html-rewriter.js`
+
+Client-side `fnf-head.js` still runs as a fallback for prefs updated after cache.
+
+## Deploy hook (`fuelnfreetime-cms-deployhook`)
+
+Your Workers Builds hook triggers a **rebuild + deploy from `main`**:
+
+```
+POST https://api.cloudflare.com/client/v4/workers/builds/deploy_hooks/0cbd475b-93c4-458a-ba72-0499a1caff90
+```
+
+Add to `.env.cloudflare` (never commit):
+
+```
+CMS_DEPLOY_HOOK_URL=https://api.cloudflare.com/client/v4/workers/builds/deploy_hooks/0cbd475b-93c4-458a-ba72-0499a1caff90
+```
+
+Trigger manually:
+
+```bash
+npm run cms:deploy-hook
+```
+
+**When to use:** Worker code or static asset changes in git.  
+**When NOT needed:** CMS publish from admin — that updates D1/R2/KV live; HTMLRewriter reads prefs/KV on each request.
+
+## Post-deploy CMS warm
+
+After `npm run deploy`, `cms:post-deploy` rebuilds all KV snapshots from D1/R2.
+
+Set Worker secret once:
+
+```bash
+wrangler secret put CMS_WARM_SECRET
+```
+
+Add the same value to `.env.cloudflare` as `CMS_WARM_SECRET` for local scripts.
+
+Internal endpoint (for CI/scripts):
+
+```
+POST /api/internal/cms/warm
+Header: X-Cms-Warm-Secret: <CMS_WARM_SECRET>
+```
+
+Admin (session required):
+
+```
+POST /api/admin/cms/warm
+```
+
+## Typical flows
+
+| Action | Command |
+|--------|---------|
+| Edit + publish in admin | Auto KV write on publish — no deploy hook |
+| Push code to main | Cloudflare Builds auto-deploys |
+| Force rebuild from hook | `npm run cms:deploy-hook` |
+| Deploy from laptop | `npm run deploy` (includes post-deploy warm) |
+| Fix stale KV after migration | `npm run cms:republish` |
