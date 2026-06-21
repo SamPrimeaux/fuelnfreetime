@@ -12,23 +12,6 @@ const CHAT_TASK_TYPES = new Set([
   "image_to_text",
 ]);
 
-export const EMERGENCY_FALLBACK_MODELS = [
-  {
-    model_id: "@cf/openai/gpt-oss-20b",
-    display_name: "GPT OSS 20B (emergency)",
-    task_type: "text_generation",
-    lane: "fast",
-    request_defaults_json: '{"temperature":0.45,"max_tokens":1200}',
-  },
-  {
-    model_id: "@cf/meta/llama-3.2-3b-instruct",
-    display_name: "Llama 3.2 3B (emergency)",
-    task_type: "text_generation",
-    lane: "last_resort",
-    request_defaults_json: '{"temperature":0.3,"max_tokens":700}',
-  },
-];
-
 function parseJson(raw, fallback = null) {
   try {
     if (raw == null || raw === "") return fallback;
@@ -293,11 +276,8 @@ export async function getFallbackChain(env, routing = {}) {
   chain = sortModels(chain, message);
 
   if (!chain.length) {
-    return EMERGENCY_FALLBACK_MODELS.map((m) => ({
-      ...m,
-      request_defaults: parseJson(m.request_defaults_json, {}),
-      emergency: true,
-    }));
+    console.warn('[agentsam] no models found for routing', { task_type, lane, workflow_key });
+    return [];
   }
 
   return chain;

@@ -1,10 +1,9 @@
 /**
- * Workers AI runner — D1 registry model selection with safe emergency fallbacks.
+ * Workers AI runner — D1 registry model selection. No emergency fallbacks.
  */
 
 import { trackAgentSamEvent, estimateCostUsd, estimateTokens } from "./analytics.js";
 import {
-  EMERGENCY_FALLBACK_MODELS,
   getFallbackChain,
   normalizeChatRouting,
 } from "./ai-registry.js";
@@ -236,11 +235,7 @@ async function runTextFallback(env, systemPrompt, userMessage, routing, trackOpt
 
   const chain = await getFallbackChain(env, textRouting);
   const compatible = chain.filter((m) => isModelCompatible(m, textRouting.task_type, textRouting));
-  const models = compatible.length ? compatible : EMERGENCY_FALLBACK_MODELS.map((m) => ({
-    ...m,
-    request_defaults: parseJson(m.request_defaults_json, {}),
-    emergency: true,
-  }));
+  const models = compatible;
 
   for (const model of models) {
     try {
@@ -308,16 +303,7 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
   const aiStarted = Date.now();
   const trackOpts = analyticsBase(routing);
 
-  const modelsToTry =
-    compatibleChain.length > 0
-      ? compatibleChain
-      : normalized.task_type === "text_generation" || normalized.task_type === "code_generation"
-        ? EMERGENCY_FALLBACK_MODELS.map((m) => ({
-            ...m,
-            request_defaults: parseJson(m.request_defaults_json, {}),
-            emergency: true,
-          }))
-        : [];
+  const modelsToTry = compatibleChain;
 
   for (let index = 0; index < modelsToTry.length; index += 1) {
     const model = modelsToTry[index];
