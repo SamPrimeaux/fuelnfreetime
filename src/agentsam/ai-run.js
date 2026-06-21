@@ -149,16 +149,8 @@ async function executeModel(env, model, systemPrompt, userMessage, routing) {
   const user = String(userMessage || "").slice(0, 4000);
 
   if (taskType === "image_generation") {
-    // Route through CF AI Gateway dynamic/agentsam-images (gpt-image-2 + gemini fallback)
-    // Requires CLOUDFLARE_API_TOKEN secret on the worker
-    if (!env.CLOUDFLARE_API_TOKEN) {
-      throw new Error("image_generation_requires_cloudflare_api_token");
-    }
-    // Direct OpenAI images endpoint via CF AI Gateway (logging/caching)
-    // Uses OPENAI_API_KEY for auth, gpt-image-2 model
-    if (!env.OPENAI_API_KEY) throw new Error("image_generation_requires_openai_api_key");
+    if (!env.OPENAI_API_KEY) throw new Error("missing_OPENAI_API_KEY_secret");
 
-    // Direct OpenAI — no gateway wrapper for image gen
     const imgRes = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: {
@@ -166,31 +158,31 @@ async function executeModel(env, model, systemPrompt, userMessage, routing) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: defaults.model || "gpt-image-2",
+        model: "gpt-image-2",
         prompt: user,
         n: 1,
-        size: defaults.size || "1024x1024",
+        size: "1024x1024",
         response_format: "b64_json",
-        quality: defaults.quality || "standard",
       }),
     });
 
+    const rawText = await imgRes.text();
+    console.log("[image_gen] status:", imgRes.status, "body:", rawText.slice(0, 300));
+
     if (!imgRes.ok) {
-      const err = await imgRes.text().catch(() => String(imgRes.status));
-      console.error("[image_gen] openai error", imgRes.status, err);
-      throw new Error(`image_gen_failed: ${imgRes.status}`);
+      throw new Error(`openai_image_${imgRes.status}: ${rawText.slice(0, 200)}`);
     }
 
-    const imgData = await imgRes.json();
+    const imgData = JSON.parse(rawText);
     const b64 = imgData?.data?.[0]?.b64_json;
     if (b64) {
       return {
-        reply: "Here\'s your generated image.",
+        reply: "Here is your generated image.",
         image_base64: b64,
         mime_type: "image/png",
       };
     }
-    throw new Error("empty_image_response");
+    throw new Error("empty_b64_response: " + rawText.slice(0, 200));
   }
 
   if (taskType === "image_to_text") {
