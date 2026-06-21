@@ -265,6 +265,20 @@
               <div class="toggle-row"><div class="toggle-copy"><strong>Webhook status sync</strong><span>Delivery, bounce, complaint events.</span></div><label class="switch"><input id="resendWebhooks" type="checkbox" checked /><span class="slider"></span></label></div>
             </div>
           </div>
+          <div class="settings-card">
+            <div class="card-title"><div><strong>Resend webhooks</strong><span>Create two endpoints in the Resend dashboard.</span></div></div>
+            <div class="webhook-url-list">
+              <div class="webhook-url-row">
+                <div><strong>Outbound</strong><span id="webhookOutboundStatus">Not configured</span></div>
+                <code id="webhookOutboundUrl">https://fuelnfreetime.com/api/webhooks/resend/outbound</code>
+              </div>
+              <div class="webhook-url-row">
+                <div><strong>Inbound</strong><span id="webhookInboundStatus">Not configured</span></div>
+                <code id="webhookInboundUrl">https://fuelnfreetime.com/api/webhooks/resend/inbound</code>
+              </div>
+            </div>
+            <p class="settings-hint">Outbound events: sent, delivered, bounced, complained. Inbound: email.received.</p>
+          </div>
         </div>
       </div>
 

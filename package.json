@@ -74,6 +74,7 @@
     "dns:check": "node scripts/check-dns.mjs",
     "dns:setup:resend": "./scripts/with-cf-admin-env.sh node scripts/setup-resend-dns.mjs",
     "dns:setup:resend:dry": "node scripts/setup-resend-dns.mjs --dry-run",
+    "db:migrate:mail-inbox": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-mail-inbox.sql",
     "cf:status": "./scripts/with-cf-admin-env.sh node scripts/cf-status.mjs"
   },
   "devDependencies": {

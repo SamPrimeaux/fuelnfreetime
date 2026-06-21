@@ -22,7 +22,16 @@ renderShell(
     fullBleed: true,
     onReady: () => {
       document.querySelector(".console-main")?.classList.add("admin-main--mail");
-      requestAnimationFrame(() => bootMailApp());
+      requestAnimationFrame(() => {
+        if (typeof window.bootMailApp === "function") {
+          window.bootMailApp().catch((err) => {
+            const root = document.getElementById("mail-root");
+            if (root) {
+              root.innerHTML = `<div class="mail-boot-error"><h2>Email workspace failed</h2><p>${err.message || err}</p></div>`;
+            }
+          });
+        }
+      });
     },
   }
 );

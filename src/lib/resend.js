@@ -1,6 +1,6 @@
 /**
  * Resend transactional email (Workers fetch API — no SDK required).
- * Secrets: RESEND_API_KEY, RESEND_WEBHOOK_SECRET (optional)
+ * Secrets: RESEND_API_KEY, RESEND_WEBHOOK_SECRET_OUTBOUND, RESEND_WEBHOOK_SECRET_INBOUND
  */
 
 const RESEND_API = "https://api.resend.com";
@@ -86,7 +86,7 @@ function timingSafeEqual(a, b) {
 
 /** Verify Resend/Svix webhook signature. Returns parsed JSON event. */
 export async function verifyResendWebhook(request, secret) {
-  if (!secret) throw new Error("RESEND_WEBHOOK_SECRET not configured");
+  if (!secret) throw new Error("Webhook signing secret not configured");
 
   const payload = await request.text();
   const id = request.headers.get("svix-id");

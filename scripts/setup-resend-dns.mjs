@@ -167,10 +167,10 @@ async function main() {
 
   console.log("\nNext steps:");
   console.log("  1. Resend dashboard → Domains → fuelnfreetime.com → Verify (may take a few minutes)");
-  console.log("  2. wrangler secret put RESEND_API_KEY");
-  console.log("  3. Resend → Webhooks → https://fuelnfreetime.com/api/agentsam/webhooks/resend");
-  console.log("  4. wrangler secret put RESEND_WEBHOOK_SECRET   # whsec_… from Resend");
-  console.log("  5. Admin → Mail → Send test to confirm\n");
+  console.log("  2. wrangler secret put RESEND_API_KEY  (or ./scripts/set-resend-secrets.sh)");
+  console.log("  3. Resend → Webhook (outbound) → https://fuelnfreetime.com/api/webhooks/resend/outbound");
+  console.log("  4. Resend → Webhook (inbound)  → https://fuelnfreetime.com/api/webhooks/resend/inbound");
+  console.log("  5. Add whsec_ values to .env.cloudflare → ./scripts/set-resend-secrets.sh");
 }
 
 function printManual(specs) {

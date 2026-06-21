@@ -40,9 +40,10 @@ export function adminLoginPath() {
 }
 
 export function adminHtmlFile(pathname) {
-  if (ADMIN_CLEAN_ALIASES[pathname]) return ADMIN_CLEAN_ALIASES[pathname];
+  const normalized = pathname.replace(/\/+$/, "") || "/";
+  if (ADMIN_CLEAN_ALIASES[normalized]) return ADMIN_CLEAN_ALIASES[normalized];
 
-  const match = pathname.match(/^\/admin\/([a-z0-9-]+)\/?$/);
+  const match = normalized.match(/^\/admin\/([a-z0-9-]+)$/);
   if (!match || !ADMIN_CLEAN_PAGES.has(match[1])) return null;
   return `/admin/${match[1]}.html`;
 }

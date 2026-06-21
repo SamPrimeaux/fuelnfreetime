@@ -51,14 +51,14 @@ async function bootMailApp() {
     '<div class="mail-boot-loading"><p>Loading inbox…</p></div>';
 
   try {
-    const res = await fetch("/admin/partials/mail-app.html", {
+    const res = await fetch("/api/admin/mail/partial", {
       credentials: "same-origin",
       headers: { Accept: "text/html" },
     });
     const html = await res.text();
     if (!res.ok || !html.includes('id="mailApp"')) {
       throw new Error(
-        res.status === 401 || res.status === 302
+        res.status === 401
           ? "Session expired — refresh and sign in again"
           : `Could not load mail UI (HTTP ${res.status})`
       );
@@ -77,6 +77,12 @@ async function bootMailApp() {
 
 async function initMailApp() {
   try {
+    bindMailEvents();
+  } catch (err) {
+    console.error("Mail bind failed:", err);
+  }
+
+  try {
     const me = await adminFetch("/api/admin/me");
     adminEmail = me.email || "";
   } catch {
@@ -93,13 +99,14 @@ async function initMailApp() {
   selectedId = messages[0]?.id ?? null;
   selectedContextId = selectedId;
 
-  bindMailEvents();
   await loadRemoteSettings();
   updateBadges();
   renderRows();
   renderReader();
   updateComposeFromOptions();
 }
+
+window.bootMailApp = bootMailApp;
 
 function $(id) {
   return document.getElementById(id);
@@ -163,22 +170,41 @@ function hydrateSettings(settings) {
 
 async function loadRemoteSettings() {
   try {
-    const data = await adminFetch("/api/admin/mail/settings");
-    hydrateSettings(data.settings || {});
+    const [settingsRes, statusRes] = await Promise.all([
+      adminFetch("/api/admin/mail/settings"),
+      adminFetch("/api/admin/mail/resend/status").catch(() => null),
+    ]);
+    hydrateSettings(settingsRes.settings || {});
     const pill = $("accountStatusPill");
-    if (pill && data.providers) {
-      const count = [data.providers.gmail, data.providers.resend].filter(
+    if (pill && settingsRes.providers) {
+      const count = [settingsRes.providers.gmail, settingsRes.providers.resend].filter(
         (s) => s === "connected" || s === "configured"
       ).length;
       pill.textContent = `${count} active`;
       pill.classList.toggle("connected", count > 0);
     }
-    $("gmailStatus")?.classList.toggle("connected", data.providers?.gmail === "connected");
-    $("gmailStatus") && ($("gmailStatus").textContent = data.providers?.gmail === "connected" ? "Connected" : "Disconnected");
-    $("resendStatus")?.classList.toggle("connected", data.providers?.resend === "configured");
+    $("gmailStatus")?.classList.toggle("connected", settingsRes.providers?.gmail === "connected");
+    $("gmailStatus") &&
+      ($("gmailStatus").textContent =
+        settingsRes.providers?.gmail === "connected" ? "Connected" : "Disconnected");
+    $("resendStatus")?.classList.toggle("connected", settingsRes.providers?.resend === "configured");
     $("resendStatus") &&
       ($("resendStatus").textContent =
-        data.providers?.resend === "configured" ? "Connected" : "Pending DNS / API key");
+        settingsRes.providers?.resend === "configured" ? "Connected" : "Pending DNS / API key");
+
+    const wh = statusRes?.webhooks;
+    const outboundEl = $("webhookOutboundUrl");
+    const inboundEl = $("webhookInboundUrl");
+    if (outboundEl && wh?.outbound_url) outboundEl.textContent = wh.outbound_url;
+    if (inboundEl && wh?.inbound_url) inboundEl.textContent = wh.inbound_url;
+    $("webhookOutboundStatus") &&
+      ($("webhookOutboundStatus").textContent = settingsRes.providers?.webhooks?.outbound
+        ? "Secret set"
+        : "Add RESEND_WEBHOOK_SECRET_OUTBOUND");
+    $("webhookInboundStatus") &&
+      ($("webhookInboundStatus").textContent = settingsRes.providers?.webhooks?.inbound
+        ? "Secret set"
+        : "Add RESEND_WEBHOOK_SECRET_INBOUND");
   } catch (err) {
     console.warn("Mail settings:", err);
     hydrateSettings(MAIL_DEFAULTS);
@@ -382,6 +408,16 @@ function renderReader() {
     return;
   }
 
+  const bodyCopy = message.body_text || message.preview || message.type || "";
+  const sourceLabel =
+    message.direction === "inbound"
+      ? "Resend inbound"
+      : message.direction === "outbound"
+        ? "Resend outbound"
+        : message.labels?.includes("promotions")
+          ? "Gmail / Promotions"
+          : "Gmail / Primary";
+
   readerBody.innerHTML = `
     <div class="message-header-card">
       <div class="message-header-main">
@@ -394,9 +430,9 @@ function renderReader() {
       </div>
       <div class="meta-grid">
         <div class="meta-item"><b>To</b><span>${inboxTo}</span></div>
-        <div class="meta-item"><b>Source</b><span>${message.labels?.includes("promotions") ? "Gmail / Promotions" : "Gmail / Primary"}</span></div>
+        <div class="meta-item"><b>Source</b><span>${sourceLabel}</span></div>
         <div class="meta-item"><b>Labels</b><span>${(message.labels || []).join(", ")}</span></div>
-        <div class="meta-item"><b>Status</b><span>${message.needs ? "Needs review" : "No immediate action"}</span></div>
+        <div class="meta-item"><b>Status</b><span>${message.status || (message.needs ? "Needs review" : "No immediate action")}</span></div>
       </div>
       <div class="sam-strip">
         <div class="sam-copy"><strong>Inbox assistant</strong><span>${message.type}</span></div>
@@ -408,29 +444,17 @@ function renderReader() {
     </div>
     <div class="email-frame">
       <article class="email-canvas">
-        <div class="email-hero">
-          <div class="email-brand">${message.brand}</div>
-          <div class="email-kicker">${message.tag}</div>
-          <h3>${message.headline}</h3>
-        </div>
         <div class="email-body">
-          <p>${message.preview}</p>
-          <p>${message.type}</p>
-          <div class="email-cta">${message.cta}</div>
-          <div class="email-cards">
-            <div class="mini-card"><strong>Read</strong><span>Focused reader with full thread context.</span></div>
-            <div class="mini-card"><strong>Act</strong><span>Reply via Gmail or send store mail via Resend.</span></div>
-            <div class="mini-card"><strong>Route</strong><span>Settings control inbox sync and sending paths.</span></div>
-          </div>
+          <p>${bodyCopy.replace(/\n/g, "<br>")}</p>
         </div>
       </article>
     </div>`;
 }
 
 function selectMessage(id) {
-  selectedId = Number(id);
-  selectedContextId = selectedId;
-  const message = messages.find((item) => item.id === selectedId);
+  selectedId = id;
+  selectedContextId = id;
+  const message = messages.find((item) => String(item.id) === String(id));
   if (message) message.unread = false;
   updateBadges();
   renderRows();
@@ -570,7 +594,7 @@ function bindMailEvents() {
     const star = event.target.closest("[data-star]");
     if (star) {
       event.stopPropagation();
-      const message = messages.find((item) => item.id === Number(star.dataset.star));
+      const message = messages.find((item) => String(item.id) === String(star.dataset.star));
       if (message) message.starred = !message.starred;
       renderRows();
       return;

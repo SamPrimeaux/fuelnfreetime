@@ -23,7 +23,11 @@ import {
 } from "./lib/admin-routes.js";
 import { redirectWww, resolveStorefrontPath, serveStaticAlias, STORE_HTML_REDIRECTS, PAGES_CLEAN_REDIRECTS } from "./lib/routes.js";
 
-import { handleResendWebhook } from "./webhooks/resend.js";
+import {
+  handleResendOutboundWebhook,
+  handleResendInboundWebhook,
+  handleResendWebhookLegacy,
+} from "./webhooks/resend.js";
 
 export { CmsEditorRoom } from "./do/CmsEditorRoom.js";
 
@@ -220,8 +224,16 @@ export default {
       return handleNewsletter(request, env);
     }
 
+    if (path === "/api/webhooks/resend/outbound" && request.method === "POST") {
+      return handleResendOutboundWebhook(request, env);
+    }
+
+    if (path === "/api/webhooks/resend/inbound" && request.method === "POST") {
+      return handleResendInboundWebhook(request, env);
+    }
+
     if (path === "/api/agentsam/webhooks/resend" && request.method === "POST") {
-      return handleResendWebhook(request, env);
+      return handleResendWebhookLegacy(request, env);
     }
 
     if (path === "/api/internal/agentsam/compaction/run" && request.method === "POST") {

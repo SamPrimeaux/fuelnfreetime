@@ -186,7 +186,91 @@ function providerStatus(settings, env) {
     gmail: settings.gmailAddress ? "connected" : "disconnected",
     resend: resendReady ? "configured" : resendConfigured(env) ? "pending" : "pending",
     resend_domain: resendConfigured(env) ? "check_dashboard" : "no_api_key",
+    webhooks: {
+      outbound: Boolean(env.RESEND_WEBHOOK_SECRET_OUTBOUND || env.RESEND_WEBHOOK_SECRET),
+      inbound: Boolean(env.RESEND_WEBHOOK_SECRET_INBOUND),
+    },
   };
+}
+
+function initialsFor(name, email) {
+  const base = (name || email || "?").trim();
+  const parts = base.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return base.slice(0, 2).toUpperCase();
+}
+
+function formatMailDate(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso.includes("T") ? iso : `${iso.replace(" ", "T")}Z`);
+  if (Number.isNaN(d.getTime())) return iso;
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  if (sameDay) return "Today";
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function rowToMessage(row, index) {
+  const labels = JSON.parse(row.labels_json || "[]");
+  const from = row.from_email || "Unknown";
+  const senderName = from.includes("@") ? from.split("@")[0] : from;
+  return {
+    id: row.id,
+    db_id: row.id,
+    direction: row.direction,
+    initials: initialsFor(senderName, from),
+    color: row.direction === "inbound" ? "teal" : "orange",
+    sender: senderName,
+    email: from,
+    subject: row.subject || "(no subject)",
+    preview: row.preview || row.body_text?.slice(0, 160) || "",
+    date: formatMailDate(row.created_at),
+    fullDate: row.created_at,
+    labels: labels.length ? labels : row.direction === "inbound" ? ["primary"] : ["updates"],
+    type:
+      row.direction === "inbound"
+        ? "Inbound via Resend receiving."
+        : `Outbound · ${row.status || "queued"}`,
+    unread: row.status === "received" || row.status === "sent",
+    starred: false,
+    needs: row.direction === "inbound",
+    brand: row.direction === "inbound" ? "Inbound" : "Fuel & Free Time",
+    tag: row.direction === "inbound" ? "Inbound" : "Sent",
+    headline: row.subject || "(no subject)",
+    cta: row.direction === "inbound" ? "Reply" : "View status",
+    body_text: row.body_text || "",
+    body_html: row.body_html || "",
+    status: row.status,
+    provider_id: row.provider_id,
+    _sort: index,
+  };
+}
+
+async function recordOutboundMessage(env, { id, from, to, subject, body, status = "sent" }) {
+  const preview = (body || subject || "").slice(0, 240);
+  await env.DB.prepare(
+    `INSERT INTO mail_messages (
+       id, direction, from_email, to_email, subject, preview, body_text,
+       status, provider, provider_id, labels_json, metadata_json
+     ) VALUES (?, 'outbound', ?, ?, ?, ?, ?, ?, 'resend', ?, ?, ?)`
+  )
+    .bind(
+      `out_${id}`,
+      from,
+      to,
+      subject,
+      preview,
+      body,
+      status,
+      id,
+      JSON.stringify(["primary", "sent"]),
+      JSON.stringify({ source: "admin.compose" })
+    )
+    .run()
+    .catch(() => {});
 }
 
 export async function getMailSettings(env) {
@@ -214,7 +298,40 @@ export async function postMailSettings(request, env) {
   });
 }
 
-export async function listMailMessages() {
+export async function getMailPartial(request, env) {
+  const assetUrl = new URL(request.url);
+  assetUrl.pathname = "/admin/partials/mail-app.html";
+  const res = await env.ASSETS.fetch(new Request(assetUrl, request));
+  if (!res.ok) {
+    return Response.json({ error: "Mail UI partial missing" }, { status: 502 });
+  }
+  const html = await res.text();
+  return new Response(html, {
+    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "private, no-store" },
+  });
+}
+
+export async function listMailMessages(env) {
+  try {
+    const { results } = await env.DB.prepare(
+      `SELECT id, direction, from_email, to_email, subject, preview, body_text, body_html,
+              status, provider, provider_id, labels_json, created_at
+       FROM mail_messages
+       ORDER BY datetime(created_at) DESC
+       LIMIT 100`
+    ).all();
+
+    if (results?.length) {
+      return Response.json({
+        ok: true,
+        messages: results.map(rowToMessage),
+        source: "d1",
+      });
+    }
+  } catch {
+    /* table may not exist yet */
+  }
+
   return Response.json({ ok: true, messages: DEMO_MESSAGES, source: "demo" });
 }
 
@@ -296,6 +413,15 @@ export async function sendMailPreview(request, env) {
     }, { status: 502 });
   }
 
+  await recordOutboundMessage(env, {
+    id: result.id,
+    from: settings.resendFrom,
+    to: body.to,
+    subject: body.subject,
+    body: payload.body,
+    status: "sent",
+  });
+
   return Response.json({
     ok: true,
     preview: false,
@@ -311,11 +437,26 @@ export async function getResendStatus(env) {
   const settings = await loadSettings(env);
   const domain = settings.resendDomain || "fuelnfreetime.com";
   const status = await getResendDomainStatus(env, domain);
+  const appDomain = env.APP_DOMAIN || "fuelnfreetime.com";
   return Response.json({
     ok: true,
     configured: resendConfigured(env),
     domain,
     resend: status,
     providers: providerStatus(settings, env),
+    webhooks: {
+      outbound_url: `https://${appDomain}/api/webhooks/resend/outbound`,
+      inbound_url: `https://${appDomain}/api/webhooks/resend/inbound`,
+      legacy_url: `https://${appDomain}/api/agentsam/webhooks/resend`,
+      outbound_events: [
+        "email.sent",
+        "email.delivered",
+        "email.delivery_delayed",
+        "email.bounced",
+        "email.complained",
+        "email.failed",
+      ],
+      inbound_events: ["email.received"],
+    },
   });
 }
