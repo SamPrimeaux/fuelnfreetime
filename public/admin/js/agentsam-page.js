@@ -178,31 +178,15 @@ function initActiveConnections(servers) {
 }
 
 function renderConnectionPills() {
+  // Connections are shown only in the + menu, not as inline pills in the composer.
   const box = $("agentsam-connection-pills");
-  if (!box) return;
-  box.innerHTML = "";
-
-  const active = mcpServers.filter((s) => activeConnections.has(s.slug));
-  if (!active.length) {
-    box.hidden = true;
-    return;
+  if (box) box.hidden = true;
+  // Show/hide dot on + button to indicate active connections
+  const plus = $("agentsam-plus");
+  if (plus) {
+    if (activeConnections.size > 0) plus.classList.add("has-connections");
+    else plus.classList.remove("has-connections");
   }
-
-  box.hidden = false;
-  active.forEach((server) => {
-    const pill = document.createElement("div");
-    pill.className = "agentsam-conn-pill";
-    pill.title = connectionMenuLabel(server);
-    pill.innerHTML = `
-      ${connectionIconMarkup(server, { size: "sm" })}
-      <span class="agentsam-conn-pill-label">${escapeHtml(connectionComposerLabel(server))}</span>
-      <button type="button" class="agentsam-conn-pill-x" aria-label="Disconnect ${escapeHtml(connectionMenuLabel(server))}">×</button>
-    `;
-    pill.querySelector(".agentsam-conn-pill-x")?.addEventListener("click", (e) => {
-      disconnectConnection(server.slug, e);
-    });
-    box.appendChild(pill);
-  });
 }
 
 function formatPreviewBlock(text) {
@@ -552,8 +536,14 @@ async function sendMessage(text, actionContext = null) {
   setBusy(true);
 
   const runningTools = [];
-  const typing = appendBubble("assistant", "Thinking…");
-  typing?.classList.add("agentsam-page-typing");
+  // Shimmer skeleton — no lame "Thinking..." text
+  showThread();
+  const thread = $("agentsam-thread");
+  const typing = document.createElement("div");
+  typing.className = "agentsam-page-bubble agentsam-page-bubble--assistant agentsam-page-shimmer";
+  typing.innerHTML = '<div class="agentsam-shimmer-line agentsam-shimmer-line--lg"></div><div class="agentsam-shimmer-line agentsam-shimmer-line--md"></div><div class="agentsam-shimmer-line agentsam-shimmer-line--sm"></div>';
+  thread?.appendChild(typing);
+  thread && (thread.scrollTop = thread.scrollHeight);
 
   try {
     const res = await fetch("/api/admin/agentsam/chat", {
@@ -729,6 +719,7 @@ function renderChips(actions) {
 function applyPlusMenuConfig(config) {
   plusMenuConfig = config || {};
   const imageBtn = $("agentsam-menu-image");
+  if (!config) return;
 
   if (imageBtn && config.image) {
     imageBtn.textContent = config.image.label || "Create image";
@@ -889,6 +880,27 @@ function bindUi() {
     } catch {
       /* ignore */
     }
+  });
+
+  // Paste images directly into textarea
+  input?.addEventListener("paste", (e) => {
+    const items = Array.from(e.clipboardData?.items || []);
+    const imageItems = items.filter((item) => item.type.startsWith("image/"));
+    if (!imageItems.length) return;
+    e.preventDefault();
+    const files = imageItems.map((item) => item.getAsFile()).filter(Boolean);
+    if (files.length) handleFilesSelected(files);
+  });
+
+  // Drag-and-drop images onto composer
+  const composerWrap = document.querySelector(".agentsam-page-composer-wrap");
+  composerWrap?.addEventListener("dragover", (e) => { e.preventDefault(); composerWrap.classList.add("is-dragover"); });
+  composerWrap?.addEventListener("dragleave", () => composerWrap.classList.remove("is-dragover"));
+  composerWrap?.addEventListener("drop", (e) => {
+    e.preventDefault();
+    composerWrap.classList.remove("is-dragover");
+    const files = Array.from(e.dataTransfer?.files || []).filter((f) => f.type.startsWith("image/") || f.type.startsWith("text/"));
+    if (files.length) handleFilesSelected(files);
   });
 
   const q = new URLSearchParams(location.search).get("q");

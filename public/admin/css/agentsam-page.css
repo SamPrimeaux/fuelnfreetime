@@ -68,8 +68,12 @@ body.agentsam-page-body .console-main--bleed {
 
 .agentsam-page-bubble--user {
   align-self: flex-end;
-  background: #2f2f35;
-  border: 1px solid var(--as-border);
+  background: #5f4ee0;
+  color: #fff;
+  border: none;
+  max-width: 72%;
+  border-radius: 20px 20px 4px 20px;
+  font-size: 15px;
 }
 
 .agentsam-page-bubble--assistant {
@@ -78,38 +82,35 @@ body.agentsam-page-body .console-main--bleed {
   padding-left: 0;
 }
 
-.agentsam-page-route {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 8px;
+/* route chips hidden — model/tool info surfaces in the tool crumb instead */
+.agentsam-page-route { display: none; }
+
+/* shimmer skeleton for thinking state */
+@keyframes agentsam-shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
 }
 
-.agentsam-page-route span {
-  font-size: 11px;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: rgba(171, 104, 255, 0.15);
-  color: #d4b8ff;
-  border: 1px solid rgba(171, 104, 255, 0.25);
+.agentsam-page-shimmer {
+  padding: 12px 0 !important;
+  background: transparent !important;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 220px;
 }
 
-.agentsam-page-route span.is-mcp {
-  background: rgba(59, 130, 246, 0.12);
-  color: #93c5fd;
-  border-color: rgba(59, 130, 246, 0.25);
+.agentsam-shimmer-line {
+  height: 14px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0.04) 75%);
+  background-size: 800px 100%;
+  animation: agentsam-shimmer 1.4s infinite linear;
 }
 
-.agentsam-page-route span.is-planned {
-  opacity: 0.65;
-}
-
-.agentsam-page-typing {
-  color: var(--as-muted);
-  font-style: italic;
-}
+.agentsam-shimmer-line--lg { width: 85%; }
+.agentsam-shimmer-line--md { width: 65%; }
+.agentsam-shimmer-line--sm { width: 45%; }
 
 .agentsam-page-dock {
   position: sticky;
@@ -993,3 +994,26 @@ body.agentsam-page-body .console-main--bleed {
     min-width: min(92vw, 280px);
   }
 }
+
+/* drag-over state */
+.agentsam-page-composer-wrap.is-dragover .agentsam-page-composer {
+  border-color: #5f4ee0;
+  box-shadow: 0 0 0 2px rgba(95,78,224,0.25);
+}
+
+/* active connection dot in + button */
+.agentsam-page-plus.has-connections::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #5f4ee0;
+  border: 1px solid var(--as-bg, #000);
+}
+.agentsam-page-plus { position: relative; }
+
+/* hide connection pills in composer entirely */
+.agentsam-page-connection-pills { display: none !important; }
