@@ -178,15 +178,35 @@ function initActiveConnections(servers) {
 }
 
 function renderConnectionPills() {
-  // Connections are shown only in the + menu, not as inline pills in the composer.
   const box = $("agentsam-connection-pills");
-  if (box) box.hidden = true;
-  // Show/hide dot on + button to indicate active connections
+  if (!box) return;
+  box.innerHTML = "";
   const plus = $("agentsam-plus");
-  if (plus) {
-    if (activeConnections.size > 0) plus.classList.add("has-connections");
-    else plus.classList.remove("has-connections");
+  const active = mcpServers.filter((s) => activeConnections.has(s.slug));
+
+  if (!active.length) {
+    box.hidden = true;
+    if (plus) plus.classList.remove("has-connections");
+    return;
   }
+
+  box.hidden = false;
+  if (plus) plus.classList.add("has-connections");
+
+  active.forEach((server) => {
+    const pill = document.createElement("div");
+    pill.className = "agentsam-conn-pill";
+    pill.title = connectionMenuLabel(server);
+    pill.innerHTML = `
+      ${connectionIconMarkup(server, { size: "sm" })}
+      <span class="agentsam-conn-pill-label">${escapeHtml(connectionComposerLabel(server))}</span>
+      <button type="button" class="agentsam-conn-pill-x" aria-label="Disconnect ${escapeHtml(connectionMenuLabel(server))}">×</button>
+    `;
+    pill.querySelector(".agentsam-conn-pill-x")?.addEventListener("click", (e) => {
+      disconnectConnection(server.slug, e);
+    });
+    box.appendChild(pill);
+  });
 }
 
 function formatPreviewBlock(text) {
@@ -399,7 +419,8 @@ function appendBubble(role, text, { routeChips = [], attachments = [], toolCalls
   body.textContent = text;
   wrap.appendChild(body);
   thread.appendChild(wrap);
-  thread.scrollTop = thread.scrollHeight;
+  const stage = document.querySelector(".agentsam-page-stage");
+  if (stage) stage.scrollTop = stage.scrollHeight;
   return wrap;
 }
 
