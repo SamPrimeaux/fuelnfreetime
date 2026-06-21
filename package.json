@@ -81,6 +81,7 @@
     "db:seed:mail-mailboxes": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/seed-mail-mailboxes.sql",
     "mail:provision": "node scripts/provision-mailboxes.mjs",
     "mail:e2e": "node scripts/send-mail-e2e.mjs",
+    "mail:backfill": "node scripts/backfill-inbound-mail.mjs",
     "cf:status": "./scripts/with-cf-admin-env.sh node scripts/cf-status.mjs"
   },
   "devDependencies": {

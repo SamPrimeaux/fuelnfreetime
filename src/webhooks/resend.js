@@ -1,4 +1,5 @@
 import { verifyResendWebhook } from "../lib/resend.js";
+import { listMailboxes } from "../lib/mail-mailboxes.js";
 
 const OUTBOUND_EVENTS = new Set([
   "email.sent",
@@ -29,6 +30,15 @@ async function logWebhookEvent(env, channel, event) {
     console.log(`[resend-${channel}]`, type, providerId);
   }
   return { type, providerId };
+}
+
+function normalizeAddress(value) {
+  if (Array.isArray(value)) return value.map((v) => normalizeAddress(v)).filter(Boolean).join(", ");
+  if (value && typeof value === "object") {
+    if (typeof value.email === "string") return value.email.trim();
+    if (typeof value.address === "string") return value.address.trim();
+  }
+  return String(value || "").trim();
 }
 
 async function applyOutboundEvent(env, event) {
@@ -65,8 +75,8 @@ async function applyInboundEvent(env, event, apiKey) {
   if (!providerId) return;
 
   let subject = data.subject || "(no subject)";
-  let fromEmail = data.from || "";
-  let toEmail = Array.isArray(data.to) ? data.to.join(", ") : data.to || "";
+  let fromEmail = normalizeAddress(data.from);
+  let toEmail = normalizeAddress(data.to);
   let bodyText = "";
   let bodyHtml = "";
 
@@ -78,8 +88,8 @@ async function applyInboundEvent(env, event, apiKey) {
       const row = await res.json().catch(() => ({}));
       if (res.ok) {
         subject = row.subject || subject;
-        fromEmail = row.from || fromEmail;
-        toEmail = row.to || toEmail;
+        fromEmail = normalizeAddress(row.from) || fromEmail;
+        toEmail = normalizeAddress(row.to) || toEmail;
         bodyText = row.text || bodyText;
         bodyHtml = row.html || bodyHtml;
       }
@@ -89,20 +99,15 @@ async function applyInboundEvent(env, event, apiKey) {
   }
 
   const preview = (bodyText || subject || "Inbound message").slice(0, 240);
-  const mailboxes = await (async () => {
-    try {
-      const { listMailboxes } = await import("../lib/mail-mailboxes.js");
-      return listMailboxes(env);
-    } catch {
-      return [];
-    }
-  })();
+  const mailboxes = await listMailboxes(env).catch(() => []);
+  const toHaystack = toEmail.toLowerCase();
   const mailbox = mailboxes.find((b) => {
     const addr = b.address.toLowerCase();
-    return (toEmail || "").toLowerCase().includes(addr);
+    return toHaystack.includes(addr);
   });
+  const labelSlug = (mailbox?.label || mailbox?.address?.split("@")[0] || "primary").toLowerCase();
   const labels = mailbox
-    ? ["inbound", mailbox.kind === "payments" ? "payments" : "primary", mailbox.label.toLowerCase()]
+    ? ["inbound", mailbox.kind === "payments" ? "payments" : "primary", labelSlug]
     : ["inbound", "primary"];
 
   await env.DB.prepare(
@@ -168,12 +173,20 @@ export async function handleResendInboundWebhook(request, env) {
     return Response.json({ error: err.message || "Invalid webhook" }, { status: 401 });
   }
 
-  const { type, providerId } = await logWebhookEvent(env, "inbound", event);
-  if (type === "email.received") {
-    await applyInboundEvent(env, event, env.RESEND_API_KEY);
-  }
+  try {
+    const { type, providerId } = await logWebhookEvent(env, "inbound", event);
+    if (type === "email.received") {
+      await applyInboundEvent(env, event, env.RESEND_API_KEY);
+    }
 
-  return Response.json({ ok: true, channel: "inbound", type, provider_id: providerId });
+    return Response.json({ ok: true, channel: "inbound", type, provider_id: providerId });
+  } catch (err) {
+    console.error("[resend-inbound]", err);
+    return Response.json(
+      { ok: false, error: err?.message || "Inbound webhook failed" },
+      { status: 500 }
+    );
+  }
 }
 
 /** Legacy single endpoint — treats as outbound. */
