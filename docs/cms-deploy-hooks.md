@@ -19,6 +19,18 @@ Client-side `fnf-head.js` still runs as a fallback for prefs updated after cache
 
 ## Deploy hook (`fuelnfreetime-cms-deployhook`)
 
+Registered in D1 as **`agentsam_hook`** row `hook_fnf_cms_deploy_build` (`hook_key`: `fnf.cms.deploy_hook`).
+
+Post-deploy CMS warm is **`hook_fnf_post_deploy`** (`fnf.post_deploy`).
+
+Resend inbound/outbound endpoints are in **`agentsam_webhooks`** as `resend-inbound` and `resend-outbound`.
+
+Apply or refresh registry:
+
+```bash
+npm run db:seed:agentsam-hooks-webhooks-v2
+```
+
 Your Workers Builds hook triggers a **rebuild + deploy from `main`**:
 
 ```

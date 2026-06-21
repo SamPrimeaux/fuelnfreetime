@@ -86,12 +86,17 @@ function timingSafeEqual(a, b) {
 
 /** Verify Resend/Svix webhook signature. Returns parsed JSON event. */
 export async function verifyResendWebhook(request, secret) {
+  const payload = await request.text();
+  return verifyResendWebhookPayload(payload, request.headers, secret);
+}
+
+/** Verify a pre-read Resend/Svix payload (allows logging before/after verify). */
+export async function verifyResendWebhookPayload(payload, headers, secret) {
   if (!secret) throw new Error("Webhook signing secret not configured");
 
-  const payload = await request.text();
-  const id = request.headers.get("svix-id");
-  const timestamp = request.headers.get("svix-timestamp");
-  const signature = request.headers.get("svix-signature");
+  const id = headers.get("svix-id");
+  const timestamp = headers.get("svix-timestamp");
+  const signature = headers.get("svix-signature");
   if (!id || !timestamp || !signature) throw new Error("Missing Svix headers");
 
   const now = Math.floor(Date.now() / 1000);

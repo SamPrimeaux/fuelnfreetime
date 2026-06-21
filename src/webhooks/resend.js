@@ -1,5 +1,13 @@
-import { verifyResendWebhook, fetchReceivedEmail } from "../lib/resend.js";
+import { verifyResendWebhookPayload, fetchReceivedEmail } from "../lib/resend.js";
 import { listMailboxes } from "../lib/mail-mailboxes.js";
+import {
+  WEBHOOK_ENDPOINT_IDS,
+  clientIp,
+  insertAgentSamWebhookEvent,
+  pickWebhookHeaders,
+  resendEventMeta,
+  updateAgentSamWebhookEvent,
+} from "../agentsam/webhook-events.js";
 
 const OUTBOUND_EVENTS = new Set([
   "email.sent",
@@ -10,7 +18,7 @@ const OUTBOUND_EVENTS = new Set([
   "email.failed",
 ]);
 
-async function logWebhookEvent(env, channel, event) {
+async function logMailWebhookEvent(env, channel, event) {
   const type = event?.type || "unknown";
   const providerId = event?.data?.email_id || event?.data?.id || null;
   try {
@@ -140,58 +148,122 @@ async function applyInboundEvent(env, event, apiKey) {
     .catch(() => {});
 }
 
-export async function handleResendOutboundWebhook(request, env) {
+async function handleResendChannel(request, env, { channel, endpointId, secret }) {
   if (request.method !== "POST") {
     return Response.json({ error: "Method not allowed" }, { status: 405 });
   }
 
-  const secret =
-    env.RESEND_WEBHOOK_SECRET_OUTBOUND || env.RESEND_WEBHOOK_SECRET || "";
+  const payload = await request.text();
+  const headers = pickWebhookHeaders(request);
+  const ipAddress = clientIp(request);
+
   let event;
   try {
-    event = await verifyResendWebhook(request, secret);
+    event = await verifyResendWebhookPayload(payload, request.headers, secret);
   } catch (err) {
+    let parsed = null;
+    try {
+      parsed = JSON.parse(payload);
+    } catch {
+      parsed = null;
+    }
+
+    await insertAgentSamWebhookEvent(env, {
+      endpointId,
+      provider: "resend",
+      eventType: parsed?.type || "auth.failed",
+      eventId: parsed?.data?.email_id || parsed?.data?.id || null,
+      payload: parsed,
+      headers,
+      metadata: { channel, phase: "verify" },
+      status: "failed",
+      signatureValid: false,
+      ipAddress,
+      errorMessage: err?.message || "Invalid webhook",
+    });
+
     return Response.json({ error: err.message || "Invalid webhook" }, { status: 401 });
   }
 
-  const { type, providerId } = await logWebhookEvent(env, "outbound", event);
-  if (OUTBOUND_EVENTS.has(type)) {
-    await applyOutboundEvent(env, event);
-  }
+  const { eventType, eventId } = resendEventMeta(event);
+  const agentsamEventId = await insertAgentSamWebhookEvent(env, {
+    endpointId,
+    provider: "resend",
+    eventType,
+    eventId,
+    payload: event,
+    headers,
+    metadata: { channel, mail_table: "mail_messages" },
+    status: "processing",
+    ipAddress,
+  });
 
-  return Response.json({ ok: true, channel: "outbound", type, provider_id: providerId });
-}
-
-export async function handleResendInboundWebhook(request, env) {
-  if (request.method !== "POST") {
-    return Response.json({ error: "Method not allowed" }, { status: 405 });
-  }
-
-  const secret = env.RESEND_WEBHOOK_SECRET_INBOUND || "";
-  let event;
-  try {
-    event = await verifyResendWebhook(request, secret);
-  } catch (err) {
-    return Response.json({ error: err.message || "Invalid webhook" }, { status: 401 });
-  }
+  const { type, providerId } = await logMailWebhookEvent(env, channel, event);
 
   try {
-    const { type, providerId } = await logWebhookEvent(env, "inbound", event);
-    if (type === "email.received") {
+    if (channel === "outbound") {
+      if (OUTBOUND_EVENTS.has(type)) {
+        await applyOutboundEvent(env, event);
+      }
+    } else if (type === "email.received") {
       await applyInboundEvent(env, event, env.RESEND_API_KEY);
     }
 
-    return Response.json({ ok: true, channel: "inbound", type, provider_id: providerId });
+    const handled =
+      channel === "outbound" ? OUTBOUND_EVENTS.has(type) : type === "email.received";
+
+    await updateAgentSamWebhookEvent(env, agentsamEventId, {
+      status: handled ? "processed" : "ignored",
+      metadata: { channel, provider_id: providerId, mail_logged: true },
+    });
+
+    return Response.json({
+      ok: true,
+      channel,
+      type,
+      provider_id: providerId,
+      agentsam_event_id: agentsamEventId,
+    });
   } catch (err) {
-    console.error("[resend-inbound]", err);
+    await updateAgentSamWebhookEvent(env, agentsamEventId, {
+      status: "failed",
+      processingError: err?.message || "Webhook processing failed",
+      metadata: { channel, provider_id: providerId },
+    });
+    console.error(`[resend-${channel}]`, err);
     return Response.json(
-      { ok: false, error: err?.message || "Inbound webhook failed" },
+      { ok: false, error: err?.message || "Webhook processing failed" },
       { status: 500 }
     );
   }
 }
 
+export async function handleResendOutboundWebhook(request, env) {
+  const secret =
+    env.RESEND_WEBHOOK_SECRET_OUTBOUND || env.RESEND_WEBHOOK_SECRET || "";
+  return handleResendChannel(request, env, {
+    channel: "outbound",
+    endpointId: WEBHOOK_ENDPOINT_IDS.resend_outbound,
+    secret,
+  });
+}
+
+export async function handleResendInboundWebhook(request, env) {
+  const secret = env.RESEND_WEBHOOK_SECRET_INBOUND || "";
+  return handleResendChannel(request, env, {
+    channel: "inbound",
+    endpointId: WEBHOOK_ENDPOINT_IDS.resend_inbound,
+    secret,
+  });
+}
+
 /** Legacy single endpoint — treats as outbound. */
 export async function handleResendWebhookLegacy(request, env) {
-  return handleResendOutboundWebhook(request, env);
+  const secret =
+    env.RESEND_WEBHOOK_SECRET_OUTBOUND || env.RESEND_WEBHOOK_SECRET || "";
+  return handleResendChannel(request, env, {
+    channel: "outbound",
+    endpointId: WEBHOOK_ENDPOINT_IDS.resend_legacy,
+    secret,
+  });
 }

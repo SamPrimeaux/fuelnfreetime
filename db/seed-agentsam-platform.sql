@@ -41,16 +41,38 @@ INSERT OR REPLACE INTO agentsam_hook (
   'au_fnf_system',
   'cloudflare',
   'post_deploy',
-  'log',
+  'warm_cms_cache',
   'fuelnfreetime',
-  '{"worker":"fuelnfreetime","domain":"fuelnfreetime.com"}',
+  '{"worker":"fuelnfreetime","domain":"fuelnfreetime.com","script":"npm run cms:post-deploy"}',
   1,
   'wf_fnf_post_deploy',
   'deploy.success',
   'fnf.post_deploy',
-  'log_only',
-  '{"channel":"console"}',
+  'internal_http',
+  '{"method":"POST","endpoint":"/api/internal/cms/warm","secret_header":"X-Cms-Warm-Secret","secret_name":"CMS_WARM_SECRET"}',
   100
+);
+
+INSERT OR REPLACE INTO agentsam_hook (
+  id, tenant_id, workspace_id, user_id, provider, trigger, command, target_id,
+  metadata, is_active, workflow_id, event_type, hook_key, handler_type, handler_config, priority
+) VALUES (
+  'hook_fnf_cms_deploy_build',
+  'tenant_fuelnfreetime',
+  'ws_fuelnfreetime',
+  'au_fnf_system',
+  'cloudflare',
+  'pre_deploy',
+  'trigger_workers_build',
+  'fuelnfreetime-cms-deployhook',
+  '{"worker":"fuelnfreetime","build_name":"fuelnfreetime-cms-deployhook","branch":"main","deploy_hook_id":"0cbd475b-93c4-458a-ba72-0499a1caff90","script":"npm run cms:deploy-hook"}',
+  1,
+  'wf_fnf_post_deploy',
+  'cms.deploy.trigger',
+  'fnf.cms.deploy_hook',
+  'http_post',
+  '{"method":"POST","url_env":"CMS_DEPLOY_HOOK_URL"}',
+  90
 );
 
 INSERT OR REPLACE INTO agentsam_hook (
@@ -120,6 +142,48 @@ INSERT OR REPLACE INTO agentsam_webhooks (
 
 INSERT OR REPLACE INTO agentsam_webhooks (
   id, tenant_id, workspace_id, user_id, provider, name, slug, description,
+  endpoint_url, signature_header, signature_algo, is_active, allowed_events, workflow_key, metadata_json
+) VALUES (
+  'awh_resend_inbound',
+  'tenant_fuelnfreetime',
+  'ws_fuelnfreetime',
+  'au_fnf_system',
+  'resend',
+  'Resend inbound mail',
+  'resend-inbound',
+  'Catch-all inbound @fuelnfreetime.com → D1 mail_messages.',
+  'https://fuelnfreetime.com/api/webhooks/resend/inbound',
+  'svix-signature',
+  'sha256',
+  1,
+  'email.received',
+  'fnf_mail_inbound',
+  '{"secret_name":"RESEND_WEBHOOK_SECRET_INBOUND","status":"live"}'
+);
+
+INSERT OR REPLACE INTO agentsam_webhooks (
+  id, tenant_id, workspace_id, user_id, provider, name, slug, description,
+  endpoint_url, signature_header, signature_algo, is_active, allowed_events, workflow_key, metadata_json
+) VALUES (
+  'awh_resend_outbound',
+  'tenant_fuelnfreetime',
+  'ws_fuelnfreetime',
+  'au_fnf_system',
+  'resend',
+  'Resend outbound mail',
+  'resend-outbound',
+  'Delivery events for sent mail → mail_messages status updates.',
+  'https://fuelnfreetime.com/api/webhooks/resend/outbound',
+  'svix-signature',
+  'sha256',
+  1,
+  'email.sent,email.delivered,email.delivery_delayed,email.bounced,email.complained,email.failed',
+  'fnf_mail_outbound',
+  '{"secret_name":"RESEND_WEBHOOK_SECRET_OUTBOUND","status":"live"}'
+);
+
+INSERT OR REPLACE INTO agentsam_webhooks (
+  id, tenant_id, workspace_id, user_id, provider, name, slug, description,
   endpoint_url, signature_header, signature_algo, is_active, allowed_events, metadata_json
 ) VALUES (
   'awh_resend_events',
@@ -127,13 +191,13 @@ INSERT OR REPLACE INTO agentsam_webhooks (
   'ws_fuelnfreetime',
   'au_fnf_system',
   'resend',
-  'Resend email events',
+  'Resend email events (legacy)',
   'resend-events',
-  'Delivery/bounce events for transactional order email (planned).',
+  'Legacy combined endpoint — use resend-inbound + resend-outbound.',
   'https://fuelnfreetime.com/api/agentsam/webhooks/resend',
   'svix-signature',
   'sha256',
   0,
   'email.sent,email.delivered,email.bounced',
-  '{"secret_name":"RESEND_WEBHOOK_SECRET","status":"planned"}'
+  '{"secret_name":"RESEND_WEBHOOK_SECRET","status":"deprecated"}'
 );

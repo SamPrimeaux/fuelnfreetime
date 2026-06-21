@@ -30,6 +30,7 @@
     "db:migrate:agentsam-workflows": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-agentsam-workflows.sql",
     "db:migrate:agentsam-workflows-v2": "bash scripts/apply-agentsam-workflows-v2.sh",
     "db:seed:agentsam-platform": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/seed-agentsam-platform.sql",
+    "db:seed:agentsam-hooks-webhooks-v2": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/seed-agentsam-fnf-hooks-webhooks-v2.sql",
     "db:seed:agentsam-workflows": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/seed-agentsam-workflows.sql",
     "db:seed:agentsam-workflows-studio": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/seed-agentsam-workflows-studio.sql",
     "db:seed:agentsam-workflow-nodes-studio": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/seed-agentsam-workflow-nodes-studio.sql",

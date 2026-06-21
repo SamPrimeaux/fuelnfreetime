@@ -131,13 +131,15 @@ npx wrangler secret put AGENTSAM_BRIDGE_KEY
 Drawer lists **Content Studio**, **Creative Studio**, **Brand Refresh** by `metadata_json.ui_label`; selected `workflow_key` overrides auto-routing.
 
 
-| slug | provider | endpoint |
-|------|----------|----------|
-| `stripe-checkout` | stripe | `/api/store/webhooks/stripe` |
-| `github-push` | github | `/api/agentsam/webhooks/github` |
-| `resend-events` | resend | `/api/agentsam/webhooks/resend` |
+| slug | provider | endpoint | event log |
+|------|----------|----------|-----------|
+| `stripe-checkout` | stripe | `/api/store/webhooks/stripe` | `agentsam_webhook_events` |
+| `github-push` | github | `/api/agentsam/webhooks/github` | `agentsam_webhook_events` |
+| `resend-inbound` | resend | `/api/webhooks/resend/inbound` | `agentsam_webhook_events` |
+| `resend-outbound` | resend | `/api/webhooks/resend/outbound` | `agentsam_webhook_events` |
+| `resend-events` | resend | `/api/agentsam/webhooks/resend` | legacy (inactive) |
 
-Rows seeded with `is_active = 0` until routes + secrets are wired.
+Resend handlers write **`agentsam_webhook_events`** (`received` → `processing` → `processed`/`failed`/`ignored`) linked to `endpoint_id` (`awh_resend_inbound` / `awh_resend_outbound`). Mail-specific audit rows still go to `mail_webhook_events`.
 
 ## Schema files
 
@@ -151,6 +153,7 @@ Rows seeded with `is_active = 0` until routes + secrets are wired.
 ## Code
 
 - `src/agentsam/constants.js` — tenant/workspace IDs
+- `src/agentsam/webhook-events.js` — `agentsam_webhook_events` insert/update helpers
 - `src/agentsam/skill-r2.js` — R2 hydration
 - `src/agentsam/skills.js` — list/get/match for chat
 - `scripts/sync-agentsam-skills.mjs` — R2 + D1 sync
