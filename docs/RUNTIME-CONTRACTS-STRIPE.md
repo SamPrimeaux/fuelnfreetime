@@ -29,9 +29,10 @@ This document is an **ordered task list** for wiring Stripe Checkout. Complete t
 - [ ] **P4.** Stripe Dashboard → Developers → Webhooks endpoint URL planned:
   - Production: `https://fuelnfreetime.com/api/store/webhooks/stripe`
   - Staging: `https://fuelnfreetime.meauxbility.workers.dev/api/store/webhooks/stripe`
-- [ ] **P5.** Success/cancel URLs agreed:
+- [ ] **P5.** Success/cancel URLs agreed (hardcoded in Worker — **not** `wrangler.toml` vars):
   - Success: `/order-confirmation?session_id={CHECKOUT_SESSION_ID}` (create page in Task 16)
   - Cancel: `/cart.html?cancelled=1`
+  - Build full URLs from the incoming request origin (`new URL(path, request.url)`) or shared constants in `src/store/stripe.js`. Do **not** add path strings as Cloudflare `[vars]` bindings — they are not secrets, not per-environment config, and add deploy noise for no benefit.
 
 ---
 
@@ -102,9 +103,9 @@ CREATE INDEX IF NOT EXISTS idx_reservations_variant_status ON inventory_reservat
 
 ---
 
-### Task 3 — Secrets & vars
+### Task 3 — Secrets (paths are not secrets)
 
-**Files:** `SECRETS.md`, `wrangler.toml` (vars only, no secrets)
+**Files:** `SECRETS.md`, `src/store/stripe.js` (constants)
 
 **Actions:**
 
@@ -113,17 +114,28 @@ wrangler secret put STRIPE_SECRET_KEY      # sk_test_... then sk_live_...
 wrangler secret put STRIPE_WEBHOOK_SECRET  # whsec_... per endpoint
 ```
 
-**Optional var** (non-secret):
+**Checkout redirect paths** — define once in code, e.g.:
 
-```toml
-# wrangler.toml [vars]
-STRIPE_CHECKOUT_SUCCESS_PATH = "/order-confirmation"
-STRIPE_CHECKOUT_CANCEL_PATH = "/cart.html"
+```js
+// src/store/stripe.js
+export const CHECKOUT_SUCCESS_PATH = "/order-confirmation";
+export const CHECKOUT_CANCEL_PATH = "/cart.html";
+
+export function checkoutUrls(request) {
+  const base = new URL(request.url).origin;
+  return {
+    success: `${base}${CHECKOUT_SUCCESS_PATH}?session_id={CHECKOUT_SESSION_ID}`,
+    cancel: `${base}${CHECKOUT_CANCEL_PATH}?cancelled=1`,
+  };
+}
 ```
+
+Do **not** put success/cancel paths in `wrangler.toml` `[vars]`. Only Stripe keys belong in secrets.
 
 **Acceptance:**
 - [ ] `SECRETS.md` status row updated to "wired" for both secrets
 - [ ] Worker can read `env.STRIPE_SECRET_KEY` in dev via `.dev.vars` (gitignored)
+- [ ] Success/cancel URLs built from request origin + code constants (no path vars in wrangler)
 
 **Depends on:** P1, P3
 
@@ -397,9 +409,9 @@ stripe listen --forward-to localhost:8787/api/store/webhooks/stripe
 
 ### Task 17 — Feature flag: Stripe vs v1
 
-**Files:** `wrangler.toml`, `src/store/api.js`
+**Files:** `wrangler.toml` (mode flag only if needed), `src/store/api.js`
 
-**Var:** `CHECKOUT_MODE = "stripe" | "legacy"` (default `stripe` when ready)
+**Var:** `CHECKOUT_MODE = "stripe" | "legacy"` (default `stripe` when ready) — optional; use only for rollout toggles, not URL paths.
 
 **Acceptance:**
 - [ ] Staging uses `stripe`; legacy path available for rollback one deploy
