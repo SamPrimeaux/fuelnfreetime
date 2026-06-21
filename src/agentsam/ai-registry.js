@@ -161,17 +161,13 @@ export function resolveAIRouting(classification, message, context = {}) {
     return { ...base, task_type: "text_to_speech", lane: "audio" };
   }
 
-  if (wantsVision && (hasImage || intent === "creative" || intent === "brand")) {
+  // If image is attached, always route vision — no keywords required
+  if (hasImage) {
     return { ...base, task_type: "image_to_text", lane: "vision" };
   }
 
-  if (
-    wantsImage &&
-    (intent === "creative" ||
-      intent === "brand" ||
-      workflowKey.includes("creative") ||
-      workflowKey.includes("brand"))
-  ) {
+  // Image generation — detect intent regardless of workflow
+  if (wantsImage) {
     const lane = /\b(quick|draft|fast)\b/.test(hay) ? "image_fast" : "image";
     return { ...base, task_type: "image_generation", lane };
   }

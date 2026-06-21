@@ -172,8 +172,8 @@ body.agentsam-page-body .console-main--bleed {
 
 .agentsam-page-menu {
   position: absolute;
-  bottom: calc(100% + 10px);
-  left: 0;
+  bottom: calc(100% + 8px);
+  left: -4px;
   min-width: 260px;
   padding: 6px;
   border-radius: 14px;
@@ -1029,6 +1029,7 @@ body.agentsam-page-body .console-main--bleed {
   align-items: center;
   flex: 1;
   min-width: 0;
+  position: relative;
 }
 
 /* textarea inside composer */
