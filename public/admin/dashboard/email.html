@@ -12,8 +12,320 @@
 <link rel="stylesheet" href="/admin/css/mail.css">
 </head>
 <body>
-<script src="/admin/js/shell.js"></script>
-<script src="/admin/js/mail.js"></script>
+<template id="mail-app-template">
+<div class="stage">
+  <div class="mobile-tabs" id="mobileTabs" aria-label="Mail mobile navigation">
+    <button data-panel="rail">Folders</button>
+    <button class="active" data-panel="list">Inbox</button>
+    <button data-panel="reader">Read</button>
+  </div>
+
+  <main class="mail-app" id="mailApp" data-mobile="list">
+    <button class="rail-toggle" id="railToggle" aria-label="Collapse folders" title="Collapse folders">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+    </button>
+
+    <aside class="mail-rail" aria-label="Mailbox folders">
+      <div class="rail-head">
+        <div class="rail-title">
+          <h1>Email</h1>
+          <p>Store inbox · Gmail sync · Resend transactional</p>
+        </div>
+        <button class="icon-button" id="settingsButton" aria-label="Mail settings" title="Mail settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"></path><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.04.04a2.1 2.1 0 0 1-2.97 2.97l-.04-.04a1.8 1.8 0 0 0-1.98-.36 1.8 1.8 0 0 0-1.09 1.65V21.3a2.1 2.1 0 0 1-4.2 0v-.06a1.8 1.8 0 0 0-1.09-1.65 1.8 1.8 0 0 0-1.98.36l-.04.04a2.1 2.1 0 0 1-2.97-2.97l.04-.04A1.8 1.8 0 0 0 3.8 15a1.8 1.8 0 0 0-1.65-1.09H2.1a2.1 2.1 0 0 1 0-4.2h.06A1.8 1.8 0 0 0 3.8 8.62a1.8 1.8 0 0 0-.36-1.98l-.04-.04a2.1 2.1 0 0 1 2.97-2.97l.04.04a1.8 1.8 0 0 0 1.98.36 1.8 1.8 0 0 0 1.09-1.65V2.3a2.1 2.1 0 0 1 4.2 0v.06a1.8 1.8 0 0 0 1.09 1.65 1.8 1.8 0 0 0 1.98-.36l.04-.04a2.1 2.1 0 0 1 2.97 2.97l-.04.04a1.8 1.8 0 0 0-.36 1.98 1.8 1.8 0 0 0 1.65 1.09h.06a2.1 2.1 0 0 1 0 4.2h-.06A1.8 1.8 0 0 0 19.4 15Z"></path></svg>
+        </button>
+      </div>
+
+      <button class="primary-button" id="composeButton" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+        <span>Compose</span>
+      </button>
+
+      <section class="section" aria-label="Mailbox">
+        <div class="section-label">Mailbox</div>
+        <div class="nav-item active" data-folder="inbox" title="Inbox">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4Z"></path><path d="m4 8 8 5 8-5"></path></svg>
+          <span class="nav-label">Inbox</span><span class="badge" id="inboxBadge">0</span>
+        </div>
+        <div class="nav-item" data-folder="starred" title="Starred">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"></path></svg>
+          <span class="nav-label">Starred</span>
+        </div>
+        <div class="nav-item" data-folder="archived" title="Archived">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"></path><path d="M7 7v12h10V7"></path><path d="M9 4h6l1 3H8l1-3Z"></path></svg>
+          <span class="nav-label">Archived</span>
+        </div>
+        <div class="nav-item" data-folder="sent" title="Sent">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4 20-7Z"></path><path d="M22 2 11 13"></path></svg>
+          <span class="nav-label">Sent</span>
+        </div>
+        <div class="nav-item" data-folder="drafts" title="Drafts">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path><path d="M14 2v6h6"></path></svg>
+          <span class="nav-label">Drafts</span><span class="badge soft" id="draftsBadge">0</span>
+        </div>
+      </section>
+
+      <section class="section" aria-label="Smart views">
+        <div class="section-label">Smart Views</div>
+        <div class="nav-item" data-folder="needs" title="Needs reply">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"></path></svg>
+          <span class="nav-label">Needs reply</span><span class="badge soft" id="needsBadge">0</span>
+        </div>
+        <div class="nav-item" data-folder="customers" title="Customers">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          <span class="nav-label">Customers</span>
+        </div>
+        <div class="nav-item" data-folder="system" title="System notices">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"></path></svg>
+          <span class="nav-label">System notices</span>
+        </div>
+      </section>
+
+      <div class="rail-bottom">
+        <div class="account-card">
+          <strong>Mail routing</strong>
+          <span id="railRouteLabel">Gmail receives. Resend sends store mail.</span>
+          <div class="status-row"><span class="sync-dot" id="syncDot"></span><span id="railSyncText">Not configured</span></div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="drag-handle rail-handle" data-handle="rail" aria-hidden="true"></div>
+
+    <section class="message-list" aria-label="Inbox message list">
+      <div class="list-head">
+        <div class="list-title-row">
+          <div class="list-title">
+            <h2 id="folderTitle">Inbox</h2>
+            <span id="folderSubhead">Loading messages…</span>
+          </div>
+          <div class="list-actions">
+            <button class="icon-button" id="refreshButton" type="button" title="Refresh inbox" aria-label="Refresh inbox">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.2 6.5"></path><path d="M3 12A9 9 0 0 1 18.2 5.5"></path><path d="M3 3v6h6"></path><path d="M21 21v-6h-6"></path></svg>
+            </button>
+            <button class="icon-button" id="quickSettingsButton" type="button" title="Account settings" aria-label="Account settings">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.02.02a2 2 0 1 1-2.83 2.83l-.02-.02a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.03a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.87.34l-.02.02a2 2 0 1 1-2.83-2.83l.02-.02A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.03A1.7 1.7 0 0 0 4.6 8.4a1.7 1.7 0 0 0-.34-1.87l-.02-.02a2 2 0 1 1 2.83-2.83l.02.02A1.7 1.7 0 0 0 8.96 4.04 1.7 1.7 0 0 0 10 2.48V2a2 2 0 1 1 4 0v.03a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.02-.02a2 2 0 1 1 2.83 2.83l-.02.02a1.7 1.7 0 0 0-.34 1.87A1.7 1.7 0 0 0 20.96 10H21a2 2 0 1 1 0 4h-.03A1.7 1.7 0 0 0 19.4 15Z"></path></svg>
+            </button>
+          </div>
+        </div>
+
+        <label class="search-box" for="mailSearch">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.2-3.2"></path></svg>
+          <input id="mailSearch" type="search" placeholder="Search messages, senders, subject…" />
+        </label>
+
+        <div class="segmented" id="filterTabs" aria-label="Mail filters">
+          <button class="active" type="button" data-filter="all">All</button>
+          <button type="button" data-filter="unread">Unread</button>
+          <button type="button" data-filter="starred">Starred</button>
+          <button type="button" data-filter="needs">Needs reply</button>
+        </div>
+      </div>
+
+      <div class="inbox-meta">
+        <span id="metaCount">Showing latest messages</span>
+        <button type="button" id="triageButton">Triage inbox</button>
+      </div>
+
+      <div class="rows" id="rows"></div>
+
+      <div class="list-foot">
+        <button class="ghost-button" type="button" id="prevPage">Previous</button>
+        <span id="pageLabel">Page 1</span>
+        <button class="ghost-button" type="button" id="nextPage">Next</button>
+      </div>
+    </section>
+
+    <div class="drag-handle detail-handle" data-handle="list" aria-hidden="true"></div>
+
+    <section class="reader" aria-label="Email reader">
+      <div class="reader-toolbar">
+        <div class="toolbar-left">
+          <button class="toolbar-button icon-only" type="button" id="mobileBack" aria-label="Back to list" title="Back to list">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+          </button>
+          <button class="toolbar-button" type="button" data-action="reply"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 17-5-5 5-5"></path><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg><span>Reply</span></button>
+          <button class="toolbar-button" type="button" data-action="replyAll"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 17-5-5 5-5"></path><path d="m13 17-5-5 5-5"></path><path d="M22 18v-2a4 4 0 0 0-4-4H8"></path></svg><span>Reply all</span></button>
+          <button class="toolbar-button" type="button" data-action="forward"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 17 5-5-5-5"></path><path d="M4 18v-2a4 4 0 0 1 4-4h12"></path></svg><span>Forward</span></button>
+        </div>
+        <div class="toolbar-right">
+          <button class="toolbar-button icon-only" type="button" data-action="archive" aria-label="Archive" title="Archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"></path><path d="M7 7v12h10V7"></path><path d="M9 4h6l1 3H8l1-3Z"></path></svg></button>
+          <button class="toolbar-button icon-only" type="button" data-action="star" aria-label="Star" title="Star"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"></path></svg></button>
+          <button class="toolbar-button icon-only danger" type="button" data-action="delete" aria-label="Delete" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path></svg></button>
+          <button class="toolbar-button icon-only" type="button" id="moreButton" aria-label="More actions" title="More"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle></svg></button>
+        </div>
+      </div>
+      <div class="body-scroll" id="readerBody"></div>
+    </section>
+  </main>
+</div>
+
+<div class="context-menu" id="contextMenu" role="menu" aria-label="Message actions">
+  <button type="button" data-menu-action="open">Open <span>Enter</span></button>
+  <button type="button" data-menu-action="reply">Reply <span>R</span></button>
+  <button type="button" data-menu-action="replyAll">Reply all <span>A</span></button>
+  <button type="button" data-menu-action="forward">Forward <span>F</span></button>
+  <div class="divider"></div>
+  <button type="button" data-menu-action="unread">Mark unread</button>
+  <button type="button" data-menu-action="archive">Archive</button>
+  <button type="button" data-menu-action="delete">Delete</button>
+</div>
+
+<div class="more-menu" id="moreMenu" role="menu" aria-label="More mail actions">
+  <button type="button" data-menu-action="summarize">Summarize thread</button>
+  <button type="button" data-menu-action="task">Create task</button>
+  <button type="button" data-menu-action="settings">Mail settings</button>
+</div>
+
+<section class="compose-sheet" id="composeSheet" aria-label="Compose message">
+  <div class="compose-head">
+    <strong id="composeTitle">New message</strong>
+    <button type="button" id="closeCompose" aria-label="Close compose">×</button>
+  </div>
+  <div class="compose-fields">
+    <label class="compose-field">From
+      <select id="composeFrom"></select>
+    </label>
+    <label class="compose-field">To <input id="composeTo" placeholder="recipient@example.com" /></label>
+    <label class="compose-field">Subject <input id="composeSubject" placeholder="Subject" /></label>
+  </div>
+  <div class="compose-body">
+    <textarea id="composeText" placeholder="Write a clear, focused message…"></textarea>
+  </div>
+  <div class="compose-actions">
+    <button class="ghost-button" type="button" id="draftButton">Save draft</button>
+    <button class="primary-button" type="button" id="sendButton"><span>Send</span></button>
+  </div>
+</section>
+
+<div class="modal-backdrop" id="settingsBackdrop" aria-hidden="true">
+  <section class="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="settings-head">
+      <div class="settings-title">
+        <h2 id="settingsTitle">Mail settings</h2>
+        <span>Connect Gmail for inbox sync and Resend for order confirmations and store mail.</span>
+      </div>
+      <button class="icon-button" type="button" id="closeSettings" aria-label="Close settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+      </button>
+    </div>
+    <div class="settings-body">
+      <nav class="settings-nav" aria-label="Settings sections">
+        <button class="settings-tab active" type="button" data-settings-tab="accounts">Accounts</button>
+        <button class="settings-tab" type="button" data-settings-tab="gmail">Gmail</button>
+        <button class="settings-tab" type="button" data-settings-tab="resend">Resend</button>
+        <button class="settings-tab" type="button" data-settings-tab="routing">Routing</button>
+      </nav>
+
+      <div class="settings-panel active" id="settings-accounts">
+        <div class="settings-card full">
+          <div class="card-title">
+            <div><strong>Connected sources</strong><span>Gmail for inbox. Resend for transactional store email.</span></div>
+            <button class="provider-pill" type="button" id="accountStatusPill">0 active</button>
+          </div>
+          <div class="accounts-list" id="accountsList"></div>
+          <div class="settings-actions">
+            <button class="form-button" type="button" id="addGmailAccount">Add Gmail</button>
+            <button class="form-button" type="button" id="addResendAccount">Add Resend</button>
+            <button class="form-button primary" type="button" id="saveAllSettings">Save all settings</button>
+          </div>
+        </div>
+        <div class="settings-card full">
+          <div class="card-title"><div><strong>API payload preview</strong><span>Shape your Worker expects when settings are saved.</span></div><button class="provider-pill" type="button" id="copyPayload">Copy</button></div>
+          <pre class="payload-preview" id="payloadPreview"></pre>
+        </div>
+      </div>
+
+      <div class="settings-panel" id="settings-gmail">
+        <div class="settings-grid">
+          <div class="settings-card">
+            <div class="card-title"><div><strong>Gmail account</strong><span>Inbox sync, replies, and drafts.</span></div><span class="provider-pill" id="gmailStatus">Disconnected</span></div>
+            <div class="form-grid">
+              <div class="field full"><label for="gmailAddress">Google mailbox</label><input id="gmailAddress" type="email" placeholder="you@gmail.com" /></div>
+              <div class="field"><label for="gmailDisplayName">Display name</label><input id="gmailDisplayName" placeholder="Fuel &amp; Free Time" /></div>
+              <div class="field"><label for="gmailSyncWindow">Sync window</label><select id="gmailSyncWindow"><option>Last 30 days</option><option>Last 90 days</option><option>All mail</option></select></div>
+            </div>
+            <div class="settings-actions"><button class="form-button blue" type="button" id="connectGmail">Connect Gmail</button><button class="form-button primary" type="button" id="saveGmail">Save Gmail</button></div>
+          </div>
+          <div class="settings-card">
+            <div class="card-title"><div><strong>Gmail permissions</strong><span>OAuth scopes for the Worker handoff.</span></div></div>
+            <div>
+              <div class="toggle-row"><div class="toggle-copy"><strong>Read message metadata</strong><span>Subject, sender, labels, dates.</span></div><label class="switch"><input id="gmailReadMeta" type="checkbox" checked /><span class="slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-copy"><strong>Read message bodies</strong><span>Needed for search and summaries.</span></div><label class="switch"><input id="gmailReadBodies" type="checkbox" checked /><span class="slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-copy"><strong>Send replies from Gmail</strong><span>Personal and customer replies.</span></div><label class="switch"><input id="gmailSend" type="checkbox" checked /><span class="slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-copy"><strong>Create drafts</strong><span>Hold generated replies for review.</span></div><label class="switch"><input id="gmailDrafts" type="checkbox" checked /><span class="slider"></span></label></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-panel" id="settings-resend">
+        <div class="settings-grid">
+          <div class="settings-card">
+            <div class="card-title"><div><strong>Resend sender</strong><span>Order confirmations, newsletters, store notifications.</span></div><span class="provider-pill" id="resendStatus">Pending</span></div>
+            <div class="form-grid">
+              <div class="field full"><label for="resendFrom">Default from email</label><input id="resendFrom" type="email" placeholder="hello@fuelnfreetime.com" /></div>
+              <div class="field"><label for="resendDomain">Verified domain</label><input id="resendDomain" placeholder="fuelnfreetime.com" /></div>
+              <div class="field"><label for="resendReplyTo">Reply-to</label><input id="resendReplyTo" type="email" placeholder="support@fuelnfreetime.com" /></div>
+              <div class="field full"><label for="resendApiKey">API key</label><input id="resendApiKey" type="password" placeholder="re_••••••••••••••••" autocomplete="off" /></div>
+            </div>
+            <div class="settings-actions"><button class="form-button" type="button" id="testResend">Send test</button><button class="form-button primary" type="button" id="saveResend">Save Resend</button></div>
+          </div>
+          <div class="settings-card">
+            <div class="card-title"><div><strong>Resend delivery controls</strong><span>Transactional first — campaigns when ready.</span></div></div>
+            <div>
+              <div class="toggle-row"><div class="toggle-copy"><strong>Enable transactional send</strong><span>Orders, receipts, confirmations.</span></div><label class="switch"><input id="resendTransactional" type="checkbox" checked /><span class="slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-copy"><strong>Enable campaign send</strong><span>Newsletter and promo mail.</span></div><label class="switch"><input id="resendCampaign" type="checkbox" /><span class="slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-copy"><strong>Track opens and clicks</strong><span>Only when policy allows.</span></div><label class="switch"><input id="resendTracking" type="checkbox" /><span class="slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-copy"><strong>Webhook status sync</strong><span>Delivery, bounce, complaint events.</span></div><label class="switch"><input id="resendWebhooks" type="checkbox" checked /><span class="slider"></span></label></div>
+            </div>
+          </div>
+          <div class="settings-card">
+            <div class="card-title"><div><strong>Resend webhooks</strong><span>Create two endpoints in the Resend dashboard.</span></div></div>
+            <div class="webhook-url-list">
+              <div class="webhook-url-row">
+                <div><strong>Outbound</strong><span id="webhookOutboundStatus">Not configured</span></div>
+                <code id="webhookOutboundUrl">https://fuelnfreetime.com/api/webhooks/resend/outbound</code>
+              </div>
+              <div class="webhook-url-row">
+                <div><strong>Inbound</strong><span id="webhookInboundStatus">Not configured</span></div>
+                <code id="webhookInboundUrl">https://fuelnfreetime.com/api/webhooks/resend/inbound</code>
+              </div>
+            </div>
+            <p class="settings-hint">Outbound events: sent, delivered, bounced, complained. Inbound: email.received.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-panel" id="settings-routing">
+        <div class="settings-grid">
+          <div class="settings-card full">
+            <div class="card-title"><div><strong>Default routing</strong><span>How inbox, replies, and store mail flow.</span></div></div>
+            <div class="form-grid">
+              <div class="field"><label for="defaultInbox">Inbox source</label><select id="defaultInbox"><option>Gmail</option><option>Resend inbound</option><option>Both</option></select></div>
+              <div class="field"><label for="defaultSender">Default sender</label><select id="defaultSender"><option>Gmail for replies, Resend for app mail</option><option>Gmail only</option><option>Resend only</option></select></div>
+              <div class="field"><label for="syncCadence">Sync cadence</label><select id="syncCadence"><option>Every 5 minutes</option><option>Every 15 minutes</option><option>Hourly</option><option>Manual</option></select></div>
+              <div class="field"><label for="agentMode">Inbox assistant</label><select id="agentMode"><option>Draft only</option><option>Suggest actions</option><option>Triage and draft</option></select></div>
+            </div>
+            <div>
+              <div class="toggle-row"><div class="toggle-copy"><strong>Auto-label platform notices</strong><span>Cloudflare, Stripe, Shopify, etc.</span></div><label class="switch"><input id="autoLabel" type="checkbox" checked /><span class="slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-copy"><strong>Surface customer messages first</strong><span>Orders and subscribers above promos.</span></div><label class="switch"><input id="clientPriority" type="checkbox" checked /><span class="slider"></span></label></div>
+              <div class="toggle-row"><div class="toggle-copy"><strong>Require review before send</strong><span>Drafts until approved.</span></div><label class="switch"><input id="reviewBeforeSend" type="checkbox" checked /><span class="slider"></span></label></div>
+            </div>
+            <div class="settings-actions"><button class="form-button primary" type="button" id="saveRouting">Save routing</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast">Saved</div>
+
+</template>
+
+<script src="/admin/js/shell.js?v=20260621"></script>
+<script src="/admin/js/mail.js?v=20260621"></script>
 <script>
 renderShell(
   "/admin/email",
@@ -22,14 +334,17 @@ renderShell(
     fullBleed: true,
     onReady: () => {
       document.querySelector(".console-main")?.classList.add("admin-main--mail");
-      requestAnimationFrame(() => {
-        if (typeof window.bootMailApp === "function") {
-          window.bootMailApp().catch((err) => {
-            const root = document.getElementById("mail-root");
-            if (root) {
-              root.innerHTML = `<div class="mail-boot-error"><h2>Email workspace failed</h2><p>${err.message || err}</p></div>`;
-            }
-          });
+      const root = document.getElementById("mail-root");
+      const boot = window.bootMailApp;
+      if (typeof boot !== "function") {
+        if (root) {
+          root.innerHTML = `<div class="mail-boot-error"><h2>Mail script blocked or cached</h2><p>Hard refresh with Cmd+Shift+R.</p></div>`;
+        }
+        return;
+      }
+      boot().catch((err) => {
+        if (root) {
+          root.innerHTML = `<div class="mail-boot-error"><h2>Email workspace failed</h2><p>${err.message || err}</p></div>`;
         }
       });
     },

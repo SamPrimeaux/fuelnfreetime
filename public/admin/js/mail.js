@@ -38,6 +38,33 @@ let selectedContextId = null;
 let toastTimer;
 let adminEmail = "";
 
+async function loadMailPartialHtml() {
+  const tpl = document.getElementById("mail-app-template");
+  if (tpl?.innerHTML?.includes('id="mailApp"')) {
+    return tpl.innerHTML.trim();
+  }
+
+  const res = await fetch("/api/admin/mail/partial", {
+    credentials: "same-origin",
+    headers: { Accept: "text/html" },
+  });
+  const html = await res.text();
+  if (res.ok && html.includes('id="mailApp"')) return html;
+
+  const fallback = await fetch("/admin/partials/mail-app.html", {
+    credentials: "same-origin",
+    headers: { Accept: "text/html" },
+  });
+  const fallbackHtml = await fallback.text();
+  if (fallback.ok && fallbackHtml.includes('id="mailApp"')) return fallbackHtml;
+
+  throw new Error(
+    res.status === 401
+      ? "Session expired — refresh and sign in again"
+      : `Could not load mail UI (HTTP ${res.status})`
+  );
+}
+
 async function bootMailApp() {
   const root = document.getElementById("mail-root");
   if (!root) return;
@@ -51,19 +78,7 @@ async function bootMailApp() {
     '<div class="mail-boot-loading"><p>Loading inbox…</p></div>';
 
   try {
-    const res = await fetch("/api/admin/mail/partial", {
-      credentials: "same-origin",
-      headers: { Accept: "text/html" },
-    });
-    const html = await res.text();
-    if (!res.ok || !html.includes('id="mailApp"')) {
-      throw new Error(
-        res.status === 401
-          ? "Session expired — refresh and sign in again"
-          : `Could not load mail UI (HTTP ${res.status})`
-      );
-    }
-    root.innerHTML = html;
+    root.innerHTML = await loadMailPartialHtml();
     await initMailApp();
   } catch (err) {
     root.innerHTML = `<div class="mail-boot-error">
@@ -588,7 +603,11 @@ function initDragHandles() {
   });
 }
 
+let mailEventsBound = false;
+
 function bindMailEvents() {
+  if (mailEventsBound) return;
+  mailEventsBound = true;
   const rows = $("rows");
   rows?.addEventListener("click", (event) => {
     const star = event.target.closest("[data-star]");
