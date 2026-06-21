@@ -40,7 +40,7 @@ export async function createFnfEmbedding(env, text) {
   }
 
   const ai = env.AGENTSAM_WAI || env.AI;
-  const resp = await ai.run(FNF_EMBED_MODEL, { text: [input] });
+  const resp = await ai.run(FNF_EMBED_MODEL, { text: [input] }, { gateway: { id: "fuelnfreetime-agentsam", skipCache: true } });
   const emb = resp?.data?.[0] ?? resp?.result?.[0];
   if (!Array.isArray(emb) || emb.length !== FNF_EMBED_DIMS) {
     throw new Error(`Unexpected embedding dimensions: ${emb?.length ?? 0}`);
