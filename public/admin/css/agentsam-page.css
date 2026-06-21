@@ -233,73 +233,7 @@ body.agentsam-page-body .console-main--bleed {
   flex: 1;
 }
 
-.agentsam-page-connection-pills {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 6px;
-  flex: none;
-}
-
-.agentsam-page-connection-pills[hidden] {
-  display: none;
-}
-
-.agentsam-conn-pill {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex: none;
-  max-width: 220px;
-  padding: 5px 10px 5px 5px;
-  border-radius: 999px;
-  border: 1px solid rgba(41, 112, 255, 0.35);
-  background: rgba(41, 112, 255, 0.22);
-  color: #b9d7ff;
-  font-size: 12px;
-  line-height: 1.2;
-  cursor: default;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-}
-
-.agentsam-conn-pill:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.14);
-  color: var(--as-muted);
-}
-
-.agentsam-conn-pill-label {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 140px;
-}
-
-.agentsam-conn-pill-x {
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font-size: 16px;
-  line-height: 1;
-  padding: 0;
-  margin-left: -2px;
-  cursor: pointer;
-  opacity: 0;
-  width: 0;
-  overflow: hidden;
-  flex: none;
-  transition: opacity 0.12s ease, width 0.12s ease;
-}
-
-.agentsam-conn-pill:hover .agentsam-conn-pill-x {
-  opacity: 0.75;
-  width: 14px;
-}
-
-.agentsam-conn-pill-x:hover {
-  opacity: 1 !important;
-}
+/* old pill styles removed — see bottom of file */
 
 .agentsam-conn-icon {
   width: 18px;
