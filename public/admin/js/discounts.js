@@ -72,8 +72,10 @@ async function discFetch(path, opts = {}) {
   return data;
 }
 
-function $(app, sel) {
-  return app?.querySelector(sel) ?? null;
+function $(sel, root) {
+  if (!sel) return null;
+  const scope = root && typeof root.querySelector === "function" ? root : document;
+  return scope.querySelector(sel);
 }
 
 function setView(app, view) {
