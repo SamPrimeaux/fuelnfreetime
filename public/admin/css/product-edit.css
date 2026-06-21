@@ -500,6 +500,14 @@
   border-top: 1px solid #ececec;
 }
 
+body.console-theme.console-body-bleed .product-editor-bar {
+  left: var(--c-nav-w, 240px);
+}
+
+body.console-theme.agentsam-open .product-editor-bar {
+  right: min(400px, 36vw);
+}
+
 @media (max-width: 980px) {
   .product-editor-grid {
     grid-template-columns: 1fr;

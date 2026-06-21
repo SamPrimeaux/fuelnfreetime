@@ -240,10 +240,12 @@ async function getProduct(request, env, id) {
 
 async function createProduct(request, env) {
   const body = await readJson(request);
-  if (!body || !body.title) return json({ error: "Title required" }, { status: 400 });
+  if (!body || !String(body.title || "").trim()) {
+    return json({ error: "Title required" }, { status: 400 });
+  }
 
-  const slug = (body.slug && body.slug.trim()) || slugify(body.title);
-  const priceCents = Math.round(Number(body.price_cents || body.price || 0));
+  const slug = (body.slug && String(body.slug).trim()) || slugify(body.title);
+  const priceCents = parsePriceCents(body.price_cents ?? body.price ?? 0);
 
   try {
     const result = await env.DB.prepare(
@@ -252,7 +254,7 @@ async function createProduct(request, env) {
     )
       .bind(
         slug,
-        body.title.trim(),
+        String(body.title).trim(),
         body.description || null,
         body.collection || null,
         priceCents,
@@ -261,55 +263,95 @@ async function createProduct(request, env) {
       )
       .run();
 
-    return json({ ok: true, id: result.meta.last_row_id });
+    const productId = result.meta.last_row_id;
+
+    try {
+      await env.DB.prepare(
+        `INSERT INTO product_variants (product_id, sku, size, color, price_cents, inventory_qty, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`
+      )
+        .bind(productId, `${slug}-default`, "Default", null, priceCents, 0)
+        .run();
+    } catch (variantErr) {
+      console.error("[products/create/default-variant]", variantErr?.message || variantErr);
+    }
+
+    return json({ ok: true, id: productId });
   } catch (err) {
-    return json({ error: "Could not create product (slug may already exist)" }, { status: 400 });
+    console.error("[products/create]", err?.message || err);
+    return json({ error: productDbError(err, "Could not create product") }, { status: 400 });
   }
+}
+
+function parsePriceCents(value, fallback = 0) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(0, Math.round(n));
+}
+
+function productDbError(err, fallback) {
+  const msg = String(err?.message || err || "");
+  if (/unique|UNIQUE constraint/i.test(msg)) {
+    if (/product_variants\.sku|variants\.sku/i.test(msg)) {
+      return "That SKU is already used by another variant.";
+    }
+    return "That URL handle is already used by another product.";
+  }
+  return fallback;
 }
 
 async function updateProduct(request, env, id) {
   const body = await readJson(request);
   if (!body) return json({ error: "Invalid body" }, { status: 400 });
-
-  const priceCents = Math.round(Number(body.price_cents || body.price || 0));
-  const slug = body.slug?.trim();
-
-  if (slug) {
-    await env.DB.prepare(
-      `UPDATE products
-       SET slug = ?, title = ?, description = ?, collection = ?, price_cents = ?, image_url = ?, status = ?, updated_at = datetime('now')
-       WHERE id = ?`
-    )
-      .bind(
-        slug,
-        body.title,
-        body.description || null,
-        body.collection || null,
-        priceCents,
-        body.image_url || null,
-        body.status || "draft",
-        id
-      )
-      .run();
-  } else {
-    await env.DB.prepare(
-      `UPDATE products
-       SET title = ?, description = ?, collection = ?, price_cents = ?, image_url = ?, status = ?, updated_at = datetime('now')
-       WHERE id = ?`
-    )
-      .bind(
-        body.title,
-        body.description || null,
-        body.collection || null,
-        priceCents,
-        body.image_url || null,
-        body.status || "draft",
-        id
-      )
-      .run();
+  if (!String(body.title || "").trim()) {
+    return json({ error: "Title required" }, { status: 400 });
   }
 
-  return json({ ok: true });
+  const priceCents = parsePriceCents(body.price_cents ?? body.price ?? 0);
+  const slug = body.slug?.trim();
+  const title = String(body.title).trim();
+
+  try {
+    if (slug) {
+      await env.DB.prepare(
+        `UPDATE products
+         SET slug = ?, title = ?, description = ?, collection = ?, price_cents = ?, image_url = ?, status = ?, updated_at = datetime('now')
+         WHERE id = ?`
+      )
+        .bind(
+          slug,
+          title,
+          body.description || null,
+          body.collection || null,
+          priceCents,
+          body.image_url || null,
+          body.status || "draft",
+          id
+        )
+        .run();
+    } else {
+      await env.DB.prepare(
+        `UPDATE products
+         SET title = ?, description = ?, collection = ?, price_cents = ?, image_url = ?, status = ?, updated_at = datetime('now')
+         WHERE id = ?`
+      )
+        .bind(
+          title,
+          body.description || null,
+          body.collection || null,
+          priceCents,
+          body.image_url || null,
+          body.status || "draft",
+          id
+        )
+        .run();
+    }
+
+    return json({ ok: true });
+  } catch (err) {
+    console.error("[products/update]", err?.message || err);
+    return json({ error: productDbError(err, "Could not update product") }, { status: 400 });
+  }
 }
 
 async function deleteProduct(request, env, id) {

@@ -25,7 +25,7 @@ let variantCount = 0;
 let pendingImages = [];
 
 function slugify(text) {
-  return text
+  return String(text || "")
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
@@ -57,6 +57,9 @@ function showNote(msg, kind) {
   el.textContent = msg || "";
   el.className = "product-note" + (kind ? ` is-${kind}` : "");
   el.style.display = msg ? "block" : "none";
+  if (msg && kind === "error") {
+    el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
 }
 
 function statusBadge(status) {
@@ -654,25 +657,26 @@ async function loadProduct() {
     const menuView = document.getElementById("menu-view");
     if (menuView && p.status === "active") menuView.href = `/products/${p.slug}`;
   } catch (err) {
-    showNote("form-note", err.message, "error");
+    showNote(err.message, "error");
   }
 }
 
 function collectPayload() {
+  const priceVal = parseFloat(document.getElementById("price").value || "0");
   return {
     title: document.getElementById("title").value.trim(),
     slug: document.getElementById("slug").value.trim() || slugify(document.getElementById("title").value),
     description: document.getElementById("description").value.trim(),
     collection: document.getElementById("collection").value.trim(),
     status: document.getElementById("status-sidebar").value,
-    price_cents: Math.round(parseFloat(document.getElementById("price").value || "0") * 100),
+    price_cents: Number.isFinite(priceVal) ? Math.round(priceVal * 100) : 0,
   };
 }
 
 async function saveProduct() {
   const payload = collectPayload();
   if (!payload.title) {
-    showNote("form-note", "Title is required.", "error");
+    showNote("Title is required.", "error");
     return;
   }
 
@@ -699,7 +703,7 @@ async function saveProduct() {
       const d = await adminFetch("/api/admin/products", { method: "POST", body: JSON.stringify(payload) });
       const newId = d.id;
       if (pendingImages.length) {
-        await Promise.all(
+        const results = await Promise.allSettled(
           pendingImages.map((p) =>
             adminFetch(`/api/admin/products/${newId}/images`, {
               method: "POST",
@@ -707,6 +711,10 @@ async function saveProduct() {
             })
           )
         );
+        const failed = results.filter((r) => r.status === "rejected").length;
+        if (failed) {
+          showNote(`Product created, but ${failed} image(s) failed to attach.`, "error");
+        }
       }
       window.location.href = `/admin/product-edit?id=${newId}`;
       return;
@@ -717,9 +725,9 @@ async function saveProduct() {
     syncStatusUi();
     updateSeoPreview();
     setDirty(false);
-    showNote("form-note", "Product saved.", "success");
+    showNote("Product saved.", "success");
   } catch (err) {
-    showNote("form-note", err.message, "error");
+    showNote(err.message, "error");
     setDirty(true);
   } finally {
     saveInFlight = false;
@@ -748,7 +756,7 @@ async function deleteProduct() {
     await adminFetch(`/api/admin/products/${productId}`, { method: "DELETE" });
     window.location.href = "/admin/products";
   } catch (err) {
-    showNote("form-note", err.message, "error");
+    showNote(err.message, "error");
   }
 }
 

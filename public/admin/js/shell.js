@@ -115,6 +115,7 @@ function ensureConsoleAssets() {
 
 async function adminFetch(path, opts = {}) {
   const res = await fetch(path, {
+    credentials: "include",
     headers: { "content-type": "application/json", ...(opts.headers || {}) },
     ...opts,
   });
