@@ -6,6 +6,9 @@
   const pageSlug = document.documentElement.dataset.cmsPage;
   if (!pageSlug) return;
 
+  // Edge HTMLRewriter already filled published slots — skip client fetch/flash.
+  if (document.documentElement.classList.contains("cms-edge-hydrated")) return;
+
   function getPath(obj, path) {
     return path.split(".").reduce((acc, key) => (acc == null ? acc : acc[key]), obj);
   }

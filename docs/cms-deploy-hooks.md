@@ -1,6 +1,6 @@
 # CMS deploy hooks + HTMLRewriter
 
-## HTMLRewriter (edge SEO)
+## HTMLRewriter (edge SEO + body slots)
 
 **No npm install** — `HTMLRewriter` is built into the Cloudflare Workers runtime.
 
@@ -8,9 +8,12 @@ Marketing pages (`/`, `/shop`, `/about`, `/community`) are served through the Wo
 
 1. Fetches static HTML from Workers Assets
 2. Rewrites `<title>`, meta description, Open Graph, and Twitter tags from **store prefs + published CMS page title**
-3. Returns HTML with SEO visible to crawlers (no JS required)
+3. Fills `[data-cms]` slots from published KV/D1 snapshots (same rules as `cms-hydrate.js`)
+4. Adds `cms-edge-hydrated` on `<html>` so the client hydrator skips (no flash)
 
-Implementation: `src/cms/html-rewriter.js`
+Preview mode (`?preview=1`) skips edge slot fill — client hydrator loads draft content.
+
+Implementation: `src/cms/html-rewriter.js`, `src/cms/edge-hydrate.js`
 
 Client-side `fnf-head.js` still runs as a fallback for prefs updated after cache.
 

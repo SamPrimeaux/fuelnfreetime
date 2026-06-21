@@ -4,6 +4,12 @@
  */
 
 import { PAGE_REGISTRY } from "./registry.js";
+import {
+  CmsSlotHandler,
+  HeadEdgeHydratedHandler,
+  HtmlEdgeHydratedHandler,
+  loadEdgeHydrationContext,
+} from "./edge-hydrate.js";
 
 const PATH_TO_SLUG = new Map([
   ["/", "home"],
@@ -112,15 +118,16 @@ ${imgTags}`,
   }
 }
 
-export async function transformStorefrontHtml(response, env, slug) {
+export async function transformStorefrontHtml(response, env, slug, request) {
   const contentType = response.headers.get("content-type") || "";
   if (response.status !== 200 || !contentType.includes("text/html")) {
     return response;
   }
 
+  const preview = request ? new URL(request.url).searchParams.has("preview") : false;
   const head = await buildHeadContext(env, slug);
 
-  return new HTMLRewriter()
+  let rewriter = new HTMLRewriter()
     .on("title", new TitleHandler(head.title))
     .on('meta[name="description"]', new MetaContentHandler(head.description))
     .on('meta[property="og:title"]', new MetaContentHandler(head.title))
@@ -129,8 +136,31 @@ export async function transformStorefrontHtml(response, env, slug) {
     .on('meta[name="twitter:title"]', new MetaContentHandler(head.title))
     .on('meta[name="twitter:description"]', new MetaContentHandler(head.description))
     .on('meta[name="twitter:image"]', new MetaContentHandler(head.socialImageUrl))
-    .on("head", new HeadSeoAppendHandler(head))
-    .transform(response);
+    .on("head", new HeadSeoAppendHandler(head));
+
+  let edgeHydrated = false;
+
+  if (!preview && slug) {
+    const hydration = await loadEdgeHydrationContext(env, slug);
+    if (hydration.hydrated) {
+      edgeHydrated = true;
+      rewriter = rewriter
+        .on("html", new HtmlEdgeHydratedHandler())
+        .on("head", new HeadEdgeHydratedHandler())
+        .on("[data-cms]", new CmsSlotHandler(hydration.sectionsByKey));
+    }
+  }
+
+  const transformed = rewriter.transform(response);
+  const headers = new Headers(transformed.headers);
+  if (edgeHydrated) {
+    headers.set("X-CMS-Edge-Hydrate", "1");
+  }
+  return new Response(transformed.body, {
+    status: transformed.status,
+    statusText: transformed.statusText,
+    headers,
+  });
 }
 
 export async function serveStorefrontPage(request, env, assetPath, slug) {
@@ -138,5 +168,5 @@ export async function serveStorefrontPage(request, env, assetPath, slug) {
   url.pathname = assetPath;
   url.search = "";
   const res = await env.ASSETS.fetch(new Request(url, request));
-  return transformStorefrontHtml(res, env, slug);
+  return transformStorefrontHtml(res, env, slug, request);
 }
