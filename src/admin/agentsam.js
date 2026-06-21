@@ -29,7 +29,7 @@ import {
 } from "../agentsam/prompt-cache.js";
 import { listPromptFragments, listPromptTemplates } from "../agentsam/prompt-registry.js";
 import { getCompactionStatus, runAgentsamCompaction } from "../agentsam/compaction.js";
-import { getActiveToolsHash } from "../agentsam/tools-registry.js";
+import { getActiveToolsHash, listToolsGrouped, getToolsRegistryStatus } from "../agentsam/tools-registry.js";
 import {
   bridgeConfigured,
   fetchGithubContextForChat,
