@@ -1350,6 +1350,15 @@ body.console-theme .admin-login-logo span.brand-tag {
     display: none;
   }
 
+  .console-topbar-spacer {
+    width: 52px;
+    min-width: 52px;
+  }
+
+  .console-topbar {
+    padding-left: max(56px, calc(env(safe-area-inset-left, 0px) + 52px));
+  }
+
   .console-search-wrap {
     display: none;
   }
