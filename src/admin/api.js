@@ -17,6 +17,18 @@ import {
   getMailPartial,
 } from "./mail.js";
 import {
+  listTeamMembers,
+  inviteTeamMember,
+  createMailbox,
+  updateAccountProfile,
+  initialsFrom,
+} from "./team.js";
+import {
+  getMailboxesForUser,
+  getPrimaryMailboxForUser,
+  mailboxSlug,
+} from "../lib/mail-mailboxes.js";
+import {
   uploadMedia,
   listMedia,
   updateMedia,
@@ -114,11 +126,25 @@ async function logout(request, env) {
 }
 
 async function me(request, env, user) {
+  const mailboxes = await getMailboxesForUser(env, user);
+  const primary = await getPrimaryMailboxForUser(env, user);
+  const displayName = user.display_name || user.name || user.email;
   return json({
     ok: true,
+    id: user.id,
     email: user.email,
     role: user.role || "member",
-    display_name: user.display_name || user.email,
+    display_name: displayName,
+    avatar_url: user.avatar_url || null,
+    initials: initialsFrom(displayName, user.email),
+    mailboxes: mailboxes.map((m) => ({
+      id: m.id,
+      address: m.address,
+      label: m.label,
+      kind: m.kind,
+      slug: mailboxSlug(m),
+    })),
+    primary_mailbox: mailboxSlug(primary),
   });
 }
 
@@ -461,8 +487,24 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   if (path === "/api/admin/mail/settings" && method === "GET") return getMailSettings(env);
   if (path === "/api/admin/mail/settings" && method === "POST") return postMailSettings(request, env);
   if (path === "/api/admin/mail/partial" && method === "GET") return getMailPartial(request, env);
-  if (path === "/api/admin/mail/messages" && method === "GET") return listMailMessages(env, url);
-  if (path === "/api/admin/mail/mailboxes" && method === "GET") return getMailMailboxes(env);
+  if (path === "/api/admin/mail/messages" && method === "GET") {
+    return listMailMessages(env, url, user);
+  }
+  if (path === "/api/admin/account/profile" && method === "POST") {
+    return updateAccountProfile(request, env, user);
+  }
+  if (path === "/api/admin/team/members" && method === "GET") {
+    return listTeamMembers(env, user);
+  }
+  if (path === "/api/admin/team/invite" && method === "POST") {
+    return inviteTeamMember(request, env, user);
+  }
+  if (path === "/api/admin/mail/mailboxes" && method === "GET") {
+    return getMailMailboxes(env, user);
+  }
+  if (path === "/api/admin/mail/mailboxes" && method === "POST") {
+    return createMailbox(request, env, user);
+  }
   if (path === "/api/admin/mail/send" && method === "POST") return sendMailPreview(request, env);
   if (path === "/api/admin/mail/resend/status" && method === "GET") return getResendStatus(env);
 

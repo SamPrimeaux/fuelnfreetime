@@ -16,7 +16,7 @@ const ICONS = {
   pos: '<rect x="6" y="3" width="12" height="18" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M10 18h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
   agentic: '<rect x="5" y="8" width="14" height="11" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M12 4v4M9 13h.01M15 13h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
   email: '<path d="M4 6h16v12H4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
-  settings: '<circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M12 2.5v2.5M12 19v2.5M21.5 12H19M5 12H2.5M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8M18.4 18.4l-1.8-1.8M7.4 7.4 5.6 5.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  settings: '<circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.02.02a2 2 0 1 1-2.83 2.83l-.02-.02a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.03a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.87.34l-.02.02a2 2 0 1 1-2.83-2.83l.02-.02A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.03A1.7 1.7 0 0 0 4.6 8.4a1.7 1.7 0 0 0-.34-1.87l-.02-.02a2 2 0 1 1 2.83-2.83l.02.02A1.7 1.7 0 0 0 8.96 4.04 1.7 1.7 0 0 0 10 2.48V2a2 2 0 1 1 4 0v.03a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.02-.02a2 2 0 1 1 2.83 2.83l-.02.02a1.7 1.7 0 0 0-.34 1.87A1.7 1.7 0 0 0 20.96 10H21a2 2 0 1 1 0 4h-.03A1.7 1.7 0 0 0 19.4 15Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>',
   chev: '<path d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
 };
 
@@ -72,13 +72,8 @@ const NAV = {
       icon: "email",
       href: "/admin/email",
       children: [
-        { href: "/admin/email", label: "All mail" },
-        { href: "/admin/email?mailbox=sam", label: "Sam @fuelnfreetime" },
-        { href: "/admin/email?mailbox=connor", label: "Connor @fuelnfreetime" },
-        { href: "/admin/email?mailbox=payments", label: "Payments @fuelnfreetime" },
+        { href: "/admin/email", label: "Inbox" },
         { href: "/admin/email?folder=sent", label: "Sent" },
-        { href: "/admin/email?folder=starred", label: "Starred" },
-        { href: "/admin/email?folder=needs", label: "Needs reply" },
       ],
     },
   ],
@@ -261,23 +256,105 @@ function renderNavItem(item, activeHref) {
   return `<a href="${item.href}" class="console-nav-item${active ? " is-active" : ""}">${icon(item.icon)}${item.label}</a>`;
 }
 
-function renderSideNav(activeHref) {
-  const main = NAV.main.map((item) => renderNavItem(item, activeHref)).join("");
-  const channels = NAV.channels.map((item) => renderNavItem(item, activeHref)).join("");
-  const apps = NAV.apps.map((item) => renderNavItem(item, activeHref)).join("");
+function renderSideNav(activeHref, userNav) {
+  const nav = userNav || NAV;
+  const main = nav.main.map((item) => renderNavItem(item, activeHref)).join("");
+  const channels = nav.channels.map((item) => renderNavItem(item, activeHref)).join("");
+  const apps = nav.apps.map((item) => renderNavItem(item, activeHref)).join("");
   return `
-    <div class="console-nav-group">${main}</div>
-    <div class="console-nav-label">Sales channels</div>
-    <div class="console-nav-group">${channels}</div>
-    <div class="console-nav-label">Apps</div>
-    <div class="console-nav-group">${apps}</div>
-    <div class="console-sidenav-foot">
-      <div class="console-recent-label">Recent activity</div>
-      <div class="console-recent-item">CMS pages published</div>
-      <div class="console-recent-item">Store orders &amp; inventory</div>
-      <div class="console-sidenav-divider"></div>
-      <a href="/admin/account" class="console-nav-item console-nav-item--account${navActive("/admin/account", activeHref) ? " is-active" : ""}">${icon("settings")}<span>Account</span></a>
+    <div class="console-sidenav-scroll">
+      <div class="console-nav-group">${main}</div>
+      <div class="console-nav-label">Sales channels</div>
+      <div class="console-nav-group">${channels}</div>
+      <div class="console-nav-label">Apps</div>
+      <div class="console-nav-group">${apps}</div>
+    </div>
+    <div class="console-sidenav-profile">
+      <a href="/admin/account" class="console-profile-card${navActive("/admin/account", activeHref) ? " is-active" : ""}">
+        <div class="console-profile-avatar" data-profile-avatar aria-hidden="true">…</div>
+        <div class="console-profile-meta">
+          <strong data-profile-name>Account</strong>
+          <span data-profile-role>Loading…</span>
+        </div>
+        ${icon("settings", 16, "console-profile-gear")}
+      </a>
     </div>`;
+}
+
+function buildUserNav(user) {
+  const nav = JSON.parse(JSON.stringify(NAV));
+  const slug = user?.primary_mailbox;
+  const boxes = user?.mailboxes || [];
+
+  if (boxes.length <= 1 && slug) {
+    nav.apps = [{ href: `/admin/email?mailbox=${slug}`, label: "Email", icon: "email" }];
+  } else if (boxes.length > 1) {
+    const primary = slug || boxes[0]?.slug;
+    const children = [];
+    for (const box of boxes) {
+      children.push({
+        href: `/admin/email?mailbox=${box.slug}`,
+        label: box.label,
+      });
+    }
+    children.push({
+      href: `/admin/email?mailbox=${primary}&folder=sent`,
+      label: "Sent",
+    });
+    nav.apps = [
+      {
+        id: "email",
+        label: "Email",
+        icon: "email",
+        href: `/admin/email?mailbox=${primary}`,
+        children,
+      },
+    ];
+  }
+  return nav;
+}
+
+function hydrateShellProfile(user) {
+  if (!user) return;
+  const name = user.display_name || user.email || "Account";
+  const role = (user.role || "member").replace(/^./, (c) => c.toUpperCase());
+  document.querySelectorAll("[data-profile-name]").forEach((el) => {
+    el.textContent = name;
+  });
+  document.querySelectorAll("[data-profile-role]").forEach((el) => {
+    el.textContent = role;
+  });
+  document.querySelectorAll("[data-profile-avatar]").forEach((el) => {
+    if (user.avatar_url) {
+      el.innerHTML = `<img src="${user.avatar_url}" alt="" referrerpolicy="no-referrer">`;
+      el.classList.add("has-image");
+    } else {
+      el.textContent = user.initials || "??";
+      el.classList.remove("has-image");
+    }
+  });
+  document.querySelectorAll("[data-admin-email]").forEach((el) => {
+    el.textContent = user.email;
+  });
+}
+
+function hydrateShellNav(user, activeHref) {
+  hydrateShellProfile(user);
+  const navHtml = renderSideNav(activeHref, buildUserNav(user));
+  document.querySelectorAll(".console-sidenav.admin-sidebar, .admin-nav--drawer").forEach((aside) => {
+    aside.innerHTML = navHtml;
+  });
+  document.querySelectorAll("[data-toggle]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const id = btn.getAttribute("data-toggle");
+      document.querySelectorAll(`[data-group="${id}"]`).forEach((group) => {
+        group.classList.add("is-animating");
+        group.classList.toggle("is-open");
+      });
+    });
+  });
 }
 
 function ensureConsoleLayout() {
@@ -318,12 +395,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
   document.getElementById("console-app").innerHTML = `
     <div class="console-shell admin-shell">
       <header class="console-topbar">
-        <a href="/admin/home" class="console-topbar-mark">
-          <div class="console-topbar-mark-icon">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2 21 7v10l-9 5-9-5V7z" stroke="#141414" stroke-width="2" stroke-linejoin="round"/><path d="M12 7v10M7.5 9.5l9 5M16.5 9.5l-9 5" stroke="#141414" stroke-width="1.6"/></svg>
-          </div>
-          <span>Admin</span>
-        </a>
+        <div class="console-topbar-spacer" aria-hidden="true"></div>
         <div class="console-search-wrap">
           <div class="console-search" role="search">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#9b9b9b" stroke-width="1.8"/><path d="m20 20-3.2-3.2" stroke="#9b9b9b" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -419,9 +491,8 @@ function renderShell(activeHref, mainHtml, options = {}) {
 
   adminFetch("/api/admin/me")
     .then((d) => {
-      document.querySelectorAll("[data-admin-email]").forEach((el) => {
-        el.textContent = d.email;
-      });
+      window.__shellUser = d;
+      hydrateShellNav(d, activeHref);
     })
     .catch(() => {});
 
@@ -511,7 +582,7 @@ function initMobileNav() {
   });
   closeBtn?.addEventListener("click", close);
   backdrop?.addEventListener("click", close);
-  drawer.querySelectorAll("a.console-nav-item, a.console-nav-child").forEach((link) => {
+  drawer.querySelectorAll("a.console-nav-item, a.console-nav-child, a.console-profile-card").forEach((link) => {
     link.addEventListener("click", close);
   });
 
@@ -521,3 +592,6 @@ function initMobileNav() {
 
   mq.addEventListener("change", () => close());
 }
+
+window.hydrateShellProfile = hydrateShellProfile;
+window.hydrateShellNav = hydrateShellNav;

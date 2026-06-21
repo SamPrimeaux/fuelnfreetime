@@ -20,7 +20,8 @@ let activeMailbox = "";
 let selectedContextId = null;
 let toastTimer;
 let adminEmail = "";
-let composeSettings = { resendFrom: "hello@fuelnfreetime.com", gmailAddress: "" };
+let composeSettings = { resendFrom: "hello@fuelnfreetime.com" };
+let primaryMailbox = "";
 let composeMailboxes = [];
 
 function getActiveFolder() {
@@ -104,6 +105,21 @@ async function initMailApp() {
   try {
     const me = await adminFetch("/api/admin/me");
     adminEmail = me.email || "";
+    primaryMailbox = me.primary_mailbox || "";
+    const allowed = (me.mailboxes || []).map((m) => m.slug);
+
+    if (!activeMailbox && primaryMailbox) {
+      const params = new URLSearchParams(window.location.search);
+      params.set("mailbox", primaryMailbox);
+      window.location.replace(`/admin/email?${params.toString()}`);
+      return;
+    }
+    if (activeMailbox && allowed.length && !allowed.includes(activeMailbox)) {
+      const params = new URLSearchParams(window.location.search);
+      params.set("mailbox", primaryMailbox || allowed[0]);
+      window.location.replace(`/admin/email?${params.toString()}`);
+      return;
+    }
   } catch {
     /* shell handles redirect */
   }
@@ -178,9 +194,6 @@ function updateComposeFromOptions() {
     options.push(
       `<option value="mailbox:${box.id.replace(/^mb_/, "")}">${box.resend_from_name || box.label} &lt;${box.address}&gt;</option>`
     );
-  }
-  if (settings.gmailAddress) {
-    options.push(`<option value="gmail">${settings.gmailAddress} via Gmail</option>`);
   }
   if (settings.resendFrom && !composeMailboxes.some((b) => b.address === settings.resendFrom)) {
     options.push(`<option value="resend">${settings.resendFrom} via Resend</option>`);
@@ -260,7 +273,7 @@ function renderRows() {
     </article>`
       )
       .join("") ||
-    `<div class="empty-state"><div class="empty-card"><h2>No messages yet</h2><p>${activeFolder === "sent" ? "Sent mail from Resend will appear here." : "Connect mail in Account settings or send a test from Resend."}</p><div class="empty-actions"><a class="small-pill primary" href="/admin/account#mail">Account &amp; mail settings</a><button class="small-pill" type="button" id="emptyCompose">Compose</button></div></div></div>`;
+    `<div class="empty-state"><div class="empty-card"><h2>No messages yet</h2><p>${activeFolder === "sent" ? "Sent mail from Resend will appear here." : "Inbound mail arrives via Resend on your @fuelnfreetime.com address."}</p><div class="empty-actions"><button class="small-pill primary" type="button" id="emptyCompose">Compose</button></div></div></div>`;
 
   $("emptyCompose")?.addEventListener("click", () => openCompose("New message"));
 }
@@ -272,7 +285,7 @@ function renderReader() {
   const inboxTo = adminEmail || "admin@fuelnfreetime.com";
 
   if (!message) {
-    readerBody.innerHTML = `<div class="empty-state"><div class="empty-card"><h2>Select a message</h2><p>Choose an email from the list, or compose a new message.</p><div class="empty-actions"><button class="small-pill primary" type="button" id="openComposeEmpty">Compose</button><a class="small-pill" href="/admin/account#mail">Mail settings</a></div></div></div>`;
+    readerBody.innerHTML = `<div class="empty-state"><div class="empty-card"><h2>Select a message</h2><p>Choose an email from the list, or compose a new message.</p><div class="empty-actions"><button class="small-pill primary" type="button" id="openComposeEmpty">Compose</button></div></div></div>`;
     $("openComposeEmpty")?.addEventListener("click", () => openCompose("New message"));
     return;
   }
@@ -348,8 +361,7 @@ async function sendCompose() {
   const fromValue = $("composeFrom")?.value || "resend";
   let fromProvider = "resend";
   let fromMailbox = null;
-  if (fromValue === "gmail") fromProvider = "gmail";
-  else if (fromValue.startsWith("mailbox:")) fromMailbox = fromValue.slice("mailbox:".length);
+  if (fromValue.startsWith("mailbox:")) fromMailbox = fromValue.slice("mailbox:".length);
 
   if (!to || !subject) {
     showToast("To and subject required");
@@ -477,21 +489,6 @@ function bindMailEvents() {
     $("composeSheet")?.classList.remove("open");
     showToast("Draft saved (preview)");
   });
-  $("refreshButton")?.addEventListener("click", async () => {
-    try {
-      const data = await adminFetch(mailMessagesUrl());
-      messages = data.messages || messages;
-      messageSource = data.source || messageSource;
-      renderRows();
-      renderReader();
-      updateBadges();
-      showToast("Inbox refreshed");
-    } catch {
-      showToast("Refresh failed");
-    }
-  });
-  $("triageButton")?.addEventListener("click", () => showToast("Triage preview — connect Gmail to run live"));
-
   $("mobileBack")?.addEventListener("click", () => setMobilePanel("list"));
   $("mobileTabs")?.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-panel]");

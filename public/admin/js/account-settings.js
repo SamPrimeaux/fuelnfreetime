@@ -1,11 +1,4 @@
 const MAIL_DEFAULTS = {
-  gmailAddress: "",
-  gmailDisplayName: "",
-  gmailSyncWindow: "Last 30 days",
-  gmailReadMeta: true,
-  gmailReadBodies: true,
-  gmailSend: true,
-  gmailDrafts: true,
   resendFrom: "hello@fuelnfreetime.com",
   resendPaymentsFrom: "payments@fuelnfreetime.com",
   resendDomain: "fuelnfreetime.com",
@@ -15,9 +8,9 @@ const MAIL_DEFAULTS = {
   resendCampaign: false,
   resendTracking: false,
   resendWebhooks: true,
-  defaultInbox: "Gmail",
-  defaultSender: "Gmail for replies, Resend for app mail",
-  syncCadence: "Every 15 minutes",
+  defaultInbox: "Resend inbound",
+  defaultSender: "Resend only",
+  syncCadence: "Live (webhooks)",
   agentMode: "Draft only",
   autoLabel: true,
   clientPriority: true,
@@ -25,6 +18,8 @@ const MAIL_DEFAULTS = {
 };
 
 let toastTimer;
+let adminEmail = "";
+let currentRole = "member";
 
 function $(id) {
   return document.getElementById(id);
@@ -39,6 +34,14 @@ function showAccountToast(message) {
   toastTimer = setTimeout(() => toast.classList.remove("open"), 2200);
 }
 
+function showFormNote(id, message, ok) {
+  const note = $(id);
+  if (!note) return;
+  note.textContent = message;
+  note.className = ok ? "admin-note success" : "admin-note error";
+  note.style.display = "block";
+}
+
 function normalizeSettings(settings) {
   return { ...MAIL_DEFAULTS, ...(settings || {}) };
 }
@@ -51,13 +54,6 @@ function collectSettings() {
   const get = (id) => $(id);
   const checkbox = (id) => !!get(id)?.checked;
   return {
-    gmailAddress: get("gmailAddress")?.value.trim() || "",
-    gmailDisplayName: get("gmailDisplayName")?.value.trim() || "",
-    gmailSyncWindow: get("gmailSyncWindow")?.value || "Last 30 days",
-    gmailReadMeta: checkbox("gmailReadMeta"),
-    gmailReadBodies: checkbox("gmailReadBodies"),
-    gmailSend: checkbox("gmailSend"),
-    gmailDrafts: checkbox("gmailDrafts"),
     resendFrom: get("resendFrom")?.value.trim() || "",
     resendPaymentsFrom: get("resendPaymentsFrom")?.value.trim() || "payments@fuelnfreetime.com",
     resendDomain: get("resendDomain")?.value.trim() || "",
@@ -67,9 +63,9 @@ function collectSettings() {
     resendCampaign: checkbox("resendCampaign"),
     resendTracking: checkbox("resendTracking"),
     resendWebhooks: checkbox("resendWebhooks"),
-    defaultInbox: get("defaultInbox")?.value || "Gmail",
-    defaultSender: get("defaultSender")?.value || "Gmail for replies, Resend for app mail",
-    syncCadence: get("syncCadence")?.value || "Every 15 minutes",
+    defaultInbox: get("defaultInbox")?.value || "Resend inbound",
+    defaultSender: get("defaultSender")?.value || "Resend only",
+    syncCadence: get("syncCadence")?.value || "Live (webhooks)",
     agentMode: get("agentMode")?.value || "Draft only",
     autoLabel: checkbox("autoLabel"),
     clientPriority: checkbox("clientPriority"),
@@ -93,13 +89,8 @@ function renderAccounts(settings = normalizeSettings(collectSettings())) {
   if (!list) return;
   list.innerHTML = `
     <div class="account-row">
-      <div class="account-row-icon gmail">GM</div>
-      <div class="account-row-main"><strong>${settings.gmailAddress || "Gmail not connected"}</strong><span>Inbox sync, drafts, and replies</span></div>
-      <button class="account-pill ${settings.gmailAddress ? "connected" : "warning"}" type="button" data-mail-tab="gmail">Gmail</button>
-    </div>
-    <div class="account-row">
       <div class="account-row-icon resend">RS</div>
-      <div class="account-row-main"><strong>${settings.resendFrom || "Resend sender not set"}</strong><span>${settings.resendDomain || "fuelnfreetime.com"} — orders &amp; newsletters</span></div>
+      <div class="account-row-main"><strong>${settings.resendFrom || "Resend sender not set"}</strong><span>${settings.resendDomain || "fuelnfreetime.com"} — inbound &amp; outbound</span></div>
       <button class="account-pill ${settings.resendTransactional ? "connected" : "warning"}" type="button" data-mail-tab="resend">Resend</button>
     </div>`;
 }
@@ -118,7 +109,7 @@ function renderMailboxes(mailboxes = []) {
   const list = $("mailboxList");
   if (!list) return;
   if (!mailboxes.length) {
-    list.innerHTML = `<p style="margin:0;color:#64748b;font-size:13px">No mailboxes seeded yet. Run <code>npm run mail:provision</code>.</p>`;
+    list.innerHTML = `<p style="margin:0;color:#64748b;font-size:13px">No mailboxes yet. Create one below or run <code>npm run mail:provision</code>.</p>`;
     return;
   }
   list.innerHTML = mailboxes
@@ -127,8 +118,27 @@ function renderMailboxes(mailboxes = []) {
     <div class="account-webhook-row">
       <div><strong>${box.label}</strong> <span>${box.kind}</span></div>
       <code>${box.address}</code>
-      <span style="font-size:12px;color:#64748b">${box.owner_name || "Shared"}${box.owner_auth_email ? ` · notifies ${box.owner_auth_email}` : ""}</span>
+      <span style="font-size:12px;color:#64748b">${box.owner_name || "Shared"}${box.owner_auth_email ? ` · ${box.owner_auth_email}` : ""}</span>
       <a href="/admin/email?mailbox=${box.address.split("@")[0]}" style="font-size:12px;font-weight:600">Open inbox →</a>
+    </div>`
+    )
+    .join("");
+}
+
+function renderTeamMembers(members = []) {
+  const list = $("teamList");
+  if (!list) return;
+  if (!members.length) {
+    list.innerHTML = `<p style="margin:0;color:#64748b;font-size:13px">No team members loaded.</p>`;
+    return;
+  }
+  list.innerHTML = members
+    .map(
+      (m) => `
+    <div class="account-webhook-row">
+      <div><strong>${m.display_name || m.name || m.email}</strong> <span>${m.role}</span></div>
+      <code>${m.email}</code>
+      <span style="font-size:12px;color:#64748b">${(m.mailboxes || []).join(", ") || "No mailbox linked"}</span>
     </div>`
     )
     .join("");
@@ -146,18 +156,11 @@ async function loadMailSettings() {
 
     const pill = $("accountStatusPill");
     if (pill && settingsRes.providers) {
-      const count = [settingsRes.providers.gmail, settingsRes.providers.resend].filter(
-        (s) => s === "connected" || s === "configured"
-      ).length;
-      pill.textContent = `${count} active`;
-      pill.classList.toggle("connected", count > 0);
+      const ready = settingsRes.providers.resend === "configured";
+      pill.textContent = ready ? "Resend active" : "Resend pending";
+      pill.classList.toggle("connected", ready);
     }
 
-    $("gmailStatus")?.classList.toggle("connected", settingsRes.providers?.gmail === "connected");
-    if ($("gmailStatus")) {
-      $("gmailStatus").textContent =
-        settingsRes.providers?.gmail === "connected" ? "Connected" : "Not connected";
-    }
     $("resendStatus")?.classList.toggle("connected", settingsRes.providers?.resend === "configured");
     if ($("resendStatus")) {
       $("resendStatus").textContent =
@@ -183,12 +186,23 @@ async function loadMailSettings() {
   }
 }
 
-async function persistSettings(section) {
-  const settings = collectSettings();
-  if (settings.gmailAddress && !validateEmail(settings.gmailAddress)) {
-    showAccountToast("Enter a valid Gmail address");
+async function loadTeamSection() {
+  if (!["owner", "admin"].includes(currentRole)) {
+    $("team")?.setAttribute("hidden", "");
     return;
   }
+  $("team")?.removeAttribute("hidden");
+  try {
+    const data = await adminFetch("/api/admin/team/members");
+    renderTeamMembers(data.members || []);
+  } catch (err) {
+    renderTeamMembers([]);
+    console.warn("Team:", err);
+  }
+}
+
+async function persistSettings(section) {
+  const settings = collectSettings();
   if (settings.resendFrom && !validateEmail(settings.resendFrom)) {
     showAccountToast("Enter a valid Resend from email");
     return;
@@ -207,6 +221,67 @@ async function persistSettings(section) {
     await loadMailSettings();
   } catch (err) {
     showAccountToast(err.message || "Could not save settings");
+  }
+}
+
+async function saveProfile(event) {
+  event.preventDefault();
+  const displayName = $("profileDisplayName")?.value.trim() || "";
+  const avatarUrl = $("profileAvatarUrl")?.value.trim() || "";
+  try {
+    await adminFetch("/api/admin/account/profile", {
+      method: "POST",
+      body: JSON.stringify({ display_name: displayName, avatar_url: avatarUrl }),
+    });
+    showFormNote("profile-note", "Profile updated.", true);
+    if (window.__shellUser) {
+      window.__shellUser.display_name = displayName;
+      window.__shellUser.avatar_url = avatarUrl || null;
+      hydrateShellProfile?.(window.__shellUser);
+    }
+  } catch (err) {
+    showFormNote("profile-note", err.message || "Could not save profile", false);
+  }
+}
+
+async function inviteMember(event) {
+  event.preventDefault();
+  try {
+    const data = await adminFetch("/api/admin/team/invite", {
+      method: "POST",
+      body: JSON.stringify({
+        email: $("inviteEmail")?.value.trim(),
+        display_name: $("inviteName")?.value.trim(),
+        role: $("inviteRole")?.value,
+        mailbox_local: $("inviteMailbox")?.value.trim(),
+        password: $("invitePassword")?.value,
+      }),
+    });
+    showFormNote("invite-note", data.message || "Member invited.", true);
+    $("invite-form")?.reset();
+    await loadTeamSection();
+    await loadMailSettings();
+  } catch (err) {
+    showFormNote("invite-note", err.message || "Invite failed", false);
+  }
+}
+
+async function createMailbox(event) {
+  event.preventDefault();
+  const localPart = $("mailboxLocal")?.value.trim();
+  const label = $("mailboxLabel")?.value.trim();
+  const kind = $("mailboxKind")?.value || "shared";
+  try {
+    const data = await adminFetch("/api/admin/mail/mailboxes", {
+      method: "POST",
+      body: JSON.stringify({ local_part: localPart, label, kind }),
+    });
+    showFormNote("mailbox-note", `Created ${data.mailbox?.address || localPart + "@fuelnfreetime.com"}`, true);
+    $("mailbox-form")?.reset();
+    await loadMailSettings();
+    await loadTeamSection();
+  } catch (err) {
+    showFormNote("mailbox-note", err.message || "Could not create mailbox", false);
   }
 }
 
@@ -234,8 +309,6 @@ async function sendResendTest() {
   }
 }
 
-let adminEmail = "";
-
 function bindAccountPage() {
   document.querySelectorAll(".account-tab").forEach((btn) => {
     btn.addEventListener("click", () => switchMailPanel(btn.dataset.mailTab));
@@ -252,27 +325,33 @@ function bindAccountPage() {
   });
 
   $("saveAllSettings")?.addEventListener("click", () => persistSettings("all"));
-  $("saveGmail")?.addEventListener("click", () => persistSettings("gmail"));
   $("saveResend")?.addEventListener("click", () => persistSettings("resend"));
   $("saveRouting")?.addEventListener("click", () => persistSettings("routing"));
-  $("connectGmail")?.addEventListener("click", () =>
-    showAccountToast("Gmail OAuth route: /api/admin/mail/oauth/gmail (next)")
-  );
   $("testResend")?.addEventListener("click", sendResendTest);
+  $("profile-form")?.addEventListener("submit", saveProfile);
+  $("invite-form")?.addEventListener("submit", inviteMember);
+  $("mailbox-form")?.addEventListener("submit", createMailbox);
 
   const hash = location.hash.replace(/^#/, "");
   if (hash.startsWith("mail-")) switchMailPanel(hash.slice(5));
   else if (hash === "mail") switchMailPanel("accounts");
 
   loadMailSettings();
+  loadTeamSection();
 }
 
 window.initAccountPage = async function initAccountPage() {
   try {
     const me = await adminFetch("/api/admin/me");
     adminEmail = me.email || "";
-    if ($("accountEmail")) $("accountEmail").textContent = adminEmail || "—";
-    if ($("accountRole")) $("accountRole").textContent = me.role || "admin";
+    currentRole = me.role || "member";
+    if ($("accountEmail")) $("accountEmail").value = adminEmail || "—";
+    if ($("accountRole")) $("accountRole").textContent = currentRole;
+    if ($("accountRoleLabel")) {
+      $("accountRoleLabel").textContent = `${currentRole.charAt(0).toUpperCase()}${currentRole.slice(1)} access`;
+    }
+    if ($("profileDisplayName")) $("profileDisplayName").value = me.display_name || "";
+    if ($("profileAvatarUrl")) $("profileAvatarUrl").value = me.avatar_url || "";
   } catch {
     /* redirect handled by shell */
   }

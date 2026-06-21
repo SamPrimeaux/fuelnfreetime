@@ -114,7 +114,7 @@ export async function getSessionUser(request, env) {
   const tokenHash = await sha256Hex(token);
 
   const row = await env.DB.prepare(
-    `SELECT u.id, u.email, u.role, u.display_name, u.tenant_id, u.active_workspace_id
+    `SELECT u.id, u.email, u.role, u.display_name, u.name, u.avatar_url, u.tenant_id, u.active_workspace_id
      FROM auth_sessions s
      JOIN auth_users u ON u.id = s.user_id
      WHERE s.token_hash = ? AND s.expires_at > datetime('now') AND u.status = 'active'`

@@ -1,26 +1,26 @@
 import { sendResendEmail, resendConfigured, getResendDomainStatus } from "../lib/resend.js";
-import { getMailboxBySlug, listMailboxes, matchMailboxForMessage } from "../lib/mail-mailboxes.js";
+import {
+  getMailboxBySlug,
+  listMailboxes,
+  matchMailboxForMessage,
+  getMailboxesForUser,
+  assertMailboxAccess,
+  getPrimaryMailboxForUser,
+} from "../lib/mail-mailboxes.js";
 
 const DEFAULT_SETTINGS = {
-  gmailAddress: "",
-  gmailDisplayName: "",
-  gmailSyncWindow: "Last 30 days",
-  gmailReadMeta: true,
-  gmailReadBodies: true,
-  gmailSend: true,
-  gmailDrafts: true,
   resendFrom: "hello@fuelnfreetime.com",
   resendPaymentsFrom: "payments@fuelnfreetime.com",
   resendDomain: "fuelnfreetime.com",
-  resendReplyTo: "",
+  resendReplyTo: "support@fuelnfreetime.com",
   resendApiKey: "",
   resendTransactional: true,
   resendCampaign: false,
   resendTracking: false,
   resendWebhooks: true,
-  defaultInbox: "Gmail",
-  defaultSender: "Gmail for replies, Resend for app mail",
-  syncCadence: "Every 15 minutes",
+  defaultInbox: "Resend inbound",
+  defaultSender: "Resend only",
+  syncCadence: "Realtime webhooks",
   agentMode: "Draft only",
   autoLabel: true,
   clientPriority: true,
@@ -82,7 +82,7 @@ function providerStatus(settings, env) {
   const resendReady =
     resendConfigured(env) && settings.resendFrom && settings.resendTransactional;
   return {
-    gmail: settings.gmailAddress ? "connected" : "disconnected",
+    gmail: "removed",
     resend: resendReady ? "configured" : resendConfigured(env) ? "pending" : "pending",
     resend_domain: resendConfigured(env) ? "check_dashboard" : "no_api_key",
     webhooks: {
@@ -243,15 +243,20 @@ export async function getMailPartial(request, env) {
   });
 }
 
-export async function getMailMailboxes(env) {
-  const mailboxes = await listMailboxes(env);
+export async function getMailMailboxes(env, user) {
+  const mailboxes = user ? await getMailboxesForUser(env, user) : await listMailboxes(env);
   return Response.json({ ok: true, mailboxes });
 }
 
-export async function listMailMessages(env, url) {
+export async function listMailMessages(env, url, user) {
   const mailboxSlug = url?.searchParams?.get("mailbox") || "";
-  const mailboxes = await listMailboxes(env);
-  const mailbox = mailboxSlug ? await getMailboxBySlug(env, mailboxSlug) : null;
+  const { mailbox, forbidden } = await assertMailboxAccess(env, user, mailboxSlug || null);
+  if (forbidden) {
+    return Response.json({ error: "Forbidden mailbox" }, { status: 403 });
+  }
+
+  const mailboxes = user ? await getMailboxesForUser(env, user) : await listMailboxes(env);
+  const activeBox = mailbox || (await getPrimaryMailboxForUser(env, user));
 
   try {
     let sql = `SELECT id, direction, from_email, to_email, subject, preview, body_text, body_html,
@@ -259,15 +264,15 @@ export async function listMailMessages(env, url) {
        FROM mail_messages`;
     const binds = [];
 
-    if (mailbox) {
-      const addr = mailbox.address.toLowerCase();
+    if (activeBox) {
+      const addr = activeBox.address.toLowerCase();
       const local = addr.split("@")[0];
       sql += ` WHERE (
         (direction = 'inbound' AND (LOWER(to_email) LIKE ? OR LOWER(to_email) = ?))
         OR (direction = 'outbound' AND (LOWER(from_email) = ? OR LOWER(from_email) LIKE ?))
         OR json_extract(metadata_json, '$.mailbox_id') = ?
       )`;
-      binds.push(`%${addr}%`, addr, addr, `%${local}@%`, mailbox.id);
+      binds.push(`%${addr}%`, addr, addr, `%${local}@%`, activeBox.id);
     }
 
     sql += ` ORDER BY datetime(created_at) DESC LIMIT 100`;
@@ -279,7 +284,8 @@ export async function listMailMessages(env, url) {
       ok: true,
       messages: (results || []).map((row) => rowToMessage(row, mailboxes)),
       source: "d1",
-      mailbox: mailbox?.id || null,
+      mailbox: activeBox?.id || null,
+      mailbox_slug: activeBox?.address?.split("@")[0] || null,
     });
   } catch {
     return Response.json({ ok: true, messages: [], source: "d1", mailbox: null });
@@ -293,29 +299,15 @@ export async function sendMailPreview(request, env) {
   }
 
   const settings = await loadSettings(env);
-  const provider = body.fromProvider === "gmail" ? "gmail" : "resend";
+  const provider = "resend";
   const { from: resolvedFrom, mailbox } = await resolveSendFrom(env, settings, body);
   const payload = {
-    from:
-      provider === "gmail"
-        ? settings.gmailAddress || "(gmail not configured)"
-        : resolvedFrom,
+    from: resolvedFrom,
     to: body.to,
     subject: body.subject,
-    replyTo: settings.resendReplyTo || settings.gmailAddress || null,
+    replyTo: settings.resendReplyTo || null,
     body: body.body || "",
   };
-
-  if (provider === "gmail") {
-    return Response.json({
-      ok: true,
-      preview: true,
-      sent: false,
-      provider,
-      payload,
-      message: "Gmail send not wired yet — preview only.",
-    });
-  }
 
   if (!settings.resendTransactional) {
     return Response.json({
