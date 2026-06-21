@@ -432,40 +432,45 @@ export async function getCompactionStatus(env, { limit = 10 } = {}) {
     return { ok: false, runs: [], retention: RETENTION };
   }
 
-  const { results: runs } = await env.DB.prepare(
-    `SELECT id, date_key, trigger_source, status, started_at, finished_at, duration_ms,
-            analytics_rows, prompt_usage_rows, tool_call_rows,
-            analytics_deleted, prompt_usage_deleted, tool_call_deleted,
-            summaries_refreshed, error_message
-     FROM agentsam_compaction_runs
-     WHERE workspace_id = ?
-     ORDER BY started_at DESC
-     LIMIT ?`
-  )
-    .bind(FNF_WORKSPACE_ID, limit)
-    .all();
-
-  const totals = await env.DB.prepare(
-    `SELECT
-       (SELECT COUNT(*) FROM agentsam_analytics WHERE workspace_id = ?) AS analytics_hot,
-       (SELECT COUNT(*) FROM agentsam_prompt_usage WHERE workspace_id = ?) AS prompt_usage_hot,
-       (SELECT COUNT(*) FROM agentsam_tool_call_log WHERE workspace_id = ?) AS tool_call_hot,
-       (SELECT COUNT(*) FROM agentsam_analytics_daily WHERE workspace_id = ?) AS analytics_daily,
-       (SELECT COUNT(*) FROM agentsam_prompt_usage_daily WHERE workspace_id = ?) AS prompt_usage_daily,
-       (SELECT COUNT(*) FROM agentsam_tool_call_daily WHERE workspace_id = ?) AS tool_call_daily`
-  )
-    .bind(
-      FNF_WORKSPACE_ID,
-      FNF_WORKSPACE_ID,
-      FNF_WORKSPACE_ID,
-      FNF_WORKSPACE_ID,
-      FNF_WORKSPACE_ID,
-      FNF_WORKSPACE_ID
+  try {
+    const { results: runs } = await env.DB.prepare(
+      `SELECT id, date_key, trigger_source, status, started_at, finished_at, duration_ms,
+              analytics_rows, prompt_usage_rows, tool_call_rows,
+              analytics_deleted, prompt_usage_deleted, tool_call_deleted,
+              summaries_refreshed, error_message
+       FROM agentsam_compaction_runs
+       WHERE workspace_id = ?
+       ORDER BY started_at DESC
+       LIMIT ?`
     )
-    .first()
-    .catch(() => null);
+      .bind(FNF_WORKSPACE_ID, limit)
+      .all();
 
-  return { ok: true, runs: runs || [], totals: totals || {}, retention: RETENTION };
+    const totals = await env.DB.prepare(
+      `SELECT
+         (SELECT COUNT(*) FROM agentsam_analytics WHERE workspace_id = ?) AS analytics_hot,
+         (SELECT COUNT(*) FROM agentsam_prompt_usage WHERE workspace_id = ?) AS prompt_usage_hot,
+         (SELECT COUNT(*) FROM agentsam_tool_call_log WHERE workspace_id = ?) AS tool_call_hot,
+         (SELECT COUNT(*) FROM agentsam_analytics_daily WHERE workspace_id = ?) AS analytics_daily,
+         (SELECT COUNT(*) FROM agentsam_prompt_usage_daily WHERE workspace_id = ?) AS prompt_usage_daily,
+         (SELECT COUNT(*) FROM agentsam_tool_call_daily WHERE workspace_id = ?) AS tool_call_daily`
+    )
+      .bind(
+        FNF_WORKSPACE_ID,
+        FNF_WORKSPACE_ID,
+        FNF_WORKSPACE_ID,
+        FNF_WORKSPACE_ID,
+        FNF_WORKSPACE_ID,
+        FNF_WORKSPACE_ID
+      )
+      .first()
+      .catch(() => null);
+
+    return { ok: true, runs: runs || [], totals: totals || {}, retention: RETENTION };
+  } catch (err) {
+    console.error("[compaction/status]", err?.message || err);
+    return { ok: false, runs: [], totals: {}, retention: RETENTION, error: "compaction_unavailable" };
+  }
 }
 
 export async function runAgentsamCompaction(env, options = {}) {

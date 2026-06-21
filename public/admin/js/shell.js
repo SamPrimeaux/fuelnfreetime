@@ -127,6 +127,18 @@ async function adminFetch(path, opts = {}) {
   return data;
 }
 
+async function loadShellUser() {
+  if (window.__shellUser?.email) return window.__shellUser;
+  try {
+    const data = await adminFetch("/api/admin/me");
+    window.__shellUser = data;
+    return data;
+  } catch (err) {
+    console.error("[shell/me]", err);
+    return null;
+  }
+}
+
 function centsToDollars(cents) {
   return "$" + (Number(cents || 0) / 100).toFixed(2);
 }
@@ -454,7 +466,10 @@ function renderShell(activeHref, mainHtml, options = {}) {
             <button class="admin-logout-btn" type="button">Log out</button>
           </div>
         </aside>
-        <main class="${mainClass}">${mainHtml}</main>
+        <div class="console-workspace">
+          <main class="${mainClass}">${mainHtml}</main>
+          <aside id="agentsam-dock" class="agentsam-dock" aria-hidden="true"></aside>
+        </div>
       </div>
     </div>
   `;
@@ -489,12 +504,24 @@ function renderShell(activeHref, mainHtml, options = {}) {
     });
   });
 
-  adminFetch("/api/admin/me")
+  if (window.__shellUser) hydrateShellProfile(window.__shellUser);
+
+  loadShellUser()
     .then((d) => {
-      window.__shellUser = d;
-      hydrateShellNav(d, activeHref);
-    })
-    .catch(() => {});
+      if (d) {
+        hydrateShellNav(d, activeHref);
+      } else {
+        hydrateShellProfile({
+          display_name: "Account",
+          email: "",
+          role: "member",
+          initials: "?",
+        });
+        document.querySelectorAll("[data-profile-role]").forEach((el) => {
+          el.textContent = "Sign in required";
+        });
+      }
+    });
 
   initMobileNav();
   initAgentsamShell();
@@ -595,3 +622,4 @@ function initMobileNav() {
 
 window.hydrateShellProfile = hydrateShellProfile;
 window.hydrateShellNav = hydrateShellNav;
+window.loadShellUser = loadShellUser;

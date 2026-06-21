@@ -79,6 +79,7 @@ import {
   agentsamGithubOAuthStatus,
 } from "./agentsam-github.js";
 import { onlineStoreOverview, getStorePreferences, postStorePreferences } from "./store.js";
+import { handleGrowthApi } from "./growth.js";
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -127,8 +128,14 @@ async function logout(request, env) {
 }
 
 async function me(request, env, user) {
-  const mailboxes = await getMailboxesForUser(env, user);
-  const primary = await getPrimaryMailboxForUser(env, user);
+  let mailboxes = [];
+  let primary = null;
+  try {
+    mailboxes = await getMailboxesForUser(env, user);
+    primary = await getPrimaryMailboxForUser(env, user);
+  } catch (err) {
+    console.error("[admin/me] mailboxes", err?.message || err);
+  }
   const displayName = user.display_name || user.name || user.email;
   return json({
     ok: true,
@@ -513,6 +520,10 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   if (path === "/api/admin/mail/send" && method === "POST") return sendMailPreview(request, env);
   if (path === "/api/admin/mail/resend/status" && method === "GET") return getResendStatus(env);
 
+  if (path.startsWith("/api/admin/growth/")) {
+    return handleGrowthApi(request, env, url, user);
+  }
+
   if (path === "/api/admin/agentsam/chat" && method === "POST") {
     return agentsamChat(request, env, executionCtx);
   }
@@ -535,11 +546,20 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   let toolCallMatch = path.match(/^\/api\/admin\/agentsam\/tool-calls\/([a-z0-9_]+)$/);
   if (toolCallMatch && method === "GET") return agentsamToolCallGet(env, toolCallMatch[1]);
   if (path === "/api/admin/agentsam/status" && method === "GET") {
-    const user = await getSessionUser(request, env);
-    return agentsamStatus(env, user?.id || null);
+    try {
+      return await agentsamStatus(env, user?.id || null);
+    } catch (err) {
+      console.error("[agentsam/status]", err);
+      return json({ ok: false, error: err?.message || "Status unavailable" }, { status: 500 });
+    }
   }
   if (path === "/api/admin/agentsam/tools" && method === "GET") {
-    return agentsamTools(env);
+    try {
+      return await agentsamTools(env);
+    } catch (err) {
+      console.error("[agentsam/tools]", err);
+      return json({ ok: false, error: err?.message || "Tools unavailable" }, { status: 500 });
+    }
   }
   if (path === "/api/admin/agentsam/prompts" && method === "GET") {
     return agentsamPromptsList(env);

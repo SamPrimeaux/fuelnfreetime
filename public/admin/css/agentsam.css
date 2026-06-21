@@ -1,5 +1,31 @@
-/* Agent Sam — glass side drawer */
+/* Agent Sam — docked side panel (in-flow, not overlay) */
 
+.agentsam-dock .agentsam-backdrop {
+  display: none;
+}
+
+.agentsam-dock .agentsam-drawer {
+  position: static;
+  transform: none;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  flex: 1;
+  z-index: auto;
+  box-shadow: none;
+  border-left: 0;
+}
+
+.agentsam-drawer {
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(24px) saturate(1.25);
+  -webkit-backdrop-filter: blur(24px) saturate(1.25);
+  color: #1a1a1a;
+}
+
+/* Legacy overlay fallback (pages without agentsam-dock) */
 .agentsam-backdrop {
   position: fixed;
   inset: 0;
@@ -15,38 +41,36 @@
   transition: opacity 0.28s ease;
 }
 
-body.agentsam-open .agentsam-backdrop {
+body.agentsam-overlay-mode.agentsam-open .agentsam-backdrop {
   opacity: 1;
   pointer-events: auto;
 }
 
-.agentsam-drawer {
+body.agentsam-overlay-mode .agentsam-drawer {
   position: fixed;
   top: 0;
   right: 0;
   width: min(420px, 92vw);
   height: 100dvh;
   z-index: 190;
-  display: flex;
-  flex-direction: column;
   transform: translateX(105%);
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(24px) saturate(1.25);
-  -webkit-backdrop-filter: blur(24px) saturate(1.25);
   border-left: 1px solid rgba(255, 255, 255, 0.65);
   box-shadow: -16px 0 48px rgba(0, 0, 0, 0.18);
-  color: #1a1a1a;
 }
 
-.agentsam-drawer.drawer-mounted {
+body.agentsam-overlay-mode .agentsam-drawer.drawer-mounted {
   transition: transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-body.agentsam-open .agentsam-drawer {
+body.agentsam-overlay-mode.agentsam-open .agentsam-drawer {
   transform: translateX(0);
 }
 
-body.agentsam-open {
+body.agentsam-overlay-mode.agentsam-open {
+  overflow: hidden;
+}
+
+body.agentsam-overlay-mode.agentsam-open {
   overflow: hidden;
 }
 
@@ -58,6 +82,7 @@ body.agentsam-open {
   padding: max(14px, env(safe-area-inset-top)) 16px 12px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   background: rgba(255, 255, 255, 0.55);
+  flex: none;
 }
 
 .agentsam-brand {
@@ -117,6 +142,7 @@ body.agentsam-open {
   flex-direction: column;
   gap: 10px;
   -webkit-overflow-scrolling: touch;
+  min-height: 0;
 }
 
 .agentsam-msg {
@@ -153,6 +179,7 @@ body.agentsam-open {
   flex-wrap: wrap;
   gap: 6px;
   padding: 10px 16px 0;
+  flex: none;
 }
 
 .agentsam-workflow {
@@ -183,6 +210,7 @@ body.agentsam-open {
   color: #5a4a20;
   background: rgba(245, 158, 11, 0.12);
   border: 1px solid rgba(245, 158, 11, 0.25);
+  flex: none;
 }
 
 .agentsam-mcp a {
@@ -203,6 +231,7 @@ body.agentsam-open {
   flex-wrap: wrap;
   gap: 8px;
   padding: 0 16px 10px;
+  flex: none;
 }
 
 .agentsam-chip {
@@ -229,6 +258,7 @@ body.agentsam-open {
   padding: 12px 16px max(16px, env(safe-area-inset-bottom));
   border-top: 1px solid rgba(0, 0, 0, 0.08);
   background: rgba(255, 255, 255, 0.6);
+  flex: none;
 }
 
 .agentsam-compose textarea {
@@ -273,4 +303,20 @@ body.agentsam-open {
 .console-icon-btn.is-agentsam-active {
   background: rgba(92, 45, 145, 0.22);
   color: #e8d4ff;
+}
+
+@media (max-width: 900px) {
+  body.agentsam-open .agentsam-dock {
+    width: min(100%, 420px);
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 200;
+    box-shadow: -12px 0 40px rgba(0, 0, 0, 0.15);
+  }
+
+  .console-workspace {
+    position: relative;
+  }
 }

@@ -28,7 +28,7 @@ INSERT INTO agentsam_dev_sessions (
 - Fix AgentSam /tools and /status 500s.',
   'agentsam_vector_chunks, agentsam_dev_sessions, agentsam_project_context',
   'docs/FNF-RUNTIME-OPS-2026-06-21.md, scripts/embed-fnf-content.mjs, db/seed-dev-session-2026-06-21.sql',
-  NULL,
+  '99bfec5',
   'Vector index now includes runtime ops doc. Query agentsam_dev_sessions for full Jun 20 ship log (ds_fnf_sam_20260620).'
 );
 

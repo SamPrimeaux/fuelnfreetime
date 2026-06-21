@@ -1,20 +1,25 @@
 /**
- * Agent Sam — right-side assistant drawer (Workers AI via /api/admin/agentsam/chat)
+ * Agent Sam — docked side assistant (/api/admin/agentsam/chat)
  */
 
 let selectedWorkflowKey = null;
 let drawerWorkflows = [];
+let agentsamDockMode = "docked";
 
-function agentsamOverlay() {
-  return document.getElementById("console-overlay") || document.body;
+function agentsamMount() {
+  return document.getElementById("agentsam-dock") || document.getElementById("console-overlay") || document.body;
 }
 
 function renderAgentsamShell() {
   if (document.getElementById("agentsam-drawer")) return;
 
+  const dock = document.getElementById("agentsam-dock");
+  agentsamDockMode = dock ? "docked" : "overlay";
+  document.body.classList.toggle("agentsam-overlay-mode", agentsamDockMode === "overlay");
+
   const html = `
-    <div class="agentsam-backdrop drawer-mounted" id="agentsam-backdrop" aria-hidden="true"></div>
-    <aside class="agentsam-drawer drawer-mounted" id="agentsam-drawer" aria-hidden="true" aria-label="Agent Sam">
+    ${agentsamDockMode === "overlay" ? '<div class="agentsam-backdrop drawer-mounted" id="agentsam-backdrop" aria-hidden="true"></div>' : ""}
+    <div class="agentsam-drawer drawer-mounted" id="agentsam-drawer" aria-hidden="true" aria-label="Agent Sam">
       <header class="agentsam-head">
         <div class="agentsam-brand">
           <div class="agentsam-mark" aria-hidden="true">
@@ -39,10 +44,10 @@ function renderAgentsamShell() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h13M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
       </form>
-    </aside>
+    </div>
   `;
 
-  agentsamOverlay().insertAdjacentHTML("beforeend", html);
+  agentsamMount().insertAdjacentHTML("beforeend", html);
 }
 
 function selectedWorkflowLabel() {
@@ -113,9 +118,6 @@ function renderMcpBanner(data) {
   } else if (needsGithub && urls.iam_github_oauth) {
     parts.push(`<a href="${urls.iam_github_oauth}" target="_blank" rel="noopener">Connect GitHub</a> in IAM for repo tools.`);
   }
-  if (!needsGithub && bridgeReady) {
-    parts.push(`<a href="${urls.iam_mcp_connect || "#"}" target="_blank" rel="noopener">MCP OAuth</a> optional for personal tokens.`);
-  }
   box.innerHTML = parts.join(" ");
 }
 
@@ -153,6 +155,17 @@ function setBusy(busy) {
   if (input) input.disabled = busy;
 }
 
+function buildAgentsamContext(extra = {}) {
+  const ctx = {
+    page: location.pathname,
+    slug: new URLSearchParams(location.search).get("slug") || undefined,
+    ...window.__agentsamPageContext,
+    ...extra,
+  };
+  if (selectedWorkflowKey) ctx.workflow_key = selectedWorkflowKey;
+  return ctx;
+}
+
 async function sendAgentsamMessage(text) {
   const message = (text || "").trim();
   if (!message) return;
@@ -165,18 +178,12 @@ async function sendAgentsamMessage(text) {
   typing.textContent = "Thinking…";
   document.getElementById("agentsam-messages")?.appendChild(typing);
 
-  const context = {
-    page: location.pathname,
-    slug: new URLSearchParams(location.search).get("slug") || undefined,
-  };
-  if (selectedWorkflowKey) context.workflow_key = selectedWorkflowKey;
-
   try {
     const res = await fetch("/api/admin/agentsam/chat", {
       method: "POST",
       headers: { "content-type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ message, context }),
+      body: JSON.stringify({ message, context: buildAgentsamContext() }),
     });
     const data = await res.json();
     typing.remove();
@@ -200,8 +207,14 @@ function openAgentsamDrawer() {
   document.body.classList.add("agentsam-open");
   document.getElementById("agentsam-drawer")?.setAttribute("aria-hidden", "false");
   document.getElementById("agentsam-backdrop")?.setAttribute("aria-hidden", "false");
+  document.getElementById("agentsam-dock")?.setAttribute("aria-hidden", "false");
   document.getElementById("agentsam-toggle")?.setAttribute("aria-expanded", "true");
   document.getElementById("agentsam-toggle")?.classList.add("is-agentsam-active");
+  try {
+    sessionStorage.setItem("fnf_agentsam_open", "1");
+  } catch {
+    /* ignore */
+  }
   document.getElementById("agentsam-input")?.focus();
 }
 
@@ -209,8 +222,14 @@ function closeAgentsamDrawer() {
   document.body.classList.remove("agentsam-open");
   document.getElementById("agentsam-drawer")?.setAttribute("aria-hidden", "true");
   document.getElementById("agentsam-backdrop")?.setAttribute("aria-hidden", "true");
+  document.getElementById("agentsam-dock")?.setAttribute("aria-hidden", "true");
   document.getElementById("agentsam-toggle")?.setAttribute("aria-expanded", "false");
   document.getElementById("agentsam-toggle")?.classList.remove("is-agentsam-active");
+  try {
+    sessionStorage.setItem("fnf_agentsam_open", "0");
+  } catch {
+    /* ignore */
+  }
 }
 
 function bindAgentsamToggle() {
@@ -239,7 +258,7 @@ function bindAgentsamStaticHandlers() {
   });
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && document.body.classList.contains("agentsam-open")) {
+    if (e.key === "Escape" && document.body.classList.contains("agentsam-open") && agentsamDockMode === "overlay") {
       closeAgentsamDrawer();
     }
   });
@@ -251,8 +270,8 @@ async function loadAgentsamMeta() {
       fetch("/api/admin/agentsam/status", { credentials: "include" }),
       fetch("/api/admin/agentsam/tools", { credentials: "include" }),
     ]);
-    const status = await statusRes.json();
-    const tools = await toolsRes.json();
+    const status = await statusRes.json().catch(() => ({}));
+    const tools = await toolsRes.json().catch(() => ({}));
 
     if (tools.ok && Array.isArray(tools.drawer_workflows)) {
       drawerWorkflows = tools.drawer_workflows;
@@ -268,6 +287,7 @@ async function loadAgentsamMeta() {
     const prompts = document.getElementById("agentsam-prompts");
     if (prompts && !prompts.childElementCount) {
       const chips =
+        window.__agentsamSuggestedPrompts ||
         wf?.suggested_prompts?.slice(0, 3) || [
           "Summarize today's store activity",
           "Draft hero copy for the shop page",
@@ -301,8 +321,20 @@ function initAgentsamDrawer() {
 
   bindAgentsamStaticHandlers();
   loadAgentsamMeta();
+
+  try {
+    if (sessionStorage.getItem("fnf_agentsam_open") === "1") openAgentsamDrawer();
+  } catch {
+    /* ignore */
+  }
+}
+
+function setAgentsamPageContext(ctx) {
+  window.__agentsamPageContext = { ...(window.__agentsamPageContext || {}), ...ctx };
 }
 
 window.openAgentsamDrawer = openAgentsamDrawer;
+window.closeAgentsamDrawer = closeAgentsamDrawer;
 window.sendAgentsamMessage = sendAgentsamMessage;
 window.initAgentsamDrawer = initAgentsamDrawer;
+window.setAgentsamPageContext = setAgentsamPageContext;

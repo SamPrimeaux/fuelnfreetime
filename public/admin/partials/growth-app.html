@@ -76,9 +76,9 @@
         <div>
           <div class="fnf-metric-head">
             <span>Sales attributed to marketing</span>
-            <span class="fnf-metric-sub">0 conversions</span>
+            <span class="fnf-metric-sub" data-growth="conversions">0 conversions</span>
           </div>
-          <div class="fnf-metric-value">$0.00</div>
+          <div class="fnf-metric-value" data-growth="attributed-revenue">$0.00</div>
         </div>
         <div class="fnf-line"></div>
       </article>
@@ -88,11 +88,11 @@
           <div>
             <div class="fnf-metric-head">Sessions by traffic type</div>
             <div class="fnf-legend">
-              <span><i class="fnf-dot"></i> Direct 26</span>
-              <span><i class="fnf-dot purple"></i> Organic 6</span>
+              <span><i class="fnf-dot"></i> Direct <span data-growth="direct-sessions">26</span></span>
+              <span><i class="fnf-dot purple"></i> Organic <span data-growth="organic-sessions">6</span></span>
             </div>
           </div>
-          <div class="fnf-metric-sub">32 sessions</div>
+          <div class="fnf-metric-sub"><span data-growth="total-sessions">32</span> sessions</div>
         </div>
         <div class="fnf-traffic-bar">
           <span></span>
@@ -134,37 +134,7 @@
     </div>
 
     <section class="fnf-card fnf-panel">
-      <div class="fnf-grid-3">
-        <article class="fnf-campaign-card" data-go="create">
-          <div class="fnf-tag">Inventory</div>
-          <h3>Low stock push</h3>
-          <p>Use scarce inventory to create a short urgency campaign for the products closest to selling out.</p>
-          <div class="fnf-campaign-foot">
-            <span>2 channels</span>
-            <span>Draft</span>
-          </div>
-        </article>
-
-        <article class="fnf-campaign-card" data-go="create">
-          <div class="fnf-tag">Product drop</div>
-          <h3>Horsepower drop</h3>
-          <p>Create a launch banner, homepage feature, email draft, and clean product story.</p>
-          <div class="fnf-campaign-foot">
-            <span>3 channels</span>
-            <span>Ready</span>
-          </div>
-        </article>
-
-        <article class="fnf-campaign-card" data-go="create">
-          <div class="fnf-tag">Audience</div>
-          <h3>Subscriber winback</h3>
-          <p>Draft a subscriber campaign for people who joined the list but have not purchased yet.</p>
-          <div class="fnf-campaign-foot">
-            <span>Email</span>
-            <span>Needs review</span>
-          </div>
-        </article>
-      </div>
+      <div class="fnf-grid-3" id="growthCampaignGrid"></div>
     </section>
   </main>
 
@@ -196,7 +166,7 @@
       <aside class="fnf-score-card">
         <div>
           <small>Growth readiness</small>
-          <strong>68%</strong>
+          <strong data-growth="readiness-score">68%</strong>
           <p>Strong enough to draft campaigns. Not yet complete enough for full autopilot publishing.</p>
         </div>
         <button class="fnf-btn orange" type="button" data-go="create">Build campaign draft</button>
@@ -206,25 +176,25 @@
     <section class="fnf-grid-4" style="margin-top:16px;">
       <article class="fnf-card fnf-kpi">
         <small>Total sessions</small>
-        <strong>32</strong>
+        <strong data-growth="kpi-sessions">32</strong>
         <p>Traffic exists, but volume is still early.</p>
       </article>
 
       <article class="fnf-card fnf-kpi">
         <small>Top channel</small>
-        <strong>Direct</strong>
-        <p>26 sessions arrived without a campaign source.</p>
+        <strong data-growth="kpi-top-channel">Direct</strong>
+        <p><span data-growth="kpi-direct-sessions">26</span> sessions arrived without a campaign source.</p>
       </article>
 
       <article class="fnf-card fnf-kpi">
         <small>Organic search</small>
-        <strong>6</strong>
+        <strong data-growth="kpi-organic">6</strong>
         <p>Google discovery is active and should be protected.</p>
       </article>
 
       <article class="fnf-card fnf-kpi">
         <small>Attributed revenue</small>
-        <strong>$0.00</strong>
+        <strong data-growth="kpi-revenue">$0.00</strong>
         <p>Needs UTM, email, and campaign tracking.</p>
       </article>
     </section>
@@ -325,7 +295,7 @@
     </section>
 
     <section class="fnf-create-layout">
-      <form class="fnf-card fnf-form">
+      <form class="fnf-card fnf-form" id="fnfCampaignForm">
         <div class="fnf-form-section">
           <h3>Campaign basics</h3>
           <div class="fnf-field-grid">
@@ -373,39 +343,39 @@
 
         <div class="fnf-form-section">
           <h3>Channels</h3>
-          <div class="fnf-choice-grid">
+          <div class="fnf-choice-grid" id="fnfChannelChoices">
             <label class="fnf-choice">
-              <input type="checkbox" checked />
+              <input type="checkbox" name="channel" value="homepage_banner" checked />
               <strong>Homepage banner</strong>
               <span>Announcement strip and hero CTA copy.</span>
             </label>
 
             <label class="fnf-choice">
-              <input type="checkbox" checked />
+              <input type="checkbox" name="channel" value="email" checked />
               <strong>Email draft</strong>
               <span>Subject lines, preview text, and body copy.</span>
             </label>
 
             <label class="fnf-choice">
-              <input type="checkbox" checked />
+              <input type="checkbox" name="channel" value="product_pages" checked />
               <strong>Product pages</strong>
               <span>Feature copy and product-level CTA suggestions.</span>
             </label>
 
             <label class="fnf-choice">
-              <input type="checkbox" />
+              <input type="checkbox" name="channel" value="social" />
               <strong>Social captions</strong>
               <span>Short launch captions and link prompts.</span>
             </label>
 
             <label class="fnf-choice">
-              <input type="checkbox" />
+              <input type="checkbox" name="channel" value="subscriber_offer" />
               <strong>Subscriber offer</strong>
               <span>Optional email-only incentive language.</span>
             </label>
 
             <label class="fnf-choice">
-              <input type="checkbox" />
+              <input type="checkbox" name="channel" value="retargeting" />
               <strong>Retargeting notes</strong>
               <span>Copy angles for warm traffic and cart returners.</span>
             </label>
@@ -477,19 +447,21 @@
         <section class="fnf-card fnf-preview-card">
           <h3>Homepage preview</h3>
           <p>Generated campaign copy will appear as a draft banner or hero module before publishing.</p>
-          <div class="fnf-preview-banner">Time is the horsepower.</div>
+          <div class="fnf-preview-banner" id="fnfPreviewBanner">Time is the horsepower.</div>
         </section>
 
         <section class="fnf-card fnf-preview-card">
           <h3>Email preview</h3>
-          <p><strong>Subject:</strong> Built for the ones who move first.</p>
-          <p style="margin-top:8px;"><strong>Preview:</strong> A clean drop campaign for the next Fuel &amp; Free Time push.</p>
+          <p><strong>Subject:</strong> <span id="fnfPreviewSubject">Built for the ones who move first.</span></p>
+          <p style="margin-top:8px;"><strong>Preview:</strong> <span id="fnfPreviewEmailPreview">A clean drop campaign for the next Fuel &amp; Free Time push.</span></p>
+          <p style="margin-top:8px;" id="fnfPreviewEmailBody">The drop is live. Shop the latest from Fuel &amp; Free Time.</p>
         </section>
+        <p class="fnf-pack-status" id="fnfPackStatus" hidden></p>
       </aside>
     </section>
 
     <div class="fnf-sticky-actions">
-      <button class="fnf-btn" type="button" data-go="overview">Save as draft</button>
+      <button class="fnf-btn" type="button" data-save-draft>Save as draft</button>
       <button class="fnf-btn primary" type="button" data-generate>Generate campaign pack</button>
     </div>
   </main>
