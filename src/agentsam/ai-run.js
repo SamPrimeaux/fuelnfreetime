@@ -158,8 +158,8 @@ async function executeModel(env, model, systemPrompt, userMessage, routing) {
     // Uses OPENAI_API_KEY for auth, gpt-image-2 model
     if (!env.OPENAI_API_KEY) throw new Error("image_generation_requires_openai_api_key");
 
-    const gatewayBase = "https://gateway.ai.cloudflare.com/v1/ede6590ac0d2fb7daf155b35653457b2/fuelnfreetime-agentsam";
-    const imgRes = await fetch(`${gatewayBase}/openai/images/generations`, {
+    // Direct OpenAI — no gateway wrapper for image gen
+    const imgRes = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${env.OPENAI_API_KEY}`,
