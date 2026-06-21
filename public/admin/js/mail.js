@@ -1,4 +1,4 @@
-const ICONS = {
+const MAIL_ICONS = {
   star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"></path></svg>',
 };
 
@@ -404,7 +404,7 @@ function renderRows() {
         <div class="preview">${message.preview}</div>
         <div class="label-row">${labelsHTML(message.labels)}</div>
       </div>
-      <button class="star-button ${message.starred ? "active" : ""}" type="button" data-star="${message.id}" aria-label="Star message">${ICONS.star}</button>
+      <button class="star-button ${message.starred ? "active" : ""}" type="button" data-star="${message.id}" aria-label="Star message">${MAIL_ICONS.star}</button>
     </article>`
       )
       .join("") ||
