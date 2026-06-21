@@ -22,30 +22,32 @@ renderShell("/admin/agentsam", `
     <div class="agentsam-page-dock">
       <div class="agentsam-page-composer-wrap">
         <form class="agentsam-page-composer" id="agentsam-page-form">
-          <div class="agentsam-page-tools">
-            <button type="button" class="agentsam-page-plus" id="agentsam-plus" aria-expanded="false" aria-haspopup="menu" aria-label="Tools and attachments">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            </button>
-            <div class="agentsam-page-menu" id="agentsam-tool-menu" role="menu" hidden>
-              <button type="button" role="menuitem" data-tool="attach">Add photos &amp; files</button>
-              <button type="button" role="menuitem" data-tool="image" id="agentsam-menu-image">Create image</button>
-              <div class="agentsam-page-menu-divider"></div>
-              <div class="agentsam-page-menu-label">Connections</div>
-              <div id="agentsam-mcp-list"></div>
-            </div>
-            <input type="file" id="agentsam-file-input" hidden multiple accept="image/png,image/jpeg,image/webp,image/gif,.txt,.md,.csv,.json">
-          </div>
           <div class="agentsam-page-composer-main">
             <div class="agentsam-page-compose-modes" id="agentsam-compose-modes" hidden></div>
             <div class="agentsam-page-attachments" id="agentsam-attachments" hidden></div>
-            <div class="agentsam-page-input-row">
-              <div class="agentsam-page-connection-pills" id="agentsam-connection-pills" hidden></div>
-              <textarea id="agentsam-page-input" rows="1" placeholder="Ask anything" autocomplete="off"></textarea>
+            <textarea id="agentsam-page-input" rows="1" placeholder="Ask anything" autocomplete="off"></textarea>
+            <div class="agentsam-page-bottom-bar">
+              <div class="agentsam-page-bottom-left">
+                <div class="agentsam-page-tools">
+                  <button type="button" class="agentsam-page-plus" id="agentsam-plus" aria-expanded="false" aria-haspopup="menu" aria-label="Tools and attachments">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                  </button>
+                  <div class="agentsam-page-menu" id="agentsam-tool-menu" role="menu" hidden>
+                    <button type="button" role="menuitem" data-tool="attach">Add photos &amp; files</button>
+                    <button type="button" role="menuitem" data-tool="image" id="agentsam-menu-image">Create image</button>
+                    <div class="agentsam-page-menu-divider"></div>
+                    <div class="agentsam-page-menu-label">Connections</div>
+                    <div id="agentsam-mcp-list"></div>
+                  </div>
+                  <input type="file" id="agentsam-file-input" hidden multiple accept="image/png,image/jpeg,image/webp,image/gif,.txt,.md,.csv,.json">
+                </div>
+                <div class="agentsam-page-connection-pills" id="agentsam-connection-pills" hidden></div>
+              </div>
+              <button type="submit" class="agentsam-page-send" id="agentsam-page-send" aria-label="Send">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 19V5M12 5l-6 6M12 5l6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
             </div>
           </div>
-          <button type="submit" class="agentsam-page-send" id="agentsam-page-send" aria-label="Send">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 19V5M12 5l-6 6M12 5l6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
         </form>
       </div>
       <div class="agentsam-page-chips" id="agentsam-page-chips"></div>

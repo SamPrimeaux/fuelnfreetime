@@ -138,14 +138,13 @@ body.agentsam-page-body .console-main--bleed {
 }
 
 .agentsam-page-composer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px 10px 8px;
+  display: block;
+  padding: 0;
   background: var(--as-surface);
   border: 1px solid var(--as-border);
-  border-radius: 28px;
+  border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
 }
 
 .agentsam-page-tools {
@@ -395,7 +394,6 @@ body.agentsam-page-body .console-main--bleed {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 
 .agentsam-page-attachments {
@@ -1025,51 +1023,95 @@ body.agentsam-page-body .console-main--bleed {
 }
 .agentsam-page-plus { position: relative; }
 
-/* connection pills — tiny, inside composer, GPT style */
+/* connection pills — GPT-identical
+   Pills row appears above bottom bar when connections active.
+   No border/bg at rest. Composer grows to fit. X only on hover. */
 .agentsam-page-connection-pills {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  padding: 6px 12px 0;
+  gap: 2px;
+  padding: 8px 12px 0 12px;
 }
+.agentsam-page-connection-pills[hidden] { display: none; }
+
 .agentsam-conn-pill {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  height: 22px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.06);
-  color: rgba(255,255,255,0.55);
-  font-size: 12px;
+  gap: 5px;
+  height: 26px;
+  padding: 0 6px 0 4px;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255,255,255,0.50);
+  font-size: 13px;
   cursor: default;
-  transition: background 0.15s, color 0.15s;
-  position: relative;
+  transition: background 0.12s;
 }
 .agentsam-conn-pill:hover {
-  background: rgba(255,255,255,0.10);
-  color: rgba(255,255,255,0.80);
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.85);
 }
 .agentsam-conn-icon--sm {
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
   border-radius: 3px;
   object-fit: cover;
   flex-shrink: 0;
+  opacity: 0.7;
 }
+.agentsam-conn-pill:hover .agentsam-conn-icon--sm { opacity: 1; }
 .agentsam-conn-icon--svg { display: flex; align-items: center; }
-.agentsam-conn-icon--svg svg { width: 12px; height: 12px; }
-.agentsam-conn-pill-label { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agentsam-conn-icon--svg svg { width: 13px; height: 13px; }
+.agentsam-conn-icon--text { font-size: 11px; font-weight: 600; }
+.agentsam-conn-pill-label {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .agentsam-conn-pill-x {
   display: none;
   background: none;
   border: none;
   color: inherit;
   cursor: pointer;
-  padding: 0;
-  font-size: 14px;
+  padding: 0 0 0 2px;
+  font-size: 15px;
   line-height: 1;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 .agentsam-conn-pill:hover .agentsam-conn-pill-x { display: inline; }
 .agentsam-conn-pill-x:hover { opacity: 1; }
+
+/* composer bottom bar — + pills on left, send on right */
+.agentsam-page-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px 4px 4px;
+}
+.agentsam-page-bottom-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+/* textarea inside composer */
+#agentsam-page-input {
+  display: block;
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 12px 14px 4px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--as-text);
+  min-height: 44px;
+  max-height: 200px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+#agentsam-page-input::placeholder { color: var(--as-muted); }
