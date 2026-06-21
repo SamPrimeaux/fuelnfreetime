@@ -8,6 +8,7 @@ export const ADMIN_CLEAN_PAGES = new Set([
   "product-edit",
   "inventory",
   "subscribers",
+  "growth",
   "scaffold",
   "content",
   "pages",

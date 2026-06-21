@@ -282,6 +282,11 @@ export default {
       return handleMediaServe(request, env, path.slice("/media/".length));
     }
 
+    // Legacy growth scaffold URL → /admin/growth
+    if (path === "/admin/scaffold" && url.searchParams.get("view") === "growth") {
+      return noStore(Response.redirect(new URL("/admin/growth", request.url), 301));
+    }
+
     // Clean admin URLs — /admin/login, /admin/home, …
     const adminAsset = adminHtmlFile(path);
     if (adminAsset) {

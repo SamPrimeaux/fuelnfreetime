@@ -12,21 +12,19 @@
 <script>
 const params = new URLSearchParams(location.search);
 const view = params.get("view") || "feature";
+
+if (view === "agentic") {
+  location.replace("/admin/agentsam");
+} else if (view === "growth") {
+  location.replace("/admin/growth");
+} else {
 const titles = {
-  growth: "Growth",
   discounts: "Discounts",
   markets: "Markets",
   pos: "Point of Sale",
-  agentic: "AgentSam",
 };
 const title = titles[view] || "Feature";
-if (view === "agentic") {
-  location.replace("/admin/agentsam");
-}
-if (view === "agentic") {
-  location.replace("/admin/agentsam");
-} else {
-renderShell(activeHref, `
+renderShell(`/admin/scaffold?view=${encodeURIComponent(view)}`, `
   <div class="console-page">
     <h1 class="admin-page-title">${title}</h1>
     <div class="console-scaffold">
@@ -37,8 +35,7 @@ renderShell(activeHref, `
     </div>
   </div>
 `, {
-  onReady() {
-  },
+  onReady() {},
 });
 }
 </script>
