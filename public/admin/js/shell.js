@@ -36,7 +36,7 @@ const NAV = {
     },
     { href: "/admin/subscribers", label: "Customers", icon: "customers" },
     { href: "/admin/growth", label: "Growth", icon: "growth" },
-    { href: "/admin/scaffold?view=discounts", label: "Discounts", icon: "discounts" },
+    { href: "/admin/discounts", label: "Discounts", icon: "discounts" },
     { href: "/admin/content", label: "Content", icon: "content" },
     { href: "/admin/scaffold?view=markets", label: "Markets", icon: "markets" },
     {

@@ -296,6 +296,11 @@ export default {
       return noStore(Response.redirect(new URL("/admin/growth", request.url), 301));
     }
 
+    // Legacy discounts scaffold URL → /admin/discounts
+    if (path === "/admin/scaffold" && url.searchParams.get("view") === "discounts") {
+      return noStore(Response.redirect(new URL("/admin/discounts", request.url), 301));
+    }
+
     // Clean admin URLs — /admin/login, /admin/home, …
     const adminAsset = adminHtmlFile(path);
     if (adminAsset) {

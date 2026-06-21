@@ -83,6 +83,7 @@
     "db:migrate:mail-mailboxes": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-mail-mailboxes.sql",
     "db:migrate:growth-campaigns": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-growth-campaigns.sql",
     "db:migrate:attribution": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-attribution.sql",
+    "db:migrate:discounts": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-discounts.sql",
     "db:seed:mail-mailboxes": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/seed-mail-mailboxes.sql",
     "mail:provision": "node scripts/provision-mailboxes.mjs",
     "mail:e2e": "node scripts/send-mail-e2e.mjs",

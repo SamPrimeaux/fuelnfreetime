@@ -3,6 +3,10 @@
  */
 
 import { attributionFromCookie, parseCookies, attachAttributionToOrder } from "../lib/attribution.js";
+import {
+  recordDiscountRedemption,
+  validateDiscountForCheckout,
+} from "../lib/discounts.js";
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -107,6 +111,7 @@ export async function createStoreCheckout(request, env) {
 
   const email = (body.email || "").trim().toLowerCase();
   const items = Array.isArray(body.items) ? body.items : [];
+  const discountCode = (body.discount_code || "").trim();
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return json({ error: "Valid email required" }, { status: 400 });
@@ -120,7 +125,7 @@ export async function createStoreCheckout(request, env) {
 
   for (const item of items) {
     const variant = await env.DB.prepare(
-      `SELECT v.*, p.title, p.slug, p.status
+      `SELECT v.*, p.title, p.slug, p.status, p.collection
        FROM product_variants v
        JOIN products p ON p.id = v.product_id
        WHERE v.id = ?`
@@ -142,11 +147,36 @@ export async function createStoreCheckout(request, env) {
     lineItems.push({ variant, qty, unitCents });
   }
 
+  const subtotalCents = totalCents;
+  let discountCents = 0;
+  let discountId = null;
+  let appliedCode = null;
+  let freeShipping = false;
+
+  if (discountCode) {
+    const validation = await validateDiscountForCheckout(env, discountCode, {
+      customerEmail: email,
+      subtotalCents,
+      lineItems,
+      itemCount: lineItems.reduce((n, li) => n + li.qty, 0),
+    });
+    if (!validation.ok) {
+      return json({ error: validation.error }, { status: 400 });
+    }
+    discountCents = validation.discount_cents || 0;
+    freeShipping = !!validation.free_shipping;
+    discountId = validation.discount?.id || null;
+    appliedCode = validation.discount?.code || discountCode;
+    totalCents = Math.max(0, totalCents - discountCents);
+  }
+
   const orderResult = await env.DB.prepare(
-    `INSERT INTO orders (customer_email, status, total_cents, created_at)
-     VALUES (?, 'pending', ?, datetime('now'))`
+    `INSERT INTO orders (
+       customer_email, status, total_cents, subtotal_cents, discount_cents,
+       discount_id, discount_code, created_at
+     ) VALUES (?, 'pending', ?, ?, ?, ?, ?, datetime('now'))`
   )
-    .bind(email, totalCents)
+    .bind(email, totalCents, subtotalCents, discountCents, discountId, appliedCode)
     .run();
 
   const orderId = orderResult.meta.last_row_id;
@@ -184,9 +214,21 @@ export async function createStoreCheckout(request, env) {
       .run();
   }
 
+  if (discountId) {
+    await recordDiscountRedemption(env, {
+      discountId,
+      orderId,
+      customerEmail: email,
+      amountCents: discountCents,
+    });
+  }
+
   return json({
     ok: true,
     order_id: orderId,
+    subtotal_cents: subtotalCents,
+    discount_cents: discountCents,
+    free_shipping: freeShipping,
     total_cents: totalCents,
     total: (totalCents / 100).toFixed(2),
     message: "Order received — payment integration coming soon. We'll email you confirmation.",
@@ -226,6 +268,69 @@ export async function handleStoreApi(request, env, url) {
 
   if (path === "/api/store/checkout" && method === "POST") {
     return createStoreCheckout(request, env);
+  }
+
+  if (path === "/api/store/discounts/validate" && method === "POST") {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: "Invalid request body" }, { status: 400 });
+    }
+
+    const code = (body.code || "").trim();
+    const items = Array.isArray(body.items) ? body.items : [];
+    if (!code) return json({ error: "Discount code required" }, { status: 400 });
+    if (!items.length) return json({ error: "Cart is empty" }, { status: 400 });
+
+    let totalCents = 0;
+    const lineItems = [];
+    for (const item of items) {
+      const variant = await env.DB.prepare(
+        `SELECT v.*, p.title, p.slug, p.status, p.collection
+         FROM product_variants v
+         JOIN products p ON p.id = v.product_id
+         WHERE v.id = ?`
+      )
+        .bind(item.variant_id)
+        .first();
+      if (!variant || variant.status !== "active") {
+        return json({ error: `Variant ${item.variant_id} unavailable` }, { status: 400 });
+      }
+      const qty = Math.max(1, Math.min(10, Math.round(Number(item.qty || 1))));
+      const unitCents =
+        variant.price_cents ??
+        (await env.DB.prepare(`SELECT price_cents FROM products WHERE id = ?`).bind(variant.product_id).first())
+          ?.price_cents ??
+        0;
+      totalCents += unitCents * qty;
+      lineItems.push({ variant, qty, unitCents });
+    }
+
+    const validation = await validateDiscountForCheckout(env, code, {
+      customerEmail: (body.email || "").trim().toLowerCase(),
+      subtotalCents: totalCents,
+      lineItems,
+      itemCount: lineItems.reduce((n, li) => n + li.qty, 0),
+    });
+
+    if (!validation.ok) {
+      return json({ ok: false, error: validation.error }, { status: 400 });
+    }
+
+    const totalAfter = Math.max(0, totalCents - (validation.discount_cents || 0));
+    return json({
+      ok: true,
+      code: validation.discount?.code || code,
+      title: validation.discount?.title || "",
+      discount_cents: validation.discount_cents || 0,
+      free_shipping: !!validation.free_shipping,
+      subtotal_cents: totalCents,
+      total_cents: totalAfter,
+      subtotal: (totalCents / 100).toFixed(2),
+      total: (totalAfter / 100).toFixed(2),
+      message: validation.message,
+    });
   }
 
   return json({ error: "Not found" }, { status: 404 });

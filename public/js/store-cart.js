@@ -1,5 +1,6 @@
 (function () {
   const CART_KEY = "fnf_cart";
+  const DISCOUNT_KEY = "fnf_discount";
 
   const CART_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6 5 3H2"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg>`;
 
@@ -9,6 +10,20 @@
 
   function getCart() {
     return window.FNF_STORE?.getCart() || JSON.parse(localStorage.getItem(CART_KEY) || "[]");
+  }
+
+  function getDiscount() {
+    try {
+      return JSON.parse(localStorage.getItem(DISCOUNT_KEY) || "null");
+    } catch {
+      return null;
+    }
+  }
+
+  function setDiscount(data) {
+    if (!data) localStorage.removeItem(DISCOUNT_KEY);
+    else localStorage.setItem(DISCOUNT_KEY, JSON.stringify(data));
+    renderTotals(getCart());
   }
 
   function setCart(items) {
@@ -41,6 +56,33 @@
           `<div class="checkout-line"><span>${item.qty}× ${item.title}${item.size ? " · " + item.size : ""}</span><strong>${money((item.price_cents || 0) * item.qty)}</strong></div>`
       )
       .join("");
+  }
+
+  function renderTotals(cart) {
+    const subtotal = cart.reduce((sum, item) => sum + (item.price_cents || 0) * item.qty, 0);
+    const discount = getDiscount();
+    const discountCents = discount?.discount_cents || 0;
+    const total = Math.max(0, subtotal - discountCents);
+
+    const subtotalRow = document.getElementById("checkout-subtotal-row");
+    const discountRow = document.getElementById("checkout-discount-row");
+    const subtotalEl = document.getElementById("cart-subtotal");
+    const discountEl = document.getElementById("cart-discount");
+    const totalEl = document.getElementById("cart-total");
+
+    if (subtotalRow) subtotalRow.hidden = !discount || discountCents <= 0;
+    if (discountRow) discountRow.hidden = !discount || discountCents <= 0;
+    if (subtotalEl) subtotalEl.textContent = money(subtotal);
+    if (discountEl) discountEl.textContent = "−" + money(discountCents);
+    if (totalEl) totalEl.textContent = money(total);
+
+    const codeInput = document.getElementById("checkout-discount");
+    const msg = document.getElementById("checkout-discount-msg");
+    if (codeInput && discount?.code && !codeInput.value) codeInput.value = discount.code;
+    if (msg && discount?.message) {
+      msg.textContent = discount.message;
+      msg.className = "checkout-promo-msg ok";
+    }
   }
 
   function render() {
@@ -90,9 +132,8 @@
       })
       .join("");
 
-    const totalEl = document.getElementById("cart-total");
-    if (totalEl) totalEl.textContent = money(total);
     renderCheckoutLines(cart);
+    renderTotals(cart);
 
     root.querySelectorAll("[data-dec]").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -121,6 +162,45 @@
     });
   }
 
+  async function applyDiscount() {
+    const cart = getCart();
+    const code = document.getElementById("checkout-discount")?.value?.trim();
+    const msg = document.getElementById("checkout-discount-msg");
+    if (!code || !cart.length) return;
+
+    msg.textContent = "Checking code…";
+    msg.className = "checkout-promo-msg";
+
+    try {
+      const res = await fetch("/api/store/discounts/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          code,
+          email: document.getElementById("checkout-email")?.value?.trim() || "",
+          items: cart.map((i) => ({ variant_id: i.variant_id, qty: i.qty })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Invalid discount code");
+
+      setDiscount({
+        code: data.code,
+        title: data.title,
+        discount_cents: data.discount_cents || 0,
+        free_shipping: !!data.free_shipping,
+        message: data.message || "Discount applied",
+      });
+      msg.textContent = data.message || "Discount applied";
+      msg.className = "checkout-promo-msg ok";
+    } catch (err) {
+      setDiscount(null);
+      msg.textContent = err.message || "Invalid discount code";
+      msg.className = "checkout-promo-msg err";
+    }
+  }
+
   async function checkout(e) {
     e.preventDefault();
     const email = document.getElementById("checkout-email")?.value?.trim();
@@ -143,12 +223,14 @@
           email,
           items: cart.map((i) => ({ variant_id: i.variant_id, qty: i.qty })),
           attribution,
+          discount_code: getDiscount()?.code || document.getElementById("checkout-discount")?.value?.trim() || "",
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Checkout failed");
 
       setCart([]);
+      setDiscount(null);
       status.textContent = `Order #${data.order_id} received — ${data.message}`;
       status.className = "checkout-status ok";
       btn.textContent = "Order placed";
@@ -160,6 +242,7 @@
   }
 
   document.getElementById("checkout-form")?.addEventListener("submit", checkout);
+  document.getElementById("checkout-apply-discount")?.addEventListener("click", applyDiscount);
   document.addEventListener("fnf:cart-updated", () => {
     render();
     updateBadge();

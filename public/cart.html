@@ -32,6 +32,16 @@
       <form id="checkout-form" class="checkout-panel" hidden>
         <h2>Order summary</h2>
         <div class="checkout-lines" id="checkout-lines"></div>
+        <div class="checkout-promo">
+          <label for="checkout-discount">Discount code</label>
+          <div class="checkout-promo-row">
+            <input id="checkout-discount" type="text" placeholder="Enter code" autocomplete="off">
+            <button type="button" id="checkout-apply-discount">Apply</button>
+          </div>
+          <p class="checkout-promo-msg" id="checkout-discount-msg"></p>
+        </div>
+        <div class="checkout-row checkout-subtotal" id="checkout-subtotal-row" hidden><span>Subtotal</span><span id="cart-subtotal">$0.00</span></div>
+        <div class="checkout-row checkout-discount" id="checkout-discount-row" hidden><span>Discount</span><span id="cart-discount">−$0.00</span></div>
         <div class="checkout-row"><span>Total</span><span id="cart-total">$0.00</span></div>
         <label for="checkout-email">Email for confirmation</label>
         <input id="checkout-email" type="email" required placeholder="you@example.com" autocomplete="email">

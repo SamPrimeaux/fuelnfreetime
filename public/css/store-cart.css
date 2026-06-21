@@ -302,6 +302,65 @@
   color: #fff;
 }
 
+.checkout-promo {
+  margin: 1rem 0;
+}
+
+.checkout-promo label {
+  display: block;
+  font-size: 0.82rem;
+  color: #9aa3ac;
+  margin-bottom: 0.4rem;
+}
+
+.checkout-promo-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.checkout-promo-row input {
+  flex: 1;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #0a0a0a;
+  color: #fff;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+}
+
+.checkout-promo-row button {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #15181b;
+  color: #fff;
+  border-radius: 10px;
+  padding: 0 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.checkout-promo-msg {
+  min-height: 1.1rem;
+  margin: 0.45rem 0 0;
+  font-size: 0.82rem;
+  color: #9aa3ac;
+}
+
+.checkout-promo-msg.ok {
+  color: #38c172;
+}
+
+.checkout-promo-msg.err {
+  color: #ff6b4a;
+}
+
+.checkout-subtotal span:last-child,
+.checkout-discount span:last-child {
+  color: #c8cdd2;
+}
+
+.checkout-discount span:last-child {
+  color: #38c172;
+}
+
 @media (max-width: 860px) {
   .cart-layout {
     grid-template-columns: 1fr;
