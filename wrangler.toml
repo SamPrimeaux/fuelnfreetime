@@ -12,6 +12,8 @@ IAM_ORIGIN = "https://inneranimalmedia.com"
 FNF_GITHUB_REPO = "SamPrimeaux/fuelnfreetime"
 FNF_GITHUB_CLIENT_ID = "Ov23li6BZYxjVtGUWibX"
 RESEND_FROM = "Fuel & Free Time <hello@fuelnfreetime.com>"
+STRIPE_CHECKOUT_SUCCESS_PATH = "/order-confirmation"
+STRIPE_CHECKOUT_CANCEL_PATH  = "/cart.html"
 
 # Custom domains — activate once Cloudflare zone leaves "pending" (nameservers cut over).
 [[routes]]
