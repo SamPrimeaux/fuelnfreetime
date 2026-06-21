@@ -51,10 +51,15 @@ function typeLabel(d) {
 }
 
 async function discFetch(path, opts = {}) {
+  const headers = { ...(opts.headers || {}) };
+  if (opts.body != null && !headers["content-type"] && !headers["Content-Type"]) {
+    headers["content-type"] = "application/json";
+  }
+
   const res = await fetch(path, {
     credentials: "include",
-    headers: { "content-type": "application/json", ...(opts.headers || {}) },
     ...opts,
+    headers,
   });
   if (res.status === 401) {
     window.location.href = "/admin/login";
@@ -68,10 +73,11 @@ async function discFetch(path, opts = {}) {
 }
 
 function $(app, sel) {
-  return app.querySelector(sel);
+  return app?.querySelector(sel) ?? null;
 }
 
 function setView(app, view) {
+  if (!app) return;
   app.dataset.view = view;
   app.querySelectorAll(".fnf-discounts-page").forEach((page) => {
     page.hidden = page.dataset.page !== view;
@@ -259,19 +265,35 @@ function fillEditor(app, discount) {
   updateSummary(app);
 }
 
-function renderList(app) {
+function renderList(app, { error = "" } = {}) {
   const empty = $("#discEmptyState", app);
   const tableWrap = $("#discTableWrap", app);
   const tbody = $("#discTableBody", app);
   const exportBtn = $("#discExportBtn", app);
+  const loading = $("#discLoadingState", app);
   const list = discState.discounts;
 
-  exportBtn.disabled = !list.length;
-  empty.hidden = !!list.length;
-  tableWrap.hidden = !list.length;
+  if (loading) loading.hidden = true;
+
+  if (error) {
+    if (empty) {
+      empty.hidden = false;
+      const msg = empty.querySelector("p");
+      if (msg) msg.textContent = error;
+    }
+    if (tableWrap) tableWrap.hidden = true;
+    if (exportBtn) exportBtn.disabled = true;
+    return;
+  }
+
+  if (exportBtn) exportBtn.disabled = !list.length;
+  if (empty) empty.hidden = !!list.length;
+  if (tableWrap) tableWrap.hidden = !list.length;
 
   if (!list.length) {
-    tbody.innerHTML = "";
+    if (tbody) tbody.innerHTML = "";
+    const msg = empty?.querySelector("p");
+    if (msg) msg.textContent = "Add discount codes and automatic discounts that apply at checkout.";
     return;
   }
 
@@ -302,17 +324,35 @@ function renderList(app) {
 }
 
 async function refreshList(app) {
-  const data = await discFetch("/api/admin/discounts");
-  discState.discounts = data.discounts || [];
-  renderList(app);
+  const loading = $("#discLoadingState", app);
+  if (loading) loading.hidden = false;
+
+  try {
+    const data = await discFetch("/api/admin/discounts");
+    discState.discounts = data.discounts || [];
+    renderList(app);
+  } catch (err) {
+    console.error("[discounts]", err);
+    discState.discounts = [];
+    renderList(app, { error: err.message || "Could not load discounts." });
+  }
+}
+
+function mountTypeModal(app) {
+  const modal = $("#discTypeModal", app);
+  if (!modal || modal.dataset.mounted === "1") return;
+  document.body.appendChild(modal);
+  modal.dataset.mounted = "1";
 }
 
 function openTypeModal(app) {
-  $("#discTypeModal", app).hidden = false;
+  const modal = document.getElementById("discTypeModal");
+  if (modal) modal.hidden = false;
 }
 
 function closeTypeModal(app) {
-  $("#discTypeModal", app).hidden = true;
+  const modal = document.getElementById("discTypeModal");
+  if (modal) modal.hidden = true;
 }
 
 function openCreate(app, typeKey) {
@@ -358,6 +398,8 @@ async function saveEditor(app) {
 }
 
 function bindDiscountsApp(app) {
+  if (!app) return;
+  mountTypeModal(app);
   $("#discCreateBtn", app)?.addEventListener("click", () => openTypeModal(app));
   app.querySelectorAll("[data-open-type-picker]").forEach((btn) => {
     btn.addEventListener("click", () => openTypeModal(app));
@@ -417,7 +459,8 @@ function bindDiscountsApp(app) {
   });
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !$("#discTypeModal", app)?.hidden) closeTypeModal(app);
+    const modal = document.getElementById("discTypeModal");
+    if (e.key === "Escape" && modal && !modal.hidden) closeTypeModal(app);
   });
 }
 
@@ -425,11 +468,26 @@ async function initDiscountsPage() {
   const mount = document.getElementById("discountsMount");
   if (!mount) return;
 
-  const res = await fetch("/admin/partials/discounts-app.html", { credentials: "same-origin" });
-  mount.innerHTML = await res.text();
-  const app = document.getElementById("fnfDiscountsApp");
-  bindDiscountsApp(app);
-  await refreshList(app);
+  try {
+    const res = await fetch("/admin/partials/discounts-app.html", { credentials: "same-origin" });
+    if (!res.ok) throw new Error(`Discounts UI failed to load (HTTP ${res.status})`);
+    mount.innerHTML = await res.text();
+
+    const app = document.getElementById("fnfDiscountsApp");
+    if (!app) throw new Error("Discounts app markup missing");
+
+    setView(app, "list");
+    bindDiscountsApp(app);
+    await refreshList(app);
+  } catch (err) {
+    console.error("[discounts/init]", err);
+    mount.innerHTML = `
+      <div class="fnf-discounts-app" style="padding:40px;">
+        <h1 class="fnf-disc-title">Discounts</h1>
+        <p style="color:#b42318;margin:12px 0 0;">${escapeHtml(err.message || "Failed to load discounts.")}</p>
+        <button type="button" class="fnf-disc-btn primary" style="margin-top:16px;" onclick="location.reload()">Retry</button>
+      </div>`;
+  }
 }
 
 window.initDiscountsPage = initDiscountsPage;
