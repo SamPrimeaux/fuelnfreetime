@@ -84,6 +84,9 @@ function setView(app, view) {
   app.querySelectorAll(".fnf-discounts-page").forEach((page) => {
     page.hidden = page.dataset.page !== view;
   });
+  if (view === "editor") {
+    app.querySelector('.fnf-discounts-page[data-page="editor"]')?.scrollIntoView({ block: "start" });
+  }
 }
 
 function randomCode() {
@@ -181,9 +184,11 @@ function resetEditor(app) {
   $("#discLimitTotal", app).checked = false;
   $("#discLimitCustomer", app).checked = false;
   $("#discEditorError", app).hidden = true;
-  app.querySelector('input[name="minReq"][value="none"]').checked = true;
-  app.querySelector('.fnf-disc-segment button[data-method="code"]').classList.add("active");
-  app.querySelector('.fnf-disc-segment button[data-method="automatic"]').classList.remove("active");
+  app.querySelector('input[name="minReq"][value="none"]')?.click();
+  const codeBtn = app.querySelector('.fnf-disc-segment button[data-method="code"]');
+  const autoBtn = app.querySelector('.fnf-disc-segment button[data-method="automatic"]');
+  codeBtn?.classList.add("active");
+  autoBtn?.classList.remove("active");
   $("#discCodeField", app).hidden = false;
   applyTypePreset(app, discState.draftType || "product_percent");
 }
@@ -347,6 +352,23 @@ function mountTypeModal(app) {
   modal.dataset.mounted = "1";
 }
 
+function bindTypeModal(app) {
+  const modal = document.getElementById("discTypeModal");
+  if (!modal || modal.dataset.bound === "1") return;
+  modal.dataset.bound = "1";
+
+  modal.querySelectorAll("[data-close-modal]").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      e.preventDefault();
+      closeTypeModal(app);
+    });
+  });
+
+  modal.querySelectorAll(".fnf-disc-type-item").forEach((btn) => {
+    btn.addEventListener("click", () => openCreate(app, btn.dataset.type));
+  });
+}
+
 function openTypeModal(app) {
   const modal = document.getElementById("discTypeModal");
   if (modal) modal.hidden = false;
@@ -402,17 +424,11 @@ async function saveEditor(app) {
 function bindDiscountsApp(app) {
   if (!app) return;
   mountTypeModal(app);
+  bindTypeModal(app);
+
   $("#discCreateBtn", app)?.addEventListener("click", () => openTypeModal(app));
   app.querySelectorAll("[data-open-type-picker]").forEach((btn) => {
     btn.addEventListener("click", () => openTypeModal(app));
-  });
-
-  app.querySelectorAll("[data-close-modal]").forEach((el) => {
-    el.addEventListener("click", () => closeTypeModal(app));
-  });
-
-  app.querySelectorAll(".fnf-disc-type-item").forEach((btn) => {
-    btn.addEventListener("click", () => openCreate(app, btn.dataset.type));
   });
 
   $("#discBackBtn", app)?.addEventListener("click", () => setView(app, "list"));
