@@ -89,6 +89,6 @@
     "cf:status": "./scripts/with-cf-admin-env.sh node scripts/cf-status.mjs"
   },
   "devDependencies": {
-    "wrangler": "^4.0.0"
+    "wrangler": "^4.103.0"
   }
 }

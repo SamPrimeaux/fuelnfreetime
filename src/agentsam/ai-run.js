@@ -149,21 +149,43 @@ async function executeModel(env, model, systemPrompt, userMessage, routing) {
   const user = String(userMessage || "").slice(0, 4000);
 
   if (taskType === "image_generation") {
-    const result = await env.AGENTSAM_WAI.run(model.model_id, {
-      prompt: user,
-      ...defaults,
-    }, { gateway: { id: "fuelnfreetime-agentsam", skipCache: false } });
-    const bytes = normalizeImageBytes(result);
-    if (bytes?.length) {
+    // Route through CF AI Gateway dynamic/agentsam-images (gpt-image-2 + gemini fallback)
+    // Requires CLOUDFLARE_API_TOKEN secret on the worker
+    if (!env.CLOUDFLARE_API_TOKEN) {
+      throw new Error("image_generation_requires_cloudflare_api_token");
+    }
+    const gatewayUrl =
+      "https://gateway.ai.cloudflare.com/v1/ede6590ac0d2fb7daf155b35653457b2/fuelnfreetime-agentsam/workers-ai/dynamic/agentsam-images";
+
+    const imgRes = await fetch(gatewayUrl, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prompt: user,
+        n: 1,
+        size: defaults.size || "1024x1024",
+        response_format: "b64_json",
+      }),
+    });
+
+    if (!imgRes.ok) {
+      const err = await imgRes.text().catch(() => String(imgRes.status));
+      throw new Error(`gateway_image_failed: ${imgRes.status} ${err}`);
+    }
+
+    const imgData = await imgRes.json();
+    // OpenAI image response shape: { data: [{ b64_json: "..." }] }
+    const b64 = imgData?.data?.[0]?.b64_json || imgData?.result?.image;
+    if (b64) {
       return {
-        reply:
-          "Generated an image from your prompt. Preview is attached in the response metadata.",
-        image_base64: bytesToBase64(bytes),
+        reply: "Here's the generated image.",
+        image_base64: b64,
         mime_type: "image/png",
       };
     }
-    const text = extractReply(result).trim();
-    if (text) return { reply: text };
     throw new Error("empty_image_response");
   }
 
