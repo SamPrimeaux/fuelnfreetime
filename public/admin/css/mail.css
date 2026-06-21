@@ -42,8 +42,7 @@
   --brand-font: "Bebas Neue", Inter, ui-sans-serif, sans-serif;
   --font-mono: "Space Mono", ui-monospace, monospace;
   --fnf-ease: cubic-bezier(.2, .8, .2, 1);
-  --rail-w: clamp(214px, 18vw, 268px);
-  --list-w: clamp(382px, 29vw, 470px);
+  --list-w: clamp(382px, 32vw, 470px);
 
   position: relative;
   min-height: 0;
@@ -110,7 +109,7 @@
 .mail-root .mail-app {
   position: relative; min-height: 0; height: 100%;
   display: grid;
-  grid-template-columns: var(--rail-w) 8px var(--list-w) 8px minmax(520px, 1fr);
+  grid-template-columns: var(--list-w) 8px minmax(520px, 1fr);
   border-radius: var(--radius-xl);
   overflow: hidden;
   border: 1px solid var(--fnf-line);
@@ -119,8 +118,19 @@
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
 }
-.mail-root .mail-app.rail-collapsed {
-  grid-template-columns: 78px 8px var(--list-w) 8px minmax(520px, 1fr);
+.mail-root .list-compose {
+  width: auto;
+  height: 38px;
+  padding: 0 14px;
+  font-size: 12px;
+}
+.mail-root .list-compose span { display: inline; }
+.mail-root .list-actions a.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: inherit;
 }
 
 .mail-root .mail-rail,
@@ -558,7 +568,7 @@
 
 @media (max-width: 1180px) {
   .mail-root .stage { width: min(1120px, calc(100vw - 28px)); height: auto; min-height: calc(100vh - 32px); }
-  .mail-root .mail-app { grid-template-columns: var(--rail-w) 8px minmax(360px, 1fr); min-height: 780px; }
+  .mail-root .mail-app { grid-template-columns: minmax(360px, 1fr); min-height: 780px; }
   .mail-root .reader { display: none; }
   .mail-root .detail-handle { display: none; }
 }
@@ -646,13 +656,12 @@
   }
   .mail-root { overflow: hidden; }
   .mail-root .stage { width: 100vw; height: 100dvh; margin: 0; padding: 10px; grid-template-rows: auto 1fr; gap: 10px; }
-  .mail-root .mobile-tabs { display: grid; grid-template-columns: repeat(3, 1fr); height: 46px; border-radius: var(--radius-md); padding: 4px; background: var(--fnf-steel); border: 1px solid var(--fnf-line); }
+  .mail-root .mobile-tabs { display: grid; grid-template-columns: repeat(2, 1fr); height: 46px; border-radius: var(--radius-md); padding: 4px; background: var(--fnf-steel); border: 1px solid var(--fnf-line); }
   .mail-root .mobile-tabs button { border: 0; background: transparent; border-radius: var(--radius-sm); font-weight: 600; font-size: 12px; cursor: pointer; color: var(--fnf-muted); }
   .mail-root .mobile-tabs button.active { background: rgba(255, 69, 0, .12); color: var(--fnf-ink); }
-  .mail-root .mail-app, .mail-root .mail-app.rail-collapsed { display: block; height: 100%; border-radius: 26px; }
-  .mail-root .drag-handle, .mail-root .rail-toggle { display: none; }
-  .mail-root .mail-rail, .mail-root .message-list, .mail-root .reader { display: none; height: 100%; }
-  .mail-root .mail-app[data-mobile="rail"] .mail-rail { display: flex; }
+  .mail-root .mail-app { display: block; height: 100%; border-radius: 26px; }
+  .mail-root .drag-handle { display: none; }
+  .mail-root .message-list, .mail-root .reader { display: none; height: 100%; }
   .mail-root .mail-app[data-mobile="list"] .message-list { display: grid; }
   .mail-root .mail-app[data-mobile="reader"] .reader { display: grid; }
   .mail-root .email-cards { grid-template-columns: 1fr; }

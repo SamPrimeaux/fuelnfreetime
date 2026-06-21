@@ -65,7 +65,22 @@ const NAV = {
     { href: "/admin/scaffold?view=pos", label: "Point of Sale", icon: "pos" },
     { href: "/admin/agentsam", label: "AgentSam", icon: "agentic" },
   ],
-  apps: [{ href: "/admin/email", label: "Email", icon: "email" }],
+  apps: [
+    {
+      id: "email",
+      label: "Email",
+      icon: "email",
+      href: "/admin/email",
+      children: [
+        { href: "/admin/email", label: "Inbox" },
+        { href: "/admin/email?folder=sent", label: "Sent" },
+        { href: "/admin/email?folder=starred", label: "Starred" },
+        { href: "/admin/email?folder=needs", label: "Needs reply" },
+        { href: "/admin/email?folder=drafts", label: "Drafts" },
+        { href: "/admin/email?folder=archived", label: "Archived" },
+      ],
+    },
+  ],
 };
 
 function ensureConsoleAssets() {
@@ -137,9 +152,21 @@ function adminPathBase(href) {
   return base;
 }
 
+function mailFolderFromHref(href) {
+  try {
+    const u = new URL(href || "/admin/email", "https://fuelnfreetime.com");
+    return u.searchParams.get("folder") || "inbox";
+  } catch {
+    return "inbox";
+  }
+}
+
 function navActive(href, activeHref) {
   const baseHref = adminPathBase(href);
   const baseActive = adminPathBase(activeHref);
+  if (baseHref === "/admin/email" && baseActive === "/admin/email") {
+    return mailFolderFromHref(href) === mailFolderFromHref(activeHref);
+  }
   if (baseHref === baseActive) return true;
   if (href === activeHref) return true;
   const aliases = {
@@ -243,7 +270,7 @@ function renderSideNav(activeHref) {
       <div class="console-recent-item">CMS pages published</div>
       <div class="console-recent-item">Store orders &amp; inventory</div>
       <div class="console-sidenav-divider"></div>
-      <a href="/admin/account" class="console-nav-item${navActive("/admin/account", activeHref) ? " is-active" : ""}">${icon("settings")}Settings</a>
+      <a href="/admin/account" class="console-nav-item console-nav-item--account${navActive("/admin/account", activeHref) ? " is-active" : ""}">${icon("settings")}<span>Account</span></a>
     </div>`;
 }
 

@@ -444,7 +444,10 @@ body.console-theme {
   font-size: 13px;
 }
 
-.console-sidenav-foot {
+.console-sidenav-foot .console-nav-item--account {
+  margin-top: 4px;
+  font-weight: 600;
+}
   margin-top: auto;
   padding-top: 14px;
 }

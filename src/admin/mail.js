@@ -25,109 +25,6 @@ const DEFAULT_SETTINGS = {
   reviewBeforeSend: true,
 };
 
-const DEMO_MESSAGES = [
-  {
-    id: 1,
-    initials: "FN",
-    color: "orange",
-    sender: "Newsletter Subscriber",
-    email: "rider@example.com",
-    subject: "New signup from shop page",
-    preview: "A visitor subscribed to Fuel & Free Time updates from the homepage newsletter form.",
-    date: "Today",
-    fullDate: "Today at 9:14 AM",
-    labels: ["client", "primary"],
-    type: "Store lead. New subscriber — consider a welcome sequence via Resend.",
-    unread: true,
-    starred: false,
-    needs: true,
-    brand: "Fuel & Free Time",
-    tag: "Newsletter",
-    headline: "New subscriber from the storefront",
-    cta: "View subscriber",
-  },
-  {
-    id: 2,
-    initials: "CF",
-    color: "teal",
-    sender: "Cloudflare",
-    email: "noreply@notify.cloudflare.com",
-    subject: "Worker deployment succeeded: fuelnfreetime",
-    preview: "Your latest Worker version deployed successfully to fuelnfreetime.meauxbility.workers.dev.",
-    date: "Today",
-    fullDate: "Today at 8:02 AM",
-    labels: ["updates"],
-    type: "Infrastructure notice. Deployment healthy — no action required.",
-    unread: true,
-    starred: false,
-    needs: false,
-    brand: "Cloudflare",
-    tag: "Deploy",
-    headline: "Worker deploy completed",
-    cta: "View deployment",
-  },
-  {
-    id: 3,
-    initials: "RS",
-    color: "dark",
-    sender: "Resend",
-    email: "notifications@resend.com",
-    subject: "Domain verification pending for fuelnfreetime.com",
-    preview: "Add the DNS records shown in Resend to verify your sending domain.",
-    date: "Yesterday",
-    fullDate: "Yesterday at 4:18 PM",
-    labels: ["action", "updates"],
-    type: "Sending setup. Complete DNS verification before enabling transactional mail.",
-    unread: false,
-    starred: true,
-    needs: true,
-    brand: "Resend",
-    tag: "Action required",
-    headline: "Verify fuelnfreetime.com for sending",
-    cta: "Open DNS guide",
-  },
-  {
-    id: 4,
-    initials: "SH",
-    color: "purple",
-    sender: "Shopify",
-    email: "mailer@shopify.com",
-    subject: "Order sync integration available",
-    preview: "Connect your catalog to sync inventory and order notifications.",
-    date: "Yesterday",
-    fullDate: "Yesterday at 11:02 AM",
-    labels: ["updates"],
-    type: "Platform update. Review when expanding checkout integrations.",
-    unread: false,
-    starred: false,
-    needs: false,
-    brand: "Shopify",
-    tag: "Integration",
-    headline: "Order sync tools are available",
-    cta: "Learn more",
-  },
-  {
-    id: 5,
-    initials: "OR",
-    color: "teal",
-    sender: "Store Orders",
-    email: "orders@fuelnfreetime.com",
-    subject: "Order #1042 confirmation ready to send",
-    preview: "A pending order is ready for a Resend transactional confirmation once checkout is live.",
-    date: "Oct 30",
-    fullDate: "Oct 30, 2025 at 6:20 PM",
-    labels: ["primary", "action"],
-    type: "Transactional mail. Preview the order confirmation template before sending.",
-    unread: true,
-    starred: false,
-    needs: true,
-    brand: "Fuel & Free Time",
-    tag: "Order",
-    headline: "Order confirmation is queued",
-    cta: "Preview email",
-  },
-];
-
 function sanitizeSettings(raw) {
   const merged = { ...DEFAULT_SETTINGS, ...(raw || {}) };
   if (merged.resendApiKey && merged.resendApiKey.includes("•")) {
@@ -321,18 +218,14 @@ export async function listMailMessages(env) {
        LIMIT 100`
     ).all();
 
-    if (results?.length) {
-      return Response.json({
-        ok: true,
-        messages: results.map(rowToMessage),
-        source: "d1",
-      });
-    }
+    return Response.json({
+      ok: true,
+      messages: (results || []).map(rowToMessage),
+      source: "d1",
+    });
   } catch {
-    /* table may not exist yet */
+    return Response.json({ ok: true, messages: [], source: "d1" });
   }
-
-  return Response.json({ ok: true, messages: DEMO_MESSAGES, source: "demo" });
 }
 
 export async function sendMailPreview(request, env) {

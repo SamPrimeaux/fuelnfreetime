@@ -2,41 +2,28 @@ const MAIL_ICONS = {
   star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"></path></svg>',
 };
 
-const MAIL_DEFAULTS = {
-  gmailAddress: "",
-  gmailDisplayName: "",
-  gmailSyncWindow: "Last 30 days",
-  gmailReadMeta: true,
-  gmailReadBodies: true,
-  gmailSend: true,
-  gmailDrafts: true,
-  resendFrom: "hello@fuelnfreetime.com",
-  resendDomain: "fuelnfreetime.com",
-  resendReplyTo: "",
-  resendApiKey: "",
-  resendTransactional: true,
-  resendCampaign: false,
-  resendTracking: false,
-  resendWebhooks: true,
-  defaultInbox: "Gmail",
-  defaultSender: "Gmail for replies, Resend for app mail",
-  syncCadence: "Every 15 minutes",
-  agentMode: "Draft only",
-  autoLabel: true,
-  clientPriority: true,
-  reviewBeforeSend: true,
+const FOLDER_LABELS = {
+  inbox: "Inbox",
+  sent: "Sent",
+  starred: "Starred",
+  needs: "Needs reply",
+  drafts: "Drafts",
+  archived: "Archived",
 };
 
-function normalizeSettings(settings) {
-  return { ...MAIL_DEFAULTS, ...(settings || {}) };
-}
-
 let messages = [];
+let messageSource = "d1";
 let selectedId = null;
 let activeFilter = "all";
+let activeFolder = "inbox";
 let selectedContextId = null;
 let toastTimer;
 let adminEmail = "";
+let composeSettings = { resendFrom: "hello@fuelnfreetime.com", gmailAddress: "" };
+
+function getActiveFolder() {
+  return new URLSearchParams(window.location.search).get("folder") || "inbox";
+}
 
 async function loadMailPartialHtml() {
   const tpl = document.getElementById("mail-app-template");
@@ -74,8 +61,7 @@ async function bootMailApp() {
     return;
   }
 
-  root.innerHTML =
-    '<div class="mail-boot-loading"><p>Loading inbox…</p></div>';
+  root.innerHTML = '<div class="mail-boot-loading"><p>Loading inbox…</p></div>';
 
   try {
     root.innerHTML = await loadMailPartialHtml();
@@ -91,6 +77,7 @@ async function bootMailApp() {
 }
 
 async function initMailApp() {
+  activeFolder = getActiveFolder();
   try {
     bindMailEvents();
   } catch (err) {
@@ -107,18 +94,24 @@ async function initMailApp() {
   try {
     const data = await adminFetch("/api/admin/mail/messages");
     messages = data.messages || [];
+    messageSource = data.source || "d1";
   } catch {
     messages = [];
+    messageSource = "d1";
   }
 
   selectedId = messages[0]?.id ?? null;
   selectedContextId = selectedId;
 
-  await loadRemoteSettings();
+  await loadComposeSettings();
+  syncFolderChrome();
   updateBadges();
   renderRows();
   renderReader();
-  updateComposeFromOptions();
+
+  if (new URLSearchParams(window.location.search).get("compose") === "1") {
+    openCompose("New message");
+  }
 }
 
 window.bootMailApp = bootMailApp;
@@ -136,187 +129,25 @@ function showToast(message) {
   toastTimer = setTimeout(() => toast.classList.remove("open"), 2200);
 }
 
-function validateEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
-function collectSettings() {
-  const get = (id) => $(id);
-  const checkbox = (id) => !!get(id)?.checked;
-  return {
-    gmailAddress: get("gmailAddress")?.value.trim() || "",
-    gmailDisplayName: get("gmailDisplayName")?.value.trim() || "",
-    gmailSyncWindow: get("gmailSyncWindow")?.value || "Last 30 days",
-    gmailReadMeta: checkbox("gmailReadMeta"),
-    gmailReadBodies: checkbox("gmailReadBodies"),
-    gmailSend: checkbox("gmailSend"),
-    gmailDrafts: checkbox("gmailDrafts"),
-    resendFrom: get("resendFrom")?.value.trim() || "",
-    resendDomain: get("resendDomain")?.value.trim() || "",
-    resendReplyTo: get("resendReplyTo")?.value.trim() || "",
-    resendApiKey: get("resendApiKey")?.value.trim() || "",
-    resendTransactional: checkbox("resendTransactional"),
-    resendCampaign: checkbox("resendCampaign"),
-    resendTracking: checkbox("resendTracking"),
-    resendWebhooks: checkbox("resendWebhooks"),
-    defaultInbox: get("defaultInbox")?.value || "Gmail",
-    defaultSender: get("defaultSender")?.value || "Gmail for replies, Resend for app mail",
-    syncCadence: get("syncCadence")?.value || "Every 15 minutes",
-    agentMode: get("agentMode")?.value || "Draft only",
-    autoLabel: checkbox("autoLabel"),
-    clientPriority: checkbox("clientPriority"),
-    reviewBeforeSend: checkbox("reviewBeforeSend"),
-  };
-}
-
-function hydrateSettings(settings) {
-  const merged = normalizeSettings(settings);
-  Object.entries(merged).forEach(([key, value]) => {
-    const el = $(key);
-    if (!el) return;
-    if (el.type === "checkbox") el.checked = !!value;
-    else el.value = value;
-  });
-  renderAccounts(merged);
-  updateSettingsPreview(merged);
-  updateRailStatus(merged);
-  updateComposeFromOptions(merged);
-}
-
-async function loadRemoteSettings() {
+async function loadComposeSettings() {
   try {
-    const [settingsRes, statusRes] = await Promise.all([
-      adminFetch("/api/admin/mail/settings"),
-      adminFetch("/api/admin/mail/resend/status").catch(() => null),
-    ]);
-    hydrateSettings(settingsRes.settings || {});
-    const pill = $("accountStatusPill");
-    if (pill && settingsRes.providers) {
-      const count = [settingsRes.providers.gmail, settingsRes.providers.resend].filter(
-        (s) => s === "connected" || s === "configured"
-      ).length;
-      pill.textContent = `${count} active`;
-      pill.classList.toggle("connected", count > 0);
-    }
-    $("gmailStatus")?.classList.toggle("connected", settingsRes.providers?.gmail === "connected");
-    $("gmailStatus") &&
-      ($("gmailStatus").textContent =
-        settingsRes.providers?.gmail === "connected" ? "Connected" : "Disconnected");
-    $("resendStatus")?.classList.toggle("connected", settingsRes.providers?.resend === "configured");
-    $("resendStatus") &&
-      ($("resendStatus").textContent =
-        settingsRes.providers?.resend === "configured" ? "Connected" : "Pending DNS / API key");
-
-    const wh = statusRes?.webhooks;
-    const outboundEl = $("webhookOutboundUrl");
-    const inboundEl = $("webhookInboundUrl");
-    if (outboundEl && wh?.outbound_url) outboundEl.textContent = wh.outbound_url;
-    if (inboundEl && wh?.inbound_url) inboundEl.textContent = wh.inbound_url;
-    $("webhookOutboundStatus") &&
-      ($("webhookOutboundStatus").textContent = settingsRes.providers?.webhooks?.outbound
-        ? "Secret set"
-        : "Add RESEND_WEBHOOK_SECRET_OUTBOUND");
-    $("webhookInboundStatus") &&
-      ($("webhookInboundStatus").textContent = settingsRes.providers?.webhooks?.inbound
-        ? "Secret set"
-        : "Add RESEND_WEBHOOK_SECRET_INBOUND");
-  } catch (err) {
-    console.warn("Mail settings:", err);
-    hydrateSettings(MAIL_DEFAULTS);
+    const data = await adminFetch("/api/admin/mail/settings");
+    composeSettings = data.settings || composeSettings;
+  } catch {
+    /* defaults */
   }
+  updateComposeFromOptions();
 }
 
-async function persistSettings(section) {
-  const settings = collectSettings();
-  if (settings.gmailAddress && !validateEmail(settings.gmailAddress)) {
-    showToast("Enter a valid Gmail address");
-    return;
-  }
-  if (settings.resendFrom && !validateEmail(settings.resendFrom)) {
-    showToast("Enter a valid Resend from email");
-    return;
-  }
-  if (settings.resendReplyTo && !validateEmail(settings.resendReplyTo)) {
-    showToast("Enter a valid reply-to email");
-    return;
-  }
-
-  try {
-    await adminFetch("/api/admin/mail/settings", {
-      method: "POST",
-      body: JSON.stringify({ section, settings }),
-    });
-    showToast("Settings saved");
-    await loadRemoteSettings();
-  } catch (err) {
-    showToast(err.message || "Could not save settings");
-  }
+function syncFolderChrome() {
+  const label = FOLDER_LABELS[activeFolder] || "Inbox";
+  if ($("folderTitle")) $("folderTitle").textContent = label;
 }
 
-function buildPayload(settings = normalizeSettings(collectSettings()), section = "preview") {
-  return {
-    section,
-    accounts: [
-      {
-        provider: "gmail",
-        address: settings.gmailAddress,
-        displayName: settings.gmailDisplayName,
-        syncWindow: settings.gmailSyncWindow,
-        permissions: {
-          readMetadata: settings.gmailReadMeta,
-          readBodies: settings.gmailReadBodies,
-          sendReplies: settings.gmailSend,
-          createDrafts: settings.gmailDrafts,
-        },
-      },
-      {
-        provider: "resend",
-        from: settings.resendFrom,
-        domain: settings.resendDomain,
-        replyTo: settings.resendReplyTo,
-        apiKeySet: !!settings.resendApiKey && !settings.resendApiKey.includes("•"),
-        delivery: {
-          transactional: settings.resendTransactional,
-          campaign: settings.resendCampaign,
-          tracking: settings.resendTracking,
-          webhooks: settings.resendWebhooks,
-        },
-      },
-    ],
-    routing: {
-      inboxSource: settings.defaultInbox,
-      defaultSender: settings.defaultSender,
-      syncCadence: settings.syncCadence,
-      agentMode: settings.agentMode,
-      autoLabel: settings.autoLabel,
-      clientPriority: settings.clientPriority,
-      reviewBeforeSend: settings.reviewBeforeSend,
-    },
-  };
-}
-
-function updateSettingsPreview(settings = normalizeSettings(collectSettings())) {
-  const preview = $("payloadPreview");
-  if (preview) preview.textContent = JSON.stringify(buildPayload(settings), null, 2);
-}
-
-function updateRailStatus(settings = normalizeSettings(collectSettings())) {
-  const inbox = settings.defaultInbox || MAIL_DEFAULTS.defaultInbox;
-  const resendPart = settings.resendTransactional ? "Resend sends store mail." : "Resend paused.";
-  const route = $("railRouteLabel");
-  if (route) route.textContent = `${inbox} receives. ${resendPart}`;
-  const sync = $("railSyncText");
-  if (sync) {
-    sync.textContent = settings.gmailAddress
-      ? settings.syncCadence || MAIL_DEFAULTS.syncCadence
-      : "Configure Gmail or Resend";
-  }
-  $("syncDot")?.classList.toggle("warning", !settings.gmailAddress || !settings.resendTransactional);
-}
-
-function updateComposeFromOptions(settings = normalizeSettings(collectSettings())) {
+function updateComposeFromOptions() {
   const select = $("composeFrom");
   if (!select) return;
+  const settings = composeSettings;
   const options = [];
   if (settings.gmailAddress) {
     options.push(`<option value="gmail">${settings.gmailAddress} via Gmail</option>`);
@@ -325,41 +156,21 @@ function updateComposeFromOptions(settings = normalizeSettings(collectSettings()
     options.push(`<option value="resend">${settings.resendFrom} via Resend</option>`);
   }
   if (!options.length) {
-    options.push(`<option value="resend">hello@fuelnfreetime.com via Resend (configure in settings)</option>`);
+    options.push(`<option value="resend">hello@fuelnfreetime.com via Resend</option>`);
   }
   select.innerHTML = options.join("");
 }
 
-function renderAccounts(settings = normalizeSettings(collectSettings())) {
-  const list = $("accountsList");
-  if (!list) return;
-  list.innerHTML = `
-    <div class="account-row">
-      <div class="provider-icon gmail">GM</div>
-      <div class="account-main"><strong>${settings.gmailAddress || "Gmail not set"}</strong><span>Inbox sync, drafts, and replies</span></div>
-      <button class="provider-pill ${settings.gmailAddress ? "connected" : "warning"}" type="button" data-settings-tab="gmail">Gmail</button>
-    </div>
-    <div class="account-row">
-      <div class="provider-icon resend">RS</div>
-      <div class="account-main"><strong>${settings.resendFrom || "Resend sender not set"}</strong><span>${settings.resendDomain || "fuelnfreetime.com"} — orders &amp; newsletters</span></div>
-      <button class="provider-pill ${settings.resendTransactional ? "connected" : "warning"}" type="button" data-settings-tab="resend">Resend</button>
-    </div>
-    <div class="account-row">
-      <div class="provider-icon add">+</div>
-      <div class="account-main"><strong>Add another mailbox</strong><span>Additional Gmail or verified sender.</span></div>
-      <button class="provider-pill" type="button" id="inlineAddAccount">Add</button>
-    </div>`;
-}
-
 function updateBadges() {
   const unread = messages.filter((m) => m.unread).length;
-  const needs = messages.filter((m) => m.needs).length;
-  const inboxBadge = $("inboxBadge");
-  if (inboxBadge) inboxBadge.textContent = String(unread);
-  const needsBadge = $("needsBadge");
-  if (needsBadge) needsBadge.textContent = String(needs);
   const sub = $("folderSubhead");
-  if (sub) sub.textContent = `${unread} unread · demo inbox`;
+  if (sub) {
+    const sourceLabel = messageSource === "demo" ? "demo inbox" : "live inbox";
+    sub.textContent =
+      activeFolder === "inbox"
+        ? `${unread} unread · ${sourceLabel}`
+        : `${messages.length} total · ${FOLDER_LABELS[activeFolder] || activeFolder}`;
+  }
 }
 
 function labelsHTML(labels) {
@@ -372,9 +183,20 @@ function labelsHTML(labels) {
     .join("");
 }
 
+function matchesFolder(message) {
+  if (activeFolder === "sent") return message.direction === "outbound";
+  if (activeFolder === "inbox") return message.direction !== "outbound";
+  if (activeFolder === "starred") return message.starred;
+  if (activeFolder === "needs") return message.needs;
+  if (activeFolder === "drafts") return message.status === "draft";
+  if (activeFolder === "archived") return message.status === "archived";
+  return true;
+}
+
 function filteredMessages() {
   const query = ($("mailSearch")?.value || "").trim().toLowerCase();
   return messages.filter((m) => {
+    if (!matchesFolder(m)) return false;
     if (activeFilter === "unread" && !m.unread) return false;
     if (activeFilter === "starred" && !m.starred) return false;
     if (activeFilter === "needs" && !m.needs) return false;
@@ -408,7 +230,9 @@ function renderRows() {
     </article>`
       )
       .join("") ||
-    `<div class="empty-state"><div class="empty-card"><h2>No messages found</h2><p>Try a different filter or connect Gmail in settings.</p></div></div>`;
+    `<div class="empty-state"><div class="empty-card"><h2>No messages yet</h2><p>${activeFolder === "sent" ? "Sent mail from Resend will appear here." : "Connect mail in Account settings or send a test from Resend."}</p><div class="empty-actions"><a class="small-pill primary" href="/admin/account#mail">Account &amp; mail settings</a><button class="small-pill" type="button" id="emptyCompose">Compose</button></div></div></div>`;
+
+  $("emptyCompose")?.addEventListener("click", () => openCompose("New message"));
 }
 
 function renderReader() {
@@ -418,8 +242,8 @@ function renderReader() {
   const inboxTo = adminEmail || "admin@fuelnfreetime.com";
 
   if (!message) {
-    readerBody.innerHTML = `<div class="empty-state"><div class="empty-card"><h2>Select a message</h2><p>Choose an email from the list, or open settings to connect Gmail and Resend.</p><div class="empty-actions"><button class="small-pill primary" type="button" id="openSettingsEmpty">Mail settings</button></div></div></div>`;
-    $("openSettingsEmpty")?.addEventListener("click", () => openSettings("accounts"));
+    readerBody.innerHTML = `<div class="empty-state"><div class="empty-card"><h2>Select a message</h2><p>Choose an email from the list, or compose a new message.</p><div class="empty-actions"><button class="small-pill primary" type="button" id="openComposeEmpty">Compose</button><a class="small-pill" href="/admin/account#mail">Mail settings</a></div></div></div>`;
+    $("openComposeEmpty")?.addEventListener("click", () => openCompose("New message"));
     return;
   }
 
@@ -429,9 +253,7 @@ function renderReader() {
       ? "Resend inbound"
       : message.direction === "outbound"
         ? "Resend outbound"
-        : message.labels?.includes("promotions")
-          ? "Gmail / Promotions"
-          : "Gmail / Primary";
+        : "Mail";
 
   readerBody.innerHTML = `
     <div class="message-header-card">
@@ -446,11 +268,11 @@ function renderReader() {
       <div class="meta-grid">
         <div class="meta-item"><b>To</b><span>${inboxTo}</span></div>
         <div class="meta-item"><b>Source</b><span>${sourceLabel}</span></div>
-        <div class="meta-item"><b>Labels</b><span>${(message.labels || []).join(", ")}</span></div>
-        <div class="meta-item"><b>Status</b><span>${message.status || (message.needs ? "Needs review" : "No immediate action")}</span></div>
+        <div class="meta-item"><b>Labels</b><span>${(message.labels || []).join(", ") || "—"}</span></div>
+        <div class="meta-item"><b>Status</b><span>${message.status || (message.needs ? "Needs review" : "Delivered")}</span></div>
       </div>
       <div class="sam-strip">
-        <div class="sam-copy"><strong>Inbox assistant</strong><span>${message.type}</span></div>
+        <div class="sam-copy"><strong>Inbox assistant</strong><span>${message.type || "No summary yet."}</span></div>
         <div class="sam-actions">
           <button class="small-pill primary" type="button" data-action="summarize">Summarize</button>
           <button class="small-pill" type="button" data-action="draft">Draft reply</button>
@@ -507,30 +329,18 @@ async function sendCompose() {
     });
     $("composeSheet")?.classList.remove("open");
     showToast(data.sent ? data.message || "Sent" : data.message || data.error || "Preview only");
+    if (data.sent) {
+      const refreshed = await adminFetch("/api/admin/mail/messages");
+      messages = refreshed.messages || messages;
+      messageSource = refreshed.source || messageSource;
+      selectedId = messages[0]?.id ?? selectedId;
+      updateBadges();
+      renderRows();
+      renderReader();
+    }
   } catch (err) {
     showToast(err.message || "Send failed");
   }
-}
-
-function openSettings(tab = "accounts") {
-  loadRemoteSettings();
-  $("settingsBackdrop")?.classList.add("open");
-  $("settingsBackdrop")?.setAttribute("aria-hidden", "false");
-  switchSettingsTab(tab);
-}
-
-function closeSettings() {
-  $("settingsBackdrop")?.classList.remove("open");
-  $("settingsBackdrop")?.setAttribute("aria-hidden", "true");
-}
-
-function switchSettingsTab(tab) {
-  document.querySelectorAll(".mail-root .settings-tab").forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.settingsTab === tab);
-  });
-  document.querySelectorAll(".mail-root .settings-panel").forEach((panel) => {
-    panel.classList.toggle("active", panel.id === `settings-${tab}`);
-  });
 }
 
 function closeMenus() {
@@ -553,7 +363,7 @@ function menuAction(action) {
   }
   if (action === "archive") showToast("Archived (preview)");
   if (action === "delete") showToast("Deleted (preview)");
-  if (action === "settings") openSettings("accounts");
+  if (action === "settings") window.location.href = "/admin/account#mail";
   if (action === "summarize") showToast("Summary ready (preview)");
   if (action === "task") showToast("Task created (preview)");
 }
@@ -576,10 +386,8 @@ function initDragHandles() {
     handle.addEventListener("pointerdown", (event) => {
       activeHandle = handle.dataset.handle;
       startX = event.clientX;
-      const rail = document.querySelector(".mail-root .mail-rail");
       const list = document.querySelector(".mail-root .message-list");
-      startValue =
-        activeHandle === "rail" ? rail.getBoundingClientRect().width : list.getBoundingClientRect().width;
+      startValue = list.getBoundingClientRect().width;
       handle.setPointerCapture(event.pointerId);
       document.body.style.userSelect = "none";
     });
@@ -589,13 +397,8 @@ function initDragHandles() {
     if (!activeHandle) return;
     const delta = event.clientX - startX;
     const root = document.querySelector(".mail-root");
-    if (activeHandle === "rail") {
-      const width = Math.max(190, Math.min(310, startValue + delta));
-      root.style.setProperty("--rail-w", `${width}px`);
-    } else {
-      const width = Math.max(340, Math.min(560, startValue + delta));
-      root.style.setProperty("--list-w", `${width}px`);
-    }
+    const width = Math.max(340, Math.min(560, startValue + delta));
+    root.style.setProperty("--list-w", `${width}px`);
   });
   window.addEventListener("pointerup", () => {
     activeHandle = null;
@@ -608,8 +411,8 @@ let mailEventsBound = false;
 function bindMailEvents() {
   if (mailEventsBound) return;
   mailEventsBound = true;
-  const rows = $("rows");
-  rows?.addEventListener("click", (event) => {
+
+  $("rows")?.addEventListener("click", (event) => {
     const star = event.target.closest("[data-star]");
     if (star) {
       event.stopPropagation();
@@ -644,6 +447,7 @@ function bindMailEvents() {
     try {
       const data = await adminFetch("/api/admin/mail/messages");
       messages = data.messages || messages;
+      messageSource = data.source || messageSource;
       renderRows();
       renderReader();
       updateBadges();
@@ -653,75 +457,7 @@ function bindMailEvents() {
     }
   });
   $("triageButton")?.addEventListener("click", () => showToast("Triage preview — connect Gmail to run live"));
-  $("settingsButton")?.addEventListener("click", () => openSettings("accounts"));
-  $("quickSettingsButton")?.addEventListener("click", () => openSettings("accounts"));
-  $("closeSettings")?.addEventListener("click", closeSettings);
-  $("settingsBackdrop")?.addEventListener("click", (event) => {
-    if (event.target === $("settingsBackdrop")) closeSettings();
-  });
-  $("saveAllSettings")?.addEventListener("click", () => persistSettings("all"));
-  $("saveGmail")?.addEventListener("click", () => persistSettings("gmail"));
-  $("saveResend")?.addEventListener("click", () => persistSettings("resend"));
-  $("saveRouting")?.addEventListener("click", () => persistSettings("routing"));
-  $("connectGmail")?.addEventListener("click", () => showToast("Gmail OAuth route: /api/admin/mail/oauth/gmail (next)"));
-  $("testResend")?.addEventListener("click", async () => {
-    const settings = normalizeSettings(collectSettings());
-    const to = settings.resendFrom || settings.resendReplyTo;
-    if (!to) {
-      showToast("Set a Resend from address first");
-      return;
-    }
-    try {
-      const data = await adminFetch("/api/admin/mail/send", {
-        method: "POST",
-        body: JSON.stringify({
-          to,
-          subject: "Fuel & Free Time — Resend test",
-          body: "If you received this, Resend is wired correctly for fuelnfreetime.com.",
-          fromProvider: "resend",
-          test: true,
-        }),
-      });
-      showToast(data.sent ? data.message || "Test sent" : data.message || data.error || "Test preview");
-    } catch (err) {
-      showToast(err.message || "Test failed");
-    }
-  });
-  $("copyPayload")?.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText($("payloadPreview")?.textContent || "");
-      showToast("Payload copied");
-    } catch {
-      showToast("Copy unavailable");
-    }
-  });
 
-  document.querySelector(".mail-root .settings-nav")?.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-settings-tab]");
-    if (button) switchSettingsTab(button.dataset.settingsTab);
-  });
-  $("accountsList")?.addEventListener("click", (event) => {
-    const tabButton = event.target.closest("[data-settings-tab]");
-    if (tabButton) switchSettingsTab(tabButton.dataset.settingsTab);
-    if (event.target.closest("#inlineAddAccount")) switchSettingsTab("gmail");
-  });
-  $("addGmailAccount")?.addEventListener("click", () => switchSettingsTab("gmail"));
-  $("addResendAccount")?.addEventListener("click", () => switchSettingsTab("resend"));
-
-  document.querySelectorAll(".mail-root .settings-modal input, .mail-root .settings-modal select").forEach((el) => {
-    const refresh = () => {
-      const current = normalizeSettings(collectSettings());
-      updateSettingsPreview(current);
-      renderAccounts(current);
-      updateRailStatus(current);
-    };
-    el.addEventListener("input", refresh);
-    el.addEventListener("change", refresh);
-  });
-
-  $("railToggle")?.addEventListener("click", () => {
-    $("mailApp")?.classList.toggle("rail-collapsed");
-  });
   $("mobileBack")?.addEventListener("click", () => setMobilePanel("list"));
   $("mobileTabs")?.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-panel]");
@@ -762,21 +498,10 @@ function bindMailEvents() {
     }
   });
 
-  document.querySelectorAll(".mail-root .nav-item").forEach((item) => {
-    item.addEventListener("click", () => {
-      document.querySelectorAll(".mail-root .nav-item").forEach((i) => i.classList.remove("active"));
-      item.classList.add("active");
-      const label = item.querySelector(".nav-label")?.textContent || "Inbox";
-      $("folderTitle") && ($("folderTitle").textContent = label);
-      setMobilePanel("list");
-    });
-  });
-
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closeMenus();
       $("composeSheet")?.classList.remove("open");
-      closeSettings();
     }
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
       event.preventDefault();
