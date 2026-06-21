@@ -49,6 +49,39 @@
     }
   }
 
+  function isBrowsable(a) {
+    const ct = (a.content_type || "").toLowerCase();
+    const ext = (a.filename || a.r2_key || "").split(".").pop()?.toLowerCase() || "";
+    const skip = new Set([
+      "json",
+      "jsonl",
+      "txt",
+      "xml",
+      "html",
+      "htm",
+      "css",
+      "js",
+      "mjs",
+      "ts",
+      "tsx",
+      "map",
+      "sql",
+      "md",
+      "csv",
+      "log",
+      "yml",
+      "yaml",
+    ]);
+    if (skip.has(ext)) return false;
+    if (ct === "application/json" || ct.startsWith("text/")) return false;
+    if (ct.startsWith("image/") || ct.startsWith("video/") || ct.startsWith("model/")) return true;
+    return ["jpg", "jpeg", "png", "gif", "webp", "svg", "avif", "mp4", "mov", "webm", "glb", "usdz"].includes(ext);
+  }
+
+  function visibleAssets() {
+    return assets.filter(isBrowsable);
+  }
+
   function isModel3d(a) {
     const ct = (a.content_type || "").toLowerCase();
     const ext = (a.filename || "").split(".").pop()?.toLowerCase() || "";
@@ -165,14 +198,24 @@
   }
 
   function renderGrid() {
-    if (!assets.length) {
-      els.grid.innerHTML = `<div class="admin-empty">No assets in this view — upload or sync from R2.</div>`;
+    const list = visibleAssets();
+    if (!list.length) {
+      els.grid.innerHTML = `
+        <button type="button" class="media-item media-item-add" id="media-grid-add" aria-label="Add media">
+          <div class="media-item-thumb media-item-add-thumb">+</div>
+          <div class="media-item-meta">
+            <div class="media-item-name">Add media</div>
+            <div class="media-item-sub">Upload or drop files</div>
+          </div>
+        </button>`;
+      bindGridAdd();
       return;
     }
 
-    els.grid.innerHTML = assets
-      .map(
-        (a) => `
+    els.grid.innerHTML =
+      list
+        .map(
+          (a) => `
       <article class="media-item" draggable="true" data-id="${a.id}">
         <div class="media-item-thumb">${thumbHtml(a)}</div>
         <div class="media-item-meta">
@@ -180,10 +223,21 @@
           <div class="media-item-sub">${a.folder || "images"}</div>
         </div>
       </article>`
-      )
-      .join("");
+        )
+        .join("") +
+      `
+      <button type="button" class="media-item media-item-add" id="media-grid-add" aria-label="Add media">
+        <div class="media-item-thumb media-item-add-thumb">+</div>
+        <div class="media-item-meta">
+          <div class="media-item-name">Add media</div>
+          <div class="media-item-sub">Upload or drop files</div>
+        </div>
+      </button>`;
+
+    bindGridAdd();
 
     els.grid.querySelectorAll(".media-item").forEach((item) => {
+      if (item.id === "media-grid-add") return;
       const id = item.dataset.id;
       item.addEventListener("click", (e) => {
         if (item.classList.contains("is-dragging")) return;
@@ -213,8 +267,14 @@
     });
   }
 
+  function bindGridAdd() {
+    document.getElementById("media-grid-add")?.addEventListener("click", () => {
+      els.fileInput?.click();
+    });
+  }
+
   async function reorderDrop(fromId, toId) {
-    const list = [...assets];
+    const list = [...visibleAssets()];
     const fromIdx = list.findIndex((a) => String(a.id) === String(fromId));
     const toIdx = list.findIndex((a) => String(a.id) === String(toId));
     if (fromIdx < 0 || toIdx < 0) return;
@@ -716,7 +776,11 @@
     els.dropLabel.textContent = "Uploading " + fileList.length + " file(s)…";
     els.note.style.display = "none";
     try {
-      const res = await fetch("/api/admin/media", { method: "POST", body: form });
+      const res = await fetch("/api/admin/media", {
+        method: "POST",
+        body: form,
+        credentials: "include",
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Upload failed");
       els.note.textContent = "Uploaded " + (data.assets?.length || 0) + " file(s).";
@@ -734,6 +798,7 @@
 
   function bindUpload() {
     els.dropZone.addEventListener("click", () => els.fileInput.click());
+    els.dropZone.style.cursor = "pointer";
     ["dragenter", "dragover"].forEach((evt) =>
       els.dropZone.addEventListener(evt, (e) => {
         e.preventDefault();

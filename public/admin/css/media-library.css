@@ -112,6 +112,7 @@
   margin-bottom: 16px;
   background: var(--c-surface);
   transition: border-color 0.15s, background 0.15s;
+  cursor: pointer;
 }
 
 .media-lib-drop.is-dragover {
@@ -168,6 +169,33 @@
   letter-spacing: 0.08em;
   color: #888;
   text-transform: uppercase;
+}
+
+.media-item-add {
+  border-style: dashed;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  width: 100%;
+}
+
+.media-item-add:hover {
+  border-color: #2c6ecb;
+  box-shadow: 0 0 0 1px rgba(44, 108, 203, 0.2);
+}
+
+.media-item-add-thumb {
+  color: #2c6ecb;
+  font-size: 32px;
+  font-weight: 300;
+  background: #f7f9fc;
+}
+
+.media-grid-empty {
+  grid-column: 1 / -1;
+  margin-top: 4px;
 }
 
 .media-item-meta {

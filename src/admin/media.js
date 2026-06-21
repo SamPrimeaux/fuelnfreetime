@@ -6,6 +6,30 @@
 const MEDIA_FOLDERS = ["images", "videos", "products"];
 
 const VIDEO_EXTS = new Set(["mp4", "mov", "webm", "m4v", "glb", "usdz"]);
+const IMAGE_EXTS = new Set(["jpg", "jpeg", "png", "gif", "webp", "svg", "avif"]);
+const NON_MEDIA_EXTS = new Set([
+  "json",
+  "jsonl",
+  "txt",
+  "xml",
+  "html",
+  "htm",
+  "css",
+  "js",
+  "mjs",
+  "ts",
+  "tsx",
+  "map",
+  "sql",
+  "md",
+  "csv",
+  "log",
+  "yml",
+  "yaml",
+  "env",
+  "lock",
+  "gitignore",
+]);
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -62,6 +86,22 @@ function inferFolder(r2Key, contentType = "") {
     return "videos";
   }
   return "images";
+}
+
+export function isBrowsableMedia(row) {
+  const key = row?.r2_key || row?.filename || "";
+  const ext = extensionOf(key);
+  if (NON_MEDIA_EXTS.has(ext)) return false;
+
+  const ct = String(row?.content_type || guessContentType(key)).toLowerCase();
+  if (ct === "application/json" || ct === "application/ld+json") return false;
+  if (ct.startsWith("text/") && !ct.startsWith("image/")) return false;
+
+  if (ct.startsWith("image/") || ct.startsWith("video/") || ct.startsWith("model/")) return true;
+  if (IMAGE_EXTS.has(ext) || VIDEO_EXTS.has(ext)) return true;
+
+  if (ct === "application/octet-stream" && IMAGE_EXTS.has(ext)) return true;
+  return false;
 }
 
 function normalizeFolder(folder) {
@@ -134,12 +174,13 @@ function rowToAsset(row) {
 
 async function folderCounts(env) {
   const { results } = await env.DB.prepare(
-    `SELECT folder, COUNT(*) AS n FROM media_assets GROUP BY folder`
+    `SELECT folder, r2_key, content_type, filename FROM media_assets`
   ).all();
   const counts = { images: 0, videos: 0, products: 0 };
   for (const row of results) {
+    if (!isBrowsableMedia(row)) continue;
     const f = normalizeFolder(row.folder);
-    counts[f] = (counts[f] || 0) + row.n;
+    counts[f] = (counts[f] || 0) + 1;
   }
   return counts;
 }
@@ -160,6 +201,8 @@ export async function syncMediaFromR2(env) {
 
       const filename = obj.key.split("/").pop() || obj.key;
       const contentType = guessContentType(obj.key);
+      if (!isBrowsableMedia({ r2_key: obj.key, content_type: contentType, filename })) continue;
+
       const folder = inferFolder(obj.key, contentType);
       const order = await nextDisplayOrder(env, folder);
 
@@ -298,6 +341,8 @@ export async function listMedia(request, env, url) {
     ).all();
     assets = results.map(rowToAsset);
   }
+
+  assets = assets.filter(isBrowsableMedia);
 
   return json({
     ok: true,

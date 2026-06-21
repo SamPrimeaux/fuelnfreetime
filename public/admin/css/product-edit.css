@@ -294,6 +294,23 @@
   display: none;
 }
 
+.product-media-browse-link {
+  border: none;
+  background: transparent;
+  color: #2c6ecb;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.product-media-browse-link:hover {
+  color: #1a4f9c;
+}
+
 .product-price-row {
   display: flex;
   align-items: center;
