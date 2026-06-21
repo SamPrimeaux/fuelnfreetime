@@ -140,7 +140,7 @@ async function initMailApp() {
   syncFolderChrome();
   updateBadges();
   renderRows();
-  renderReader();
+  void renderReader();
 
   if (new URLSearchParams(window.location.search).get("compose") === "1") {
     openCompose("New message");
@@ -251,6 +251,69 @@ function filteredMessages() {
   });
 }
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+async function ensureMessageBody(message) {
+  if (!message || message.body_html || message.body_text) return message;
+  if (message.direction !== "inbound" || !message.provider_id) return message;
+  try {
+    const data = await adminFetch(
+      `/api/admin/mail/messages/${encodeURIComponent(message.db_id || message.id)}/hydrate`,
+      { method: "POST" }
+    );
+    message.body_html = data.body_html || "";
+    message.body_text = data.body_text || "";
+    if (data.preview) message.preview = data.preview;
+  } catch (err) {
+    console.warn("Mail hydrate failed:", err);
+  }
+  return message;
+}
+
+function mountEmailBody(message, mountEl) {
+  if (!mountEl) return;
+  mountEl.innerHTML = "";
+  const html = message.body_html?.trim();
+  const text = message.body_text?.trim();
+
+  if (html) {
+    const iframe = document.createElement("iframe");
+    iframe.className = "email-html-frame";
+    iframe.setAttribute(
+      "sandbox",
+      "allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
+    );
+    iframe.srcdoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><base target="_blank"><style>
+      body { font-family: Inter, system-ui, sans-serif; margin: 16px 20px 24px; line-height: 1.55; color: #111; background: #fff; }
+      img { max-width: 100%; height: auto; }
+      a { color: #2563eb; }
+      table { max-width: 100%; }
+    </style></head><body>${html}</body></html>`;
+    iframe.onload = () => {
+      try {
+        const doc = iframe.contentDocument;
+        if (doc?.body) iframe.style.height = `${Math.max(doc.body.scrollHeight + 8, 140)}px`;
+      } catch {
+        iframe.style.height = "420px";
+      }
+    };
+    mountEl.appendChild(iframe);
+    return;
+  }
+
+  const textWrap = document.createElement("div");
+  textWrap.className = "email-body email-body-text";
+  const bodyCopy = text || message.preview || message.subject || "No content";
+  textWrap.innerHTML = `<p>${escapeHtml(bodyCopy).replace(/\n/g, "<br>")}</p>`;
+  mountEl.appendChild(textWrap);
+}
+
 function renderRows() {
   const rows = $("rows");
   if (!rows) return;
@@ -278,11 +341,11 @@ function renderRows() {
   $("emptyCompose")?.addEventListener("click", () => openCompose("New message"));
 }
 
-function renderReader() {
+async function renderReader() {
   const readerBody = $("readerBody");
   if (!readerBody) return;
-  const message = messages.find((item) => item.id === selectedId);
-  const inboxTo = adminEmail || "admin@fuelnfreetime.com";
+  let message = messages.find((item) => item.id === selectedId);
+  const inboxTo = message?.to_email || adminEmail || "admin@fuelnfreetime.com";
 
   if (!message) {
     readerBody.innerHTML = `<div class="empty-state"><div class="empty-card"><h2>Select a message</h2><p>Choose an email from the list, or compose a new message.</p><div class="empty-actions"><button class="small-pill primary" type="button" id="openComposeEmpty">Compose</button></div></div></div>`;
@@ -290,7 +353,8 @@ function renderReader() {
     return;
   }
 
-  const bodyCopy = message.body_text || message.preview || message.type || "";
+  message = await ensureMessageBody(message);
+
   const sourceLabel =
     message.direction === "inbound"
       ? "Resend inbound"
@@ -303,19 +367,19 @@ function renderReader() {
       <div class="message-header-main">
         <div class="big-avatar avatar ${message.color}">${message.initials}</div>
         <div class="subject-stack">
-          <h2>${message.subject}</h2>
-          <p>${message.sender} &lt;${message.email}&gt;</p>
+          <h2>${escapeHtml(message.subject)}</h2>
+          <p>${escapeHtml(message.sender)} &lt;${escapeHtml(message.email)}&gt;</p>
         </div>
-        <div class="header-date">${message.fullDate}</div>
+        <div class="header-date">${escapeHtml(message.fullDate)}</div>
       </div>
       <div class="meta-grid">
-        <div class="meta-item"><b>To</b><span>${inboxTo}</span></div>
+        <div class="meta-item"><b>To</b><span>${escapeHtml(inboxTo)}</span></div>
         <div class="meta-item"><b>Source</b><span>${sourceLabel}</span></div>
-        <div class="meta-item"><b>Labels</b><span>${(message.labels || []).join(", ") || "—"}</span></div>
-        <div class="meta-item"><b>Status</b><span>${message.status || (message.needs ? "Needs review" : "Delivered")}</span></div>
+        <div class="meta-item"><b>Labels</b><span>${escapeHtml((message.labels || []).join(", ") || "—")}</span></div>
+        <div class="meta-item"><b>Status</b><span>${escapeHtml(message.status || (message.needs ? "Needs review" : "Delivered"))}</span></div>
       </div>
       <div class="sam-strip">
-        <div class="sam-copy"><strong>Inbox assistant</strong><span>${message.type || "No summary yet."}</span></div>
+        <div class="sam-copy"><strong>Inbox assistant</strong><span>${escapeHtml(message.type || "No summary yet.")}</span></div>
         <div class="sam-actions">
           <button class="small-pill primary" type="button" data-action="summarize">Summarize</button>
           <button class="small-pill" type="button" data-action="draft">Draft reply</button>
@@ -324,11 +388,11 @@ function renderReader() {
     </div>
     <div class="email-frame">
       <article class="email-canvas">
-        <div class="email-body">
-          <p>${bodyCopy.replace(/\n/g, "<br>")}</p>
-        </div>
+        <div id="emailBodyMount" class="email-body-mount"></div>
       </article>
     </div>`;
+
+  mountEmailBody(message, document.getElementById("emailBodyMount"));
 }
 
 function selectMessage(id) {
@@ -338,7 +402,7 @@ function selectMessage(id) {
   if (message) message.unread = false;
   updateBadges();
   renderRows();
-  renderReader();
+  void renderReader();
   setMobilePanel("reader");
 }
 
@@ -382,7 +446,7 @@ async function sendCompose() {
       selectedId = messages[0]?.id ?? selectedId;
       updateBadges();
       renderRows();
-      renderReader();
+      void renderReader();
     }
   } catch (err) {
     showToast(err.message || "Send failed");

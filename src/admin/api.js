@@ -11,6 +11,7 @@ import {
   getMailSettings,
   postMailSettings,
   listMailMessages,
+  hydrateInboundMessage,
   getMailMailboxes,
   sendMailPreview,
   getResendStatus,
@@ -489,6 +490,10 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   if (path === "/api/admin/mail/partial" && method === "GET") return getMailPartial(request, env);
   if (path === "/api/admin/mail/messages" && method === "GET") {
     return listMailMessages(env, url, user);
+  }
+  let mailHydrateMatch = path.match(/^\/api\/admin\/mail\/messages\/([^/]+)\/hydrate$/);
+  if (mailHydrateMatch && method === "POST") {
+    return hydrateInboundMessage(env, user, decodeURIComponent(mailHydrateMatch[1]));
   }
   if (path === "/api/admin/account/profile" && method === "POST") {
     return updateAccountProfile(request, env, user);

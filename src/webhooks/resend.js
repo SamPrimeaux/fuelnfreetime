@@ -1,4 +1,4 @@
-import { verifyResendWebhook } from "../lib/resend.js";
+import { verifyResendWebhook, fetchReceivedEmail } from "../lib/resend.js";
 import { listMailboxes } from "../lib/mail-mailboxes.js";
 
 const OUTBOUND_EVENTS = new Set([
@@ -81,20 +81,13 @@ async function applyInboundEvent(env, event, apiKey) {
   let bodyHtml = "";
 
   if (apiKey && providerId) {
-    try {
-      const res = await fetch(`https://api.resend.com/emails/receiving/${providerId}`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
-      const row = await res.json().catch(() => ({}));
-      if (res.ok) {
-        subject = row.subject || subject;
-        fromEmail = normalizeAddress(row.from) || fromEmail;
-        toEmail = normalizeAddress(row.to) || toEmail;
-        bodyText = row.text || bodyText;
-        bodyHtml = row.html || bodyHtml;
-      }
-    } catch {
-      /* metadata-only path is fine */
+    const received = await fetchReceivedEmail(env, providerId);
+    if (received.ok) {
+      subject = received.subject || subject;
+      fromEmail = normalizeAddress(received.from) || fromEmail;
+      toEmail = normalizeAddress(received.to) || toEmail;
+      bodyText = received.text || bodyText;
+      bodyHtml = received.html || bodyHtml;
     }
   }
 
@@ -115,7 +108,16 @@ async function applyInboundEvent(env, event, apiKey) {
        id, direction, from_email, to_email, subject, preview, body_text, body_html,
        status, provider, provider_id, labels_json, metadata_json
      ) VALUES (?, 'inbound', ?, ?, ?, ?, ?, ?, 'received', 'resend', ?, ?, ?)
-     ON CONFLICT(id) DO NOTHING`
+     ON CONFLICT(id) DO UPDATE SET
+       from_email = excluded.from_email,
+       to_email = excluded.to_email,
+       subject = excluded.subject,
+       preview = excluded.preview,
+       body_text = CASE WHEN excluded.body_text != '' THEN excluded.body_text ELSE mail_messages.body_text END,
+       body_html = CASE WHEN excluded.body_html != '' THEN excluded.body_html ELSE mail_messages.body_html END,
+       labels_json = excluded.labels_json,
+       metadata_json = excluded.metadata_json,
+       updated_at = datetime('now')`
   )
     .bind(
       `in_${providerId}`,

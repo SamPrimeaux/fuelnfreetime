@@ -1,4 +1,4 @@
-import { sendResendEmail, resendConfigured, getResendDomainStatus } from "../lib/resend.js";
+import { sendResendEmail, resendConfigured, getResendDomainStatus, fetchReceivedEmail } from "../lib/resend.js";
 import {
   getMailboxBySlug,
   listMailboxes,
@@ -128,6 +128,7 @@ function rowToMessage(row, mailboxes = []) {
     color: row.direction === "inbound" ? "teal" : "orange",
     sender: senderName,
     email: from,
+    to_email: row.to_email || "",
     subject: row.subject || "(no subject)",
     preview: row.preview || row.body_text?.slice(0, 160) || "",
     date: formatMailDate(row.created_at),
@@ -290,6 +291,80 @@ export async function listMailMessages(env, url, user) {
   } catch {
     return Response.json({ ok: true, messages: [], source: "d1", mailbox: null });
   }
+}
+
+async function userCanAccessMessage(env, user, row) {
+  if (!row || !user) return false;
+  const metadata = JSON.parse(row.metadata_json || "{}");
+  const mailboxId = metadata.mailbox_id;
+  if (mailboxId) {
+    const mailboxes = await getMailboxesForUser(env, user);
+    if (mailboxes.some((b) => b.id === mailboxId)) return true;
+  }
+  const to = (row.to_email || "").toLowerCase();
+  const from = (row.from_email || "").toLowerCase();
+  const allowed = await getMailboxesForUser(env, user);
+  return allowed.some((box) => {
+    const addr = box.address.toLowerCase();
+    return to.includes(addr) || from.includes(addr);
+  });
+}
+
+export async function hydrateInboundMessage(env, user, messageId) {
+  const row = await env.DB.prepare(
+    `SELECT id, direction, provider_id, body_text, body_html, to_email, from_email, metadata_json
+     FROM mail_messages WHERE id = ?`
+  )
+    .bind(messageId)
+    .first();
+
+  if (!row) return Response.json({ error: "Message not found" }, { status: 404 });
+  if (!(await userCanAccessMessage(env, user, row))) {
+    return Response.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (row.direction !== "inbound") {
+    return Response.json({ error: "Only inbound messages can be hydrated" }, { status: 400 });
+  }
+
+  if (row.body_html || row.body_text) {
+    return Response.json({
+      ok: true,
+      body_html: row.body_html || "",
+      body_text: row.body_text || "",
+      cached: true,
+    });
+  }
+
+  const providerId = row.provider_id;
+  if (!providerId) {
+    return Response.json({ error: "No provider id on message" }, { status: 400 });
+  }
+
+  const received = await fetchReceivedEmail(env, providerId);
+  if (!received.ok) {
+    return Response.json({ error: received.error || "Could not fetch from Resend" }, { status: 502 });
+  }
+
+  const preview = (received.text || received.html?.replace(/<[^>]+>/g, " ") || row.subject || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 240);
+
+  await env.DB.prepare(
+    `UPDATE mail_messages
+     SET body_text = ?, body_html = ?, preview = ?, updated_at = datetime('now')
+     WHERE id = ?`
+  )
+    .bind(received.text || "", received.html || "", preview, messageId)
+    .run();
+
+  return Response.json({
+    ok: true,
+    body_html: received.html || "",
+    body_text: received.text || "",
+    preview,
+    cached: false,
+  });
 }
 
 export async function sendMailPreview(request, env) {

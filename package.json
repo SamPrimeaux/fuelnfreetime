@@ -82,6 +82,7 @@
     "mail:provision": "node scripts/provision-mailboxes.mjs",
     "mail:e2e": "node scripts/send-mail-e2e.mjs",
     "mail:backfill": "node scripts/backfill-inbound-mail.mjs",
+    "mail:hydrate": "node scripts/hydrate-inbound-bodies.mjs",
     "cf:status": "./scripts/with-cf-admin-env.sh node scripts/cf-status.mjs"
   },
   "devDependencies": {

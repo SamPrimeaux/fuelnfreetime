@@ -121,6 +121,37 @@ export async function verifyResendWebhook(request, secret) {
   return JSON.parse(payload);
 }
 
+/** Fetch full inbound message body from Resend receiving API. */
+export async function fetchReceivedEmail(env, emailId) {
+  const apiKey = env.RESEND_API_KEY;
+  if (!apiKey) return { ok: false, error: "RESEND_API_KEY not configured" };
+  if (!emailId) return { ok: false, error: "email_id required" };
+
+  const res = await fetch(`${RESEND_API}/emails/receiving/${emailId}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return {
+      ok: false,
+      error: data?.message || data?.error || `Resend HTTP ${res.status}`,
+      status: res.status,
+    };
+  }
+
+  const row = data?.object === "email" ? data : data?.data || data;
+  return {
+    ok: true,
+    subject: row.subject || "",
+    from: row.from || "",
+    to: row.to || [],
+    text: row.text || "",
+    html: row.html || "",
+    headers: row.headers || {},
+    attachments: row.attachments || [],
+  };
+}
+
 export async function getResendDomainStatus(env, domain = "fuelnfreetime.com") {
   const apiKey = env.RESEND_API_KEY;
   if (!apiKey) return { ok: false, error: "RESEND_API_KEY not configured" };
