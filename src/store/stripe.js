@@ -54,9 +54,10 @@ export async function stripeRequest(env, method, path, formBody) {
 }
 
 // (3) Create a Checkout Session. lineItems: [{ name, amountCents, qty }].
+// Optional couponId applies a Stripe coupon (serializes to discounts[0][coupon]=...).
 export async function createCheckoutSession(
   env,
-  { orderId, email, lineItems, successUrl, cancelUrl },
+  { orderId, email, lineItems, successUrl, cancelUrl, couponId },
 ) {
   const params = {
     mode: "payment",
@@ -76,6 +77,9 @@ export async function createCheckoutSession(
       quantity: item.qty,
     })),
   };
+  if (couponId) {
+    params.discounts = [{ coupon: couponId }];
+  }
   return stripeRequest(env, "POST", "/checkout/sessions", encodeStripeForm(params));
 }
 
@@ -133,4 +137,15 @@ export async function constructWebhookEvent(rawBody, signatureHeader, secret) {
   }
 
   return JSON.parse(rawBody);
+}
+
+// --- Tasks 6-7: one-time coupon for cart-level discounts ---
+// Create a single-use, fixed-amount coupon. Returns the parsed coupon (has .id).
+export async function createCoupon(env, { amountOffCents, currency = "usd" }) {
+  return stripeRequest(
+    env,
+    "POST",
+    "/coupons",
+    encodeStripeForm({ amount_off: amountOffCents, currency, duration: "once" }),
+  );
 }
