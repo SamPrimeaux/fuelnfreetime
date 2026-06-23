@@ -7,6 +7,8 @@ import {
   recordDiscountRedemption,
   validateDiscountForCheckout,
 } from "../lib/discounts.js";
+import { checkoutUrls, createCheckoutSession, createCoupon } from "./stripe.js";
+import { availableQty, holdInventory, releaseReservations } from "./inventory.js";
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -235,6 +237,172 @@ export async function createStoreCheckout(request, env) {
   });
 }
 
+// Tasks 6-7: Stripe checkout-session variant of createStoreCheckout.
+// Mirrors v1's validation/pricing/discount/attribution (duplicated, not shared).
+// Differences: status is 'awaiting_payment', inventory is RESERVED (not decremented),
+// and a Stripe Checkout Session is created. Redemption is recorded by the webhook.
+export async function createStoreCheckoutSession(request, env) {
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "Invalid request body" }, { status: 400 });
+  }
+
+  const email = (body.email || "").trim().toLowerCase();
+  const items = Array.isArray(body.items) ? body.items : [];
+  const discountCode = (body.discount_code || "").trim();
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return json({ error: "Valid email required" }, { status: 400 });
+  }
+  if (!items.length) {
+    return json({ error: "Cart is empty" }, { status: 400 });
+  }
+
+  let totalCents = 0;
+  const lineItems = [];
+
+  for (const item of items) {
+    const variant = await env.DB.prepare(
+      `SELECT v.*, p.title, p.slug, p.status, p.collection
+       FROM product_variants v
+       JOIN products p ON p.id = v.product_id
+       WHERE v.id = ?`
+    )
+      .bind(item.variant_id)
+      .first();
+
+    if (!variant || variant.status !== "active") {
+      return json({ error: `Variant ${item.variant_id} unavailable` }, { status: 400 });
+    }
+
+    const qty = Math.max(1, Math.min(10, Math.round(Number(item.qty || 1))));
+    const unitCents = variant.price_cents ?? (await env.DB.prepare(`SELECT price_cents FROM products WHERE id = ?`).bind(variant.product_id).first())?.price_cents ?? 0;
+    totalCents += unitCents * qty;
+    lineItems.push({ variant, qty, unitCents });
+  }
+
+  // Reservation-aware pre-check BEFORE creating any order (avoids orphan orders).
+  for (const { variant, qty } of lineItems) {
+    if ((await availableQty(env, variant.id)) < qty) {
+      return json({ error: `Only limited stock left for ${variant.size || variant.sku}` }, { status: 400 });
+    }
+  }
+
+  const subtotalCents = totalCents;
+  let discountCents = 0;
+  let discountId = null;
+  let appliedCode = null;
+  let freeShipping = false;
+
+  if (discountCode) {
+    const validation = await validateDiscountForCheckout(env, discountCode, {
+      customerEmail: email,
+      subtotalCents,
+      lineItems,
+      itemCount: lineItems.reduce((n, li) => n + li.qty, 0),
+    });
+    if (!validation.ok) {
+      return json({ error: validation.error }, { status: 400 });
+    }
+    discountCents = validation.discount_cents || 0;
+    freeShipping = !!validation.free_shipping;
+    discountId = validation.discount?.id || null;
+    appliedCode = validation.discount?.code || discountCode;
+    totalCents = Math.max(0, totalCents - discountCents);
+  }
+
+  const orderResult = await env.DB.prepare(
+    `INSERT INTO orders (
+       customer_email, status, total_cents, subtotal_cents, discount_cents,
+       discount_id, discount_code, created_at
+     ) VALUES (?, 'awaiting_payment', ?, ?, ?, ?, ?, datetime('now'))`
+  )
+    .bind(email, totalCents, subtotalCents, discountCents, discountId, appliedCode)
+    .run();
+
+  const orderId = orderResult.meta.last_row_id;
+
+  const cookies = parseCookies(request.headers.get("Cookie"));
+  const attribution =
+    body.attribution ||
+    attributionFromCookie(cookies) ||
+    (body.utm_campaign
+      ? {
+          campaign_id: body.campaign_id || null,
+          utm_source: body.utm_source || null,
+          utm_medium: body.utm_medium || null,
+          utm_campaign: body.utm_campaign || null,
+          visit_id: body.visit_id || null,
+        }
+      : null);
+
+  if (attribution) {
+    await attachAttributionToOrder(env, orderId, attribution);
+  }
+
+  // Record line items — but do NOT decrement product_variants here (reserve instead).
+  for (const { variant, qty, unitCents } of lineItems) {
+    await env.DB.prepare(
+      `INSERT INTO order_items (order_id, variant_id, title, qty, price_cents)
+       VALUES (?, ?, ?, ?, ?)`
+    )
+      .bind(orderId, variant.id, `${variant.title} — ${variant.size || variant.sku}`, qty, unitCents)
+      .run();
+  }
+
+  // Reserve inventory (held). On failure, release whatever was held and 400.
+  try {
+    await holdInventory(
+      env,
+      orderId,
+      lineItems.map((li) => ({ variant_id: li.variant.id, qty: li.qty }))
+    );
+  } catch {
+    await releaseReservations(env, orderId);
+    return json({ error: "Insufficient inventory" }, { status: 400 });
+  }
+
+  // Stripe checkout can't handle a zero/negative total — release and bail.
+  if (totalCents <= 0) {
+    await releaseReservations(env, orderId);
+    return json({ error: "Free orders aren't supported on Stripe checkout yet" }, { status: 400 });
+  }
+
+  const { success, cancel } = checkoutUrls(request);
+
+  const stripeLineItems = lineItems.map((li) => ({
+    name: `${li.variant.title} — ${li.variant.size || li.variant.sku}`,
+    amountCents: li.unitCents,
+    qty: li.qty,
+  }));
+
+  const couponId =
+    discountCents > 0 ? (await createCoupon(env, { amountOffCents: discountCents })).id : undefined;
+
+  let session;
+  try {
+    session = await createCheckoutSession(env, {
+      orderId,
+      email,
+      lineItems: stripeLineItems,
+      successUrl: success,
+      cancelUrl: cancel,
+      couponId,
+    });
+  } catch {
+    await releaseReservations(env, orderId);
+    return json({ error: "Could not start checkout" }, { status: 502 });
+  }
+
+  await env.DB.prepare(`UPDATE orders SET stripe_checkout_session_id = ? WHERE id = ?`)
+    .bind(session.id, orderId)
+    .run();
+
+  return json({ ok: true, url: session.url, order_id: orderId, session_id: session.id });
+}
+
 export async function handleStoreApi(request, env, url) {
   const path = url.pathname;
   const method = request.method;
@@ -268,6 +436,10 @@ export async function handleStoreApi(request, env, url) {
 
   if (path === "/api/store/checkout" && method === "POST") {
     return createStoreCheckout(request, env);
+  }
+
+  if (path === "/api/store/checkout/session" && method === "POST") {
+    return createStoreCheckoutSession(request, env);
   }
 
   if (path === "/api/store/discounts/validate" && method === "POST") {
