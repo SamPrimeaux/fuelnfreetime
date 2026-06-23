@@ -1,7 +1,11 @@
 name = "fuelnfreetime"
 main = "src/index.js"
-compatibility_date = "2025-04-01"
+compatibility_date = "2026-01-20"
 workers_dev = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true
 
 [vars]
 APP_NAME = "Fuel & Free Time"

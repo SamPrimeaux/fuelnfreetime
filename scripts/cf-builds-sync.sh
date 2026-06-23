@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+# Push Workers Builds settings (build + deploy commands) via Cloudflare Builds Triggers API.
+#
+# Usage (from repo root):
+#   ./scripts/cf-builds-sync.sh
+#
+# Optional overrides: WORKER_SERVICE_NAME, CF_BUILDS_BUILD_COMMAND, CF_BUILDS_DEPLOY_COMMAND
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+ENV_FILE="${REPO_ROOT}/.env.cloudflare"
+IAM_ENV="${HOME}/inneranimalmedia/.env.cloudflare"
+
+if [[ -f "$ENV_FILE" ]]; then
+  set -a
+  # shellcheck source=/dev/null
+  source "$ENV_FILE"
+  set +a
+elif [[ -f "$IAM_ENV" ]]; then
+  set -a
+  # shellcheck source=/dev/null
+  source "$IAM_ENV"
+  set +a
+else
+  echo "ERROR: .env.cloudflare not found at $ENV_FILE or $IAM_ENV" >&2
+  exit 1
+fi
+
+ACCOUNT_ID="${CLOUDFLARE_ACCOUNT_ID}"
+API_TOKEN="${CLOUDFLARE_API_TOKEN}"
+WORKER_NAME="${WORKER_SERVICE_NAME:-fuelnfreetime}"
+
+BUILD_COMMAND="${CF_BUILDS_BUILD_COMMAND:-npm run build}"
+DEPLOY_COMMAND="${CF_BUILDS_DEPLOY_COMMAND:-bash scripts/cf-builds-deploy.sh}"
+
+if [[ -z "$ACCOUNT_ID" || -z "$API_TOKEN" ]]; then
+  echo "ERROR: CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN must be set" >&2
+  exit 1
+fi
+
+auth_header=(-H "Authorization: Bearer ${API_TOKEN}" -H "Content-Type: application/json")
+
+echo "[cf-builds-sync] Resolving script tag for worker ${WORKER_NAME}..."
+SERVICE_JSON="$(curl -sS \
+  "https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/workers/services/${WORKER_NAME}" \
+  "${auth_header[@]}")"
+
+if command -v jq >/dev/null 2>&1; then
+  SCRIPT_TAG="$(echo "$SERVICE_JSON" | jq -r '.result.default_environment.script_tag // empty')"
+else
+  SCRIPT_TAG="$(python3 - <<PY
+import json, sys
+data = json.loads(sys.argv[1])
+result = data.get("result") or {}
+env = result.get("default_environment") or {}
+print(env.get("script_tag", ""))
+PY
+"$SERVICE_JSON")"
+fi
+
+if [[ -z "$SCRIPT_TAG" ]]; then
+  echo "[cf-builds-sync] Could not resolve script tag for ${WORKER_NAME}." >&2
+  echo "$SERVICE_JSON" | head -c 2000 >&2 || true
+  exit 1
+fi
+
+echo "[cf-builds-sync] Listing triggers for external_script_id ${SCRIPT_TAG}..."
+TRIGGERS_JSON="$(curl -sS \
+  "https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/builds/workers/${SCRIPT_TAG}/triggers" \
+  "${auth_header[@]}")"
+
+if command -v jq >/dev/null 2>&1; then
+  TRIGGER_UUIDS="$(echo "$TRIGGERS_JSON" | jq -r '.result[].trigger_uuid // empty')"
+else
+  TRIGGER_UUIDS="$(python3 - <<PY
+import json, sys
+data = json.loads(sys.argv[1])
+for row in data.get("result") or []:
+    uid = row.get("trigger_uuid")
+    if uid:
+        print(uid)
+PY
+"$TRIGGERS_JSON")"
+fi
+
+if [[ -z "$TRIGGER_UUIDS" ]]; then
+  echo "[cf-builds-sync] No Builds triggers returned for ${WORKER_NAME} (script tag ${SCRIPT_TAG})." >&2
+  exit 1
+fi
+
+PATCH_BODY="$(cat <<JSON
+{
+  "build_command": "${BUILD_COMMAND}",
+  "deploy_command": "${DEPLOY_COMMAND}",
+  "root_directory": "/"
+}
+JSON
+)"
+
+patched=0
+while IFS= read -r TRIGGER_UUID; do
+  [[ -z "$TRIGGER_UUID" ]] && continue
+  echo "[cf-builds-sync] Patching trigger ${TRIGGER_UUID}..."
+  RESP="$(curl -sS -X PATCH \
+    "https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/builds/triggers/${TRIGGER_UUID}" \
+    "${auth_header[@]}" \
+    -d "$PATCH_BODY")"
+
+  if command -v jq >/dev/null 2>&1; then
+    echo "$RESP" | jq .
+  else
+    echo "$RESP"
+  fi
+
+  echo "$RESP" | grep -q '"success":true' || exit 1
+  patched=$((patched + 1))
+done <<< "$TRIGGER_UUIDS"
+
+echo "[cf-builds-sync] OK — patched ${patched} trigger(s); deploy_command=${DEPLOY_COMMAND}"
