@@ -68,6 +68,7 @@ export async function createCheckoutSession(
       order_id: orderId,
       customer_email: email,
     },
+    payment_intent_data: { metadata: { order_id: orderId } },
     line_items: lineItems.map((item) => ({
       price_data: {
         currency: "usd",
