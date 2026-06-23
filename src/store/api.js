@@ -9,6 +9,7 @@ import {
 } from "../lib/discounts.js";
 import { checkoutUrls, createCheckoutSession, createCoupon } from "./stripe.js";
 import { availableQty, holdInventory, releaseReservations } from "./inventory.js";
+import { handleStripeWebhook } from "./stripe-webhook.js";
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -440,6 +441,10 @@ export async function handleStoreApi(request, env, url) {
 
   if (path === "/api/store/checkout/session" && method === "POST") {
     return createStoreCheckoutSession(request, env);
+  }
+
+  if (path === "/api/store/webhooks/stripe" && method === "POST") {
+    return handleStripeWebhook(request, env);
   }
 
   if (path === "/api/store/discounts/validate" && method === "POST") {
