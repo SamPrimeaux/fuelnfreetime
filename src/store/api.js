@@ -404,6 +404,33 @@ export async function createStoreCheckoutSession(request, env) {
   return json({ ok: true, url: session.url, order_id: orderId, session_id: session.id });
 }
 
+// Tasks 11-12: poll-able order status by Stripe checkout session id.
+// Returns non-sensitive fields only (no email, no payment-intent id).
+export async function getOrderStatus(request, env, url) {
+  const sessionId = url.searchParams.get("session_id");
+  if (!sessionId) {
+    return json({ error: "session_id required" }, { status: 400 });
+  }
+
+  const order = await env.DB.prepare(
+    `SELECT id, status, total_cents FROM orders WHERE stripe_checkout_session_id = ?`
+  )
+    .bind(sessionId)
+    .first();
+
+  if (!order) {
+    return json({ error: "Not found" }, { status: 404 });
+  }
+
+  return json({
+    ok: true,
+    order_id: order.id,
+    status: order.status,
+    total_cents: order.total_cents,
+    total: (order.total_cents / 100).toFixed(2),
+  });
+}
+
 export async function handleStoreApi(request, env, url) {
   const path = url.pathname;
   const method = request.method;
@@ -433,6 +460,10 @@ export async function handleStoreApi(request, env, url) {
   const m = path.match(/^\/api\/store\/products\/([^/]+)$/);
   if (m && method === "GET") {
     return getStoreProduct(env, decodeURIComponent(m[1]));
+  }
+
+  if (path === "/api/store/orders/status" && method === "GET") {
+    return getOrderStatus(request, env, url);
   }
 
   if (path === "/api/store/checkout" && method === "POST") {
