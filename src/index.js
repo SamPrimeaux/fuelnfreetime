@@ -380,6 +380,13 @@ export default {
       return noStore(await env.ASSETS.fetch(request));
     }
 
+    // Stripe order-confirmation landing — serve before alias/CMS resolution.
+    if (path === "/order-confirmation" || path === "/order-confirmation/") {
+      const dest = new URL(request.url);
+      dest.pathname = "/order-confirmation.html";
+      return env.ASSETS.fetch(new Request(dest, request));
+    }
+
     // Legacy *.html storefront URLs → clean paths
     const cleanStore = STORE_HTML_REDIRECTS.get(path);
     if (cleanStore) {
