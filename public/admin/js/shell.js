@@ -79,6 +79,13 @@ const NAV = {
   ],
 };
 
+// Explicit user-toggle overrides for collapsible nav groups. Keyed by group id.
+// When a key is present, it wins over the route-derived "should this be open"
+// guess in groupOpen(). This is the single source of truth for open/closed
+// state so re-renders (hydrateShellNav) never silently discard a manual
+// expand/collapse the way the old per-render DOM-class toggling did.
+const navToggleState = new Map();
+
 function ensureConsoleAssets() {
   document.body.classList.add("console-theme");
   if (!document.getElementById("console-css")) {
@@ -207,6 +214,7 @@ function navActive(href, activeHref) {
 }
 
 function groupOpen(id, activeHref, children, parentHref) {
+  if (id && navToggleState.has(id)) return navToggleState.get(id);
   if (parentHref && navActive(parentHref, activeHref)) return true;
   if (!children) return false;
   return children.some((c) => navActive(c.href, activeHref));
@@ -227,7 +235,7 @@ function renderNavItem(item, activeHref) {
       return `
       <div class="console-nav-split${parentActive ? " is-active" : ""}">
         <a href="${item.href}" class="console-nav-item console-nav-item--split">${icon(item.icon || "store")}<span>${item.label}</span></a>
-        <button type="button" class="console-nav-toggle" data-toggle="${item.id}" aria-label="Toggle ${item.label}">
+        <button type="button" class="console-nav-toggle${open ? " is-open" : ""}" data-toggle="${item.id}" aria-label="Toggle ${item.label}" aria-expanded="${open ? "true" : "false"}">
           ${icon("chev", 13, "console-icon chev")}
         </button>
       </div>
@@ -245,7 +253,7 @@ function renderNavItem(item, activeHref) {
     }
 
     return `
-      <button type="button" class="console-nav-item${parentActive ? " is-active" : ""}" data-toggle="${item.id}">
+      <button type="button" class="console-nav-item${parentActive ? " is-active" : ""}" data-toggle="${item.id}" aria-expanded="${open ? "true" : "false"}">
         ${icon(item.icon || "store")}
         <span style="flex:1;text-align:left">${item.label}</span>
         ${icon("chev", 13, "console-icon chev")}
@@ -357,17 +365,12 @@ function hydrateShellNav(user, activeHref) {
   document.querySelectorAll(".console-sidenav.admin-sidebar, .admin-nav--drawer").forEach((aside) => {
     aside.innerHTML = navHtml;
   });
-  document.querySelectorAll("[data-toggle]").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const id = btn.getAttribute("data-toggle");
-      document.querySelectorAll(`[data-group="${id}"]`).forEach((group) => {
-        group.classList.add("is-animating");
-        group.classList.toggle("is-open");
-      });
-    });
-  });
+  // Toggle click handling is wired ONCE, via delegation, in
+  // bindConsoleGlobalHandlers(). Re-rendering the nav here used to
+  // re-attach a fresh set of per-button listeners on top of whatever was
+  // already wired from the initial static render in renderShell(), which
+  // is what caused the double-toggle race / stuck chevron. navToggleState
+  // plus the delegated listener now survive this innerHTML swap untouched.
 }
 
 function ensureConsoleLayout() {
@@ -494,16 +497,16 @@ function renderShell(activeHref, mainHtml, options = {}) {
     storeBtn.setAttribute("aria-expanded", String(!!open));
   });
 
-  document.querySelectorAll("[data-toggle]").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const id = btn.getAttribute("data-toggle");
-      const group = document.querySelector(`[data-group="${id}"]`);
-      group?.classList.add("is-animating");
-      group?.classList.toggle("is-open");
-    });
-  });
+  // NOTE: nav-toggle click handling is NOT wired here anymore. It used to be
+  // wired both here (on the freshly-painted static markup) AND again inside
+  // hydrateShellNav() once the async /api/admin/me call resolved and
+  // replaced the sidebar's innerHTML. Whichever buttons survived ended up
+  // with stacked/duplicate listeners, and any click landing in the gap
+  // between this render and hydrateShellNav's innerHTML swap got its
+  // .is-open state silently discarded a moment later. That race produced
+  // the "stuck" chevron/focus box. The single delegated listener in
+  // bindConsoleGlobalHandlers() now handles every [data-toggle] click for
+  // the life of the page, across any number of innerHTML replacements.
 
   if (window.__shellUser) hydrateShellProfile(window.__shellUser);
 
@@ -547,6 +550,33 @@ function bindConsoleGlobalHandlers() {
   document.addEventListener("click", () => {
     document.getElementById("console-store-menu")?.classList.remove("open");
     document.getElementById("console-store-btn")?.setAttribute("aria-expanded", "false");
+  });
+
+  // Single delegated handler for every collapsible nav group, for the
+  // lifetime of the page. Survives any number of aside.innerHTML swaps
+  // (hydrateShellNav) because it lives on document, not on the buttons
+  // themselves -- so there is exactly one listener per click, ever, and
+  // navToggleState is the only thing that decides open/closed.
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-toggle]");
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const id = btn.getAttribute("data-toggle");
+    if (!id) return;
+    const currentlyOpen = navToggleState.has(id)
+      ? navToggleState.get(id)
+      : !!document.querySelector(`[data-group="${id}"]`)?.classList.contains("is-open");
+    const next = !currentlyOpen;
+    navToggleState.set(id, next);
+    document.querySelectorAll(`[data-group="${id}"]`).forEach((group) => {
+      group.classList.add("is-animating");
+      group.classList.toggle("is-open", next);
+    });
+    document.querySelectorAll(`[data-toggle="${id}"]`).forEach((toggleBtn) => {
+      toggleBtn.setAttribute("aria-expanded", String(next));
+      toggleBtn.classList.toggle("is-open", next);
+    });
   });
 }
 

@@ -524,6 +524,22 @@ body.agentsam-open .agentsam-dock {
   background: rgba(255, 255, 255, 0.35);
 }
 
+.console-nav-item .chev,
+.console-nav-toggle .chev {
+  transition: transform 0.18s ease;
+}
+
+.console-nav-toggle.is-open .chev,
+.console-nav-item.is-open .chev {
+  transform: rotate(90deg);
+}
+
+.console-nav-toggle:focus-visible,
+.console-nav-item:focus-visible {
+  outline: 2px solid var(--c-active);
+  outline-offset: -2px;
+}
+
 .console-nav-children {
   overflow: hidden;
   max-height: 0;
