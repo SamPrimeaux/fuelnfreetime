@@ -215,7 +215,7 @@
 
     try {
       const attribution = window.fnfAttribution?.getAttribution?.() || {};
-      const res = await fetch("/api/store/checkout", {
+      const res = await fetch("/api/store/checkout/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
@@ -229,11 +229,12 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Checkout failed");
 
-      setCart([]);
-      setDiscount(null);
-      status.textContent = `Order #${data.order_id} received — ${data.message}`;
-      status.className = "checkout-status ok";
-      btn.textContent = "Order placed";
+      // Redirect to Stripe-hosted checkout. Do NOT clear cart/discount here —
+      // the confirmation page clears them on "paid", so a cancelled checkout
+      // keeps the cart intact.
+      status.textContent = "Redirecting to secure checkout…";
+      status.className = "checkout-status";
+      window.location.href = data.url;
     } catch (err) {
       status.textContent = err.message || "Checkout failed";
       status.className = "checkout-status err";
@@ -256,5 +257,10 @@
   } else {
     render();
     updateBadge();
+  }
+
+  if (new URLSearchParams(location.search).get("cancelled") === "1") {
+    var s = document.getElementById("checkout-status");
+    if (s) { s.textContent = "Checkout cancelled — your cart is saved."; s.className = "checkout-status"; }
   }
 })();
