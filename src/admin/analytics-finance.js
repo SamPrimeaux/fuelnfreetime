@@ -4,6 +4,9 @@
 
 const STATUS_COLORS = {
   pending: "oklch(0.72 0.16 85)",
+  awaiting_payment: "oklch(0.72 0.16 85)",
+  expired: "oklch(0.62 0.14 60)",
+  failed: "oklch(0.62 0.18 25)",
   paid: "oklch(0.78 0.17 155)",
   fulfilled: "oklch(0.68 0.22 285)",
   cancelled: "oklch(0.62 0.18 25)",
@@ -120,7 +123,7 @@ async function periodTotals(env, sinceModifier) {
     `SELECT
        COUNT(*) AS orders,
        COALESCE(SUM(total_cents), 0) AS revenue_cents,
-       COALESCE(SUM(CASE WHEN status = 'pending' THEN total_cents ELSE 0 END), 0) AS pending_cents,
+       COALESCE(SUM(CASE WHEN status IN ('pending','awaiting_payment') THEN total_cents ELSE 0 END), 0) AS pending_cents,
        COALESCE(SUM(CASE WHEN status IN ('paid','fulfilled') THEN total_cents ELSE 0 END), 0) AS confirmed_cents
      FROM orders
      WHERE datetime(created_at) >= datetime('now', ?)`,
@@ -169,7 +172,7 @@ async function revenueByBucket(env, cfg) {
         env,
         `SELECT strftime('%Y-%m-%dT%H', created_at) AS bucket,
                 COALESCE(SUM(total_cents), 0) AS revenue_cents,
-                COALESCE(SUM(CASE WHEN status = 'pending' THEN total_cents ELSE 0 END), 0) AS pending_cents,
+                COALESCE(SUM(CASE WHEN status IN ('pending','awaiting_payment') THEN total_cents ELSE 0 END), 0) AS pending_cents,
                 COALESCE(SUM(CASE WHEN status IN ('paid','fulfilled') THEN total_cents ELSE 0 END), 0) AS confirmed_cents
          FROM orders
          WHERE datetime(created_at) >= datetime('now', '-1 day')
@@ -198,7 +201,7 @@ async function revenueByBucket(env, cfg) {
       env,
       `SELECT date(created_at) AS bucket,
               COALESCE(SUM(total_cents), 0) AS revenue_cents,
-              COALESCE(SUM(CASE WHEN status = 'pending' THEN total_cents ELSE 0 END), 0) AS pending_cents,
+              COALESCE(SUM(CASE WHEN status IN ('pending','awaiting_payment') THEN total_cents ELSE 0 END), 0) AS pending_cents,
               COALESCE(SUM(CASE WHEN status IN ('paid','fulfilled') THEN total_cents ELSE 0 END), 0) AS confirmed_cents
        FROM orders
        WHERE datetime(created_at) >= datetime('now', ?)
@@ -491,7 +494,7 @@ export async function getFinanceAnalytics(env, range = "30d") {
         `SELECT
            COUNT(*) AS orders,
            COALESCE(SUM(total_cents), 0) AS revenue_cents,
-           COALESCE(SUM(CASE WHEN status = 'pending' THEN total_cents ELSE 0 END), 0) AS pending_cents
+           COALESCE(SUM(CASE WHEN status IN ('pending','awaiting_payment') THEN total_cents ELSE 0 END), 0) AS pending_cents
          FROM orders
          WHERE datetime(created_at) >= datetime('now', ?)
            AND datetime(created_at) < datetime('now', ?)`,
@@ -557,7 +560,7 @@ export async function getFinanceAnalytics(env, range = "30d") {
   const collectedCents = recent
     .filter((o) => o.status === "paid" || o.status === "fulfilled")
     .reduce((a, b) => a + b.amount_cents, 0);
-  const pendingCount = recent.filter((o) => o.status === "pending").length;
+  const pendingCount = recent.filter((o) => o.status === "pending" || o.status === "awaiting_payment").length;
 
   const aiTotal = aiCosts.ai.reduce((a, b) => a + b, 0);
   const cogsEstimate = revenueSeries.revenue.map((v) => Number((v * 0.35).toFixed(2)));
@@ -567,7 +570,7 @@ export async function getFinanceAnalytics(env, range = "30d") {
     range: cfg.label,
     refreshed_at: new Date().toISOString(),
     data_source: "d1",
-    stripe_connected: false,
+    stripe_connected: Boolean(env.STRIPE_SECRET_KEY),
     kpis: {
       gross_revenue: {
         value: grossRevenue,
