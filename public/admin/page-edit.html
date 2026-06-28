@@ -343,21 +343,31 @@ async function savePage() {
 
   try {
     const title = document.getElementById("page-title-input").value.trim();
-    const status = document.querySelector('input[name="visibility"]:checked')?.value;
+    const status = document.querySelector('input[name="visibility"]:checked')?.value || "draft";
 
     await adminFetch(`/api/admin/cms/pages/${slug}`, {
       method: "PUT",
-      body: JSON.stringify({ title, status }),
+      body: JSON.stringify({ title }),
     });
 
     for (const { key, content } of collectAllSectionContent()) {
-      await adminFetch(`/api/admin/cms/pages/${slug}/sections/${key}`, {
+      await adminFetch(`/api/admin/cms/pages/${slug}/sections/${encodeURIComponent(key)}`, {
         method: "PUT",
         body: JSON.stringify({ content }),
       });
     }
 
-    showNote("Page saved.", "success");
+    if (status === "published") {
+      await adminFetch(`/api/admin/cms/pages/${slug}/publish`, { method: "POST" });
+      showNote("Page saved and published.", "success");
+    } else {
+      await adminFetch(`/api/admin/cms/pages/${slug}`, {
+        method: "PUT",
+        body: JSON.stringify({ status: "draft" }),
+      });
+      showNote("Page saved as draft.", "success");
+    }
+
     await loadPage();
   } catch (err) {
     showNote(err.message, "error");
@@ -402,15 +412,36 @@ document.getElementById("content-ai-btn")?.addEventListener("click", () => {
   window.sendAgentsamMessage?.(`Draft hero copy for the ${slug} page on Fuel & Free Time.`);
 });
 
-loadCmsRegistry().then(() => {
-  liveEditor = connectCmsLive(slug, {
-    onSectionUpdated(data) {
-      if (!dirty) loadPage();
-    },
-    onPublished() {
-      showNote("Published to live site.", "success");
-      loadPage();
-    },
-  });
+async function initPageEditor() {
+  try {
+    await loadCmsRegistry();
+  } catch (err) {
+    showNote(`Could not load editor schema: ${err.message}`, "error");
+  }
+
+  if (typeof connectCmsLive === "function") {
+    try {
+      liveEditor = connectCmsLive(slug, {
+        onSectionUpdated() {
+          if (!dirty) loadPage();
+        },
+        onPublished() {
+          showNote("Published to live site.", "success");
+          loadPage();
+        },
+        onError(message) {
+          console.warn("[cms-live]", message);
+        },
+      });
+    } catch (err) {
+      console.warn("[cms-live] unavailable", err);
+    }
+  }
+
   loadPage();
-});
+}
+
+initPageEditor();
+</script>
+</body>
+</html>
