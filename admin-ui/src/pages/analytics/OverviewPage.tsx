@@ -1,15 +1,10 @@
 import { Fragment, useMemo } from "react";
 import {
   AreaChart,
-  Donut,
-  HBars,
   Icon,
   KPI,
-  Sparkline,
-  fmtNum,
-  genSeries,
-  seedRand,
 } from "../../components/analytics-ui";
+import { fmtNum, genSeries, seedRand } from "../../lib/format";
 import type { RangeKey } from "../../lib/types";
 
 type PageProps = { range: RangeKey; tenant?: string };
@@ -31,9 +26,7 @@ export default function OverviewPage({ range, tenant = "all" }: PageProps) {
 
   const requests = genSeries(days, { seed: seed+1, base: 1.2e6, trend: 0.6, noise: 0.18, season: 0.15 });
   const requestsPrev = genSeries(days, { seed: seed+12, base: 0.9e6, trend: 0.4, noise: 0.18 });
-  const activeUsers = genSeries(days, { seed: seed+2, base: 18000, trend: 0.5, noise: 0.1, season: 0.1 });
   const errors = genSeries(days, { seed: seed+3, base: 80, trend: -0.2, noise: 0.4 });
-  const latency = genSeries(days, { seed: seed+4, base: 142, trend: -0.15, noise: 0.2 });
 
   const funnel = [
     { label: 'Visited landing',   value: 124800, color: 'var(--accent)' },
@@ -222,7 +215,7 @@ export default function OverviewPage({ range, tenant = "all" }: PageProps) {
             <div style={{ display: 'grid', gridTemplateColumns: '32px 1fr', gap: 4, alignItems: 'center' }}>
               <div></div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(24, 1fr)', gap: 2, fontSize: 9, color: 'var(--fg-3)', fontFamily: 'var(--mono)' }}>
-                {[0,4,8,12,16,20].map((h, i) => (
+                {[0,4,8,12,16,20].map((h) => (
                   <span key={h} style={{ gridColumn: `${h+1} / span 4`, textAlign: 'left' }}>{h.toString().padStart(2,'0')}</span>
                 ))}
               </div>

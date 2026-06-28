@@ -1,6 +1,7 @@
 import {
   Fragment,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -9,8 +10,6 @@ import {
 } from "react";
 import { fmtNum } from "../lib/format";
 import type { ChartSeries, DonutSlice, RangeKey } from "../lib/types";
-
-export { fmtNum, genSeries, seedRand } from "../lib/format";
 
 type IconName =
   | "home"
@@ -145,6 +144,8 @@ export function Sparkline({
   fill?: boolean;
   stroke?: number;
 }) {
+  const id = useId().replace(/:/g, "");
+
   if (!data?.length) return null;
   const min = Math.min(...data);
   const max = Math.max(...data);
@@ -153,19 +154,19 @@ export function Sparkline({
   const points = data.map((v, i) => [i * stepX, height - ((v - min) / range) * height]);
   const path = points.map((p, i) => (i === 0 ? "M" : "L") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
   const fillPath = path + ` L${width} ${height} L0 ${height} Z`;
-  const id = useMemo(() => "sg-" + Math.random().toString(36).slice(2, 7), []);
+  const gradientId = `sg-${id}`;
 
   return (
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
       {fill && (
         <>
           <defs>
-            <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={color} stopOpacity="0.3" />
               <stop offset="100%" stopColor={color} stopOpacity="0" />
             </linearGradient>
           </defs>
-          <path d={fillPath} fill={`url(#${id})`} />
+          <path d={fillPath} fill={`url(#${gradientId})`} />
         </>
       )}
       <path d={path} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" />
@@ -194,6 +195,7 @@ export function AreaChart({
   stacked?: boolean;
   type?: "area" | "bar";
 }) {
+  const chartId = useId().replace(/:/g, "");
   const ref = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
   const [w, setW] = useState(800);
@@ -210,7 +212,7 @@ export function AreaChart({
   const n = series[0]?.data.length || 0;
   const stepX = innerW / Math.max(1, n - 1);
 
-  let allValues: number[] = [];
+  const allValues: number[] = [];
   if (stacked) {
     for (let i = 0; i < n; i++) {
       let sum = 0;
@@ -302,18 +304,17 @@ export function AreaChart({
             topPath = s.data.map((v, i) => (i === 0 ? "M" : "L") + xScale(i) + " " + yScale(v)).join(" ");
             fillPath = topPath + ` L${xScale(n - 1)} ${yScale(0)} L${xScale(0)} ${yScale(0)} Z`;
           }
-          const id = `area-${si}-${Math.random().toString(36).slice(2, 6)}`;
           return (
             <Fragment key={si}>
               {type === "area" && (
                 <>
                   <defs>
-                    <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id={`area-${chartId}-${si}`} x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor={s.color} stopOpacity={stacked ? 0.5 : 0.3} />
                       <stop offset="100%" stopColor={s.color} stopOpacity="0" />
                     </linearGradient>
                   </defs>
-                  <path d={fillPath} fill={`url(#${id})`} />
+                  <path d={fillPath} fill={`url(#area-${chartId}-${si})`} />
                 </>
               )}
               <path d={topPath} fill="none" stroke={s.color} strokeWidth={1.6} strokeLinecap="round" />
@@ -398,16 +399,17 @@ export function Donut({
   const total = data.reduce((a, b) => a + b.value, 0);
   const r = (size - thickness) / 2;
   const c = 2 * Math.PI * r;
-  let acc = 0;
+  const arcs = data.map((d, i) => {
+    const start = data.slice(0, i).reduce((sum, item) => sum + item.value / total, 0);
+    const frac = d.value / total;
+    return { d, i, len: c * frac, offset: c * start };
+  });
+
   return (
     <div style={{ position: "relative", width: size, height: size, margin: "0 auto" }}>
       <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--bg-3)" strokeWidth={thickness} />
-        {data.map((d, i) => {
-          const frac = d.value / total;
-          const len = c * frac;
-          const offset = c * acc;
-          acc += frac;
+        {arcs.map(({ d, i, len, offset }) => {
           return (
             <circle
               key={i}

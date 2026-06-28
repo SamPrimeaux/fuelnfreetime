@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "npm run build:admin",
-    "build:admin": "npm ci --prefix admin-ui && npm run build --prefix admin-ui",
+    "build:admin": "npm ci --include=dev --prefix admin-ui && npm run build --prefix admin-ui",
     "build:admin:skip": "node scripts/embed-mail-template.mjs",
     "predeploy:worker": "node scripts/embed-mail-template.mjs",
     "dev:admin": "npm run dev --prefix admin-ui",

@@ -4,8 +4,8 @@ import {
   Donut,
   Icon,
   KPI,
-  fmtNum,
 } from "../../components/analytics-ui";
+import { fmtNum } from "../../lib/format";
 import { fetchFinanceAnalytics } from "../../lib/api";
 import type { FinanceAnalyticsResponse, RangeKey } from "../../lib/types";
 
@@ -42,13 +42,12 @@ function exportOrdersCsv(orders: FinanceAnalyticsResponse["recent_orders"]) {
 
 export default function FinancePage({ range }: PageProps) {
   const [data, setData] = useState<FinanceAnalyticsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const loadingRange = data?.range !== range;
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
     fetchFinanceAnalytics(range)
       .then((res) => {
         if (!cancelled) setData(res);
@@ -56,9 +55,7 @@ export default function FinancePage({ range }: PageProps) {
       .catch((err) => {
         if (!cancelled) setError(err?.message || "Failed to load finance data");
       })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      .finally(() => undefined);
     return () => {
       cancelled = true;
     };
@@ -90,7 +87,7 @@ export default function FinancePage({ range }: PageProps) {
     ? "Revenue by product"
     : "Revenue by order status";
 
-  if (loading && !data) {
+  if (loadingRange && !data) {
     return (
       <div className="page-head">
         <div>

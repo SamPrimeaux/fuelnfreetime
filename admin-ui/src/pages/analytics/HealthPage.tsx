@@ -1,20 +1,44 @@
-import { Fragment, useMemo } from "react";
+import { useMemo } from "react";
 import {
   AreaChart,
-  Donut,
-  HBars,
   Icon,
   KPI,
   Sparkline,
-  fmtNum,
-  genSeries,
-  seedRand,
 } from "../../components/analytics-ui";
+import { fmtNum, genSeries } from "../../lib/format";
 import type { RangeKey } from "../../lib/types";
 
 type PageProps = { range: RangeKey; tenant?: string };
 
-export default function HealthPage({ range, tenant = "all" }: PageProps) {
+function Gauge({
+  value,
+  max,
+  label,
+  sub,
+  color = "var(--accent)",
+}: {
+  value: number;
+  max: number;
+  label: string;
+  sub: string;
+  color?: string;
+}) {
+  const pct = Math.min(1, value / max);
+  const r = 50;
+  const c = Math.PI * r;
+  return (
+    <div style={{ textAlign: "center" }}>
+      <svg width="140" height="84" viewBox="0 0 140 84">
+        <path d="M 20 70 A 50 50 0 0 1 120 70" fill="none" stroke="var(--bg-3)" strokeWidth="10" strokeLinecap="round" />
+        <path d="M 20 70 A 50 50 0 0 1 120 70" fill="none" stroke={color} strokeWidth="10" strokeLinecap="round" strokeDasharray={`${pct * c} ${c}`} />
+      </svg>
+      <div className="mono fw-600 text-lg" style={{ marginTop: -22 }}>{label}</div>
+      <div className="muted text-xs">{sub}</div>
+    </div>
+  );
+}
+
+export default function HealthPage({ range }: PageProps) {
   const seed = 88;
   const days = range === '24h' ? 24 : range === '7d' ? 7 : range === '30d' ? 30 : range === '90d' ? 90 : range === 'YTD' ? 124 : 365;
   const xLabels = useMemo(() => {
@@ -36,8 +60,6 @@ export default function HealthPage({ range, tenant = "all" }: PageProps) {
   const p99 = genSeries(days, { seed: seed+3, base: 286, trend: 0.0, noise: 0.22 });
 
   const errorRate = genSeries(days, { seed: seed+4, base: 0.18, trend: -0.4, noise: 0.5 });
-  const successRate = errorRate.map(e => 100 - e * 100);
-
   const services = [
     { name: 'API Gateway',   provider: 'Cloudflare Workers', uptime: 99.998, p99: 142, rps: 28412, errors: 18, status: 'good' },
     { name: 'Auth Service',  provider: 'Supabase Auth',      uptime: 99.992, p99: 84,  rps: 4820,  errors: 2,  status: 'good' },
@@ -87,34 +109,6 @@ export default function HealthPage({ range, tenant = "all" }: PageProps) {
     { ts: '14:42:18.092', lvl: 'ok',   svc: 'sb-pg',  msg: 'Connection pool 142/200 — healthy' },
   ];
 
-  // Gauge component
-  const Gauge = ({
-    value,
-    max,
-    label,
-    sub,
-    color = "var(--accent)",
-  }: {
-    value: number;
-    max: number;
-    label: string;
-    sub: string;
-    color?: string;
-  }) => {
-    const pct = Math.min(1, value / max);
-    const r = 50, c = Math.PI * r;
-    return (
-      <div style={{ textAlign: 'center' }}>
-        <svg width="140" height="84" viewBox="0 0 140 84">
-          <path d={`M 20 70 A 50 50 0 0 1 120 70`} fill="none" stroke="var(--bg-3)" strokeWidth="10" strokeLinecap="round" />
-          <path d={`M 20 70 A 50 50 0 0 1 120 70`} fill="none" stroke={color} strokeWidth="10" strokeLinecap="round"
-            strokeDasharray={`${pct * c} ${c}`} />
-        </svg>
-        <div className="mono fw-600 text-lg" style={{ marginTop: -22 }}>{label}</div>
-        <div className="muted text-xs">{sub}</div>
-      </div>
-    );
-  };
 
   return (
     <>
