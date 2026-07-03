@@ -451,6 +451,15 @@ async function listOrders(request, env) {
   return json({ ok: true, orders: results });
 }
 
+async function getOrder(request, env, id) {
+  const order = await env.DB.prepare(`SELECT * FROM orders WHERE id = ?`).bind(id).first();
+  if (!order) return json({ error: "Not found" }, { status: 404 });
+  const { results: items } = await env.DB.prepare(
+    `SELECT id, variant_id, title, qty, price_cents FROM order_items WHERE order_id = ? ORDER BY id`
+  ).bind(id).all();
+  return json({ ok: true, order, items });
+}
+
 // ----- Subscribers -----
 
 async function listSubscribers(request, env) {
@@ -511,6 +520,8 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
 
   if (path === "/api/admin/inventory" && method === "GET") return listInventory(request, env);
   if (path === "/api/admin/orders" && method === "GET") return listOrders(request, env);
+  let orderMatch = path.match(/^\/api\/admin\/orders\/(\d+)$/);
+  if (orderMatch && method === "GET") return getOrder(request, env, orderMatch[1]);
   if (path === "/api/admin/subscribers" && method === "GET") return listSubscribers(request, env);
 
   if (path === "/api/admin/media" && method === "POST") return uploadMedia(request, env);
