@@ -79,3 +79,13 @@
 .embed--light-shell ::-webkit-scrollbar-thumb {
   border-color: var(--shell-bg);
 }
+
+/* The analytics SPA renders page content directly inside the console's
+   full-bleed <main> (unlike legacy pages, which nest a self-scrolling iframe).
+   Shared console.css styles that main as a fixed height with overflow:hidden,
+   which clips tall pages such as Finance with no scrollbar. Restore vertical
+   scroll on the SPA's main only. This file is bundled into the SPA, so it does
+   not affect legacy admin pages that load console.css without this bundle. */
+.admin-main.console-main--bleed {
+  overflow-y: auto;
+}
