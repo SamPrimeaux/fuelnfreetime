@@ -790,7 +790,8 @@ function applyPlusMenuConfig(config) {
   if (!config) return;
 
   if (imageBtn && config.image) {
-    imageBtn.textContent = config.image.label || "Create image";
+    const label = imageBtn.querySelector("[data-menu-label]");
+    if (label) label.textContent = config.image.label || "Create image";
     imageBtn.disabled = !config.image.enabled;
     imageBtn.hidden = config.image.enabled === false;
   }
