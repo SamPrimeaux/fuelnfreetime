@@ -661,8 +661,24 @@ function openFilePicker() {
 }
 
 function closeToolMenu() {
-  $("agentsam-tool-menu")?.setAttribute("hidden", "");
+  const menu = $("agentsam-tool-menu");
+  menu?.setAttribute("hidden", "");
+  menu?.classList.remove("opens-up", "opens-down");
   $("agentsam-plus")?.setAttribute("aria-expanded", "false");
+}
+
+function positionToolMenu() {
+  const menu = $("agentsam-tool-menu");
+  const wrap = document.querySelector(".agentsam-page-composer-wrap");
+  const page = $("agentsam-page");
+  if (!menu || !wrap || menu.hasAttribute("hidden")) return;
+
+  menu.classList.remove("opens-up", "opens-down");
+  const rect = wrap.getBoundingClientRect();
+  const roomBelow = window.innerHeight - rect.bottom;
+  const estimatedHeight = Math.min(menu.scrollHeight || 320, 420);
+  const preferDown = !page?.classList.contains("has-thread") && roomBelow >= Math.min(estimatedHeight + 16, 280);
+  menu.classList.add(preferDown ? "opens-down" : "opens-up");
 }
 
 function toggleToolMenu() {
@@ -672,6 +688,7 @@ function toggleToolMenu() {
   if (menu.hasAttribute("hidden")) {
     menu.removeAttribute("hidden");
     plus.setAttribute("aria-expanded", "true");
+    requestAnimationFrame(positionToolMenu);
   } else {
     closeToolMenu();
   }
