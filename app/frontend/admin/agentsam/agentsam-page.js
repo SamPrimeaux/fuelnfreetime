@@ -37,6 +37,8 @@ let composeContext = null;
 let iamLogoUrl = IAM_LOGO_DEFAULT;
 /** @type {object|null} */
 let plusMenuConfig = null;
+/** @type {"chat"|"work"} */
+let interactionMode = "chat";
 /** @type {object|null} */
 let modalToolCall = null;
 /** @type {Array<any>} */
@@ -71,25 +73,56 @@ function formatRelativeTime(unix) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+function refreshComposerPlaceholder() {
+  const input = $("agentsam-page-input");
+  if (!input) return;
+  if (composeContext?.mode === "image") {
+    input.placeholder = "Describe the image you want…";
+    return;
+  }
+  input.placeholder = interactionMode === "work" ? "Describe a task to work through" : "Ask anything";
+}
+
+function setInteractionMode(mode) {
+  const next = mode === "work" ? "work" : "chat";
+  interactionMode = next;
+  const page = $("agentsam-page");
+  if (page) page.dataset.agentView = next;
+  document.querySelectorAll("[data-agent-view-option]").forEach((button) => {
+    const active = button.dataset.agentViewOption === next;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+  const heroTitle = $("agentsam-hero")?.querySelector("h1");
+  if (heroTitle) heroTitle.textContent = next === "work" ? "What should we work on?" : "Where should we begin?";
+  refreshComposerPlaceholder();
+  closeToolMenu();
+}
+
 function showThread() {
   const thread = $("agentsam-thread");
   const hero = $("agentsam-hero");
   const stage = document.querySelector(".agentsam-page-stage");
+  const page = $("agentsam-page");
   if (thread) thread.hidden = false;
   if (hero) hero.style.display = "none";
   if (stage) stage.classList.add("has-thread");
+  if (page) page.classList.add("has-thread");
+  closeToolMenu();
 }
 
 function clearThreadUi() {
   const thread = $("agentsam-thread");
   const hero = $("agentsam-hero");
   const stage = document.querySelector(".agentsam-page-stage");
+  const page = $("agentsam-page");
   if (thread) {
     thread.innerHTML = "";
     thread.hidden = true;
   }
   if (hero) hero.style.display = "";
   if (stage) stage.classList.remove("has-thread");
+  if (page) page.classList.remove("has-thread");
 }
 
 function renderComposeModes() {
@@ -106,15 +139,11 @@ function renderComposeModes() {
   chip.innerHTML = `${composeContext.label || "Creative Studio"} <button type="button" aria-label="Clear mode">&times;</button>`;
   chip.querySelector("button")?.addEventListener("click", () => {
     composeContext = null;
-    const input = $("agentsam-page-input");
-    if (input) input.placeholder = "Ask anything";
     renderComposeModes();
+    refreshComposerPlaceholder();
   });
   box.appendChild(chip);
-  const input = $("agentsam-page-input");
-  if (input && composeContext.mode === "image") {
-    input.placeholder = "Describe the image you want…";
-  }
+  refreshComposerPlaceholder();
 }
 
 function connectionComposerLabel(server) {
@@ -534,6 +563,7 @@ function buildSendContext() {
   const ctx = {
     page: "/admin/agentsam",
     conversation_id: conversationId,
+    interaction_mode: interactionMode,
     has_image: pendingAttachments.some((a) => a.kind === "image"),
     active_mcp_connections: [...activeConnections],
   };
@@ -607,7 +637,7 @@ async function sendMessage(text, actionContext = null) {
     renderAttachmentTray();
     composeContext = null;
     renderComposeModes();
-    $("agentsam-page-input") && ($("agentsam-page-input").placeholder = "Ask anything");
+    refreshComposerPlaceholder();
     hydrateRecentActivity();
   } catch (err) {
     typing?.remove();
@@ -631,8 +661,24 @@ function openFilePicker() {
 }
 
 function closeToolMenu() {
-  $("agentsam-tool-menu")?.setAttribute("hidden", "");
+  const menu = $("agentsam-tool-menu");
+  menu?.setAttribute("hidden", "");
+  menu?.classList.remove("opens-up", "opens-down");
   $("agentsam-plus")?.setAttribute("aria-expanded", "false");
+}
+
+function positionToolMenu() {
+  const menu = $("agentsam-tool-menu");
+  const wrap = document.querySelector(".agentsam-page-composer-wrap");
+  const page = $("agentsam-page");
+  if (!menu || !wrap || menu.hasAttribute("hidden")) return;
+
+  menu.classList.remove("opens-up", "opens-down");
+  const rect = wrap.getBoundingClientRect();
+  const roomBelow = window.innerHeight - rect.bottom;
+  const estimatedHeight = Math.min(menu.scrollHeight || 320, 420);
+  const preferDown = !page?.classList.contains("has-thread") && roomBelow >= Math.min(estimatedHeight + 16, 280);
+  menu.classList.add(preferDown ? "opens-down" : "opens-up");
 }
 
 function toggleToolMenu() {
@@ -642,6 +688,7 @@ function toggleToolMenu() {
   if (menu.hasAttribute("hidden")) {
     menu.removeAttribute("hidden");
     plus.setAttribute("aria-expanded", "true");
+    requestAnimationFrame(positionToolMenu);
   } else {
     closeToolMenu();
   }
@@ -743,7 +790,8 @@ function applyPlusMenuConfig(config) {
   if (!config) return;
 
   if (imageBtn && config.image) {
-    imageBtn.textContent = config.image.label || "Create image";
+    const label = imageBtn.querySelector("[data-menu-label]");
+    if (label) label.textContent = config.image.label || "Create image";
     imageBtn.disabled = !config.image.enabled;
     imageBtn.hidden = config.image.enabled === false;
   }
@@ -833,6 +881,10 @@ function bindUi() {
   const plus = $("agentsam-plus");
   const menu = $("agentsam-tool-menu");
   const fileInput = $("agentsam-file-input");
+
+  document.querySelectorAll("[data-agent-view-option]").forEach((button) => {
+    button.addEventListener("click", () => setInteractionMode(button.dataset.agentViewOption));
+  });
 
   form?.addEventListener("submit", (e) => {
     e.preventDefault();

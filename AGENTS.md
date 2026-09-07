@@ -25,7 +25,7 @@ This file is the entry point for human and AI collaborators (including Connor's 
 |--------|----------|--------|
 | **Commerce** — products, variants, inventory, media, cart, checkout, orders | [`docs/RUNTIME-CONTRACTS-COMMERCE.md`](docs/RUNTIME-CONTRACTS-COMMERCE.md) | Products/inventory live; Stripe **not wired** |
 | **Stripe** — ordered implementation checklist | [`docs/RUNTIME-CONTRACTS-STRIPE.md`](docs/RUNTIME-CONTRACTS-STRIPE.md) | Not started |
-| **Stripe agent skills** | [`.cursor/skills/stripe-best-practices/SKILL.md`](.cursor/skills/stripe-best-practices/SKILL.md) | Vendored from [stripe/ai](https://github.com/stripe/ai) |
+| **AgentSam app/runtime/UI** — Chat, Work, composer, tools, frontend/backend source authority | [`docs/RUNTIME-CONTRACTS-AGENTSAM.md`](docs/RUNTIME-CONTRACTS-AGENTSAM.md) | `app/` is canonical; legacy paths are bridges/output |
 | **Agent Sam skills (R2 + D1)** | [`docs/AGENTSAM-SKILLS.md`](docs/AGENTSAM-SKILLS.md) | Sync with `npm run agentsam:skills:sync` |
 | **Project context** | D1 `agentsam_project_context.id = ctx_fuelnfreetime` | Worker + IAM registry — `npm run db:seed:ctx-fuelnfreetime:all` |
 | **CMS** — pages, sections, publish, KV, R2 bodies, live editor | [`docs/FNF-CMS-SPRINT-2026-06-20.md`](docs/FNF-CMS-SPRINT-2026-06-20.md) | Live |
@@ -41,6 +41,9 @@ If a feature does not fit an existing contract, **update the contract first** (o
 | Worker router | `src/index.js` |
 | Public store API | `src/store/api.js` |
 | Admin API router | `src/admin/api.js` |
+| AgentSam frontend | `app/frontend/admin/agentsam/` |
+| AgentSam backend handler | `app/backend/admin/agentsam.js` |
+| AgentSam runtime modules | `app/backend/agentsam/` |
 | Media library | `src/admin/media.js` |
 | Store preferences | `src/admin/store.js` |
 | Admin auth | `src/lib/auth.js` |
@@ -68,6 +71,7 @@ If a feature does not fit an existing contract, **update the contract first** (o
 ## Common commands
 
 ```bash
+npm run app:frontend:sync       # materialize app/frontend AgentSam assets into public/
 npm run dev                    # local Worker
 npm run deploy                 # production deploy
 npm run admin:create -- <email> <password>
@@ -106,7 +110,9 @@ See commerce contract § "Implementation status" for the full matrix.
 
 - Admin-only: `POST /api/admin/agentsam/chat`
 - Uses live D1 reads for inventory/products — do not invent counts in prompts
-- Context builder: `src/admin/agentsam.js`
+- Frontend source authority: `app/frontend/admin/agentsam/`
+- Backend source authority: `app/backend/admin/agentsam.js` + `app/backend/agentsam/`
+- `public/admin/agentsam*` is generated runtime output; `src/admin/agentsam.js` and `src/agentsam/*` are compatibility bridges, not implementation targets
 - **Skills:** D1 `agentsam_skill` registry + R2 `agentsam/skills/` markdown — see [`docs/AGENTSAM-SKILLS.md`](docs/AGENTSAM-SKILLS.md)
 
 ---
