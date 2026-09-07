@@ -12,10 +12,14 @@
 <script src="/admin/js/shell.js"></script>
 <script>
 renderShell("/admin/agentsam", `
-  <div class="agentsam-page" id="agentsam-page">
+  <div class="agentsam-page" id="agentsam-page" data-agent-view="chat">
+    <div class="agentsam-page-view-switch" id="agentsam-view-switch" role="tablist" aria-label="Agent view">
+      <button type="button" class="is-active" role="tab" aria-selected="true" data-agent-view-option="chat">Chat</button>
+      <button type="button" role="tab" aria-selected="false" data-agent-view-option="work">Work</button>
+    </div>
     <div class="agentsam-page-stage">
       <div class="agentsam-page-hero" id="agentsam-hero">
-        <h1>What's on the agenda today?</h1>
+        <h1>Where should we begin?</h1>
       </div>
       <div class="agentsam-page-thread" id="agentsam-thread" role="log" aria-live="polite" hidden></div>
     </div>
