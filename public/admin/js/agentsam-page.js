@@ -563,6 +563,7 @@ function buildSendContext() {
   const ctx = {
     page: "/admin/agentsam",
     conversation_id: conversationId,
+    interaction_mode: interactionMode,
     has_image: pendingAttachments.some((a) => a.kind === "image"),
     active_mcp_connections: [...activeConnections],
   };
