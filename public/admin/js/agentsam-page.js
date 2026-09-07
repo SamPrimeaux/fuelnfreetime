@@ -37,6 +37,8 @@ let composeContext = null;
 let iamLogoUrl = IAM_LOGO_DEFAULT;
 /** @type {object|null} */
 let plusMenuConfig = null;
+/** @type {"chat"|"work"} */
+let interactionMode = "chat";
 /** @type {object|null} */
 let modalToolCall = null;
 /** @type {Array<any>} */
