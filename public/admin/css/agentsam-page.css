@@ -1050,3 +1050,204 @@ body.agentsam-page-body .console-main--bleed {
   box-sizing: border-box;
 }
 #agentsam-page-input::placeholder { color: var(--as-muted); }
+
+/* Empty-state interaction shell.
+   The composer is a reusable stateful surface: centered before a thread exists,
+   then docked to the bottom once conversation content is present. */
+.agentsam-page {
+  position: relative;
+}
+
+.agentsam-page-stage {
+  box-sizing: border-box;
+}
+
+.agentsam-page:not(.has-thread) .agentsam-page-stage {
+  padding-bottom: 24px;
+  overflow-y: hidden;
+}
+
+.agentsam-page:not(.has-thread) .agentsam-page-hero {
+  transform: translateY(-112px);
+}
+
+.agentsam-page.has-thread .agentsam-page-stage {
+  padding-bottom: 156px;
+}
+
+.agentsam-page-view-switch {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  z-index: 6;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(232px, calc(100% - 40px));
+  padding: 3px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(31, 31, 35, 0.88);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(14px);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.agentsam-page-view-switch button {
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--as-muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.agentsam-page-view-switch button:hover {
+  color: var(--as-text);
+}
+
+.agentsam-page-view-switch button.is-active {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--as-text);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.agentsam-page-view-switch button:focus-visible {
+  outline: 2px solid var(--as-accent);
+  outline-offset: 1px;
+}
+
+.agentsam-page.has-thread .agentsam-page-view-switch {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -8px);
+}
+
+.agentsam-page-dock {
+  position: absolute;
+  top: 50%;
+  bottom: auto;
+  left: 0;
+  right: 0;
+  width: auto;
+  padding: 0 20px;
+  transform: translateY(-16px);
+  background: transparent;
+  z-index: 5;
+}
+
+.agentsam-page.has-thread .agentsam-page-dock {
+  top: auto;
+  bottom: 0;
+  transform: none;
+  padding: 22px 16px max(20px, env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, transparent, var(--as-bg) 28%);
+}
+
+.agentsam-page-composer-wrap {
+  position: relative;
+  width: min(768px, 100%);
+}
+
+/* Composer-wide action menu. It opens below the centered empty-state composer
+   and flips above the composer after the thread docks to the bottom. */
+.agentsam-page-menu {
+  left: 0;
+  top: auto;
+  bottom: auto;
+  width: 100%;
+  min-width: 0;
+  max-height: min(420px, calc(100dvh - 180px));
+  padding: 8px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  border-radius: 16px;
+}
+
+.agentsam-page-menu.opens-down {
+  top: calc(100% + 10px);
+  bottom: auto;
+}
+
+.agentsam-page-menu.opens-up {
+  top: auto;
+  bottom: calc(100% + 10px);
+}
+
+.agentsam-page-menu > button {
+  min-height: 54px;
+  padding: 9px 10px;
+}
+
+.agentsam-page-menu-icon {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--as-text);
+}
+
+.agentsam-page-menu-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.agentsam-page-menu-copy strong {
+  color: var(--as-text);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.agentsam-page-menu-copy small {
+  color: var(--as-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+#agentsam-mcp-list .agentsam-page-mcp {
+  min-height: 46px;
+  padding: 10px 12px;
+}
+
+@media (max-width: 640px) {
+  .agentsam-page-view-switch {
+    top: 12px;
+    width: min(212px, calc(100% - 32px));
+  }
+
+  .agentsam-page:not(.has-thread) .agentsam-page-hero {
+    transform: translateY(-104px);
+  }
+
+  .agentsam-page:not(.has-thread) .agentsam-page-stage {
+    padding-bottom: 24px;
+  }
+
+  .agentsam-page:not(.has-thread) .agentsam-page-dock {
+    top: 48%;
+    padding-inline: 12px;
+  }
+
+  .agentsam-page.has-thread .agentsam-page-stage {
+    padding-bottom: 180px;
+  }
+
+  .agentsam-page.has-thread .agentsam-page-dock {
+    padding: 18px 10px max(12px, env(safe-area-inset-bottom));
+  }
+
+  .agentsam-page-menu {
+    width: 100%;
+    min-width: 0;
+    max-height: min(52dvh, 420px);
+  }
+}
