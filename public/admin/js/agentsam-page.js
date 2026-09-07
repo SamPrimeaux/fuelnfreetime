@@ -139,15 +139,11 @@ function renderComposeModes() {
   chip.innerHTML = `${composeContext.label || "Creative Studio"} <button type="button" aria-label="Clear mode">&times;</button>`;
   chip.querySelector("button")?.addEventListener("click", () => {
     composeContext = null;
-    const input = $("agentsam-page-input");
-    if (input) input.placeholder = "Ask anything";
     renderComposeModes();
+    refreshComposerPlaceholder();
   });
   box.appendChild(chip);
-  const input = $("agentsam-page-input");
-  if (input && composeContext.mode === "image") {
-    input.placeholder = "Describe the image you want…";
-  }
+  refreshComposerPlaceholder();
 }
 
 function connectionComposerLabel(server) {
