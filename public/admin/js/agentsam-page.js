@@ -73,6 +73,32 @@ function formatRelativeTime(unix) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+function refreshComposerPlaceholder() {
+  const input = $("agentsam-page-input");
+  if (!input) return;
+  if (composeContext?.mode === "image") {
+    input.placeholder = "Describe the image you want…";
+    return;
+  }
+  input.placeholder = interactionMode === "work" ? "Describe a task to work through" : "Ask anything";
+}
+
+function setInteractionMode(mode) {
+  const next = mode === "work" ? "work" : "chat";
+  interactionMode = next;
+  const page = $("agentsam-page");
+  if (page) page.dataset.agentView = next;
+  document.querySelectorAll("[data-agent-view-option]").forEach((button) => {
+    const active = button.dataset.agentViewOption === next;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+  const heroTitle = $("agentsam-hero")?.querySelector("h1");
+  if (heroTitle) heroTitle.textContent = next === "work" ? "What should we work on?" : "Where should we begin?";
+  refreshComposerPlaceholder();
+  closeToolMenu();
+}
+
 function showThread() {
   const thread = $("agentsam-thread");
   const hero = $("agentsam-hero");
