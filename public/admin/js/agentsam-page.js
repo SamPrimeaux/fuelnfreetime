@@ -637,7 +637,7 @@ async function sendMessage(text, actionContext = null) {
     renderAttachmentTray();
     composeContext = null;
     renderComposeModes();
-    $("agentsam-page-input") && ($("agentsam-page-input").placeholder = "Ask anything");
+    refreshComposerPlaceholder();
     hydrateRecentActivity();
   } catch (err) {
     typing?.remove();
