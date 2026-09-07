@@ -5,6 +5,7 @@
 import { constructWebhookEvent } from "./stripe.js";
 import { commitReservations, releaseReservations } from "./inventory.js";
 import { recordDiscountRedemption } from "../lib/discounts.js";
+import { sendOrderConfirmationEmail } from "./order-email.js";
 
 export async function handleStripeWebhook(request, env) {
   const rawBody = await request.text();
@@ -59,6 +60,9 @@ export async function handleStripeWebhook(request, env) {
             amountCents: order.discount_cents,
           });
         }
+
+        // Best-effort confirmation email (never throws). Keep this last.
+        await sendOrderConfirmationEmail(env, orderId);
         return;
       }
 
