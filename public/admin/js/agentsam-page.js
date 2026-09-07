@@ -103,21 +103,26 @@ function showThread() {
   const thread = $("agentsam-thread");
   const hero = $("agentsam-hero");
   const stage = document.querySelector(".agentsam-page-stage");
+  const page = $("agentsam-page");
   if (thread) thread.hidden = false;
   if (hero) hero.style.display = "none";
   if (stage) stage.classList.add("has-thread");
+  if (page) page.classList.add("has-thread");
+  closeToolMenu();
 }
 
 function clearThreadUi() {
   const thread = $("agentsam-thread");
   const hero = $("agentsam-hero");
   const stage = document.querySelector(".agentsam-page-stage");
+  const page = $("agentsam-page");
   if (thread) {
     thread.innerHTML = "";
     thread.hidden = true;
   }
   if (hero) hero.style.display = "";
   if (stage) stage.classList.remove("has-thread");
+  if (page) page.classList.remove("has-thread");
 }
 
 function renderComposeModes() {
