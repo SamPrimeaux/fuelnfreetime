@@ -882,6 +882,10 @@ function bindUi() {
   const menu = $("agentsam-tool-menu");
   const fileInput = $("agentsam-file-input");
 
+  document.querySelectorAll("[data-agent-view-option]").forEach((button) => {
+    button.addEventListener("click", () => setInteractionMode(button.dataset.agentViewOption));
+  });
+
   form?.addEventListener("submit", (e) => {
     e.preventDefault();
     sendMessage(input?.value || "");
