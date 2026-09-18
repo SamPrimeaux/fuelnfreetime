@@ -228,18 +228,13 @@ Local development may load these through a gitignored environment file, but prod
 
 ### Required when webhooks are created
 
-Each Completeful webhook subscription gets a signing secret returned once at creation or rotation.
+Use one integration signing secret per deployed F&FT environment:
 
-Preferred secret naming:
+- `COMPLETEFUL_WEBHOOK_SECRET`
 
-- `COMPLETEFUL_WEBHOOK_SECRET_ORDER_CREATED`
-- `COMPLETEFUL_WEBHOOK_SECRET_ORDER_UPDATED`
-- `COMPLETEFUL_WEBHOOK_SECRET_ORDER_SENT_TO_PRODUCTION`
-- `COMPLETEFUL_WEBHOOK_SECRET_ORDER_CANCELLED`
-- `COMPLETEFUL_WEBHOOK_SECRET_ORDER_REFUNDED`
-- `COMPLETEFUL_WEBHOOK_SECRET_ORDER_SHIPMENT_CREATED`
+Generate it ourselves and pass the same value when creating each Completeful subscription for the F&FT webhook receiver. This keeps raw-body verification independent of untrusted event/topic fields and avoids storing a separate secret for every topic.
 
-If we later subscribe to catalog/product topics, give those subscriptions their own Worker secret names as well.
+Completeful can also generate a secret on create/rotation, but it is revealed only once. If we ever allow provider-generated per-subscription secrets instead, each secret must be captured immediately into Worker secrets and verification must safely support key rotation.
 
 Do not put signing secrets in D1.
 
