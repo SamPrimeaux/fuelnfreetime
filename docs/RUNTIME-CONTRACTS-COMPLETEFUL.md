@@ -202,15 +202,30 @@ Proposed columns:
 
 Retain a bounded payload suitable for replay/debugging; do not persist secrets.
 
-## Tables we should not build initially
+## Catalog mirror decision
 
-- No full `completeful_catalog_products` mirror yet.
-- No duplicate Completeful request/activity log for every GET request.
-- No API-key table.
-- No webhook-secret table.
-- No duplicate customer/order tables that compete with F&FT `orders` / `order_items`.
+Fuel & Free Time intentionally maintains a local Completeful catalog mirror so the admin does not have to rediscover and sort hundreds of provider options on every browse.
 
-If catalog latency, availability, or rate limits justify a cache later, add one from observed need rather than pre-copying the provider database.
+The mirror is normalized into:
+
+- `completeful_catalog_products`
+- `completeful_catalog_variants`
+- `completeful_catalog_print_locations`
+- `completeful_catalog_images`
+- `completeful_catalog_mockups`
+- `completeful_catalog_curation`
+- `completeful_catalog_sync_state`
+
+Provider JSON is also retained on mirror rows for forward compatibility. Local curation is stored separately from mirrored provider fields, so favorites/hiding/priority survive provider refreshes without corrupting the provider snapshot.
+
+We still do not build:
+
+- a duplicate Completeful request/activity log for every GET request
+- an API-key table
+- a webhook-secret table
+- duplicate customer/order tables that compete with F&FT `orders` / `order_items`
+
+The schema is defined in `db/migrate-completeful.sql`.
 
 ## Secrets and variables
 
