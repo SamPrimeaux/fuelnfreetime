@@ -30,6 +30,16 @@ fi
 _cf_token_valid() {
   local token="$1"
   [[ -n "$token" ]] || return 1
+
+  # Account-owned API tokens (cfat_) verify against the account endpoint.
+  if [[ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]] && \
+    curl -sf -H "Authorization: Bearer ${token}" \
+      "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/tokens/verify" \
+      | grep -q '"success":true'; then
+    return 0
+  fi
+
+  # User-owned / legacy API tokens verify against the user endpoint.
   curl -sf -H "Authorization: Bearer ${token}" \
     "https://api.cloudflare.com/client/v4/user/tokens/verify" \
     | grep -q '"success":true'
