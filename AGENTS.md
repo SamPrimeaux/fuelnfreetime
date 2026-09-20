@@ -23,8 +23,9 @@ This file is the entry point for human and AI collaborators (including Connor's 
 
 | Domain | Document | Status |
 |--------|----------|--------|
-| **Commerce** — products, variants, inventory, media, cart, checkout, orders | [`docs/RUNTIME-CONTRACTS-COMMERCE.md`](docs/RUNTIME-CONTRACTS-COMMERCE.md) | Products/inventory live; Stripe **not wired** |
-| **Stripe** — ordered implementation checklist | [`docs/RUNTIME-CONTRACTS-STRIPE.md`](docs/RUNTIME-CONTRACTS-STRIPE.md) | Not started |
+| **Commerce** — products, variants, inventory, media, cart, checkout, orders | [`docs/RUNTIME-CONTRACTS-COMMERCE.md`](docs/RUNTIME-CONTRACTS-COMMERCE.md) | Products/inventory + Stripe Checkout live |
+| **Stripe** — implementation/history checklist | [`docs/RUNTIME-CONTRACTS-STRIPE.md`](docs/RUNTIME-CONTRACTS-STRIPE.md) | Checkout session + signed webhook + reservation flow implemented |
+| **Completeful** — provider/catalog/fulfillment bridge | [`docs/RUNTIME-CONTRACTS-COMPLETEFUL.md`](docs/RUNTIME-CONTRACTS-COMPLETEFUL.md) | Phase A runtime coded; CAPP_KEY + first provider sync pending |
 | **AgentSam app/runtime/UI** — Chat, Work, composer, tools, frontend/backend source authority | [`docs/RUNTIME-CONTRACTS-AGENTSAM.md`](docs/RUNTIME-CONTRACTS-AGENTSAM.md) | `app/` is canonical; legacy paths are bridges/output |
 | **Agent Sam skills (R2 + D1)** | [`docs/AGENTSAM-SKILLS.md`](docs/AGENTSAM-SKILLS.md) | Sync with `npm run agentsam:skills:sync` |
 | **Project context** | D1 `agentsam_project_context.id = ctx_fuelnfreetime` | Worker + IAM registry — `npm run db:seed:ctx-fuelnfreetime:all` |
@@ -41,6 +42,8 @@ If a feature does not fit an existing contract, **update the contract first** (o
 | Worker router | `src/index.js` |
 | Public store API | `src/store/api.js` |
 | Admin API router | `src/admin/api.js` |
+| Completeful admin API | `src/admin/completeful.js` |
+| Completeful provider client / catalog mirror | `src/completeful/client.js`, `src/completeful/catalog.js` |
 | AgentSam frontend | `app/frontend/admin/agentsam/` |
 | AgentSam backend handler | `app/backend/admin/agentsam.js` |
 | AgentSam runtime modules | `app/backend/agentsam/` |
@@ -48,7 +51,7 @@ If a feature does not fit an existing contract, **update the contract first** (o
 | Store preferences | `src/admin/store.js` |
 | Admin auth | `src/lib/auth.js` |
 | Admin clean URLs | `src/lib/admin-routes.js` |
-| D1 schema | `db/schema.sql` |
+| D1 schema / migrations | `db/schema.sql` + `db/migrate-*.sql` |
 | Storefront JS | `public/js/store-catalog.js`, `store-product.js`, `store-cart.js` |
 | Admin product editor | `public/admin/product-edit.html`, `public/admin/js/media-picker.js` |
 | CMS | `src/cms/api.js`, `src/cms/registry.js`, `src/cms/r2-store.js` |
@@ -76,6 +79,7 @@ npm run dev                    # local Worker
 npm run deploy                 # production deploy
 npm run admin:create -- <email> <password>
 npm run db:migrate             # apply schema.sql remote
+npm run db:migrate:completeful # ensure Completeful mirror/link schema exists
 npm run db:seed:tee            # sample product + variants
 npm run cms:bootstrap          # seed CMS from registry
 npm run cms:republish          # rebuild KV snapshots
@@ -96,7 +100,7 @@ npm run cf:status              # Cloudflare account sanity check
 
 ## What is stubbed (do not assume it works)
 
-- **Stripe / payments** — checkout creates D1 orders only
+- **Completeful fulfillment runtime** — Phase A client/catalog sync is implemented in code; CAPP_KEY still must be installed before provider sync can run
 - **Order confirmation email** — no Resend send on checkout
 - **Store password / B2B gates** — saved in prefs, not enforced on storefront
 - **Order detail admin API** — list only, no line items endpoint
