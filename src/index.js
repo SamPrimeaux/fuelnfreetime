@@ -35,6 +35,7 @@ import {
   handleResendInboundWebhook,
   handleResendWebhookLegacy,
 } from "./webhooks/resend.js";
+import { handleCompletefulWebhook } from "./webhooks/completeful.js";
 
 export { CmsEditorRoom } from "./do/CmsEditorRoom.js";
 
@@ -249,6 +250,10 @@ export default {
 
     if (path === "/api/agentsam/webhooks/resend" && request.method === "POST") {
       return handleResendWebhookLegacy(request, env);
+    }
+
+    if (path === "/api/webhooks/completeful" && request.method === "POST") {
+      return handleCompletefulWebhook(request, env);
     }
 
     if (path === "/api/internal/cms/warm" && request.method === "POST") {
