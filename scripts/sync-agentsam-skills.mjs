@@ -57,6 +57,13 @@ function parseFrontmatter(content) {
   return { meta, body: content.slice(match[0].length) };
 }
 
+function parseListMeta(value) {
+  return String(value || "")
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
+
 function slugToId(slug) {
   return `skill_${String(slug).replace(/-/g, "_")}`;
 }
