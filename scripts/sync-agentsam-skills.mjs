@@ -70,6 +70,8 @@ function slugToId(slug) {
 
 function inferSkillDomain(slug, description = "") {
   const s = `${slug} ${description}`.toLowerCase();
+  if (s.includes("genmedia") || s.includes("image") || s.includes("creative") || s.includes("brand media")) return "media";
+  if (s.includes("completeful")) return "commerce";
   if (s.includes("stripe") || s.includes("payment") || s.includes("checkout")) return "stripe";
   if (s.includes("commerce") || s.includes("product") || s.includes("inventory")) return "commerce";
   if (
