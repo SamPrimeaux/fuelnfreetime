@@ -24,6 +24,7 @@ export default function App() {
         </Route>
         <Route path="account" element={<AccountRoute />} />
         <Route path="products/create" element={<ProductStudioRoute />} />
+        <Route path="products/create/:productId" element={<ProductStudioRoute />} />
       </Route>
       <Route path="*" element={<Navigate to="/analytics/overview" replace />} />
     </Routes>
@@ -39,7 +40,7 @@ function AccountRoute() {
 
 function ProductStudioRoute() {
   useEffect(() => {
-    document.title = "New product — Fuel & Free Time Admin";
+    document.title = "Create & Explore Designs — Fuel & Free Time Admin";
   }, []);
   return <ProductStudioPage />;
 }
