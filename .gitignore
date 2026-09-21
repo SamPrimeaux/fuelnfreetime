@@ -1,3 +1,4 @@
+.agentsam/
 node_modules/
 .wrangler/
 .dev.vars
