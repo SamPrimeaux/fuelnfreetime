@@ -45,6 +45,9 @@ const NAV: NavSection[] = [
     title: "Apps",
     items: [{ to: "/admin/dashboard/email.html", label: "Email" }],
   },
+  {
+    items: [{ to: "/account", label: "Account" }],
+  },
 ];
 
 function isGroup(item: NavLinkItem | NavGroup): item is NavGroup {
@@ -52,7 +55,8 @@ function isGroup(item: NavLinkItem | NavGroup): item is NavGroup {
 }
 
 function LegacyLink({ to, className, children }: { to: string; className?: string; children: React.ReactNode }) {
-  const isSpa = to.startsWith("/analytics");
+  const SPA_PREFIXES = ["/analytics", "/account"];
+  const isSpa = SPA_PREFIXES.some((prefix) => to.startsWith(prefix));
   if (isSpa) {
     return (
       <NavLink to={to} className={className} end>
@@ -69,8 +73,21 @@ function LegacyLink({ to, className, children }: { to: string; className?: strin
 
 export default function AdminLayout() {
   const [email, setEmail] = useState("…");
+  const [navCollapsed, setNavCollapsed] = useState(() => {
+    const stored = localStorage.getItem("fnf-admin-nav-collapsed");
+    if (stored != null) return stored === "1";
+    return typeof window !== "undefined" && window.matchMedia("(max-width: 900px)").matches;
+  });
   const location = useLocation();
   const inAnalytics = location.pathname.startsWith("/analytics");
+
+  function toggleNav() {
+    setNavCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("fnf-admin-nav-collapsed", next ? "1" : "0");
+      return next;
+    });
+  }
 
   useEffect(() => {
     document.body.classList.add("console-theme", "console-body-bleed", "admin-body-bleed");
@@ -100,6 +117,19 @@ export default function AdminLayout() {
           </div>
         </div>
         <div className="console-topbar-actions">
+          <button
+            type="button"
+            className="console-nav-toggle-btn"
+            onClick={toggleNav}
+            aria-label={navCollapsed ? "Open navigation" : "Close navigation"}
+            aria-expanded={!navCollapsed}
+          >
+            <span className="console-nav-toggle-icon" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+            </span>
+          </button>
           <div className="console-store-wrap">
             <button type="button" className="console-store-btn">
               <img src={LOGO_URL} alt="" />
@@ -109,7 +139,7 @@ export default function AdminLayout() {
         </div>
       </header>
       <div className="console-body">
-        <aside className="console-sidenav admin-sidebar">
+        <aside className={`console-sidenav admin-sidebar${navCollapsed ? " is-collapsed" : ""}`}>
           {NAV.map((section, si) => (
             <div key={si}>
               {section.title && <div className="console-nav-label">{section.title}</div>}

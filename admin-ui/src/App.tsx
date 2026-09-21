@@ -5,6 +5,7 @@ import AnalyticsShell from "./pages/analytics/AnalyticsShell";
 import OverviewPage from "./pages/analytics/OverviewPage";
 import FinancePage from "./pages/analytics/FinancePage";
 import HealthPage from "./pages/analytics/HealthPage";
+import AccountPage from "./pages/account/AccountPage";
 import type { RangeKey } from "./lib/types";
 
 export type AnalyticsOutletContext = { range: RangeKey; setRange: (r: RangeKey) => void };
@@ -20,10 +21,18 @@ export default function App() {
           <Route path="finance" element={<AnalyticsRoute page={FinancePage} title="Finance" />} />
           <Route path="health" element={<AnalyticsRoute page={HealthPage} title="Health" />} />
         </Route>
+        <Route path="account" element={<AccountRoute />} />
       </Route>
       <Route path="*" element={<Navigate to="/analytics/overview" replace />} />
     </Routes>
   );
+}
+
+function AccountRoute() {
+  useEffect(() => {
+    document.title = "Account — Fuel & Free Time Admin";
+  }, []);
+  return <AccountPage />;
 }
 
 function AnalyticsRoute({
