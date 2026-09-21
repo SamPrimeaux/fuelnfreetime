@@ -94,6 +94,7 @@ function inferTags(slug, domain) {
   const tags = [slug.replace(/-/g, "_")];
   if (domain === "stripe") tags.push("stripe", "payments", "checkout", "webhooks");
   if (domain === "commerce") tags.push("commerce", "products", "inventory", "orders");
+  if (domain === "media") tags.push("media", "image_generation", "image_to_text", "brand", "creative");
   if (domain === "cloudflare") {
     tags.push(
       "cloudflare",
