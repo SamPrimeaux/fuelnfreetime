@@ -29,6 +29,7 @@ const NAV = {
       label: "Products",
       icon: "products",
       children: [
+        { href: "/admin/products/create", label: "Create product" },
         { href: "/admin/products", label: "All products" },
         { href: "/admin/products", label: "Collections" },
         { href: "/admin/inventory", label: "Inventory" },
