@@ -336,6 +336,7 @@ export default {
     // Analytics SPA — /admin/analytics/overview|finance|health (no .html)
     const analyticsViewMatch = path.match(/^\/admin\/analytics\/(overview|finance|health)\/?$/);
     const accountViewMatch = path === "/admin/account" || path === "/admin/account/";
+    const productStudioMatch = path === "/admin/products/create" || path === "/admin/products/create/";
     if (path === ADMIN_ANALYTICS_PREFIX || path === `${ADMIN_ANALYTICS_PREFIX}/`) {
       const user = await getSessionUser(request, env);
       if (!user) {
@@ -345,7 +346,7 @@ export default {
         Response.redirect(new URL(`${ADMIN_ANALYTICS_PREFIX}/overview`, request.url), 302)
       );
     }
-    if (analyticsViewMatch || accountViewMatch) {
+    if (analyticsViewMatch || accountViewMatch || productStudioMatch) {
       const user = await getSessionUser(request, env);
       if (!user) {
         return noStore(redirectToAdminLogin(request));

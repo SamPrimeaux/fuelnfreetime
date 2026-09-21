@@ -17,6 +17,7 @@ const NAV: NavSection[] = [
       {
         label: "Products",
         children: [
+          { to: "/products/create", label: "Create product" },
           { to: "/admin/products.html", label: "All products" },
           { to: "/admin/inventory.html", label: "Inventory" },
         ],
@@ -80,6 +81,7 @@ export default function AdminLayout() {
   });
   const location = useLocation();
   const inAnalytics = location.pathname.startsWith("/analytics");
+  const inProducts = location.pathname.startsWith("/products");
 
   function toggleNav() {
     setNavCollapsed((prev) => {
@@ -145,7 +147,9 @@ export default function AdminLayout() {
               {section.title && <div className="console-nav-label">{section.title}</div>}
               {section.items.map((item) => {
                 if (isGroup(item)) {
-                  const open = inAnalytics && item.label === "Analytics";
+                  const open =
+                    (inAnalytics && item.label === "Analytics") ||
+                    (inProducts && item.label === "Products");
                   return (
                     <div key={item.label}>
                       <div className={`console-nav-split${open ? " is-active" : ""}`}>
