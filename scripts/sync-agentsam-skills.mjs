@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Upload .cursor/skills markdown → R2 agentsam/skills/
+ * Upload AgentSam skill markdown from .cursor/skills + app-owned skills/
+ * → R2 agentsam/skills/ and upsert agentsam_skill registry metadata.
  * Upsert agentsam_skill + agentsam_skill_file rows from SKILL.md frontmatter.
  *
  * Usage:
