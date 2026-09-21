@@ -17,7 +17,6 @@ export const ADMIN_CLEAN_PAGES = new Set([
   "theme-editor",
   "store",
   "preferences",
-  "account",
   "email",
   "agentsam",
 ]);
