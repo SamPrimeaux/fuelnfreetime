@@ -137,6 +137,7 @@ function inferTaskTypes(domain, slug) {
 
 function inferSortOrder(domain, slug) {
   if (slug === "fnf-cloudflare-runtime") return 1;
+  if (domain === "media") return 4;
   if (domain === "commerce") return 5;
   if (domain === "stripe") return 10;
   if (domain === "cloudflare") return 8;
