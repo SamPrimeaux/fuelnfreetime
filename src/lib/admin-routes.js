@@ -27,6 +27,7 @@ export const ADMIN_PUBLIC_PAGES = new Set(["login"]);
 /** Clean path → static asset file */
 export const ADMIN_CLEAN_ALIASES = {
   "/admin/email": "/admin/dashboard/email.html",
+  "/admin/products/create": "/admin/product-create.html",
 };
 
 /** Legacy .html paths → clean canonical URL (301) */
