@@ -17,7 +17,10 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
-const SKILLS_SRC = path.join(REPO_ROOT, ".cursor/skills");
+const SKILL_SOURCES = [
+  { root: path.join(REPO_ROOT, ".cursor/skills"), source: ".cursor/skills" },
+  { root: path.join(REPO_ROOT, "skills"), source: "skills" },
+];
 const R2_PREFIX = "agentsam/skills";
 const BUCKET = "fuelnfreetime";
 const TENANT_ID = "tenant_fuelnfreetime";
