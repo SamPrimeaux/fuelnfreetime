@@ -117,6 +117,7 @@ const ALWAYS_APPLY_SLUGS = new Set(["fnf-cloudflare-runtime"]);
 function inferTaskTypes(domain, slug) {
   if (domain === "stripe") return ["stripe", "payments", "commerce"];
   if (domain === "commerce") return ["commerce", "products", "inventory", "orders"];
+  if (domain === "media") return ["image_generation", "image_to_text", "brand_design", "content_generation"];
   if (domain === "cloudflare") {
     return [
       "cloudflare",
