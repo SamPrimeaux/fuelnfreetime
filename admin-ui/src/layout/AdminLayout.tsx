@@ -56,7 +56,7 @@ function isGroup(item: NavLinkItem | NavGroup): item is NavGroup {
 }
 
 function LegacyLink({ to, className, children }: { to: string; className?: string; children: React.ReactNode }) {
-  const SPA_PREFIXES = ["/analytics", "/account"];
+  const SPA_PREFIXES = ["/analytics", "/account", "/products"];
   const isSpa = SPA_PREFIXES.some((prefix) => to.startsWith(prefix));
   if (isSpa) {
     return (
@@ -79,6 +79,8 @@ export default function AdminLayout() {
     if (stored != null) return stored === "1";
     return typeof window !== "undefined" && window.matchMedia("(max-width: 900px)").matches;
   });
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerMounted, setDrawerMounted] = useState(false);
   const location = useLocation();
   const inAnalytics = location.pathname.startsWith("/analytics");
   const inProducts = location.pathname.startsWith("/products");
@@ -100,6 +102,79 @@ export default function AdminLayout() {
       document.body.classList.remove("console-body-bleed", "admin-body-bleed");
     };
   }, []);
+
+  // Same as shell.js's mobile drawer: body class drives the slide-in
+  // transform + backdrop opacity defined in admin.css.
+  useEffect(() => {
+    document.body.classList.toggle("admin-nav-open", drawerOpen);
+  }, [drawerOpen]);
+
+  // Skip the entrance transition on first paint (mirrors shell.js's
+  // stabilizeShellDrawers — avoid an unwanted slide-in on page load).
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setDrawerMounted(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  // Close the drawer whenever the route changes — same behavior as
+  // shell.js closing on nav-link click.
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [location.pathname]);
+
+  async function onLogout() {
+    await fetch("/api/admin/logout", { method: "POST" }).catch(() => {});
+    window.location.href = "/admin/login";
+  }
+
+  function renderNav() {
+    return NAV.map((section, si) => (
+      <div key={si}>
+        {section.title && <div className="console-nav-label">{section.title}</div>}
+        {section.items.map((item) => {
+          if (isGroup(item)) {
+            const open =
+              (inAnalytics && item.label === "Analytics") || (inProducts && item.label === "Products");
+            return (
+              <div key={item.label}>
+                <div className={`console-nav-split${open ? " is-active" : ""}`}>
+                  {item.to ? (
+                    <LegacyLink to={item.to} className="console-nav-item console-nav-item--split">
+                      <span>{item.label}</span>
+                    </LegacyLink>
+                  ) : (
+                    <span className="console-nav-item console-nav-item--split">{item.label}</span>
+                  )}
+                </div>
+                <div className={`console-nav-children${open ? " is-open" : ""}`}>
+                  {item.children!.map((child) => (
+                    <NavLink
+                      key={child.to}
+                      to={child.to}
+                      end={child.end}
+                      className={({ isActive }) => `console-nav-child${isActive ? " is-active" : ""}`}
+                    >
+                      {({ isActive }) => (
+                        <>
+                          {isActive ? <span className="branch">↳</span> : null}
+                          {child.label}
+                        </>
+                      )}
+                    </NavLink>
+                  ))}
+                </div>
+              </div>
+            );
+          }
+          return (
+            <LegacyLink key={item.to} to={item.to} className="console-nav-item">
+              <span>{item.label}</span>
+            </LegacyLink>
+          );
+        })}
+      </div>
+    ));
+  }
 
   return (
     <div className="console-shell admin-shell">
@@ -142,64 +217,77 @@ export default function AdminLayout() {
       </header>
       <div className="console-body">
         <aside className={`console-sidenav admin-sidebar${navCollapsed ? " is-collapsed" : ""}`}>
-          {NAV.map((section, si) => (
-            <div key={si}>
-              {section.title && <div className="console-nav-label">{section.title}</div>}
-              {section.items.map((item) => {
-                if (isGroup(item)) {
-                  const open =
-                    (inAnalytics && item.label === "Analytics") ||
-                    (inProducts && item.label === "Products");
-                  return (
-                    <div key={item.label}>
-                      <div className={`console-nav-split${open ? " is-active" : ""}`}>
-                        {item.to ? (
-                          <LegacyLink
-                            to={item.to}
-                            className="console-nav-item console-nav-item--split"
-                          >
-                            <span>{item.label}</span>
-                          </LegacyLink>
-                        ) : (
-                          <span className="console-nav-item console-nav-item--split">{item.label}</span>
-                        )}
-                      </div>
-                      <div className={`console-nav-children${open ? " is-open" : ""}`}>
-                        {item.children!.map((child) => (
-                          <NavLink
-                            key={child.to}
-                            to={child.to}
-                            end={child.end}
-                            className={({ isActive }) =>
-                              `console-nav-child${isActive ? " is-active" : ""}`
-                            }
-                          >
-                            {({ isActive }) => (
-                              <>
-                                {isActive ? <span className="branch">↳</span> : null}
-                                {child.label}
-                              </>
-                            )}
-                          </NavLink>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                }
-                return (
-                  <LegacyLink key={item.to} to={item.to} className="console-nav-item">
-                    <span>{item.label}</span>
-                  </LegacyLink>
-                );
-              })}
-            </div>
-          ))}
+          {renderNav()}
         </aside>
+
+        <button
+          type="button"
+          className="admin-menu-toggle"
+          aria-label={drawerOpen ? "Close navigation" : "Open navigation"}
+          aria-expanded={drawerOpen}
+          aria-controls="admin-drawer"
+          onClick={() => setDrawerOpen((v) => !v)}
+        >
+          <span className="admin-menu-toggle-icon" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </span>
+        </button>
+        <div
+          className="admin-drawer-backdrop"
+          aria-hidden={!drawerOpen}
+          onClick={() => setDrawerOpen(false)}
+        />
+        <aside
+          className={`admin-drawer${drawerMounted ? " drawer-mounted" : ""}`}
+          id="admin-drawer"
+          aria-hidden={!drawerOpen}
+        >
+          <div className="admin-drawer-head">
+            <a href="/admin/home" className="admin-drawer-logo">
+              <img src={LOGO_URL} alt="" width={48} height={48} />
+              <span>Fuel &amp; Free Time</span>
+            </a>
+            <button
+              type="button"
+              className="admin-drawer-close"
+              aria-label="Close navigation"
+              onClick={() => setDrawerOpen(false)}
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                aria-hidden="true"
+              >
+                <path d="M18 6 6 18"></path>
+                <path d="m6 6 12 12"></path>
+              </svg>
+            </button>
+          </div>
+          <nav
+            className="console-sidenav admin-nav admin-nav--drawer"
+            style={{ display: "block", width: "100%", border: 0, background: "transparent", padding: 0 }}
+          >
+            {renderNav()}
+          </nav>
+          <div className="admin-drawer-footer">
+            <div className="admin-user-email">{email}</div>
+            <button className="admin-logout-btn" type="button" onClick={onLogout}>
+              Log out
+            </button>
+          </div>
+        </aside>
+
         <main className="console-main admin-main console-main--bleed">
           <Outlet />
         </main>
       </div>
-      <div className="admin-drawer-footer" style={{ display: "none" }} data-admin-email={email} />
     </div>
   );
 }
