@@ -211,6 +211,8 @@ function inferRouteKeys(domain, slug, taskTypes = []) {
     keys.push({ intent: "commerce", task_type: "store_ops" }, { workflow_key: "fnf_agentsam_chat", task_type: "commerce" });
   } else if (domain === "commerce") {
     keys.push({ intent: "commerce", task_type: "store_ops" }, { route_key: "commerce" });
+  } else if (domain === "media") {
+    keys.push({ intent: "content", task_type: "image_generation" }, { workflow_key: "fnf_creative_studio", task_type: "image_generation" });
   } else if (domain === "cloudflare") {
     keys.push({ intent: "code", task_type: "repo_work" }, { route_key: "code" });
   }
