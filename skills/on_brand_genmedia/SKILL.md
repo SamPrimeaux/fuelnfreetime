@@ -1,95 +1,220 @@
-On-Brand GenMedia Agent - REWRITE TO THIS APPS NEEDS/BINDINGS.                • DB · d1 (fuelnfreetime)
-               • AGENTSAM_WAI · ai
-               • ASSETS · assets
-               • CMS_CACHE · kv_namespace (bc3b4e3f272e4b46b3c92df6dff85bff)
-               • CMS_EDITOR · durable_object_namespace
-               • FNF_VECTORIZE · vectorize
-               • WEBSITE_ASSETS · r2 (fuelnfreetime)
-               • 10 vars · 12 secrets
+---
+name: On-Brand GenMedia - Fuel & Free Time
+description: Fuel & Free Time brand-aware visual generation and product mockup workflow. Use for generated product art, banners, campaign creative, social media, product mockups, image review, and media that must follow the F&FT brand dossier.
+skill_domain: media
+task_types: image_generation,image_to_text,brand_design,content_generation,commerce
+access_mode: read_write
+slash_trigger: genmedia
+sort_order: 4
+globs: docs/brand/**,app/backend/agentsam/**,src/admin/media.js,src/completeful/**,src/admin/completeful.js
+---
 
-Skill key: on_brand_genmedia
-Slash trigger: /genmedia
-Scope: workspace
-Task types: agent, plan
+# On-Brand GenMedia - Fuel & Free Time
 
-Purpose
-Takes a user prompt, enriches it against workspace brand guidelines in Vectorize, generates an image, scores it against policy chunks, and iterates until the score passes threshold or max iterations. Every sub-agent is a real agentsam_subagent_profile row. Loop state lives in agentsam_spawn_job. Output goes to R2 + image_generation_jobs.
+This skill is owned by Fuel & Free Time and scoped to `ws_fuelnfreetime`. Do not substitute Inner Animal Media brand/storage/vector lanes.
 
-Orchestration sequence
-Parent run — User invokes /genmedia or task type matches. Create parent agentsam_agent_run + agentsam_spawn_job:
+## Runtime authority
 
-master_agent_slug = on_brand_genmedia
-subagent_slug = genmedia_prompt_enrichment (first step)
-merged_output = {}
-status = pending
-genmedia_prompt_enrichment — Enrich raw prompt via:
+Use the deployed F&FT Worker contract:
 
-AGENTSAM_VECTORIZE_DOCUMENTS — source_type IN ('knowledge','clients','workflows')
-AGENTSAM_VECTORIZE_MEMORY — workspace brand preferences
-Output: single enriched generation prompt string (brand color, tone, subject, layout)
-Patch merged_output.enriched_prompt
-genmedia_image_gen — Generate image:
+- `DB` -> D1 `fuelnfreetime` (`9fd6ff92-e407-4b51-8b01-3c93f3845bb2`)
+- `AGENTSAM_WAI` -> Workers AI
+- `FNF_VECTORIZE` -> `fnf-agentsam-bge-m3-1024`
+- `WEBSITE_ASSETS` -> R2 bucket `fuelnfreetime`
+- `CMS_CACHE` -> F&FT CMS cache
+- `CMS_EDITOR` -> `CmsEditorRoom`
+- `ASSETS` -> static Worker assets
+- `OPENAI_API_KEY` -> server-side OpenAI provider secret
 
-Input: enriched prompt + merged_output.last_feedback (empty on first pass)
-Provider from agentsam_ai catalog, task_type=image_generation
-Upload via agentsam_cf_images_upload → R2
-Upsert image_generation_jobs (status=completed, prompt_text, provider, model, run_id)
-Patch merged_output.current_r2_key
-genmedia_scoring — Brand compliance score:
+Canonical config: `wrangler.toml`.
 
-Input: R2 key + iteration number
-Fetch image (agentsam_r2_get); retrieve rubric from AGENTSAM_VECTORIZE_DOCUMENTS where source_type=policy
-LLM score → { score, feedback, passed, r2_key }
-Insert image_generation_variants (variant_type=iteration_N, artifact_id=R2 key, sort_order=N)
-JSON-patch agentsam_spawn_job.merged_output (best_score, last_feedback, iterations[])
-genmedia_checker — Loop control:
+Do not reference IAM-only `AGENTSAM_VECTORIZE_DOCUMENTS`, `AGENTSAM_VECTORIZE_MEMORY`, IAM `agent-sam` R2, or IAM-only image/spawn tables.
 
-Read threshold from agentsam_memory key brand_score_threshold (default 75)
-Read max_iterations from this skill's metadata_json (default 3)
-If passed OR subagents_spawned >= max_iterations → status=completed, return best_r2_key
-Else spawn genmedia_image_gen again with feedback, then genmedia_scoring
-Loop state (agentsam_spawn_job)
-Field	Usage
-master_run_id	Parent agentsam_agent_run.id
-master_agent_slug	on_brand_genmedia
-subagent_slug	Current active sub-agent
-subagents_spawned	Iteration counter
-subagents_succeeded	Passed threshold count
-merge_quality_score	Best score achieved
-merged_output	JSON: { current_r2_key, best_r2_key, best_score, last_feedback, enriched_prompt, iterations[] }
-status	pending → running → completed / failed
-total_cost_usd	Accumulated gen + scoring cost
-No new columns required.
+## Existing workflow: fnf_creative_studio
 
-Vector lanes
-Step	Lane	Filter
-Enrichment	DOCUMENTS	source_type IN ('knowledge','clients','workflows')
-Enrichment	MEMORY	workspace-scoped brand prefs
-Scoring	DOCUMENTS	source_type = 'policy'
-Accepted output	MEDIA	embed accepted image to AGENTSAM_VECTORIZE_MEDIA
-Not used: COURSES, CODE, SCHEMA lanes.
+Do not invent a parallel spawn loop. The live F&FT workflow is:
 
-Config (D1 only — no .env)
-Setting	Location	Key / field
-Score threshold	agentsam_memory	brand_score_threshold (default 75)
-Max iterations	agentsam_skill.metadata_json	max_iterations (default 3)
-Image provider	agentsam_ai catalog	task_type=image_generation
-R2 prefix	agentsam_memory or workspace	brand_r2_prefix
-Policy docs	documents lane	source_type=policy — run npm run run:ingest_genmedia_brand_policy
-Sub-agent slugs
-genmedia_prompt_enrichment
-genmedia_image_gen
-genmedia_scoring
-genmedia_checker
-Prerequisites
-Policy docs ingested (source_type=policy) — see docs/inneranimalmedia/brand/genmedia-brand-policy.md
-Sub-agent profiles seeded (migration 653)
-Spawn tree linkage (Sprint 2A) for parent↔child runs
-Verification
-# Policy chunks exist
+1. `fnf.capture_creative_brief`
+2. `fnf.load_visual_context`
+3. `fnf.plan_creative`
+4. `fnf.generate_creative`
+5. `fnf.approval_creative` when a live asset replacement is requested
+6. `fnf.verify_creative`
+7. `fnf.present_creative`
+8. `fnf.write_memory`
 
-# Profiles
-# D1: SELECT slug FROM agentsam_subagent_profile WHERE slug LIKE 'genmedia_%';
+The workflow default task type is `image_generation`.
 
-# MCP spawn tree after a run
-# agentsam_spawn_tree { "run_id": "<parent_ar_id>" }
+Current audit note: the workflow node handler keys are present in `agentsam_workflow_nodes`, but most are not yet normalized as individual `agentsam_tools` rows. Treat them as workflow implementation hooks, not proof of separate callable tools.
+
+## Brand context
+
+Canonical brand document:
+
+- `docs/brand/business-brand-dossier.md`
+
+Before generation:
+
+1. Retrieve relevant brand context through `fnf_semantic_search` using `source_type=brand` when available.
+2. Retrieve product context with `source_type=product` for product-specific creative.
+3. Read the exact dossier section when repo access is available.
+4. Load existing media/product images from `media_assets` / `product_images`.
+5. Never use `CMS_CACHE` as the source of truth for brand decisions.
+
+## Image generation
+
+Route visual generation through the AgentSam AI runtime with:
+
+- `task_type = image_generation`
+- workflow `fnf_creative_studio`
+- brand/product context included in the system/user prompt
+
+The model registry already contains active image lanes including FLUX, Leonardo, and inpainting models. The current `app/backend/agentsam/ai-run.js` image-generation executor also has a server-side OpenAI path using `OPENAI_API_KEY`.
+
+Important runtime truth:
+
+- Do not hard-code a model in this skill.
+- Select by `task_type=image_generation` and let the runtime registry/dispatcher own model routing.
+- Current audit found that the image-generation executor presently sends the generation request to OpenAI `gpt-image-2` even when a Workers AI image model row was selected. That is a dispatcher normalization issue, not a missing-capability issue.
+- Vision/review uses the `image_to_text` lane through `AGENTSAM_WAI`.
+
+## Creative brief contract
+
+Before generating, normalize the request into:
+
+- objective
+- audience
+- channel/placement
+- product or subject
+- required copy
+- palette/material cues
+- composition/layout
+- typography behavior
+- mood
+- required brand elements
+- avoid-list
+- dimensions/aspect ratio
+- product-truth constraints
+- accessibility/readability constraints
+
+For product imagery, never invent product features, colors, materials, variants, or dimensions that conflict with local product/catalog data.
+
+## Persist generated media
+
+Generated images must become real F&FT media assets before downstream Completeful use.
+
+Use the existing media library:
+
+- R2 binding: `WEBSITE_ASSETS`
+- D1 table: `media_assets`
+- public route: `/media/{r2_key}`
+- canonical public URL for provider calls: `https://fuelnfreetime.com/media/{r2_key}`
+
+Stage generated creative under an appropriate R2 prefix and register the asset in `media_assets`.
+
+Do not replace a primary product image, homepage hero, or campaign asset without the workflow approval gate.
+
+## Completeful design + mockup bridge
+
+For product-ready creative, Completeful is the downstream placement/render/export system.
+
+Provider base:
+
+`https://vxapi.completeful.com/v1`
+
+Use the Worker-side `CAPP_KEY`; never expose it to browser code.
+
+### Design creation
+
+Create a Completeful design with `POST /v1/designs`.
+
+Useful fields include:
+
+- `name`
+- `artfile_url` or `image_url` -> public F&FT media URL
+- `canvas_json`
+- `shop_id`
+- `collection`
+- `tags`
+- `width` / `height`
+- personalization fields when applicable
+
+Use `Idempotency-Key` for create/action calls.
+
+### Design export
+
+Use:
+
+- `POST /v1/designs/{designId}/exports`
+- `GET /v1/designs/exports/{exportId}`
+
+Supported export intent includes JSON/PNG/JPEG/SVG according to the provider contract.
+
+### Catalog placement
+
+Resolve the provider product before rendering:
+
+- `GET /v1/catalog/products/{productId}/print-locations`
+- `GET /v1/catalog/products/{productId}/mockups`
+- `GET /v1/catalog/products/{productId}/assets`
+- `GET /v1/catalog/products/by-sku/{sku}`
+
+### Mockup render
+
+Use `POST /v1/mockups/renders` with:
+
+- `mockup_id`
+- `art_url` -> public F&FT media URL
+- `output.format`
+- `output.max_size`
+- `output.clip_to_print_area`
+
+A render may return immediately or queue. Poll:
+
+`GET /v1/mockups/renders/{renderId}`
+
+This is product mockup/rendering, not the upstream generative model itself.
+
+## Review loop
+
+After generation/render:
+
+1. Run image review through the active `image_to_text` model lane.
+2. Compare against the brand dossier and product truth.
+3. Check composition, logo treatment, copy legibility, product fidelity, dimensions, and channel fit.
+4. Iterate the generation only when the feedback is actionable.
+5. Store the approved asset key and relevant design/mockup IDs for reuse.
+
+## Safety and authority boundaries
+
+- F&FT D1 remains authority for local product identity, retail pricing, orders, and storefront state.
+- Completeful supplies provider catalog/design/mockup/fulfillment state.
+- Never place secret values in D1 rows, prompts, R2 metadata, or generated files.
+- Never use `CMS_EDITOR` as generic image-job state.
+- Never create a new Durable Object just for this workflow.
+- Never treat a provider mockup as a live storefront image until explicitly approved.
+
+## Verification
+
+```sql
+SELECT id, provider, model_id, display_name, task_type, lane, status
+FROM agentsam_ai
+WHERE task_type IN ('image_generation','image_to_text')
+ORDER BY task_type, priority;
+```
+
+```sql
+SELECT workflow_key, default_task_type, is_active
+FROM agentsam_workflows
+WHERE workflow_key = 'fnf_creative_studio';
+```
+
+```sql
+SELECT id, slug, file_path, retrieval_strategy, version, is_active
+FROM agentsam_skill
+WHERE slug = 'on_brand_genmedia';
+```
+
+Expected skill object:
+
+`r2://fuelnfreetime/agentsam/skills/on_brand_genmedia/SKILL.md`

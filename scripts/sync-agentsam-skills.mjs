@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Upload .cursor/skills markdown → R2 agentsam/skills/
+ * Upload AgentSam skill markdown from .cursor/skills + app-owned skills/
+ * → R2 agentsam/skills/ and upsert agentsam_skill registry metadata.
  * Upsert agentsam_skill + agentsam_skill_file rows from SKILL.md frontmatter.
  *
  * Usage:
@@ -16,7 +17,10 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
-const SKILLS_SRC = path.join(REPO_ROOT, ".cursor/skills");
+const SKILL_SOURCES = [
+  { root: path.join(REPO_ROOT, ".cursor/skills"), source: ".cursor/skills" },
+  { root: path.join(REPO_ROOT, "skills"), source: "skills" },
+];
 const R2_PREFIX = "agentsam/skills";
 const BUCKET = "fuelnfreetime";
 const TENANT_ID = "tenant_fuelnfreetime";
@@ -53,12 +57,21 @@ function parseFrontmatter(content) {
   return { meta, body: content.slice(match[0].length) };
 }
 
+function parseListMeta(value) {
+  return String(value || "")
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
+
 function slugToId(slug) {
   return `skill_${String(slug).replace(/-/g, "_")}`;
 }
 
 function inferSkillDomain(slug, description = "") {
   const s = `${slug} ${description}`.toLowerCase();
+  if (s.includes("genmedia") || s.includes("image") || s.includes("creative") || s.includes("brand media")) return "media";
+  if (s.includes("completeful")) return "commerce";
   if (s.includes("stripe") || s.includes("payment") || s.includes("checkout")) return "stripe";
   if (s.includes("commerce") || s.includes("product") || s.includes("inventory")) return "commerce";
   if (
@@ -81,6 +94,7 @@ function inferTags(slug, domain) {
   const tags = [slug.replace(/-/g, "_")];
   if (domain === "stripe") tags.push("stripe", "payments", "checkout", "webhooks");
   if (domain === "commerce") tags.push("commerce", "products", "inventory", "orders");
+  if (domain === "media") tags.push("media", "image_generation", "image_to_text", "brand", "creative");
   if (domain === "cloudflare") {
     tags.push(
       "cloudflare",
@@ -103,6 +117,7 @@ const ALWAYS_APPLY_SLUGS = new Set(["fnf-cloudflare-runtime"]);
 function inferTaskTypes(domain, slug) {
   if (domain === "stripe") return ["stripe", "payments", "commerce"];
   if (domain === "commerce") return ["commerce", "products", "inventory", "orders"];
+  if (domain === "media") return ["image_generation", "image_to_text", "brand_design", "content_generation"];
   if (domain === "cloudflare") {
     return [
       "cloudflare",
@@ -122,6 +137,7 @@ function inferTaskTypes(domain, slug) {
 
 function inferSortOrder(domain, slug) {
   if (slug === "fnf-cloudflare-runtime") return 1;
+  if (domain === "media") return 4;
   if (domain === "commerce") return 5;
   if (domain === "stripe") return 10;
   if (domain === "cloudflare") return 8;
@@ -140,47 +156,66 @@ function walkMarkdownFiles(dir) {
 }
 
 function discoverSkills() {
-  const skills = [];
-  if (!fs.existsSync(SKILLS_SRC)) return skills;
+  const bySlug = new Map();
 
-  for (const entry of fs.readdirSync(SKILLS_SRC, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const skillDir = path.join(SKILLS_SRC, entry.name);
-    const skillMd = path.join(skillDir, "SKILL.md");
-    if (!fs.existsSync(skillMd)) continue;
+  for (const source of SKILL_SOURCES) {
+    if (!fs.existsSync(source.root)) continue;
 
-    const slug = entry.name;
-    const content = fs.readFileSync(skillMd, "utf8");
-    const { meta } = parseFrontmatter(content);
-    const name = meta.name || slug;
-    const description = (meta.description || "").replace(/\s+/g, " ").trim();
+    for (const entry of fs.readdirSync(source.root, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const skillDir = path.join(source.root, entry.name);
+      const skillMd = path.join(skillDir, "SKILL.md");
+      if (!fs.existsSync(skillMd)) continue;
 
-    const files = walkMarkdownFiles(skillDir).map((abs) => {
-      const rel = path.relative(skillDir, abs).replace(/\\/g, "/");
-      const role = rel === "SKILL.md" ? "skill" : rel.startsWith("references/") ? "reference" : "asset";
-      return {
-        rel,
-        abs,
-        r2Key: `${R2_PREFIX}/${slug}/${rel}`,
-        role,
-      };
-    });
+      const slug = entry.name;
+      const content = fs.readFileSync(skillMd, "utf8");
+      const { meta } = parseFrontmatter(content);
+      const name = meta.name || slug;
+      const description = (meta.description || "").replace(/\s+/g, " ").trim();
 
-    const domain = inferSkillDomain(slug, description);
+      const files = walkMarkdownFiles(skillDir).map((abs) => {
+        const rel = path.relative(skillDir, abs).replace(/\\/g, "/");
+        const role = rel === "SKILL.md" ? "skill" : rel.startsWith("references/") ? "reference" : "asset";
+        return {
+          rel,
+          abs,
+          r2Key: `${R2_PREFIX}/${slug}/${rel}`,
+          role,
+        };
+      });
 
-    skills.push({
-      slug,
-      id: slugToId(slug),
-      name,
-      description,
-      domain,
-      tags: inferTags(slug, domain),
-      mainR2Key: `${R2_PREFIX}/${slug}/SKILL.md`,
-      files,
-    });
+      const domain = meta.skill_domain || inferSkillDomain(slug, description);
+      const explicitTaskTypes = parseListMeta(meta.task_types);
+      const explicitTags = parseListMeta(meta.tags);
+      const explicitGlobs = parseListMeta(meta.globs);
+      const accessMode = meta.access_mode === "read_write" ? "read_write" : "read_only";
+      const sortOrder = Number.isFinite(Number(meta.sort_order))
+        ? Number(meta.sort_order)
+        : inferSortOrder(domain, slug);
+
+      // Later sources win. App-owned skills/ intentionally overrides a same-slug
+      // generic .cursor skill so product/runtime-specific truth stays authoritative.
+      bySlug.set(slug, {
+        slug,
+        id: slugToId(slug),
+        name,
+        description,
+        domain,
+        source: source.source,
+        slashTrigger: meta.slash_trigger || slug,
+        accessMode,
+        sortOrder,
+        alwaysApply: String(meta.always_apply || "").toLowerCase() === "true",
+        taskTypes: explicitTaskTypes,
+        globs: explicitGlobs,
+        tags: explicitTags.length ? explicitTags : inferTags(slug, domain),
+        mainR2Key: `${R2_PREFIX}/${slug}/SKILL.md`,
+        files,
+      });
+    }
   }
 
-  return skills.sort((a, b) => a.slug.localeCompare(b.slug));
+  return [...bySlug.values()].sort((a, b) => a.slug.localeCompare(b.slug));
 }
 
 function uploadFile(localPath, r2Key) {
@@ -195,6 +230,8 @@ function inferRouteKeys(domain, slug, taskTypes = []) {
     keys.push({ intent: "commerce", task_type: "store_ops" }, { workflow_key: "fnf_agentsam_chat", task_type: "commerce" });
   } else if (domain === "commerce") {
     keys.push({ intent: "commerce", task_type: "store_ops" }, { route_key: "commerce" });
+  } else if (domain === "media") {
+    keys.push({ intent: "content", task_type: "image_generation" }, { workflow_key: "fnf_creative_studio", task_type: "image_generation" });
   } else if (domain === "cloudflare") {
     keys.push({ intent: "code", task_type: "repo_work" }, { route_key: "code" });
   }
