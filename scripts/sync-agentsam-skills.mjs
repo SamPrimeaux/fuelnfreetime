@@ -156,47 +156,66 @@ function walkMarkdownFiles(dir) {
 }
 
 function discoverSkills() {
-  const skills = [];
-  if (!fs.existsSync(SKILLS_SRC)) return skills;
+  const bySlug = new Map();
 
-  for (const entry of fs.readdirSync(SKILLS_SRC, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const skillDir = path.join(SKILLS_SRC, entry.name);
-    const skillMd = path.join(skillDir, "SKILL.md");
-    if (!fs.existsSync(skillMd)) continue;
+  for (const source of SKILL_SOURCES) {
+    if (!fs.existsSync(source.root)) continue;
 
-    const slug = entry.name;
-    const content = fs.readFileSync(skillMd, "utf8");
-    const { meta } = parseFrontmatter(content);
-    const name = meta.name || slug;
-    const description = (meta.description || "").replace(/\s+/g, " ").trim();
+    for (const entry of fs.readdirSync(source.root, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const skillDir = path.join(source.root, entry.name);
+      const skillMd = path.join(skillDir, "SKILL.md");
+      if (!fs.existsSync(skillMd)) continue;
 
-    const files = walkMarkdownFiles(skillDir).map((abs) => {
-      const rel = path.relative(skillDir, abs).replace(/\\/g, "/");
-      const role = rel === "SKILL.md" ? "skill" : rel.startsWith("references/") ? "reference" : "asset";
-      return {
-        rel,
-        abs,
-        r2Key: `${R2_PREFIX}/${slug}/${rel}`,
-        role,
-      };
-    });
+      const slug = entry.name;
+      const content = fs.readFileSync(skillMd, "utf8");
+      const { meta } = parseFrontmatter(content);
+      const name = meta.name || slug;
+      const description = (meta.description || "").replace(/\s+/g, " ").trim();
 
-    const domain = inferSkillDomain(slug, description);
+      const files = walkMarkdownFiles(skillDir).map((abs) => {
+        const rel = path.relative(skillDir, abs).replace(/\\/g, "/");
+        const role = rel === "SKILL.md" ? "skill" : rel.startsWith("references/") ? "reference" : "asset";
+        return {
+          rel,
+          abs,
+          r2Key: `${R2_PREFIX}/${slug}/${rel}`,
+          role,
+        };
+      });
 
-    skills.push({
-      slug,
-      id: slugToId(slug),
-      name,
-      description,
-      domain,
-      tags: inferTags(slug, domain),
-      mainR2Key: `${R2_PREFIX}/${slug}/SKILL.md`,
-      files,
-    });
+      const domain = meta.skill_domain || inferSkillDomain(slug, description);
+      const explicitTaskTypes = parseListMeta(meta.task_types);
+      const explicitTags = parseListMeta(meta.tags);
+      const explicitGlobs = parseListMeta(meta.globs);
+      const accessMode = meta.access_mode === "read_write" ? "read_write" : "read_only";
+      const sortOrder = Number.isFinite(Number(meta.sort_order))
+        ? Number(meta.sort_order)
+        : inferSortOrder(domain, slug);
+
+      // Later sources win. App-owned skills/ intentionally overrides a same-slug
+      // generic .cursor skill so product/runtime-specific truth stays authoritative.
+      bySlug.set(slug, {
+        slug,
+        id: slugToId(slug),
+        name,
+        description,
+        domain,
+        source: source.source,
+        slashTrigger: meta.slash_trigger || slug,
+        accessMode,
+        sortOrder,
+        alwaysApply: String(meta.always_apply || "").toLowerCase() === "true",
+        taskTypes: explicitTaskTypes,
+        globs: explicitGlobs,
+        tags: explicitTags.length ? explicitTags : inferTags(slug, domain),
+        mainR2Key: `${R2_PREFIX}/${slug}/SKILL.md`,
+        files,
+      });
+    }
   }
 
-  return skills.sort((a, b) => a.slug.localeCompare(b.slug));
+  return [...bySlug.values()].sort((a, b) => a.slug.localeCompare(b.slug));
 }
 
 function uploadFile(localPath, r2Key) {
