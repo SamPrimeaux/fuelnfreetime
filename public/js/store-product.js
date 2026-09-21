@@ -138,7 +138,7 @@
             ${cartIconButton()}
           </div>
           <p class="pdp-note" id="pdp-stock"></p>
-          ${canBuy ? `<p class="pdp-checkout-note">Secure checkout — payment processing coming online next.</p>` : ""}
+          ${canBuy ? `<p class="pdp-checkout-note">Secure checkout powered by Stripe.</p>` : ""}
         </div>
       </div>
       <section class="pdp-related" id="pdp-related" hidden></section>`;

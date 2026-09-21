@@ -1,7 +1,7 @@
 # Completeful integration runtime contract
 
-Status: planning / provider-doc capture  
-Branch: `feat/completeful-technologies-setup`
+Status: Phase A runtime implemented; provider credential + first sync pending
+Branch: `feat/completeful-runtime-phase-a`
 
 ## Goal
 
@@ -32,7 +32,7 @@ The provider contract is pinned under `docs/providers/completeful/`.
 
 ## D1 plan
 
-Do not mirror the entire Completeful catalog into D1 on day one. Read catalog/search from Completeful and persist only durable relationships, operational state, and records required for idempotency/recovery.
+Maintain the normalized Completeful catalog mirror in D1 so the admin can browse/search without repeatedly rediscovering provider state. Keep local storefront identity, retail pricing, curation, orders, and payments authoritative in F&FT; provider JSON remains mirror/evidence rather than local business authority.
 
 ### 1. `completeful_shops`
 
@@ -318,17 +318,40 @@ If we depend on Completeful catalog-change synchronization, consider:
 
 Also keep `ping` available for endpoint verification. `shop:disconnected` should be subscribed once shop connectivity becomes a production dependency.
 
+## Phase A runtime surface (implemented)
+
+The Worker now owns a server-only Completeful client and D1 catalog mirror sync.
+CAPP_KEY never reaches browser code. The initial session-gated admin surface is:
+
+- GET /api/admin/completeful/status — configuration mode, live-write kill switch, sync state, mirror counts
+- GET /api/admin/completeful/shops — local shop registry; refresh=1 also refreshes from provider
+- POST /api/admin/completeful/shops/refresh — refresh accessible shops from Completeful
+- POST /api/admin/completeful/shops/{shopId}/select — choose the primary F&FT shop
+- GET /api/admin/completeful/catalog — browse/search the local D1 mirror
+- GET /api/admin/completeful/catalog/{productId} — product + variants + print locations + images + mockups
+- POST /api/admin/completeful/catalog/sync — bounded cursor-based provider to D1 synchronization
+
+The provider client accepts either https://vxapi.completeful.com or a /v1 base,
+preserves structured provider errors/request IDs, and defaults live writes off.
+Catalog child rows are rebuilt from each enriched provider product while
+completeful_catalog_curation remains local-only and untouched.
+
+The production schema is already deployed. The remaining external prerequisite
+for the first real provider call is installing a capp_test_ value as the Worker
+secret CAPP_KEY.
+
 ## Build phases
 
 ### Phase A — read-only connection
 
-- add Completeful client
-- add session-gated admin status endpoint
-- list shops
-- explicitly select the F&FT shop
-- catalog read/search smoke test
-- confirm test-mode headers
-- no local schema mutation other than `completeful_shops`
+- [x] add Completeful client
+- [x] add session-gated admin status endpoint
+- [x] list/refresh shops endpoint
+- [x] primary-shop selection endpoint
+- [x] local catalog browse/search endpoints; real provider smoke test still pending credential
+- [ ] confirm test-mode headers against real provider
+- [x] use the already-deployed Completeful schema + normalized catalog mirror
+- [ ] install `CAPP_KEY` with a `capp_test_` credential
 
 ### Phase B — product mapping
 

@@ -81,6 +81,7 @@ import {
 import { onlineStoreOverview, getStorePreferences, postStorePreferences } from "./store.js";
 import { handleGrowthApi } from "./growth.js";
 import { handleDiscountsApi } from "./discounts.js";
+import { handleCompletefulAdminApi } from "./completeful.js";
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -580,6 +581,10 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
 
   if (path.startsWith("/api/admin/discounts/") || path === "/api/admin/discounts") {
     return handleDiscountsApi(request, env, url, user);
+  }
+
+  if (path.startsWith("/api/admin/completeful")) {
+    return handleCompletefulAdminApi(request, env, url);
   }
 
   if (path === "/api/admin/agentsam/chat" && method === "POST") {
