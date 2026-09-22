@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const mappings = [
+  ["apps/ecommerce-cms-agentsam/frontend/shell.js", "public/admin/js/shell.js"],
+  ["apps/ecommerce-cms-agentsam/frontend/inspector.js", "public/admin/js/inspector.js"],
   ["app/frontend/admin/agentsam/agentsam.html", "public/admin/agentsam.html"],
   ["app/frontend/admin/agentsam/agentsam-page.css", "public/admin/css/agentsam-page.css"],
   ["app/frontend/admin/agentsam/agentsam-page.js", "public/admin/js/agentsam-page.js"],

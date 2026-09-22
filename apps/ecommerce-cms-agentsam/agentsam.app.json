@@ -1,0 +1,27 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "ecommerce-cms-agentsam",
+  "name": "AgentSam Ecommerce + CMS",
+  "version": "0.2.0",
+  "bin": "bin/ecommerce.mjs",
+  "commands": {
+    "info": "ecommerce info",
+    "doctor": "ecommerce doctor",
+    "preview": "ecommerce preview",
+    "scaffold": "ecommerce scaffold <directory>"
+  },
+  "runtime": {
+    "local_preview": "worker",
+    "source_scaffold": "workspace-source",
+    "cloudflare": "requires-owner-provisioning"
+  },
+  "capabilities": {
+    "products": true,
+    "cms": true,
+    "media": true,
+    "catalog": true,
+    "annotation": true,
+    "fulfillment_automation": false
+  },
+  "notes": "Fuel & Free Time reference installation. New owners must provision resources and configure branding and providers. Workspace source is required for scaffolding."
+}

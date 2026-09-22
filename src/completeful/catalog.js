@@ -1,10 +1,10 @@
 import { completefulRequest } from "./client.js";
 
 const DEFAULT_INCLUDE = "variants,print_locations,images,mockups,shipping";
-const DEFAULT_PAGE_LIMIT = 100;
-const MAX_PAGE_LIMIT = 200;
-const DEFAULT_MAX_PAGES = 5;
-const MAX_SYNC_PAGES = 20;
+const DEFAULT_PAGE_LIMIT = 3;
+const MAX_PAGE_LIMIT = 3;
+const DEFAULT_MAX_PAGES = 1;
+const MAX_SYNC_PAGES = 1;
 const BATCH_SIZE = 75;
 
 function jsonText(value) {
@@ -167,7 +167,21 @@ export async function selectPrimaryCompletefulShop(env, shopId) {
 }
 
 async function statementsForCatalogProduct(env, product, syncToken, requestId) {
-  const raw = JSON.stringify(product);
+  const source = JSON.stringify(product);
+  const sourceHash = await sha256Hex(source);
+  const sourceKey = `completeful/catalog-source/${product.id}/${sourceHash}.json`;
+  // Preserve the complete payload in object storage before committing the mirror.
+  // Large mockup geometry must never occupy a D1 row.
+  await env.WEBSITE_ASSETS.put(sourceKey, source, {
+    httpMetadata: { contentType: "application/json" },
+  });
+  const raw = JSON.stringify({ r2_key: sourceKey, sha256: sourceHash });
+  const boundedJson = (value) => {
+    const encoded = jsonText(value);
+    return encoded && new TextEncoder().encode(encoded).length > 65536
+      ? JSON.stringify({ source: sourceKey, external: true })
+      : encoded;
+  };
   const pricing = product.pricing || {};
   const costs = pricing.fulfillment_cost || {};
   const productId = product.id;
@@ -240,12 +254,12 @@ async function statementsForCatalogProduct(env, product, syncToken, requestId) {
       product.cover_image_url ?? null,
       product.main_icon_url ?? null,
       product.realistic_image_url ?? null,
-      jsonText(product.tags || []),
-      jsonText(product.dimensions),
-      jsonText(product.variant_attributes || {}),
-      jsonText(product.shipping),
+      boundedJson(product.tags || []),
+      boundedJson(product.dimensions),
+      boundedJson(product.variant_attributes || {}),
+      boundedJson(product.shipping),
       raw,
-      await sha256Hex(raw),
+      sourceHash,
       syncToken,
       requestId,
     ),
@@ -297,12 +311,12 @@ async function statementsForCatalogProduct(env, product, syncToken, requestId) {
         toCents(variantCosts.free),
         toCents(variantCosts.growth),
         toCents(variantCosts.business),
-        jsonText(variant.attributes || {}),
-        jsonText(variant.variant_attributes || {}),
+        boundedJson(variant.attributes || {}),
+        boundedJson(variant.variant_attributes || {}),
         variant.cover_image_url ?? null,
         variant.main_icon_url ?? null,
         variant.realistic_image_url ?? null,
-        jsonText(variant),
+        boundedJson(variant),
         syncToken,
       ),
     );
@@ -335,7 +349,7 @@ async function statementsForCatalogProduct(env, product, syncToken, requestId) {
         location.shape_type ?? null,
         location.artboard_image_url ?? null,
         toCents(location.extra_cost),
-        jsonText(location),
+        boundedJson(location),
       ),
     );
   }
@@ -357,7 +371,7 @@ async function statementsForCatalogProduct(env, product, syncToken, requestId) {
         image.sort_order ?? 0,
         boolInt(image.is_primary),
         image.variant_title ?? null,
-        jsonText(image),
+        boundedJson(image),
       ),
     );
   }
@@ -378,8 +392,8 @@ async function statementsForCatalogProduct(env, product, syncToken, requestId) {
         mockup.print_location_id ?? null,
         mockup.active === false ? 0 : 1,
         mockup.sort_order ?? 0,
-        jsonText(mockup.variant_scope),
-        jsonText(mockup),
+        boundedJson(mockup.variant_scope),
+        boundedJson(mockup),
       ),
     );
   }
@@ -396,6 +410,12 @@ export async function syncCompletefulCatalog(env, options = {}) {
   const maxPages = clampInt(options.max_pages ?? options.maxPages, DEFAULT_MAX_PAGES, 1, MAX_SYNC_PAGES);
   const include = options.include || DEFAULT_INCLUDE;
   const search = options.search || null;
+  const lease = await env.DB.prepare(
+    "UPDATE completeful_catalog_sync_state SET status = 'running', updated_at = datetime('now') WHERE id = 1 AND (status != 'running' OR updated_at < datetime('now', '-5 minutes'))"
+  ).run();
+  if (!lease.meta?.changes) {
+    return { ok: false, status: "busy", has_more: true, retry_after: 3 };
+  }
   const existing = await getCompletefulSyncState(env);
   let cursor = reset ? null : existing?.next_cursor || null;
   const syncToken = crypto.randomUUID();
@@ -455,7 +475,7 @@ export async function syncCompletefulCatalog(env, options = {}) {
 
       lastRequestId = meta.request_id;
       const page = normalizeCatalogPage(data);
-      const pageStatements = [];
+
 
       for (const product of page.items) {
         if (!product?.id) continue;
@@ -465,12 +485,13 @@ export async function syncCompletefulCatalog(env, options = {}) {
           syncToken,
           meta.request_id,
         );
-        pageStatements.push(...built.statements);
+        // D1 batch is transactional: keep the prior complete product if any child fails.
+        await env.DB.batch(built.statements);
         productsSeen += 1;
         variantsSeen += built.variantCount;
       }
 
-      if (pageStatements.length) await runBatches(env, pageStatements);
+
 
       pages += 1;
       cursor = page.nextCursor;
@@ -535,7 +556,14 @@ export async function syncCompletefulCatalog(env, options = {}) {
         error?.requestId || lastRequestId,
       )
       .run();
-    throw error;
+    return {
+      ok: false, status: "error", has_more: true,
+      error: "Catalog refresh paused. Existing products remain available.",
+      code: error?.code || "catalog_sync_failed",
+      detail: String(error?.message || error).slice(0, 500),
+      retryable: error?.status === 429 || error?.status >= 500 || /timeout|network|temporarily/i.test(String(error?.message)),
+      retry_after: 3,
+    };
   }
 }
 
@@ -680,10 +708,12 @@ export async function getCompletefulCatalogProduct(env, productId) {
   ]);
 
   return {
-    product,
-    variants: variants.results || [],
-    print_locations: locations.results || [],
-    images: images.results || [],
-    mockups: mockups.results || [],
+    product: omitRaw(product),
+    variants: (variants.results || []).map(omitRaw),
+    print_locations: (locations.results || []).map(omitRaw),
+    images: (images.results || []).map(omitRaw),
+    mockups: (mockups.results || []).map(omitRaw),
   };
 }
+
+function omitRaw({ raw_json, ...record }) { return record; }

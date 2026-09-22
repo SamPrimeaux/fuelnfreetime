@@ -10,6 +10,7 @@
  */
 
 import { handleAdminApi } from "./admin/api.js";
+import { serveCatalogImage } from "./completeful/images.js";
 import { runAgentsamCompaction } from "./agentsam/compaction.js";
 import { handleStoreApi } from "./store/api.js";
 import { handleAttributionApi } from "./attribution/api.js";
@@ -210,6 +211,7 @@ export default {
 
     const url = new URL(request.url);
     const path = url.pathname;
+    if (path === "/catalog-image") return serveCatalogImage(request, env, ctx);
 
     if (path === "/api/health") {
       return Response.json({

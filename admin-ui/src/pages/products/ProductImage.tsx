@@ -11,9 +11,13 @@ export default function ProductImage({
 }) {
   const [failed, setFailed] = useState<string[]>([]);
   const src = sources.find((s) => s && !failed.includes(s));
+  const proxy = src?.startsWith("https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/")
+    ? "/catalog-image?src=" + encodeURIComponent(src) : null;
   return src ? (
     <img
-      src={src}
+      src={proxy ? proxy + "&w=640" : src}
+      srcSet={proxy ? [320, 640, 1200].map(w => proxy + "&w=" + w + " " + w + "w").join(", ") : undefined}
+      sizes="(max-width: 760px) 50vw, (max-width: 1200px) 25vw, 320px"
       alt={alt}
       loading={lazy ? "lazy" : "eager"}
       decoding="async"

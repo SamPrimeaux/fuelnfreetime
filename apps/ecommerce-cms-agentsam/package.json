@@ -1,0 +1,13 @@
+{
+  "name": "@inneranimalmedia/ecommerce-cms-agentsam",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "ecommerce": "bin/ecommerce.mjs"
+  },
+  "scripts": {
+    "doctor": "node bin/ecommerce.mjs doctor",
+    "preview": "node bin/ecommerce.mjs preview"
+  }
+}

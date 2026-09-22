@@ -103,36 +103,45 @@ export default function ProductStudioPage() {
       });
     return () => controller.abort();
   }, [productId, refresh]);
+  const stopSync = useRef(false);
+  useEffect(() => () => { stopSync.current = true; }, []);
   async function syncCatalog() {
+    stopSync.current = false;
     setSyncing(true);
     setError("");
-    setNotice("Refreshing products from Completeful…");
+    setNotice("Connecting to Completeful…");
     try {
-      const state = await adminFetch<{
-        sync?: { next_cursor?: string; status?: string };
-      }>("/api/admin/completeful/status");
-      const result = await adminFetch<{
-        has_more: boolean;
-        counts?: { catalog_products: number };
-      }>("/api/admin/completeful/catalog/sync", {
-        method: "POST",
-        body: JSON.stringify({
-          reset: !state.sync?.next_cursor,
-          limit: 24,
-          max_pages: 2,
-        }),
-      });
-      setNotice(
-        `${result.counts?.catalog_products ?? "Your"} products ready to explore.${result.has_more ? " Refresh again to load the next batch." : " Catalog is up to date."}`,
-      );
-      setOffset(0);
-      setRefresh((n) => n + 1);
+      const state = await adminFetch<{ sync?: { next_cursor?: string; status?: string } }>("/api/admin/completeful/status");
+      let reset = !state.sync?.next_cursor;
+      let failures = 0;
+      while (!stopSync.current) {
+        const result = await adminFetch<{
+          ok: boolean; status: string; has_more: boolean; retryable?: boolean;
+          error?: string; detail?: string; counts?: { catalog_products: number };
+        }>("/api/admin/completeful/catalog/sync", {
+          method: "POST",
+          body: JSON.stringify({ reset, limit: 3, max_pages: 1 }),
+        });
+        if (result.status === "busy" || (!result.ok && result.retryable)) {
+          if (++failures > 3) throw new Error("Refresh paused after three retries. Tap Refresh catalog to resume.");
+          setNotice(`Connection interrupted. Retrying batch (${failures}/3)…`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * 2 ** failures));
+          continue;
+        }
+        if (!result.ok) throw new Error(`${result.error || "Refresh paused"} ${result.detail || ""} Tap Refresh catalog to retry this batch.`);
+        failures = 0;
+        reset = false;
+        setOffset(0);
+        setRefresh(n => n + 1);
+        setNotice(`${result.counts?.catalog_products ?? "Your"} products ready. ${result.has_more ? "Loading the next batch…" : "Catalog is up to date."}`);
+        if (!result.has_more) break;
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+      if (stopSync.current) setNotice("Refresh paused. Your progress is saved; refresh to continue.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Catalog refresh failed");
-      setNotice("");
-    } finally {
-      setSyncing(false);
-    }
+      setNotice(e instanceof Error ? e.message : "Refresh paused. Your products are still available.");
+      setRefresh(n => n + 1);
+    } finally { setSyncing(false); }
   }
   return (
     <section
@@ -146,6 +155,7 @@ export default function ProductStudioPage() {
         <div className="ps-container">
           <div className="ps-topline">
             <span className="ps-eyebrow">THE CREATIVE STUDIO</span>
+            {syncing && <button className="ps-button" onClick={() => { stopSync.current = true; }}>Pause refresh</button>}
             <a href="/admin/content">
               Your media library <StudioIcon name="arrow" size={15} />
             </a>
