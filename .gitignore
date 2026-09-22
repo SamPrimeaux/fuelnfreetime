@@ -6,6 +6,9 @@ node_modules/
 *.log
 .DS_Store
 
+# Local rollback snapshots; keep outside version control.
+.fnf-backups/
+
 # Generated from app/frontend by scripts/sync-app-frontend.mjs
 public/admin/agentsam.html
 public/admin/css/agentsam-page.css
