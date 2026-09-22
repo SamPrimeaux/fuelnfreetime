@@ -1,179 +1,526 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { adminFetch } from "../../lib/api";
+import StudioIcon from "./StudioIcon";
+import ProductImage from "./ProductImage";
+import StudioWorkspace from "./StudioWorkspace";
+import {
+  costLabel,
+  printSizeLabel,
+  productImage,
+  type CatalogProduct,
+  type CatalogResponse,
+  type ProductDetail,
+} from "./studio-model";
+import "../../styles/product-studio.css";
 
-type Mode = "build" | "design" | "product" | "review";
-
-const MODES: { id: Mode; label: string }[] = [
-  { id: "build", label: "Build" },
-  { id: "design", label: "Design" },
-  { id: "product", label: "Product" },
-  { id: "review", label: "Review" },
+const collections = [
+  { name: "Everything", query: "", caption: "Find your next idea" },
+  { name: "Tees", query: "shirt", caption: "Made to be worn" },
+  { name: "Tumblers", query: "tumbler", caption: "Everyday essentials" },
+  { name: "Framed decor", query: "frame", caption: "Make a space their own" },
+  { name: "Hats", query: "hat", caption: "Small things. Big personality." },
 ];
-
-type CatalogProduct = {
-  id: string;
-  title: string;
-  brand?: string;
-  price_from_cents?: number;
-  variant_count?: number;
-  print_location_count?: number;
-  image_url?: string;
-};
-
-type CatalogResponse = { ok: boolean; products?: CatalogProduct[]; error?: string };
-
 export default function ProductStudioPage() {
-  const [mode, setMode] = useState<Mode>("build");
+  const navigate = useNavigate();
+  const { productId } = useParams();
+  const surface = useRef<HTMLElement>(null);
   const [query, setQuery] = useState("");
+  const [search, setSearch] = useState("");
   const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
-  const [catalogLoading, setCatalogLoading] = useState(false);
-  const [catalogError, setCatalogError] = useState<string | null>(null);
-  const [selected, setSelected] = useState<CatalogProduct | null>(null);
-
-  // BUILD: real catalog call. F&FT's Completeful mirror is currently empty
-  // (0 rows synced) — an empty result here is accurate, not a bug.
+  const [total, setTotal] = useState(0);
+  const [offset, setOffset] = useState(0);
+  const [more, setMore] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [refresh, setRefresh] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [detail, setDetail] = useState<ProductDetail | null>(null);
+  const [designing, setDesigning] = useState(false);
+  const [gallery, setGallery] = useState("");
   useEffect(() => {
-    if (mode !== "build") return;
-    setCatalogLoading(true);
-    setCatalogError(null);
-    adminFetch<CatalogResponse>(
-      `/api/admin/completeful/catalog${query.trim() ? `?q=${encodeURIComponent(query.trim())}` : ""}`
+    surface.current?.scrollIntoView({ block: "start" });
+  }, [productId, designing]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(query.trim());
+      setOffset(0);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [query]);
+  useEffect(() => {
+    if (productId) return;
+    const controller = new AbortController();
+    setLoading(true);
+    setError("");
+    const params = new URLSearchParams({
+      limit: "24",
+      offset: String(offset),
+      search,
+    });
+    adminFetch<CatalogResponse>(`/api/admin/completeful/catalog?${params}`, {
+      signal: controller.signal,
+    })
+      .then((d) => {
+        if (!controller.signal.aborted) {
+          setCatalog((prev) => (offset ? [...prev, ...d.items] : d.items));
+          setTotal(d.pagination.total);
+          setMore(d.pagination.has_more);
+        }
+      })
+      .catch((e) => {
+        if (!controller.signal.aborted) setError(e.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [search, offset, refresh, productId]);
+  useEffect(() => {
+    setDesigning(false);
+    setDetail(null);
+    setGallery("");
+    if (!productId) return;
+    const controller = new AbortController();
+    setLoading(true);
+    setError("");
+    adminFetch<ProductDetail>(
+      `/api/admin/completeful/catalog/${encodeURIComponent(productId)}`,
+      { signal: controller.signal },
     )
-      .then((d) => setCatalog(d.products ?? []))
-      .catch((err) => setCatalogError(err instanceof Error ? err.message : "Catalog request failed."))
-      .finally(() => setCatalogLoading(false));
-  }, [mode, query]);
-
+      .then((d) => {
+        if (!controller.signal.aborted) {
+          setDetail(d);
+          setGallery(productImage(d.product) || d.images[0]?.url || "");
+        }
+      })
+      .catch((e) => {
+        if (!controller.signal.aborted) setError(e.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [productId, refresh]);
+  async function syncCatalog() {
+    setSyncing(true);
+    setError("");
+    setNotice("Refreshing products from Completeful…");
+    try {
+      const state = await adminFetch<{
+        sync?: { next_cursor?: string; status?: string };
+      }>("/api/admin/completeful/status");
+      const result = await adminFetch<{
+        has_more: boolean;
+        counts?: { catalog_products: number };
+      }>("/api/admin/completeful/catalog/sync", {
+        method: "POST",
+        body: JSON.stringify({
+          reset: !state.sync?.next_cursor,
+          limit: 24,
+          max_pages: 2,
+        }),
+      });
+      setNotice(
+        `${result.counts?.catalog_products ?? "Your"} products ready to explore.${result.has_more ? " Refresh again to load the next batch." : " Catalog is up to date."}`,
+      );
+      setOffset(0);
+      setRefresh((n) => n + 1);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Catalog refresh failed");
+      setNotice("");
+    } finally {
+      setSyncing(false);
+    }
+  }
   return (
-    <>
-      <div className="page-head">
-        <div>
-          <h1 className="page-title">New product</h1>
-          <p className="page-sub">
-            {selected ? `${selected.title} — Fuel & Free Time` : "Pick a base product to get started"}
-          </p>
-        </div>
-        <div className="page-actions">
-          <button className="btn ghost" type="button" disabled title="Wire to product draft save next">
-            Save draft
-          </button>
-          <button className="btn primary" type="button" disabled title="Wire to Completeful mockup render next">
-            Render
-          </button>
-        </div>
-      </div>
-
-      <div className="seg" style={{ marginBottom: 14 }}>
-        {MODES.map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            className={mode === m.id ? "active" : ""}
-            onClick={() => setMode(m.id)}
-          >
-            {m.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="grid cols-12" style={{ minHeight: 480 }}>
-        <div className="card span-3">
-          <div className="card-head">
-            <div className="card-title">
-              {mode === "build" ? "Completeful catalog" : mode === "design" ? "Artwork" : "Setup"}
-            </div>
+    <section
+      ref={surface}
+      className={`product-studio-shell${designing ? " is-designing" : ""}`}
+      aria-label="Product Studio"
+    >
+      {designing && detail ? (
+        <StudioWorkspace detail={detail} onBack={() => setDesigning(false)} />
+      ) : (
+        <div className="ps-container">
+          <div className="ps-topline">
+            <span className="ps-eyebrow">THE CREATIVE STUDIO</span>
+            <a href="/admin/content">
+              Your media library <StudioIcon name="arrow" size={15} />
+            </a>
           </div>
-          <div className="card-body">
-            {mode === "build" && (
-              <>
-                <input
-                  type="search"
-                  placeholder="heavyweight washed black tee…"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  className="console-search"
-                  style={{ width: "100%", marginBottom: 10 }}
-                />
-                {catalogLoading && <p className="muted text-sm">Searching catalog…</p>}
-                {catalogError && <p className="text-sm" style={{ color: "var(--bad)" }}>{catalogError}</p>}
-                {!catalogLoading && !catalogError && catalog.length === 0 && (
-                  <p className="muted text-sm">
-                    No catalog products synced yet. Run a Completeful catalog sync before base products
-                    show up here.
+          {!productId ? (
+            <>
+              <header className="ps-hero">
+                <div className="ps-hero-copy">
+                  <span className="ps-kicker">
+                    A little inspiration. Something entirely yours.
+                  </span>
+                  <h1>
+                    Create &amp; explore
+                    <br />
+                    <em>your next idea.</em>
+                  </h1>
+                  <p>
+                    Discover a product you love. Make it your own.
+                    <br />
+                    Bring your artwork, or start with a spark.
                   </p>
-                )}
-                {catalog.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    className="card"
-                    style={{ width: "100%", textAlign: "left", marginBottom: 8, cursor: "pointer" }}
-                    onClick={() => setSelected(p)}
-                  >
-                    <div className="card-body" style={{ padding: 10 }}>
-                      <div className="text-sm" style={{ fontWeight: 600 }}>{p.title}</div>
-                      {p.brand && <div className="muted text-xs">{p.brand}</div>}
-                      {p.variant_count != null && (
-                        <div className="muted text-xs">{p.variant_count} variants</div>
-                      )}
+                  <a href="#studio-catalog" className="ps-button ps-primary">
+                    Explore the catalog <StudioIcon name="arrow" size={18} />
+                  </a>
+                </div>
+                <div className="ps-hero-products" aria-hidden="true">
+                  {catalog.slice(0, 3).map((p, i) => (
+                    <div
+                      className={`ps-hero-tile tile-${i}`}
+                      key={p.completeful_product_id}
+                    >
+                      <ProductImage
+                        sources={[
+                          p.realistic_image_url,
+                          p.cover_image_url,
+                          p.main_icon_url,
+                        ]}
+                        lazy={false}
+                      />
+                      <span>{p.product_type || "Make it yours"}</span>
                     </div>
+                  ))}
+                  {!catalog.length && (
+                    <div className="ps-hero-empty">
+                      <StudioIcon name="spark" size={72} />
+                      <span>
+                        GOOD IDEAS
+                        <br />
+                        START HERE.
+                      </span>
+                    </div>
+                  )}
+                  <span className="ps-hero-stamp">
+                    YOUR IDEAS.
+                    <br />
+                    REAL POSSIBILITIES.
+                  </span>
+                </div>
+              </header>
+              <div className="ps-collections" aria-label="Browse collections">
+                {collections.map((c, i) => (
+                  <button
+                    key={c.name}
+                    className={query === c.query ? "is-active" : ""}
+                    onClick={() => setQuery(c.query)}
+                    aria-pressed={query === c.query}
+                  >
+                    <span className="ps-collection-number">0{i + 1}</span>
+                    <strong>{c.name}</strong>
+                    <small>{c.caption}</small>
                   </button>
                 ))}
-              </>
-            )}
-            {mode !== "build" && (
-              <p className="muted text-sm">Not wired yet — select a base product in Build first.</p>
-            )}
-          </div>
-        </div>
-
-        <div className="card span-6" style={{ display: "flex", flexDirection: "column" }}>
-          <div className="card-head">
-            <div className="card-title">Canvas</div>
-          </div>
-          <div
-            className="card-body"
-            style={{
-              flex: 1,
-              display: "grid",
-              placeItems: "center",
-              background: "var(--bg-2)",
-              borderRadius: 8,
-            }}
-          >
-            {selected ? (
-              <div style={{ textAlign: "center" }}>
-                {selected.image_url ? (
-                  <img
-                    src={selected.image_url}
-                    alt={selected.title}
-                    style={{ maxWidth: "100%", maxHeight: 320, borderRadius: 6 }}
-                  />
-                ) : (
-                  <p className="muted text-sm">{selected.title}</p>
-                )}
-                <p className="muted text-xs" style={{ marginTop: 10 }}>
-                  Mockup render not wired — this is the catalog product image only.
-                </p>
               </div>
-            ) : (
-              <p className="muted text-sm">Choose a base product to preview it here.</p>
-            )}
-          </div>
+              <div id="studio-catalog" className="ps-catalog-heading">
+                <div>
+                  <span className="ps-eyebrow">THE POSSIBILITIES</span>
+                  <h2>Find your canvas.</h2>
+                </div>
+                <button
+                  className="ps-text-button"
+                  disabled={syncing}
+                  onClick={syncCatalog}
+                >
+                  {syncing ? "Refreshing…" : "Refresh catalog"}
+                </button>
+              </div>
+              <div className="ps-search-row">
+                <label className="ps-search">
+                  <StudioIcon name="search" />
+                  <input
+                    aria-label="Search Completeful products"
+                    placeholder="Try tumblers, cotton, engraving…"
+                    type="search"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                </label>
+                <span className="ps-result-count" aria-live="polite">
+                  {loading && !offset
+                    ? "Finding possibilities…"
+                    : `${total} products`}
+                </span>
+              </div>
+              {notice && (
+                <p className="ps-notice" role="status">
+                  {notice}
+                </p>
+              )}
+              {error && (
+                <div className="ps-feedback" role="alert">
+                  <strong>We couldn’t load the catalog.</strong>
+                  <p>{error}</p>
+                  <button
+                    className="ps-button"
+                    onClick={() => setRefresh((n) => n + 1)}
+                  >
+                    Try again
+                  </button>
+                </div>
+              )}
+              {!loading && !error && !catalog.length && (
+                <div className="ps-empty">
+                  <StudioIcon name={search ? "search" : "box"} size={40} />
+                  <h3>
+                    {search
+                      ? "A different search might spark something."
+                      : "Let’s bring in your possibilities."}
+                  </h3>
+                  <p>
+                    {search
+                      ? "Try a product, material, or print method."
+                      : "Load the latest Completeful products to explore images, options, and print areas."}
+                  </p>
+                  <button
+                    className="ps-button ps-primary"
+                    disabled={syncing}
+                    onClick={search ? () => setQuery("") : syncCatalog}
+                  >
+                    {search
+                      ? "See all products"
+                      : syncing
+                        ? "Loading catalog…"
+                        : "Load products"}
+                  </button>
+                </div>
+              )}
+              <div className="ps-catalog-grid" aria-busy={loading}>
+                {loading && !offset
+                  ? Array.from({ length: 8 }, (_, i) => (
+                      <div className="ps-skeleton" key={i}>
+                        <div />
+                        <span />
+                        <span />
+                      </div>
+                    ))
+                  : catalog.map((p) => (
+                      <button
+                        className="ps-product-card"
+                        key={p.completeful_product_id}
+                        onClick={() =>
+                          navigate(
+                            `/products/create/${encodeURIComponent(p.completeful_product_id)}`,
+                          )
+                        }
+                      >
+                        <div className="ps-product-photo">
+                          <ProductImage
+                            sources={[
+                              p.realistic_image_url,
+                              p.cover_image_url,
+                              p.main_icon_url,
+                            ]}
+                          />
+                          <span className="ps-product-badge">
+                            {p.print_type || "Customizable"}
+                          </span>
+                          <span className="ps-card-arrow">
+                            <StudioIcon name="arrow" />
+                          </span>
+                        </div>
+                        <div className="ps-product-copy">
+                          <small>
+                            {p.material ||
+                              (p.product_type !== p.print_type
+                                ? p.product_type
+                                : "Completeful collection")}
+                          </small>
+                          <h3>{p.name}</h3>
+                          <div>
+                            <span>
+                              {costLabel(p)}
+                              <small> base cost</small>
+                            </span>
+                            <span>
+                              {p.variant_count ?? 0}{" "}
+                              {p.variant_count === 1 ? "option" : "options"}
+                            </span>
+                          </div>
+                          {Number(p.available) === 0 && (
+                            <small>Currently unavailable</small>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+              </div>
+              {more && (
+                <div className="ps-load-more">
+                  <button
+                    className="ps-button"
+                    disabled={loading}
+                    onClick={() => setOffset(catalog.length)}
+                  >
+                    {loading ? "Loading…" : "Explore more products"}
+                  </button>
+                  <span>
+                    {catalog.length} of {total}
+                  </span>
+                </div>
+              )}
+              <footer className="ps-catalog-footer">
+                <StudioIcon name="spark" />
+                <span>
+                  Your artwork. Your point of view. Your next collection.
+                </span>
+                <a href="/admin/agentsam">
+                  Brainstorm with AgentSam <StudioIcon name="arrow" size={16} />
+                </a>
+              </footer>
+            </>
+          ) : (
+            <>
+              <button
+                className="ps-text-button ps-back"
+                onClick={() => navigate("/products/create")}
+              >
+                <StudioIcon name="back" size={18} /> Back to catalog
+              </button>
+              {loading && (
+                <div className="ps-empty" role="status">
+                  Opening your next canvas…
+                </div>
+              )}
+              {error && (
+                <div className="ps-feedback" role="alert">
+                  {error}
+                  <button
+                    className="ps-button"
+                    onClick={() => setRefresh((n) => n + 1)}
+                  >
+                    Try again
+                  </button>
+                </div>
+              )}
+              {detail && (
+                <div className="ps-detail">
+                  <div>
+                    <div className="ps-detail-photo">
+                      <ProductImage
+                        sources={[
+                          gallery,
+                          detail.product.cover_image_url,
+                          detail.product.main_icon_url,
+                        ]}
+                        alt={detail.product.name}
+                      />
+                    </div>
+                    <div className="ps-thumbnails">
+                      {[
+                        ...new Set(
+                          [
+                            productImage(detail.product),
+                            ...detail.images.map((i) => i.url),
+                          ].filter((s): s is string => Boolean(s)),
+                        ),
+                      ].map((src, i) => (
+                        <button
+                          key={src}
+                          className={gallery === src ? "is-active" : ""}
+                          onClick={() => setGallery(src)}
+                          aria-label={`View product image ${i + 1}`}
+                          aria-pressed={gallery === src}
+                        >
+                          <img src={src} alt="" loading="lazy" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="ps-detail-copy">
+                    <span className="ps-eyebrow">
+                      {detail.product.product_type || "YOUR NEXT CANVAS"}
+                    </span>
+                    <h1>{detail.product.name}</h1>
+                    <p>
+                      {[detail.product.material, detail.product.print_type]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                    <div className="ps-detail-cost">
+                      <strong>{costLabel(detail.product)}</strong>
+                      <span>
+                        Base fulfillment cost · Free plan
+                        <br />
+                        Shipping and taxes calculated separately
+                      </span>
+                    </div>
+                    <div className="ps-detail-facts">
+                      <div>
+                        <strong>{detail.variants.length}</strong>
+                        <span>Product options</span>
+                      </div>
+                      <div>
+                        <strong>
+                          {
+                            detail.print_locations.filter((l) => l.enabled)
+                              .length
+                          }
+                        </strong>
+                        <span>Print areas</span>
+                      </div>
+                      <div>
+                        <strong>
+                          {detail.mockups.filter((m) => m.active).length}
+                        </strong>
+                        <span>Mockup views</span>
+                      </div>
+                    </div>
+                    <h3>Make it yours</h3>
+                    <p>
+                      Bring in artwork from your library, explore a new
+                      direction, and compose your design in one focused space.
+                    </p>
+                    <button
+                      className="ps-button ps-primary ps-wide"
+                      disabled={Number(detail.product.available) === 0}
+                      onClick={() => setDesigning(true)}
+                    >
+                      {Number(detail.product.available) === 0
+                        ? "Currently unavailable"
+                        : "Start designing"}
+                      <StudioIcon name="arrow" />
+                    </button>
+                    <div className="ps-detail-guidance">
+                      <StudioIcon name="check" />
+                      <span>
+                        Keep original artwork at its highest quality. Print
+                        requirements are available inside the studio.
+                      </span>
+                    </div>
+                    <details className="ps-disclosure">
+                      <summary>
+                        Product options &amp; print requirements
+                      </summary>
+                      <div className="ps-option-tags">
+                        {detail.variants.map((v) => (
+                          <span key={v.completeful_variant_id}>
+                            {v.variant_title || v.name || "Default"}
+                          </span>
+                        ))}
+                      </div>
+                      {detail.print_locations
+                        .filter((l) => l.enabled)
+                        .map((l) => (
+                          <p key={l.print_location_id}>
+                            <strong>{l.name}</strong> · {printSizeLabel(l)}
+                            {l.dpi ? ` · ${l.dpi} DPI` : ""}
+                          </p>
+                        ))}
+                    </details>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
-
-        <div className="card span-3">
-          <div className="card-head">
-            <div className="card-title">Product details</div>
-          </div>
-          <div className="card-body">
-            <p className="muted text-sm">
-              Title, price, variants, and channel publishing fields go here — reusing the same fields as{" "}
-              <code>product-edit.html</code> rather than a second implementation.
-            </p>
-          </div>
-        </div>
-      </div>
-    </>
+      )}
+    </section>
   );
 }

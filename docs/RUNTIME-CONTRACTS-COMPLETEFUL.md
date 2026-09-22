@@ -1,5 +1,15 @@
 # Completeful integration runtime contract
 
+## Product studio presentation (September 2026)
+
+`admin-ui/src/pages/products/` owns the catalog, independent product detail, and artwork workspace at `/admin/products/create` and `/admin/products/create/:productId`. Its scoped stylesheet does not own navigation. Detail URLs use the same session-gated Worker SPA fallback as the catalog.
+
+The UI uses existing catalog list/detail/status/sync, media list/upload, and AgentSam chat endpoints. Catalog reads consume `items`, use `search`, and page through `pagination.has_more`; details load independently of the currently visible page. Provider imagery falls back from realistic to cover to icon, then an explicit unavailable state.
+
+Artwork placement, notes, and downloaded/restored layout files are browser editing state. PNG export uses the provider file dimensions **and unit**, converting physical units using provider DPI or the clearly stated 300 DPI recommendation. Missing units prevent pixel export. Safe-area guides are advisory, not provider-certified bleed boundaries. SVG/PDF originals are accepted by the existing media uploader; PDF requires a raster preview for the canvas. Studio uploads are limited to 20 MB in this interface.
+
+The contextual creative composer calls the existing AgentSam creative workflow; it does not introduce a new AI provider or server endpoint. Provider mockup images are explicitly labeled references, not completed artwork renders. Product merchandising and publication remain in `/admin/product-edit`; this UI does not establish provider fulfillment links or publish products. The provider mutation and order phases below remain separate requirements.
+
 Status: Phase A runtime implemented; provider credential + first sync pending
 Branch: `feat/completeful-runtime-phase-a`
 
