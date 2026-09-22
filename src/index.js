@@ -336,7 +336,7 @@ export default {
     // Analytics SPA — /admin/analytics/overview|finance|health (no .html)
     const analyticsViewMatch = path.match(/^\/admin\/analytics\/(overview|finance|health)\/?$/);
     const accountViewMatch = path === "/admin/account" || path === "/admin/account/";
-    const productStudioMatch = path === "/admin/products/create" || path === "/admin/products/create/";
+    const productStudioMatch = /^\/admin\/products\/create(?:\/[^/]+)?\/?$/.test(path);
     if (path === ADMIN_ANALYTICS_PREFIX || path === `${ADMIN_ANALYTICS_PREFIX}/`) {
       const user = await getSessionUser(request, env);
       if (!user) {
