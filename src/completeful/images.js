@@ -22,20 +22,18 @@ export async function serveCatalogImage(request, env, ctx) {
   const hit = await cache.match(key);
   if (hit) return hit;
   let upstream;
-  let optimized = true;
+  let optimized = false;
   try {
     upstream = await fetch(source, {
-      redirect: "error",
       signal: AbortSignal.timeout(15000),
-      cf: { image: { width, fit: "scale-down", format: "webp", quality: 82 },
-        cacheEverything: true, cacheTtl: 86400 },
+      headers: { Accept: "image/avif,image/webp,image/png,image/*" },
+      cf: { cacheEverything: true, cacheTtl: 86400 },
     });
-    if (!upstream.ok || !upstream.headers.get("content-type")?.startsWith("image/")) throw new Error("Transformation unavailable");
+    if (!upstream.ok || !upstream.headers.get("content-type")?.startsWith("image/")) throw new Error("Image unavailable");
   } catch {
-    optimized = false;
     try {
-      upstream = await fetch(source, { redirect: "error", signal: AbortSignal.timeout(15000),
-        cf: { cacheEverything: true, cacheTtl: 86400 } });
+      // Keep the provider image available if an edge cache option is rejected.
+      upstream = await fetch(source, { signal: AbortSignal.timeout(15000) });
     } catch { return new Response("Image temporarily unavailable", { status: 502 }); }
   }
   if (!upstream.ok || !upstream.headers.get("content-type")?.startsWith("image/"))
