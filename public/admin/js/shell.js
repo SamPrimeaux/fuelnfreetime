@@ -17,6 +17,8 @@ const ICONS = {
   agentic: '<rect x="5" y="8" width="14" height="11" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M12 4v4M9 13h.01M15 13h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
   email: '<path d="M4 6h16v12H4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
   settings: '<circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.02.02a2 2 0 1 1-2.83 2.83l-.02-.02a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.03a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.87.34l-.02.02a2 2 0 1 1-2.83-2.83l.02-.02A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.03A1.7 1.7 0 0 0 4.6 8.4a1.7 1.7 0 0 0-.34-1.87l-.02-.02a2 2 0 1 1 2.83-2.83l.02.02A1.7 1.7 0 0 0 8.96 4.04 1.7 1.7 0 0 0 10 2.48V2a2 2 0 1 1 4 0v.03a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.02-.02a2 2 0 1 1 2.83 2.83l-.02.02a1.7 1.7 0 0 0-.34 1.87A1.7 1.7 0 0 0 20.96 10H21a2 2 0 1 1 0 4h-.03A1.7 1.7 0 0 0 19.4 15Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>',
+  arrowLeftToLine: '<path d="M3 19V5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m13 6-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  textAlignStart: '<path d="M21 5H3M15 12H3M17 19H3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   chev: '<path d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
 };
 
@@ -86,6 +88,7 @@ const NAV = {
 // state so re-renders (hydrateShellNav) never silently discard a manual
 // expand/collapse the way the old per-render DOM-class toggling did.
 const navToggleState = new Map();
+let persistentNavHoverTimer;
 
 function ensureConsoleAssets() {
   document.body.classList.add("console-theme");
@@ -278,7 +281,8 @@ function renderNavItem(item, activeHref) {
   return `<a href="${item.href}" class="console-nav-item${active ? " is-active" : ""}">${icon(item.icon)}${item.label}</a>`;
 }
 
-function renderSideNav(activeHref, userNav) {
+function renderSideNav(activeHref, userNav, options = {}) {
+  const { drawer = false } = options;
   const nav = userNav || NAV;
   const main = nav.main.map((item) => renderNavItem(item, activeHref)).join("");
   const channels = nav.channels.map((item) => renderNavItem(item, activeHref)).join("");
@@ -291,15 +295,30 @@ function renderSideNav(activeHref, userNav) {
       <div class="console-nav-label">Apps</div>
       <div class="console-nav-group">${apps}</div>
     </div>
-    <div class="console-sidenav-profile">
-      <a href="/admin/account" class="console-profile-card${navActive("/admin/account", activeHref) ? " is-active" : ""}">
-        <div class="console-profile-avatar" data-profile-avatar aria-hidden="true">…</div>
-        <div class="console-profile-meta">
-          <strong data-profile-name>Account</strong>
-          <span data-profile-role>Loading…</span>
+    <div class="console-sidenav-profile${drawer ? " console-sidenav-profile--drawer" : ""}">
+      <div class="console-sidenav-profile-row">
+        <button type="button" class="console-profile-card console-profile-store" data-profile-menu-toggle aria-expanded="false" aria-haspopup="true">
+          <img class="console-profile-store-logo" src="${LOGO_URL}" alt="">
+          <span class="console-profile-meta">
+            <strong>Fuel &amp; Free Time</strong>
+            <span data-admin-email>Loading…</span>
+          </span>
+          ${icon("chev", 15, "console-profile-chevron")}
+        </button>
+        <button type="button" class="console-nav-collapse" data-console-nav-toggle aria-label="${drawer ? "Close sidebar" : "Collapse sidebar"}" title="${drawer ? "Close sidebar" : "Collapse sidebar"}">
+          ${icon("arrowLeftToLine", 19, "console-nav-collapse-icon")}
+        </button>
+      </div>
+      <div class="console-profile-menu" data-profile-menu>
+        <div class="console-profile-menu-head">
+          <div class="console-profile-avatar" data-profile-avatar aria-hidden="true">…</div>
+          <div class="console-profile-meta"><strong data-profile-name>Account</strong><span data-profile-role>Loading…</span></div>
         </div>
-        ${icon("settings", 16, "console-profile-gear")}
-      </a>
+        <a href="/admin/preferences" class="console-menu-item">Store preferences</a>
+        <a href="/admin/account" class="console-menu-item">Account &amp; password</a>
+        <a href="/" class="console-menu-item" target="_blank" rel="noopener">View storefront</a>
+      </div>
+      ${drawer ? '<button class="admin-logout-btn" type="button">Log out</button>' : ""}
     </div>`;
 }
 
@@ -363,9 +382,11 @@ function hydrateShellProfile(user) {
 function hydrateShellNav(user, activeHref) {
   hydrateShellProfile(user);
   const navHtml = renderSideNav(activeHref, buildUserNav(user));
+  const drawerNavHtml = renderSideNav(activeHref, buildUserNav(user), { drawer: true });
   document.querySelectorAll(".console-sidenav.admin-sidebar, .admin-nav--drawer").forEach((aside) => {
-    aside.innerHTML = navHtml;
+    aside.innerHTML = aside.classList.contains("admin-nav--drawer") ? drawerNavHtml : navHtml;
   });
+  syncPersistentNavState();
   // Toggle click handling is wired ONCE, via delegation, in
   // bindConsoleGlobalHandlers(). Re-rendering the nav here used to
   // re-attach a fresh set of per-button listeners on top of whatever was
@@ -428,48 +449,25 @@ function renderShell(activeHref, mainHtml, options = {}) {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 19a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.5"/></svg>
 
           </button>
-          <div style="width:1px;height:24px;background:#3a3a3a;margin:0 6px;"></div>
-          <div class="console-store-wrap">
-            <button type="button" class="console-store-btn" id="console-store-btn" aria-expanded="false">
-              <img src="${LOGO_URL}" alt="">
-              <span>Fuel &amp; Free Time</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="#9b9b9b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-            <div class="console-store-menu" id="console-store-menu">
-              <div class="console-store-menu-head">
-                <img src="${LOGO_URL}" alt="">
-                <div><strong>Fuel &amp; Free Time</strong><br><small>fuelnfreetime.com</small></div>
-              </div>
-              <a href="/admin/preferences" class="console-menu-item">Store preferences</a>
-              <a href="/admin/account" class="console-menu-item">Account &amp; password</a>
-              <a href="/" class="console-menu-item" target="_blank" rel="noopener">View storefront</a>
-              <div class="console-menu-divider"></div>
-              <button type="button" class="console-menu-item admin-logout-btn">Log out</button>
-            </div>
-          </div>
         </div>
       </header>
       <div class="console-body">
         <aside class="console-sidenav admin-sidebar">${renderSideNav(activeHref)}</aside>
-        <button type="button" class="admin-menu-toggle" id="admin-menu-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="admin-drawer">
-          <span class="admin-menu-toggle-icon" aria-hidden="true"><span></span><span></span><span></span></span>
+        <button type="button" class="console-nav-ghost-toggle admin-menu-toggle" id="admin-menu-toggle" aria-label="Show sidebar" title="Show sidebar" aria-expanded="false" aria-controls="admin-drawer">
+          ${icon("textAlignStart", 21, "console-nav-ghost-icon")}
+        </button>
+        <button type="button" class="console-nav-ghost-toggle console-nav-ghost-toggle--persistent" data-console-nav-toggle aria-label="Show sidebar" title="Show sidebar">
+          ${icon("textAlignStart", 21, "console-nav-ghost-icon")}
         </button>
         <div class="admin-drawer-backdrop" id="admin-drawer-backdrop" aria-hidden="true"></div>
         <aside class="admin-drawer" id="admin-drawer" aria-hidden="true">
           <div class="admin-drawer-head">
-            <a href="/admin/home" class="admin-drawer-logo">
-              <img src="${LOGO_URL}" alt="" width="48" height="48">
-              <span>Fuel &amp; Free Time</span>
-            </a>
-            <button type="button" class="admin-drawer-close" id="admin-drawer-close" aria-label="Close navigation">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+            <span class="admin-drawer-title">Navigation</span>
+            <button type="button" class="admin-drawer-close" id="admin-drawer-close" aria-label="Close sidebar" title="Close sidebar">
+              ${icon("arrowLeftToLine", 20, "admin-drawer-close-icon")}
             </button>
           </div>
-          <nav class="console-sidenav admin-nav admin-nav--drawer" style="display:block;width:100%;border:0;background:transparent;padding:0">${renderSideNav(activeHref)}</nav>
-          <div class="admin-drawer-footer">
-            <div class="admin-user-email" data-admin-email>…</div>
-            <button class="admin-logout-btn" type="button">Log out</button>
-          </div>
+          <nav class="console-sidenav admin-nav admin-nav--drawer" style="display:block;width:100%;border:0;background:transparent;padding:0">${renderSideNav(activeHref, null, { drawer: true })}</nav>
         </aside>
         <div class="console-workspace">
           <main class="${mainClass}">${mainHtml}</main>
@@ -482,21 +480,6 @@ function renderShell(activeHref, mainHtml, options = {}) {
   if (fullBleed) document.body.classList.add("console-body-bleed", "admin-body-bleed");
 
   bindConsoleGlobalHandlers();
-
-  document.querySelectorAll(".admin-logout-btn").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      await fetch("/api/admin/logout", { method: "POST" }).catch(() => {});
-      window.location.href = "/admin/login";
-    });
-  });
-
-  const storeBtn = document.getElementById("console-store-btn");
-  const storeMenu = document.getElementById("console-store-menu");
-  storeBtn?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const open = storeMenu?.classList.toggle("open");
-    storeBtn.setAttribute("aria-expanded", String(!!open));
-  });
 
   // NOTE: nav-toggle click handling is NOT wired here anymore. It used to be
   // wired both here (on the freshly-painted static markup) AND again inside
@@ -528,6 +511,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
       }
     });
 
+  initPersistentNav();
   initMobileNav();
   window.initEcommerceInspector?.();
   if (!window.initEcommerceInspector && !document.getElementById("ecommerce-inspector-script")) {
@@ -556,9 +540,46 @@ function bindConsoleGlobalHandlers() {
   window.__consoleGlobalHandlers = true;
 
   document.addEventListener("click", () => {
-    document.getElementById("console-store-menu")?.classList.remove("open");
-    document.getElementById("console-store-btn")?.setAttribute("aria-expanded", "false");
+    document.querySelectorAll("[data-profile-menu].open").forEach((menu) => menu.classList.remove("open"));
+    document.querySelectorAll("[data-profile-menu-toggle]").forEach((button) => button.setAttribute("aria-expanded", "false"));
   });
+
+  document.addEventListener("click", (e) => {
+    const logout = e.target.closest(".admin-logout-btn");
+    if (logout) {
+      e.preventDefault();
+      fetch("/api/admin/logout", { method: "POST" }).catch(() => {}).finally(() => {
+        window.location.href = "/admin/login";
+      });
+      return;
+    }
+    const profileButton = e.target.closest("[data-profile-menu-toggle]");
+    if (profileButton) {
+      e.preventDefault();
+      e.stopPropagation();
+      const menu = profileButton.closest(".console-sidenav-profile")?.querySelector("[data-profile-menu]");
+      const open = menu?.classList.toggle("open");
+      profileButton.setAttribute("aria-expanded", String(!!open));
+      return;
+    }
+    const navToggle = e.target.closest("[data-console-nav-toggle]");
+    if (navToggle) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (navToggle.closest(".admin-nav--drawer")) return;
+      setPersistentNav(navToggle.classList.contains("console-nav-ghost-toggle"));
+    }
+  });
+
+  document.addEventListener("pointerenter", (e) => {
+    if (e.target.closest?.(".console-nav-ghost-toggle--persistent")) {
+      clearTimeout(persistentNavHoverTimer);
+      persistentNavHoverTimer = setTimeout(() => setPersistentNav(true), 420);
+    }
+  }, true);
+  document.addEventListener("pointerleave", (e) => {
+    if (e.target.closest?.(".console-nav-ghost-toggle--persistent")) clearTimeout(persistentNavHoverTimer);
+  }, true);
 
   // Single delegated handler for every collapsible nav group, for the
   // lifetime of the page. Survives any number of aside.innerHTML swaps
@@ -586,6 +607,29 @@ function bindConsoleGlobalHandlers() {
       toggleBtn.classList.toggle("is-open", next);
     });
   });
+}
+
+function syncPersistentNavState() {
+  const collapsed = document.body.classList.contains("console-nav-collapsed");
+  document.querySelectorAll(".console-sidenav.admin-sidebar").forEach((aside) => aside.classList.toggle("is-collapsed", collapsed));
+  document.querySelectorAll("[data-console-nav-toggle]").forEach((button) => {
+    if (button.closest(".admin-nav--drawer")) return;
+    button.setAttribute("aria-label", collapsed ? "Show sidebar" : "Collapse sidebar");
+    button.setAttribute("title", collapsed ? "Show sidebar" : "Collapse sidebar");
+  });
+}
+
+function setPersistentNav(open) {
+  if (window.matchMedia?.("(max-width: 900px)")?.matches) return;
+  document.body.classList.toggle("console-nav-collapsed", !open);
+  try { localStorage.setItem("fnf-console-nav", open ? "open" : "collapsed"); } catch {}
+  syncPersistentNavState();
+}
+
+function initPersistentNav() {
+  let open = true;
+  try { open = localStorage.getItem("fnf-console-nav") !== "collapsed"; } catch {}
+  setPersistentNav(open);
 }
 
 function initAgentsamShell() {
