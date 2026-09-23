@@ -32,9 +32,9 @@ function esc(value) {
 }
 
 const events = d1(
-  `SELECT provider_id, payload_json FROM mail_webhook_events
-   WHERE channel = 'inbound' AND event_type = 'email.received'
-   ORDER BY received_at ASC`
+  `SELECT provider_object_id AS provider_id, payload_json FROM agentsam_webhook_events
+   WHERE provider = 'resend' AND event_type = 'email.received' AND payload_json IS NOT NULL
+   ORDER BY received_at_unix ASC`
 );
 
 const mailboxes = d1(`SELECT id, address, label, kind FROM mail_mailboxes ORDER BY sort_order ASC`);
