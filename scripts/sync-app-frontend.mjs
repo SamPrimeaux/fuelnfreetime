@@ -11,6 +11,7 @@ await cp(path.join(root, 'packages/heuristic-theme/storefront'), output, { recur
 await cp(path.join(frontend, 'static'), path.join(output, 'admin'), { recursive: true });
 await cp(path.join(frontend, 'dist'), path.join(output, 'admin/_spa'), { recursive: true });
 await cp(path.join(root, 'packages/agentsam-workbench/src'), path.join(output, 'admin/workbench'), { recursive: true });
+await cp(path.join(root, 'packages/admin-profile-popup/src'), path.join(output, 'admin/profile-popup'), { recursive: true });
 for (const file of ['shell.js', 'inspector.js']) {
   await cp(path.join(frontend, file), path.join(output, 'admin/js', file));
 }

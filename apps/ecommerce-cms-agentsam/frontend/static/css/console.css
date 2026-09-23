@@ -1544,11 +1544,11 @@ body.console-nav-collapsed .console-nav-ghost-toggle--persistent:hover::before {
 }
 .console-nav-collapse:hover { color: var(--c-accent); background: #fff; border-color: var(--c-ink-2); }
 .console-profile-menu {
-  position: absolute;
-  left: calc(100% + 10px);
-  bottom: 4px;
+  position: fixed;
+  left: var(--profile-popup-left, 12px);
+  top: var(--profile-popup-top, 12px);
   z-index: 190;
-  width: 238px;
+  width: var(--profile-popup-width, 260px);
   padding: 8px;
   border: 1px solid rgba(30, 34, 40, 0.12);
   border-radius: 14px;
@@ -1568,7 +1568,7 @@ body.console-nav-collapsed .console-nav-ghost-toggle--persistent:hover::before {
 .console-profile-menu .console-menu-item:hover { background: var(--c-hover); }
 
 .console-sidenav-profile--drawer { padding-top: 12px; }
-.console-sidenav-profile--drawer .console-profile-menu { left: auto; right: 0; bottom: 54px; }
+.console-sidenav-profile--drawer .console-profile-menu { right: auto; bottom: auto; }
 .console-sidenav-profile--drawer .console-nav-collapse { transform: rotate(180deg); }
 .console-sidenav-profile--drawer .admin-logout-btn { margin-top: 9px; color: rgba(255,255,255,0.86); border-color: rgba(255,255,255,0.16); }
 .console-sidenav-profile--drawer .admin-logout-btn:hover { color: #fff; border-color: rgba(255, 120, 70, 0.7); background: rgba(255, 100, 50, 0.1); }
@@ -1608,10 +1608,8 @@ body.console-nav-collapsed .console-nav-ghost-toggle--persistent:hover::before {
   .console-nav-ghost-toggle--persistent { display: inline-flex !important; }
   .console-sidenav-profile-row .console-nav-collapse { display: none; }
   .console-sidenav.admin-sidebar .console-profile-menu {
-    left: 8px;
-    right: 8px;
-    bottom: 58px;
-    width: auto;
+    right: auto;
+    bottom: auto;
   }
   .console-nav-ghost-toggle.admin-menu-toggle {
     display: none !important;

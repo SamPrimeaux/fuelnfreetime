@@ -1,0 +1,11 @@
+{
+  "name": "@inneranimalmedia/admin-profile-popup",
+  "version": "0.1.0",
+  "description": "Framework-neutral, accessible account popup behavior for Inner Animal Media admin shells.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": ["src", "README.md"],
+  "license": "MIT"
+}

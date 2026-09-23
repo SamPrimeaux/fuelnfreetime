@@ -3,12 +3,26 @@
     {"slug":"ecommerce-cms-agentsam","name":"AgentSam Ecommerce + CMS","kind":"app","canonical_path":"apps/ecommerce-cms-agentsam","package_name":"@inneranimalmedia/ecommerce-cms-agentsam","version":"0.2.0"},
     {"slug":"heuristic","name":"Heuristic","kind":"theme","canonical_path":"packages/heuristic-theme","package_name":"@inneranimalmedia/heuristic-theme","version":"0.1.0"},
     {"slug":"agentsam-workbench","name":"AgentSam Workbench","kind":"sdk-package","canonical_path":"packages/agentsam-workbench","package_name":"@inneranimalmedia/agentsam-workbench","version":"0.1.0"},
-    {"slug":"mini-agentsam","name":"miniAgentSam","kind":"ui-component","canonical_path":"packages/agentsam-workbench/src/mini-agentsam.js","package_name":"@inneranimalmedia/agentsam-workbench","version":"0.1.0"}
+    {"slug":"mini-agentsam","name":"miniAgentSam","kind":"ui-component","canonical_path":"packages/agentsam-workbench/src/mini-agentsam.js","package_name":"@inneranimalmedia/agentsam-workbench","version":"0.1.0"},
+    {"slug":"admin-profile-popup","name":"Admin Profile Popup","kind":"ui-component","canonical_path":"packages/admin-profile-popup","package_name":"@inneranimalmedia/admin-profile-popup","version":"0.1.0"},
+    {"slug":"fnf-completeful-connector","name":"Fuel & Free Time Completeful Connector","kind":"integration","status":"wired","canonical_path":"apps/ecommerce-cms-agentsam/backend/completeful","capabilities":["catalog-sync","fulfillment-webhooks","asset-ingest"]},
+    {"slug":"fnf-resend-mail","name":"Fuel & Free Time Resend Mail","kind":"service","status":"wired","canonical_path":"apps/ecommerce-cms-agentsam/backend/store/order-email.js","capabilities":["transactional-email","custom-domain-email"]},
+    {"slug":"fnf-github-oauth","name":"Fuel & Free Time GitHub OAuth","kind":"integration","status":"wired","canonical_path":"apps/ecommerce-cms-agentsam/backend/admin/agentsam-github.js","capabilities":["oauth","repository-access"]},
+    {"slug":"fnf-multi-user-admin","name":"Fuel & Free Time Multi-user Admin","kind":"service","status":"production","canonical_path":"apps/ecommerce-cms-agentsam/backend/lib/auth.js","capabilities":["accounts","roles","sessions"]},
+    {"slug":"fnf-workers-ai","name":"Fuel & Free Time Workers AI Adapter","kind":"integration","status":"wired","canonical_path":"apps/ecommerce-cms-agentsam/backend/agentsam/ai-run.js","capabilities":["workers-ai","text-generation","image-generation"]},
+    {"slug":"fnf-ai-provider-router","name":"Fuel & Free Time AI Provider Router","kind":"service","status":"wired","canonical_path":"apps/ecommerce-cms-agentsam/backend/agentsam/ai-registry.js","capabilities":["provider-routing","model-registry","api-providers"]}
   ],
   "relationships": [
     ["mini-agentsam","packaged_as","agentsam-workbench"],
     ["mini-agentsam","consumed_by","ecommerce-cms-agentsam"],
     ["heuristic","consumed_by","ecommerce-cms-agentsam"],
-    ["agentsam-workbench","consumed_by","ecommerce-cms-agentsam"]
+    ["agentsam-workbench","consumed_by","ecommerce-cms-agentsam"],
+    ["admin-profile-popup","consumed_by","ecommerce-cms-agentsam"],
+    ["fnf-completeful-connector","integrates_with","ecommerce-cms-agentsam"],
+    ["fnf-resend-mail","integrates_with","ecommerce-cms-agentsam"],
+    ["fnf-github-oauth","integrates_with","ecommerce-cms-agentsam"],
+    ["fnf-multi-user-admin","provides_identity_for","ecommerce-cms-agentsam"],
+    ["fnf-workers-ai","provides_ai_for","ecommerce-cms-agentsam"],
+    ["fnf-ai-provider-router","routes_for","ecommerce-cms-agentsam"]
   ]
 }

@@ -296,7 +296,7 @@ function renderSideNav(activeHref, userNav, options = {}) {
       <div class="console-nav-label">Apps</div>
       <div class="console-nav-group">${apps}</div>
     </div>
-    <div class="console-sidenav-profile${drawer ? " console-sidenav-profile--drawer" : ""}">
+    <div class="console-sidenav-profile${drawer ? " console-sidenav-profile--drawer" : ""}" data-profile-popup-root>
       <div class="console-sidenav-profile-row">
         <button type="button" class="console-profile-card console-profile-store" data-profile-menu-toggle aria-expanded="false" aria-haspopup="true">
           <img class="console-profile-store-logo" src="${LOGO_URL}" alt="">
@@ -310,14 +310,14 @@ function renderSideNav(activeHref, userNav, options = {}) {
           ${icon("arrowLeftToLine", 19, "console-nav-collapse-icon")}
         </button>` : ""}
       </div>
-      <div class="console-profile-menu" data-profile-menu>
+      <div class="console-profile-menu" data-profile-menu role="menu" aria-label="Account settings" aria-hidden="true">
         <div class="console-profile-menu-head">
           <div class="console-profile-avatar" data-profile-avatar aria-hidden="true">…</div>
           <div class="console-profile-meta"><strong data-profile-name>Account</strong><span data-profile-role>Loading…</span></div>
         </div>
-        <a href="/admin/preferences" class="console-menu-item">Store preferences</a>
-        <a href="/admin/account" class="console-menu-item">Account &amp; password</a>
-        <a href="/" class="console-menu-item" target="_blank" rel="noopener">View storefront</a>
+        <a href="/admin/preferences" class="console-menu-item" role="menuitem">Store preferences</a>
+        <a href="/admin/account" class="console-menu-item" role="menuitem">Account &amp; password</a>
+        <a href="/" class="console-menu-item" role="menuitem" target="_blank" rel="noopener">View storefront</a>
       </div>
       <button class="admin-logout-btn" type="button">Log out</button>
     </div>`;
@@ -495,6 +495,9 @@ function renderShell(activeHref, mainHtml, options = {}) {
   if (fullBleed) document.body.classList.add("console-body-bleed", "admin-body-bleed");
 
   bindConsoleGlobalHandlers();
+  import('/admin/profile-popup/index.js')
+    .then(({ mountProfilePopups }) => mountProfilePopups(document))
+    .catch(() => {});
 
   // NOTE: nav-toggle click handling is NOT wired here anymore. It used to be
   // wired both here (on the freshly-painted static markup) AND again inside
@@ -554,11 +557,6 @@ function bindConsoleGlobalHandlers() {
   if (window.__consoleGlobalHandlers) return;
   window.__consoleGlobalHandlers = true;
 
-  document.addEventListener("click", () => {
-    document.querySelectorAll("[data-profile-menu].open").forEach((menu) => menu.classList.remove("open"));
-    document.querySelectorAll("[data-profile-menu-toggle]").forEach((button) => button.setAttribute("aria-expanded", "false"));
-  });
-
   document.addEventListener("click", (e) => {
     const logout = e.target.closest(".admin-logout-btn");
     if (logout) {
@@ -566,15 +564,6 @@ function bindConsoleGlobalHandlers() {
       fetch("/api/admin/logout", { method: "POST" }).catch(() => {}).finally(() => {
         window.location.href = "/admin/login";
       });
-      return;
-    }
-    const profileButton = e.target.closest("[data-profile-menu-toggle]");
-    if (profileButton) {
-      e.preventDefault();
-      e.stopPropagation();
-      const menu = profileButton.closest(".console-sidenav-profile")?.querySelector("[data-profile-menu]");
-      const open = menu?.classList.toggle("open");
-      profileButton.setAttribute("aria-expanded", String(!!open));
       return;
     }
     const navToggle = e.target.closest("[data-console-nav-toggle]");
