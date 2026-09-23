@@ -1,6 +1,11 @@
 /**
  * Fuel & Free Time — Agent Sam platform IDs (single-tenant).
  */
+export const FNF_ACCOUNT_ID = "ede6590ac0d2fb7daf155b35653457b2";
+export const FNF_CLOUDFLARE_ACCOUNT_ID = FNF_ACCOUNT_ID;
+export const FNF_CLOUDFLARE_ZONE_ID = "816a5d2284103e4481987ceeb16c2ca9";
+
+// Legacy scope constants remain only for tables not yet normalized to account_id.
 export const FNF_TENANT_ID = "tenant_fuelnfreetime";
 export const FNF_WORKSPACE_ID = "ws_fuelnfreetime";
 export const FNF_SYSTEM_USER_ID = "au_fnf_system";
