@@ -21,6 +21,8 @@ These are release requirements, not claims that every capability is complete tod
 
 The reference installation has a working commerce/CMS foundation, product and media administration, Completeful catalog browsing, and an artwork workspace. The shared shell and contextual inspector are app-owned. React content mounts inside the existing shell so CMS pages, product editing, and the studio have one navigation renderer.
 
+The dashboard uses `persistent-frosted-rail` as its single navigation source of truth at every viewport. `mobile-glass-drawer` remains a separately documented package for the public storefront header and is intentionally not mounted by dashboard pages.
+
 Catalog refresh uses small resumable requests, a single-writer lease, atomic per-product replacement, R2 storage for complete provider payloads, and visible pause/retry/error states. This is resumable request processing, not a durable background queue.
 
 Public provider images use an origin allowlist, bounded Cloudflare transformations, edge caching, and original fallback. Originals remain available for production artwork. Customer artwork does not use the public catalog-image route.
@@ -47,6 +49,7 @@ Price each offer against onboarding, support, provider, and AI costs. Do not sel
 
 - A fresh owner can scaffold outside this repository without inherited credentials, account IDs, or customer data.
 - Mobile navigation has one control and one active drawer with keyboard focus management, Escape, and route-close behavior.
+- Dashboard navigation has one responsive left-rail authority with a persistent profile footer and collapse/reveal control; public header navigation is packaged separately.
 - Catalog import completes, resumes after interruption, retries failures, and never exposes partial product snapshots.
 - Images load at display sizes while originals remain available.
 - Annotation sends only the selected context and comment, reports failures, and preserves retryability.

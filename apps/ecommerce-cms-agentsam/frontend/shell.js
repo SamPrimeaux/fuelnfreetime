@@ -430,7 +430,7 @@ function stabilizeShellDrawers() {
 }
 
 function renderShell(activeHref, mainHtml, options = {}) {
-  const { fullBleed = false, onReady } = options;
+  const { fullBleed = false, onReady, includeMobileDrawer = false } = options;
   ensureConsoleAssets();
   ensureConsoleLayout();
 
@@ -441,8 +441,22 @@ function renderShell(activeHref, mainHtml, options = {}) {
     ? "console-main admin-main console-main--bleed admin-main--bleed"
     : "console-main admin-main";
 
+  const mobileDrawerMarkup = includeMobileDrawer ? `
+        <div class="admin-drawer-backdrop" id="admin-drawer-backdrop" aria-hidden="true"></div>
+        <aside class="admin-drawer" id="admin-drawer" aria-hidden="true">
+          <div class="admin-drawer-head">
+            <span class="admin-drawer-title">Navigation</span>
+            <button type="button" class="admin-drawer-close" id="admin-drawer-close" aria-label="Close sidebar" title="Close sidebar">
+              ${icon("arrowLeftToLine", 20, "admin-drawer-close-icon")}
+            </button>
+          </div>
+          <nav class="console-sidenav admin-nav admin-nav--drawer" data-nav-package="mobile-glass-drawer" style="display:block;width:100%;border:0;background:transparent;padding:0">${renderSideNav(activeHref, null, { drawer: true })}</nav>
+        </aside>` : "";
+  const mobileDrawerTrigger = includeMobileDrawer ? `<button type="button" class="console-nav-ghost-toggle admin-menu-toggle" id="admin-menu-toggle" aria-label="Show sidebar" title="Show sidebar" aria-expanded="false" aria-controls="admin-drawer">
+          ${icon("textAlignStart", 21, "console-nav-ghost-icon")}
+        </button>` : "";
   document.getElementById("console-app").innerHTML = `
-    <div class="console-shell admin-shell" data-nav-packages="persistent-frosted-rail mobile-glass-drawer">
+    <div class="console-shell admin-shell" data-nav-packages="persistent-frosted-rail${includeMobileDrawer ? " mobile-glass-drawer" : ""}">
       <header class="console-topbar">
         <div class="console-topbar-spacer" aria-hidden="true"></div>
         <div class="console-search-wrap">
@@ -464,22 +478,11 @@ function renderShell(activeHref, mainHtml, options = {}) {
       </header>
       <div class="console-body">
         <aside class="console-sidenav admin-sidebar" data-nav-package="persistent-frosted-rail">${renderSideNav(activeHref)}</aside>
-        <button type="button" class="console-nav-ghost-toggle admin-menu-toggle" id="admin-menu-toggle" aria-label="Show sidebar" title="Show sidebar" aria-expanded="false" aria-controls="admin-drawer">
-          ${icon("textAlignStart", 21, "console-nav-ghost-icon")}
-        </button>
+        ${mobileDrawerTrigger}
         <button type="button" class="console-nav-ghost-toggle console-nav-ghost-toggle--persistent" data-console-nav-toggle aria-label="Show sidebar" title="Show sidebar">
           ${icon("textAlignStart", 21, "console-nav-ghost-icon")}
         </button>
-        <div class="admin-drawer-backdrop" id="admin-drawer-backdrop" aria-hidden="true"></div>
-        <aside class="admin-drawer" id="admin-drawer" aria-hidden="true">
-          <div class="admin-drawer-head">
-            <span class="admin-drawer-title">Navigation</span>
-            <button type="button" class="admin-drawer-close" id="admin-drawer-close" aria-label="Close sidebar" title="Close sidebar">
-              ${icon("arrowLeftToLine", 20, "admin-drawer-close-icon")}
-            </button>
-          </div>
-          <nav class="console-sidenav admin-nav admin-nav--drawer" data-nav-package="mobile-glass-drawer" style="display:block;width:100%;border:0;background:transparent;padding:0">${renderSideNav(activeHref, null, { drawer: true })}</nav>
-        </aside>
+        ${mobileDrawerMarkup}
         <div class="console-workspace">
           <main class="${mainClass}">${mainHtml}</main>
           <aside id="agentsam-dock" class="agentsam-dock" aria-hidden="true"></aside>
@@ -523,7 +526,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
     });
 
   initPersistentNav();
-  initMobileNav();
+  if (includeMobileDrawer) initMobileNav();
   window.initEcommerceInspector?.();
   if (!window.initEcommerceInspector && !document.getElementById("ecommerce-inspector-script")) {
     const script = document.createElement("script");
@@ -631,7 +634,6 @@ function syncPersistentNavState() {
 }
 
 function setPersistentNav(open) {
-  if (window.matchMedia?.("(max-width: 900px)")?.matches) return;
   document.body.classList.toggle("console-nav-collapsed", !open);
   try { localStorage.setItem("fnf-console-nav", open ? "open" : "collapsed"); } catch {}
   syncPersistentNavState();

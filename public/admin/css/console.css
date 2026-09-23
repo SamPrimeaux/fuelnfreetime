@@ -1553,11 +1553,33 @@ body.console-nav-collapsed .console-nav-ghost-toggle--persistent:hover::before {
 .admin-drawer-close:hover { color: #fff; background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.24); }
 
 @media (max-width: 900px) {
+  body.console-theme { --c-nav-w: 0px; }
   body.console-theme.console-nav-collapsed { --c-nav-w: 0px; }
-  .console-sidenav.admin-sidebar { display: none; }
-  .console-nav-ghost-toggle--persistent { display: none !important; }
+  .console-sidenav.admin-sidebar {
+    display: flex;
+    position: fixed;
+    top: var(--c-topbar-h, 56px);
+    left: 0;
+    bottom: 0;
+    z-index: 160;
+    width: min(320px, 84vw);
+    max-width: 320px;
+    border-right: 1px solid var(--c-nav-rail-border);
+    box-shadow: 0 20px 50px rgba(0,0,0,.18);
+    transform: translateX(0);
+    transition: transform .24s ease, opacity .2s ease;
+  }
+  .console-sidenav.admin-sidebar.is-collapsed {
+    display: flex;
+    width: min(320px, 84vw);
+    max-width: 320px;
+    padding: 12px 9px 0;
+    opacity: 0;
+    transform: translateX(-105%);
+    pointer-events: none;
+  }
   .console-nav-ghost-toggle.admin-menu-toggle {
-    display: inline-flex;
+    display: none !important;
     position: fixed;
     top: 0;
     left: 0;
@@ -1576,13 +1598,7 @@ body.console-nav-collapsed .console-nav-ghost-toggle--persistent:hover::before {
   .console-nav-ghost-toggle.admin-menu-toggle:hover { color: #fff; background: rgba(40,40,42,0.9); }
   .console-nav-ghost-toggle.admin-menu-toggle::after { content: attr(title); position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%); white-space: nowrap; padding: 6px 8px; border-radius: 7px; color: #fff; background: #1b1d21; font-size: 11px; opacity: 0; pointer-events: none; transition: opacity .15s ease; }
   .console-nav-ghost-toggle.admin-menu-toggle:hover::after { opacity: 1; }
-  .admin-drawer .console-sidenav-profile { margin-top: auto; }
-  .admin-drawer .console-profile-card { color: rgba(255,255,255,0.92); }
-  .admin-drawer .console-profile-meta strong { color: rgba(255,255,255,0.95); }
-  .admin-drawer .console-profile-meta span { color: rgba(255,255,255,0.62); }
-  .admin-drawer .console-sidenav-profile { border-top: 1px solid rgba(255,255,255,0.1); }
-  .admin-drawer .console-nav-collapse { display: none; }
-  .admin-drawer .console-profile-menu { color: var(--c-ink); }
+  body.console-nav-collapsed .console-nav-ghost-toggle--persistent { display: inline-flex !important; }
 }
 
 /* --- Closable sidenav (admin-ui React shell) --- */
