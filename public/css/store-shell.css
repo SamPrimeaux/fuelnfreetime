@@ -147,8 +147,12 @@ body.fnf-nav-open {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 6px;
+  width: 46px;
+  height: 46px;
+  padding: 0;
   border: none;
+  outline: none;
+  border-radius: 10px;
   background: transparent;
   color: var(--fnf-accent);
   text-decoration: none;
@@ -160,6 +164,12 @@ body.fnf-nav-open {
 .fnf-cart-btn:hover,
 .fnf-burger:hover {
   opacity: 0.85;
+}
+
+.fnf-burger:focus-visible {
+  outline: 2px solid var(--fnf-accent);
+  outline-offset: 3px;
+  background: rgba(255, 69, 0, 0.08);
 }
 
 .fnf-cart-btn svg {
