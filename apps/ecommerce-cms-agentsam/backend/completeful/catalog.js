@@ -86,8 +86,10 @@ export async function getCompletefulCounts(env) {
        (SELECT COUNT(*) FROM completeful_variant_links) AS variant_links,
        (SELECT COUNT(*) FROM completeful_order_links) AS order_links,
        (SELECT COUNT(*) FROM completeful_operations) AS operations,
-       (SELECT COUNT(*) FROM completeful_webhook_subscriptions) AS webhook_subscriptions,
-       (SELECT COUNT(*) FROM completeful_webhook_events) AS webhook_events`,
+       (SELECT COUNT(*) FROM agentsam_webhooks
+         WHERE provider = 'completeful' AND status != 'retired') AS webhook_subscriptions,
+       (SELECT COUNT(*) FROM agentsam_webhook_events
+         WHERE provider = 'completeful') AS webhook_events`,
   ).first();
 }
 
