@@ -275,6 +275,8 @@ SELECT
   resolved, resolved_at_unix, expires_at_unix, created_at_unix
 FROM agentsam_hook_execution;
 
+DROP VIEW IF EXISTS v_completeful_schema_summary;
+
 DROP TABLE agentsam_hook_execution;
 DROP TABLE agentsam_hook;
 DROP TABLE agentsam_webhook_events;
