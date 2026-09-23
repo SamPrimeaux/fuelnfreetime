@@ -2,7 +2,7 @@
 
 ## Product studio presentation (September 2026)
 
-`admin-ui/src/pages/products/` owns the catalog, independent product detail, and artwork workspace at `/admin/products/create` and `/admin/products/create/:productId`. Its scoped stylesheet does not own navigation. Detail URLs use the same session-gated Worker SPA fallback as the catalog.
+`apps/ecommerce-cms-agentsam/frontend/src/pages/products/` owns the catalog, independent product detail, and artwork workspace at `/admin/products/create` and `/admin/products/create/:productId`. The app-owned `shell.js` owns navigation; the product studio owns only its content surface. Detail URLs use the same session-gated Worker SPA fallback as the catalog.
 
 The UI uses existing catalog list/detail/status/sync, media list/upload, and AgentSam chat endpoints. Catalog reads consume `items`, use `search`, and page through `pagination.has_more`; details load independently of the currently visible page. Provider imagery falls back from realistic to cover to icon, then an explicit unavailable state.
 

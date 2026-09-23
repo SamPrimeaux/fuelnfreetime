@@ -1,5 +1,5 @@
 import { useEffect, type ComponentType } from "react";
-import { Navigate, Route, Routes, useOutletContext } from "react-router-dom";
+import { Navigate, Route, Routes, useOutletContext, useParams } from "react-router-dom";
 import AdminLayout from "./layout/AdminLayout";
 import AnalyticsShell from "./pages/analytics/AnalyticsShell";
 import OverviewPage from "./pages/analytics/OverviewPage";
@@ -39,10 +39,11 @@ function AccountRoute() {
 }
 
 function ProductStudioRoute() {
+  const { productId } = useParams();
   useEffect(() => {
     document.title = "Create & Explore Designs — Fuel & Free Time Admin";
   }, []);
-  return <ProductStudioPage />;
+  return <ProductStudioPage key={productId || "catalog"} />;
 }
 
 function AnalyticsRoute({

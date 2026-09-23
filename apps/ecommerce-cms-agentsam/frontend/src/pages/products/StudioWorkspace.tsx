@@ -82,8 +82,12 @@ export default function StudioWorkspace({
   useEffect(() => {
     if (tab !== "designs") return;
     const controller = new AbortController();
-    setBusy("library");
-    setError("");
+    queueMicrotask(() => {
+      if (!controller.signal.aborted) {
+        setBusy("library");
+        setError("");
+      }
+    });
     adminFetch<{ assets: MediaAsset[] }>("/api/admin/media?view=all", {
       signal: controller.signal,
     })
@@ -102,7 +106,6 @@ export default function StudioWorkspace({
     return () => controller.abort();
   }, [tab]);
   useEffect(() => {
-    setDimensions(null);
     if (!asset) return;
     let active = true;
     const image = new Image();
@@ -119,6 +122,7 @@ export default function StudioWorkspace({
     };
   }, [asset]);
   function choose(a: MediaAsset) {
+    setDimensions(null);
     setAsset(a);
     setShowArtwork(true);
     setView("artwork");
@@ -271,6 +275,7 @@ export default function StudioWorkspace({
         typeof value === "number" && Number.isFinite(value)
           ? Math.max(min, Math.min(max, value))
           : fallback;
+      setDimensions(null);
       setAsset(restored || null);
       setX(limit(saved.placement?.x, 0, 100, 50));
       setY(limit(saved.placement?.y, 0, 100, 50));
@@ -354,7 +359,7 @@ export default function StudioWorkspace({
       ? dimensions.width / ((printPixels.width * scale) / 100)
       : null;
   return (
-    <div className="ps-workspace">
+    <div className="ps-workspace" data-agentsam-resource="product-design-workspace">
       <header className="ps-workspace-header">
         <button
           className="ps-text-button"
@@ -604,6 +609,17 @@ export default function StudioWorkspace({
           )}
           {tab === "annotate" && (
             <>
+              <button
+                className="ps-button ps-wide"
+                type="button"
+                onClick={() => window.startEcommerceInspector?.()}
+              >
+                Inspect & annotate with AgentSam
+              </button>
+              <p className="ps-panel-intro">
+                Pick any visible part of the studio to attach contextual instructions to it.
+                Storefront CMS sections are verified server-side before they can become editable resources.
+              </p>
               <label className="ps-field">
                 Design notes
                 <textarea
@@ -685,7 +701,7 @@ export default function StudioWorkspace({
             </div>
             <span>{location?.name || "Design space"}</span>
           </div>
-          <div className="ps-stage">
+          <div className="ps-stage" data-agentsam-resource="product-design-stage">
             {view === "artwork" ? (
               <div
                 className="ps-artboard"

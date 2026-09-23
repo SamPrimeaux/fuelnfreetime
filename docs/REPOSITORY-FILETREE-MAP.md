@@ -1,5 +1,8 @@
 # Fuel & Free Time — repository filetree map and buildout scaffold
 
+> **Historical topology note (2026-09-23):** this map includes pre-cutover paths from the `admin-ui/` + root `app/` era. Runtime authority has moved to `apps/ecommerce-cms-agentsam/{frontend,backend}`; `packages/agentsam-workbench` owns reusable miniAgentSam; Wrangler serves assembled `dist/assets`. Use `docs/PIPELINE-OWNERSHIP.md` and `AGENTSAM.md` for current ownership. Do not restore retired paths from this snapshot.
+
+
 Generated from the tracked checkout on 2026-09-23. This document separates canonical source from generated runtime output and gives the build/deploy path for the complete application.
 
 ## System shape

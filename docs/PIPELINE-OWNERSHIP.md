@@ -14,7 +14,15 @@ Build the dashboard with Vite, then assemble public/theme/admin assets. Deploy o
 
 ## UI refinement contract
 
-Preserve click-controlled navigation and the current storefront design. miniAgentSam is a dark glass pill with purple selection/send/thinking accents, attached only to editable store resources. The selected canvas resource, local composer, and response/generation surfaces have separate responsibilities. Generation animation reflects execution events, never prompt keyword guesses. The full drawer owns transport and sessions. The host must authorize resource edits server-side.
+Preserve click-controlled navigation and the current storefront design. miniAgentSam is a dark glass pill with purple selection/send/thinking accents. It can annotate ordinary admin UI as context, while only store-owned CMS resources may be promoted to editable resources after server-side authorization. The selected canvas resource, local composer, and response/generation surfaces have separate responsibilities. Generation animation reflects execution events, never prompt keyword guesses. The full drawer owns transport and sessions. DOM selection never grants edit authority.
+
+## Live CMS editor and agentic generation
+
+`CMS_EDITOR` binds the `CmsEditorRoom` Durable Object as the per-page live authoring room. It is the coordination plane, not the LLM execution engine: the room sequences section patches, broadcasts updates to connected editor/preview clients, and coordinates publish events. It is also the right place to evolve presence, optimistic version checks, conflict handling, revision notifications, and agent phase/draft events that must be seen consistently by every client editing the same page.
+
+Agentic generation stays in the AgentSam/Worker execution path. The intended flow is: miniAgentSam or the full composer identifies context → AgentSam produces a structured CMS operation → the server resolves and authorizes the selected resource and validates the operation → the accepted patch is applied through the page's `CmsEditorRoom` → connected editor/preview clients receive the live update → publish remains an explicit authoring action. Heavy model/tool execution must not be held inside the Durable Object.
+
+Today `CmsEditorRoom` already handles WebSocket `section:patch`, `publish`, and broadcast/ping traffic for the human editor. AgentSam-selected CMS resources are already server-resolved against D1, but the AgentSam tool registry does not yet expose a general CMS mutation handler. Wiring a structured CMS authoring tool through the same room is the remaining backend step for true live agentic edits; do not claim chat replies alone mutate the page.
 
 ## Registry contract
 

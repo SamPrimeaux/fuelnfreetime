@@ -35,6 +35,14 @@ for (const base of ['apps/ecommerce-cms-agentsam', 'packages']) {
 }
 const config = fs.readFileSync(path.join(root, 'wrangler.toml'), 'utf8');
 if (!config.includes('directory = "./dist/assets"') || !config.includes('main = "apps/ecommerce-cms-agentsam/backend/index.js"')) failures.push('Worker build ownership drift');
+
+// The SPA must render directly inside the shell-owned content mount. A separate
+// viewport-sized #root created a blank screen above every React admin route.
+const spaIndex = fs.readFileSync(path.join(root, 'apps/ecommerce-cms-agentsam/frontend/index.html'), 'utf8');
+const spaMain = fs.readFileSync(path.join(root, 'apps/ecommerce-cms-agentsam/frontend/src/main.tsx'), 'utf8');
+const spaCss = fs.readFileSync(path.join(root, 'apps/ecommerce-cms-agentsam/frontend/src/index.css'), 'utf8');
+if (/id=["']root["']/.test(spaIndex) || /#root\s*\{/.test(spaCss)) failures.push('SPA viewport root drift: React must mount inside the admin shell');
+if (!spaMain.includes('getElementById("ecommerce-react-content")') || !spaMain.includes('createRoot(host)')) failures.push('SPA shell mount drift: expected ecommerce-react-content root');
 for (const entry of ['index.html','admin/login.html','admin/_spa/index.html','admin/js/shell.js','admin/js/inspector.js']) {
   if (!fs.existsSync(path.join(root, 'dist/assets', entry))) failures.push(`Missing assembled asset: ${entry}`);
 }

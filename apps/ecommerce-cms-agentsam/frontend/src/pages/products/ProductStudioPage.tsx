@@ -52,8 +52,12 @@ export default function ProductStudioPage() {
   useEffect(() => {
     if (productId) return;
     const controller = new AbortController();
-    setLoading(true);
-    setError("");
+    queueMicrotask(() => {
+      if (!controller.signal.aborted) {
+        setLoading(true);
+        setError("");
+      }
+    });
     const params = new URLSearchParams({
       limit: "24",
       offset: String(offset),
@@ -78,13 +82,14 @@ export default function ProductStudioPage() {
     return () => controller.abort();
   }, [search, offset, refresh, productId]);
   useEffect(() => {
-    setDesigning(false);
-    setDetail(null);
-    setGallery("");
     if (!productId) return;
     const controller = new AbortController();
-    setLoading(true);
-    setError("");
+    queueMicrotask(() => {
+      if (!controller.signal.aborted) {
+        setLoading(true);
+        setError("");
+      }
+    });
     adminFetch<ProductDetail>(
       `/api/admin/completeful/catalog/${encodeURIComponent(productId)}`,
       { signal: controller.signal },

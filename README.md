@@ -228,7 +228,7 @@ fuelnfreetime/
 │   ├── migrate-growth-campaigns.sql
 │   ├── migrate-attribution.sql
 │   └── migrate-discounts.sql
-├── admin-ui/                 # React analytics (/admin/analytics/*)
+├── apps/ecommerce-cms-agentsam/  # Canonical admin/CMS/commerce app (frontend + backend)
 └── docs/
     ├── RUNTIME-CONTRACTS-STRIPE.md   # Stripe task checklist (not started)
     └── RUNTIME-CONTRACTS-COMMERCE.md
