@@ -583,7 +583,7 @@ function bindConsoleGlobalHandlers() {
       e.preventDefault();
       e.stopPropagation();
       if (navToggle.closest(".admin-nav--drawer")) return;
-      setPersistentNav(navToggle.classList.contains("console-nav-ghost-toggle"));
+      setPersistentNav(document.body.classList.contains("console-nav-collapsed"));
     }
   });
 
