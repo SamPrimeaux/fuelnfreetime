@@ -92,9 +92,9 @@ export async function createSession(env, userId) {
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 86400000).toISOString();
 
   await env.DB.prepare(
-    `INSERT INTO auth_sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)`
+    `INSERT INTO auth_sessions (token_hash, user_id, active_account_id, expires_at) VALUES (?, ?, ?, ?)`
   )
-    .bind(tokenHash, String(userId), expiresAt)
+    .bind(tokenHash, String(userId), FNF_ACCOUNT_ID, expiresAt)
     .run();
 
   await touchLogin(env, userId);
