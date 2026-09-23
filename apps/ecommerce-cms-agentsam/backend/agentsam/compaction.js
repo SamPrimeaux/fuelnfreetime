@@ -2,7 +2,7 @@
  * AgentSam compaction — roll hot D1 logs into daily stats and trim retention windows.
  */
 
-import { FNF_TENANT_ID, FNF_WORKSPACE_ID } from "./constants.js";
+import { FNF_ACCOUNT_ID, FNF_TENANT_ID, FNF_WORKSPACE_ID } from "./constants.js";
 import { trackAgentSamEvent } from "./analytics.js";
 
 export const RETENTION = {
@@ -99,8 +99,9 @@ export async function rollupAnalyticsDaily(env, dateKey) {
 
   const result = await env.DB.prepare(
     `INSERT INTO agentsam_analytics_daily (
-       id, tenant_id, workspace_id, date_key,
+       id, account_id, date_key,
        event_type, event_name, workflow_key, task_type, model_id,
+       provider, channel, campaign_id, product_id,
        event_count, success_count, failed_count, started_count, fallback_count,
        total_input_tokens, total_output_tokens, total_estimated_cost_usd,
        avg_duration_ms, avg_ai_latency_ms, compacted_at
@@ -109,12 +110,15 @@ export async function rollupAnalyticsDaily(env, dateKey) {
        'aad_' || lower(hex(randomblob(8))),
        ?,
        ?,
-       ?,
        COALESCE(NULLIF(event_type, ''), '_all'),
        COALESCE(NULLIF(event_name, ''), '_all'),
        COALESCE(NULLIF(workflow_key, ''), '_all'),
        COALESCE(NULLIF(task_type, ''), '_all'),
        COALESCE(NULLIF(model_id, ''), '_all'),
+       COALESCE(NULLIF(provider, ''), '_all'),
+       COALESCE(NULLIF(channel, ''), '_all'),
+       COALESCE(NULLIF(campaign_id, ''), '_all'),
+       COALESCE(NULLIF(product_id, ''), '_all'),
        COUNT(*),
        SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END),
        SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END),
@@ -127,9 +131,13 @@ export async function rollupAnalyticsDaily(env, dateKey) {
        COALESCE(AVG(ai_latency_ms), 0),
        unixepoch()
      FROM agentsam_analytics
-     WHERE workspace_id = ? AND date_key = ?
-     GROUP BY event_type, event_name, workflow_key, task_type, model_id
-     ON CONFLICT(workspace_id, date_key, event_type, event_name, workflow_key, task_type, model_id)
+     WHERE account_id = ? AND date_key = ?
+     GROUP BY event_type, event_name, workflow_key, task_type, model_id,
+              provider, channel, campaign_id, product_id
+     ON CONFLICT(
+       account_id, date_key, event_type, event_name, workflow_key, task_type,
+       model_id, provider, channel, campaign_id, product_id
+     )
      DO UPDATE SET
        event_count = excluded.event_count,
        success_count = excluded.success_count,
@@ -143,7 +151,7 @@ export async function rollupAnalyticsDaily(env, dateKey) {
        avg_ai_latency_ms = excluded.avg_ai_latency_ms,
        compacted_at = excluded.compacted_at`
   )
-    .bind(FNF_TENANT_ID, FNF_WORKSPACE_ID, dateKey, FNF_WORKSPACE_ID, dateKey)
+    .bind(FNF_ACCOUNT_ID, dateKey, FNF_ACCOUNT_ID, dateKey)
     .run();
 
   return { ok: true, rows: result.meta?.changes ?? 0 };
@@ -326,9 +334,9 @@ export async function trimHotLogs(env, dateKey) {
 
   const analytics = await env.DB.prepare(
     `DELETE FROM agentsam_analytics
-     WHERE workspace_id = ? AND date_key <= ? AND created_at_unix < ?`
+     WHERE account_id = ? AND date_key <= ? AND created_at_unix < ?`
   )
-    .bind(FNF_WORKSPACE_ID, dateKey, analyticsCutoff)
+    .bind(FNF_ACCOUNT_ID, dateKey, analyticsCutoff)
     .run();
 
   const promptUsage = await env.DB.prepare(
@@ -448,18 +456,18 @@ export async function getCompactionStatus(env, { limit = 10 } = {}) {
 
     const totals = await env.DB.prepare(
       `SELECT
-         (SELECT COUNT(*) FROM agentsam_analytics WHERE workspace_id = ?) AS analytics_hot,
+         (SELECT COUNT(*) FROM agentsam_analytics WHERE account_id = ?) AS analytics_hot,
          (SELECT COUNT(*) FROM agentsam_prompt_usage WHERE workspace_id = ?) AS prompt_usage_hot,
          (SELECT COUNT(*) FROM agentsam_tool_call_log WHERE workspace_id = ?) AS tool_call_hot,
-         (SELECT COUNT(*) FROM agentsam_analytics_daily WHERE workspace_id = ?) AS analytics_daily,
+         (SELECT COUNT(*) FROM agentsam_analytics_daily WHERE account_id = ?) AS analytics_daily,
          (SELECT COUNT(*) FROM agentsam_prompt_usage_daily WHERE workspace_id = ?) AS prompt_usage_daily,
          (SELECT COUNT(*) FROM agentsam_tool_call_daily WHERE workspace_id = ?) AS tool_call_daily`
     )
       .bind(
+        FNF_ACCOUNT_ID,
         FNF_WORKSPACE_ID,
         FNF_WORKSPACE_ID,
-        FNF_WORKSPACE_ID,
-        FNF_WORKSPACE_ID,
+        FNF_ACCOUNT_ID,
         FNF_WORKSPACE_ID,
         FNF_WORKSPACE_ID
       )
