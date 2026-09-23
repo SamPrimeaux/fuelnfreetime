@@ -8,16 +8,21 @@
 --    underneath live children.
 -- ---------------------------------------------------------------------------
 
+UPDATE accounts
+SET account_key = 'fuelnfreetime_legacy_20260923'
+WHERE id = 'acct_fuelnfreetime'
+  AND account_key = 'fuelnfreetime';
+
 INSERT INTO accounts (id, account_key, display_name, status, created_at, updated_at)
 SELECT
   'ede6590ac0d2fb7daf155b35653457b2',
-  account_key,
+  'fuelnfreetime',
   display_name,
   status,
   created_at,
   unixepoch()
 FROM accounts
-WHERE account_key = 'fuelnfreetime'
+WHERE id = 'acct_fuelnfreetime'
 ON CONFLICT(id) DO NOTHING;
 
 UPDATE account_memberships
