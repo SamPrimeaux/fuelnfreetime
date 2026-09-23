@@ -319,4 +319,4 @@ CREATE INDEX idx_agentsam_hook_execution_status_created
 CREATE INDEX idx_agentsam_hook_execution_expiry
   ON agentsam_hook_execution(expires_at_unix);
 
-PRAGMA foreign_keys = ON;
+PRAGMA defer_foreign_keys = OFF;
