@@ -19,6 +19,8 @@ const ICONS = {
   settings: '<circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.02.02a2 2 0 1 1-2.83 2.83l-.02-.02a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.03a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.87.34l-.02.02a2 2 0 1 1-2.83-2.83l.02-.02A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.03A1.7 1.7 0 0 0 4.6 8.4a1.7 1.7 0 0 0-.34-1.87l-.02-.02a2 2 0 1 1 2.83-2.83l.02.02A1.7 1.7 0 0 0 8.96 4.04 1.7 1.7 0 0 0 10 2.48V2a2 2 0 1 1 4 0v.03a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.02-.02a2 2 0 1 1 2.83 2.83l-.02.02a1.7 1.7 0 0 0-.34 1.87A1.7 1.7 0 0 0 20.96 10H21a2 2 0 1 1 0 4h-.03A1.7 1.7 0 0 0 19.4 15Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>',
   arrowLeftToLine: '<path d="M3 19V5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m13 6-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   textAlignStart: '<path d="M21 5H3M15 12H3M17 19H3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  menu: '<path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  x: '<path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   chev: '<path d="m9 6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
 };
 
@@ -318,7 +320,7 @@ function renderSideNav(activeHref, userNav, options = {}) {
         <a href="/admin/account" class="console-menu-item">Account &amp; password</a>
         <a href="/" class="console-menu-item" target="_blank" rel="noopener">View storefront</a>
       </div>
-      ${drawer ? '<button class="admin-logout-btn" type="button">Log out</button>' : ""}
+      <button class="admin-logout-btn" type="button">Log out</button>
     </div>`;
 }
 
@@ -628,8 +630,10 @@ function syncPersistentNavState() {
   document.querySelectorAll(".console-sidenav.admin-sidebar").forEach((aside) => aside.classList.toggle("is-collapsed", collapsed));
   document.querySelectorAll("[data-console-nav-toggle]").forEach((button) => {
     if (button.closest(".admin-nav--drawer")) return;
-    button.setAttribute("aria-label", collapsed ? "Show sidebar" : "Collapse sidebar");
-    button.setAttribute("title", collapsed ? "Show sidebar" : "Collapse sidebar");
+    const label = collapsed ? "Show sidebar" : (window.matchMedia?.("(max-width: 900px)")?.matches ? "Close sidebar" : "Collapse sidebar");
+    button.setAttribute("aria-label", label);
+    button.setAttribute("title", label);
+    button.innerHTML = icon(collapsed || !window.matchMedia?.("(max-width: 900px)")?.matches ? "textAlignStart" : "x", 21, "console-nav-ghost-icon");
   });
 }
 

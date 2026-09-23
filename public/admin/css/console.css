@@ -1490,6 +1490,21 @@ body.console-nav-collapsed .console-nav-ghost-toggle--persistent:hover::before {
 
 .console-sidenav-profile { position: relative; }
 .console-sidenav-profile-row { display: flex; align-items: center; gap: 6px; }
+.console-sidenav-profile .admin-logout-btn {
+  width: 100%;
+  min-height: 34px;
+  margin-top: 9px;
+  padding: 7px 10px;
+  border: 1px solid var(--c-line-2);
+  border-radius: 10px;
+  color: var(--c-ink-2);
+  background: rgba(255,255,255,.42);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.console-sidenav-profile .admin-logout-btn:hover { color: var(--c-ink); border-color: var(--c-ink-2); background: rgba(255,255,255,.8); }
 .console-profile-card {
   appearance: none;
   border: 0;
@@ -1577,6 +1592,31 @@ body.console-nav-collapsed .console-nav-ghost-toggle--persistent:hover::before {
     opacity: 0;
     transform: translateX(-105%);
     pointer-events: none;
+  }
+  .console-nav-ghost-toggle--persistent {
+    display: inline-flex !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 170;
+    width: 52px;
+    height: var(--c-topbar-h, 56px);
+    border: 0;
+    border-right: 1px solid rgba(255,255,255,.1);
+    border-radius: 0;
+    color: rgba(255,255,255,.9);
+    background: rgba(20,20,20,.74);
+    box-shadow: none;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+  .console-nav-ghost-toggle--persistent:hover { color: #fff; background: rgba(40,40,42,.9); }
+  .console-sidenav-profile-row .console-nav-collapse { display: none; }
+  .console-sidenav.admin-sidebar .console-profile-menu {
+    left: 8px;
+    right: 8px;
+    bottom: 58px;
+    width: auto;
   }
   .console-nav-ghost-toggle.admin-menu-toggle {
     display: none !important;
