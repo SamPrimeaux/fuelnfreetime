@@ -431,7 +431,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
     : "console-main admin-main";
 
   document.getElementById("console-app").innerHTML = `
-    <div class="console-shell admin-shell">
+    <div class="console-shell admin-shell" data-nav-packages="persistent-frosted-rail mobile-glass-drawer">
       <header class="console-topbar">
         <div class="console-topbar-spacer" aria-hidden="true"></div>
         <div class="console-search-wrap">
@@ -452,7 +452,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
         </div>
       </header>
       <div class="console-body">
-        <aside class="console-sidenav admin-sidebar">${renderSideNav(activeHref)}</aside>
+        <aside class="console-sidenav admin-sidebar" data-nav-package="persistent-frosted-rail">${renderSideNav(activeHref)}</aside>
         <button type="button" class="console-nav-ghost-toggle admin-menu-toggle" id="admin-menu-toggle" aria-label="Show sidebar" title="Show sidebar" aria-expanded="false" aria-controls="admin-drawer">
           ${icon("textAlignStart", 21, "console-nav-ghost-icon")}
         </button>
@@ -467,7 +467,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
               ${icon("arrowLeftToLine", 20, "admin-drawer-close-icon")}
             </button>
           </div>
-          <nav class="console-sidenav admin-nav admin-nav--drawer" style="display:block;width:100%;border:0;background:transparent;padding:0">${renderSideNav(activeHref, null, { drawer: true })}</nav>
+          <nav class="console-sidenav admin-nav admin-nav--drawer" data-nav-package="mobile-glass-drawer" style="display:block;width:100%;border:0;background:transparent;padding:0">${renderSideNav(activeHref, null, { drawer: true })}</nav>
         </aside>
         <div class="console-workspace">
           <main class="${mainClass}">${mainHtml}</main>
