@@ -77,23 +77,31 @@ async function semanticCatalogSearch(env, params = {}) {
 }
 
 async function listWebhookSubscriptions(env, params = {}) {
-  const clauses = [];
+  const clauses = ["provider = 'completeful'"];
   const bindings = [];
   if (params.topic) {
-    clauses.push("topic = ?");
+    clauses.push("json_extract(events_json, '$[0]') = ?");
     bindings.push(String(params.topic));
   }
   if (params.status) {
     clauses.push("status = ?");
     bindings.push(String(params.status));
   }
-  const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+  const where = `WHERE ${clauses.join(" AND ")}`;
   const { results } = await env.DB.prepare(
-    `SELECT id, completeful_webhook_id, completeful_shop_id, topic, url, status,
-            secret_ref, last_verified_at, created_at, updated_at
-       FROM completeful_webhook_subscriptions
+    `SELECT id,
+            provider_webhook_id AS completeful_webhook_id,
+            provider_resource_id AS completeful_shop_id,
+            json_extract(events_json, '$[0]') AS topic,
+            endpoint_url AS url,
+            status,
+            secret_ref,
+            last_verified_at_unix AS last_verified_at,
+            created_at_unix AS created_at,
+            updated_at_unix AS updated_at
+       FROM agentsam_webhooks
        ${where}
-       ORDER BY topic, updated_at DESC`,
+       ORDER BY topic, updated_at_unix DESC`,
   )
     .bind(...bindings)
     .all();
