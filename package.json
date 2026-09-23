@@ -97,7 +97,8 @@
     "db:migrate:catalog:iam": "./scripts/with-cf-admin-env.sh ./node_modules/.bin/wrangler d1 execute inneranimalmedia-business --remote -c ../inneranimalmedia/wrangler.production.toml --file=db/migrate-agentsam-catalog.sql",
     "db:migrate:catalog:all": "npm run db:migrate:catalog && npm run db:migrate:catalog:iam",
     "test:catalog": "python3 tests/catalog-migration.py",
-    "test:admin-boundary": "node tests/admin-boundary.mjs"
+    "test:admin-boundary": "node tests/admin-boundary.mjs",
+    "test:cms-warm": "node tests/cms-warm.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.135.0"

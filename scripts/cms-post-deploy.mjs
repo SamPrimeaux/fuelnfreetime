@@ -65,9 +65,19 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`CMS warm ok — ${data.count}/${data.warmed?.length || 0} pages`);
+  const warmedCount = data.warmed_count ?? data.count ?? 0;
+  const skippedCount = data.skipped_count ?? 0;
+  const errorCount = data.error_count ?? (data.warmed || []).filter((row) => !row.ok).length;
+  console.log(
+    `CMS warm ok — ${warmedCount} warmed, ${skippedCount} skipped, ${errorCount} errors`
+  );
   for (const row of data.warmed || []) {
-    console.log(`  ${row.slug}: ${row.ok ? "ok" : row.error || "failed"}`);
+    const state = row.skipped
+      ? `skipped (${row.reason || "not published"})`
+      : row.ok
+        ? "warmed"
+        : row.error || "failed";
+    console.log(`  ${row.slug}: ${state}`);
   }
 }
 

@@ -5,23 +5,58 @@
 import { PAGE_REGISTRY } from "./registry.js";
 import { writePublishedSnapshot } from "./api.js";
 
-export async function warmAllCmsPages(env) {
+async function readPageStatus(env, slug) {
+  if (!env?.DB) return null;
+  return env.DB.prepare(`SELECT status FROM pages WHERE slug = ?`).bind(slug).first();
+}
+
+export async function warmAllCmsPages(
+  env,
+  { writeSnapshot = writePublishedSnapshot, readStatus = readPageStatus } = {}
+) {
   const slugs = Object.keys(PAGE_REGISTRY);
   const warmed = [];
 
   for (const slug of slugs) {
     try {
-      const snapshot = await writePublishedSnapshot(env, slug);
-      warmed.push({ slug, ok: Boolean(snapshot) });
+      const page = await readStatus(env, slug);
+      if (!page) {
+        warmed.push({ slug, ok: false, error: "Page not found" });
+        continue;
+      }
+      if (page.status !== "published") {
+        // Draft pages are intentionally absent from the public CMS cache.
+        // Treat that as a healthy skip, not a failed deployment warm.
+        warmed.push({
+          slug,
+          ok: true,
+          skipped: true,
+          reason: `status:${page.status || "unknown"}`,
+        });
+        continue;
+      }
+
+      const snapshot = await writeSnapshot(env, slug);
+      if (!snapshot) {
+        warmed.push({ slug, ok: false, error: "Published page has no snapshot" });
+        continue;
+      }
+      warmed.push({ slug, ok: true, warmed: true });
     } catch (err) {
       warmed.push({ slug, ok: false, error: err?.message || String(err) });
     }
   }
 
+  const errors = warmed.filter((row) => !row.ok);
+  const warmedCount = warmed.filter((row) => row.warmed).length;
+  const skippedCount = warmed.filter((row) => row.skipped).length;
   return {
-    ok: warmed.every((row) => row.ok),
+    ok: errors.length === 0,
     warmed,
-    count: warmed.filter((row) => row.ok).length,
+    count: warmedCount,
+    warmed_count: warmedCount,
+    skipped_count: skippedCount,
+    error_count: errors.length,
   };
 }
 
