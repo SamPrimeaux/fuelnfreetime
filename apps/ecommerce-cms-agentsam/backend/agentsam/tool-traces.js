@@ -2,7 +2,7 @@
  * Tool call traces for AgentSam chat UI (safe previews only).
  */
 
-import { FNF_WORKSPACE_ID } from "./constants.js";
+import { FNF_ACCOUNT_ID } from "./constants.js";
 import { IAM_LOGO } from "./quick-actions.js";
 
 const PREVIEW_MAX = 400;
@@ -84,9 +84,9 @@ export function buildToolCallFromGithubMeta(meta, ids = {}) {
 export async function getToolCallById(env, id) {
   if (!env?.DB || !id) return null;
   const row = await env.DB.prepare(
-    `SELECT * FROM agentsam_tool_call_log WHERE id = ? AND workspace_id = ? LIMIT 1`
+    `SELECT * FROM agentsam_tool_call_log WHERE id = ? AND account_id = ? LIMIT 1`
   )
-    .bind(id, FNF_WORKSPACE_ID)
+    .bind(id, FNF_ACCOUNT_ID)
     .first();
   if (!row) return null;
 

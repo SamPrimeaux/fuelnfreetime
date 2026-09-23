@@ -2,7 +2,7 @@
  * AgentSam compiled prompt cache — D1 metadata + KV hot + R2 large payloads.
  */
 
-import { FNF_TENANT_ID, FNF_WORKSPACE_ID } from "./constants.js";
+import { FNF_ACCOUNT_ID } from "./constants.js";
 import { estimateTokens, buildPromptPack } from "./prompt-registry.js";
 
 const D1_INLINE_MAX = 4000;
@@ -26,7 +26,7 @@ function ttlForPack(routing = {}) {
 
 export function buildPromptCacheKey(parts = {}) {
   const segments = [
-    parts.workspace_id || FNF_WORKSPACE_ID,
+    parts.account_id || FNF_ACCOUNT_ID,
     parts.workflow_key || "_",
     parts.route_lane || "_",
     parts.task_type || "_",
@@ -98,11 +98,11 @@ export async function getPromptCache(env, cacheKey) {
 
   const row = await env.DB.prepare(
     `SELECT * FROM agentsam_prompt_cache
-     WHERE workspace_id = ? AND cache_key = ? AND status = 'active'
+     WHERE account_id = ? AND cache_key = ? AND status = 'active'
        AND (expires_unix IS NULL OR expires_unix > ?)
      LIMIT 1`
   )
-    .bind(FNF_WORKSPACE_ID, cacheKey, Math.floor(Date.now() / 1000))
+    .bind(FNF_ACCOUNT_ID, cacheKey, Math.floor(Date.now() / 1000))
     .first();
 
   if (!row) return null;
@@ -152,13 +152,13 @@ export async function putPromptCache(env, compiledPromptPack, options = {}) {
 
   await env.DB.prepare(
     `INSERT INTO agentsam_prompt_cache (
-       id, tenant_id, workspace_id, cache_key, prompt_hash, context_hash, tool_hash, model_hash,
+       id, account_id, cache_key, prompt_hash, context_hash, tool_hash, model_hash,
        workflow_key, route_lane, task_type, model_id,
        prompt_keys_json, fragment_keys_json, tool_keys_json,
        compiled_preview, compiled_token_estimate, compiled_char_count,
        kv_key, r2_key, miss_count, expires_at, expires_unix, status, metadata_json
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime(?, 'unixepoch'), ?, 'active', ?)
-     ON CONFLICT(workspace_id, cache_key) DO UPDATE SET
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime(?, 'unixepoch'), ?, 'active', ?)
+     ON CONFLICT(account_id, cache_key) DO UPDATE SET
        prompt_hash = excluded.prompt_hash,
        context_hash = excluded.context_hash,
        tool_hash = excluded.tool_hash,
@@ -175,8 +175,7 @@ export async function putPromptCache(env, compiledPromptPack, options = {}) {
   )
     .bind(
       id,
-      FNF_TENANT_ID,
-      FNF_WORKSPACE_ID,
+      FNF_ACCOUNT_ID,
       cacheKey,
       compiledPromptPack.promptHash,
       options.context_hash || null,
@@ -207,17 +206,17 @@ export async function putPromptCache(env, compiledPromptPack, options = {}) {
 export async function invalidatePromptCache(env, options = {}) {
   if (!env?.DB) return { invalidated: 0 };
   const reason = options.reason || "manual_invalidation";
-  let query = `UPDATE agentsam_prompt_cache SET status = 'invalidated', invalidation_reason = ?, updated_at = datetime('now') WHERE workspace_id = ? AND status = 'active'`;
-  const binds = [reason, FNF_WORKSPACE_ID];
+  let query = `UPDATE agentsam_prompt_cache SET status = 'invalidated', invalidation_reason = ?, updated_at = datetime('now') WHERE account_id = ? AND status = 'active'`;
+  const binds = [reason, FNF_ACCOUNT_ID];
 
   if (options.workflow_key) {
     query += ` AND workflow_key = ?`;
     binds.push(options.workflow_key);
   }
   if (options.cache_key) {
-    query = `UPDATE agentsam_prompt_cache SET status = 'invalidated', invalidation_reason = ?, updated_at = datetime('now') WHERE workspace_id = ? AND cache_key = ?`;
+    query = `UPDATE agentsam_prompt_cache SET status = 'invalidated', invalidation_reason = ?, updated_at = datetime('now') WHERE account_id = ? AND cache_key = ?`;
     binds.length = 0;
-    binds.push(reason, FNF_WORKSPACE_ID, options.cache_key);
+    binds.push(reason, FNF_ACCOUNT_ID, options.cache_key);
   }
 
   const result = await env.DB.prepare(query).bind(...binds).run();
@@ -251,7 +250,7 @@ export async function getOrBuildPromptPack(env, routing, context, options = {}) 
   const contextHash = options.context_hash || options.stable_context_hash || "";
 
   const cacheKey = buildPromptCacheKey({
-    workspace_id: FNF_WORKSPACE_ID,
+    account_id: FNF_ACCOUNT_ID,
     workflow_key: workflowKey,
     route_lane: routeLane,
     task_type: taskType,
@@ -312,9 +311,9 @@ export async function summarizePromptCache(env) {
 
   const since = Math.floor(Date.now() / 1000) - 86400;
   const active = await env.DB.prepare(
-    `SELECT COUNT(*) AS n FROM agentsam_prompt_cache WHERE workspace_id = ? AND status = 'active'`
+    `SELECT COUNT(*) AS n FROM agentsam_prompt_cache WHERE account_id = ? AND status = 'active'`
   )
-    .bind(FNF_WORKSPACE_ID)
+    .bind(FNF_ACCOUNT_ID)
     .first();
 
   const usage = await env.DB.prepare(
@@ -323,9 +322,9 @@ export async function summarizePromptCache(env) {
        SUM(CASE WHEN prompt_cache_hit = 0 THEN 1 ELSE 0 END) AS misses,
        SUM(saved_tokens_estimated) AS saved_tokens
      FROM agentsam_prompt_usage
-     WHERE workspace_id = ? AND created_at_unix >= ?`
+     WHERE account_id = ? AND created_at_unix >= ?`
   )
-    .bind(FNF_WORKSPACE_ID, since)
+    .bind(FNF_ACCOUNT_ID, since)
     .first();
 
   return {
@@ -342,7 +341,7 @@ export async function logPromptUsage(env, data = {}, options = {}) {
 
     const write = env.DB.prepare(
       `INSERT INTO agentsam_prompt_usage (
-         id, tenant_id, workspace_id, conversation_id, message_id, run_id,
+         id, account_id, conversation_id, message_id, run_id,
          workflow_key, route_lane, task_type, model_id,
          prompt_cache_key, context_cache_key,
          prompt_cache_hit, context_cache_hit,
@@ -354,8 +353,7 @@ export async function logPromptUsage(env, data = {}, options = {}) {
        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       `puse_${crypto.randomUUID().replace(/-/g, "").slice(0, 24)}`,
-      FNF_TENANT_ID,
-      FNF_WORKSPACE_ID,
+      FNF_ACCOUNT_ID,
       data.conversation_id ?? null,
       data.message_id ?? null,
       data.run_id ?? null,

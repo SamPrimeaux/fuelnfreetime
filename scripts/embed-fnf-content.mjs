@@ -17,8 +17,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
 
-const TENANT_ID = "tenant_fuelnfreetime";
-const WORKSPACE_ID = "ws_fuelnfreetime";
+const ACCOUNT_ID = "ede6590ac0d2fb7daf155b35653457b2";
 const VECTORIZE_INDEX = "fnf-agentsam-bge-m3-1024";
 const EMBED_MODEL = "@cf/baai/bge-m3";
 const EMBED_DIMS = 1024;
@@ -261,7 +260,7 @@ function loadRepoDocuments() {
 
 function loadExistingChunks() {
   const rows = d1Query(
-    `SELECT chunk_id, content_hash, source_type, source_key FROM agentsam_vector_chunks WHERE workspace_id = '${WORKSPACE_ID}'`
+    `SELECT chunk_id, content_hash, source_type, source_key FROM agentsam_vector_chunks WHERE account_id = '${ACCOUNT_ID}'`
   );
   const map = new Map();
   for (const row of rows) {
@@ -324,8 +323,8 @@ function sqlEscape(s) {
 function upsertChunkRegistry(chunks) {
   if (!chunks.length || DRY_RUN) return;
   const statements = chunks.map(
-    (c) => `INSERT INTO agentsam_vector_chunks (chunk_id, content_hash, source_type, source_key, workspace_id, tenant_id, vectorize_index, embedded_at, updated_at)
-VALUES ('${sqlEscape(c.chunk_id)}', '${sqlEscape(c.content_hash)}', '${sqlEscape(c.source_type)}', '${sqlEscape(c.source_key)}', '${WORKSPACE_ID}', '${TENANT_ID}', '${VECTORIZE_INDEX}', datetime('now'), datetime('now'))
+    (c) => `INSERT INTO agentsam_vector_chunks (chunk_id, content_hash, source_type, source_key, account_id, vectorize_index, embedded_at, updated_at)
+VALUES ('${sqlEscape(c.chunk_id)}', '${sqlEscape(c.content_hash)}', '${sqlEscape(c.source_type)}', '${sqlEscape(c.source_key)}', '${ACCOUNT_ID}', '${VECTORIZE_INDEX}', datetime('now'), datetime('now'))
 ON CONFLICT(chunk_id) DO UPDATE SET
   content_hash = excluded.content_hash,
   embedded_at = datetime('now'),
@@ -399,8 +398,7 @@ async function main() {
       id: chunk.chunk_id,
       values: vectors[idx],
       metadata: {
-        workspace_id: WORKSPACE_ID,
-        tenant_id: TENANT_ID,
+        account_id: ACCOUNT_ID,
         source_type: chunk.source_type,
         source_key: chunk.source_key,
         title: chunk.title,

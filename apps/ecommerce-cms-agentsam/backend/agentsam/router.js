@@ -4,7 +4,7 @@
  */
 
 import { resolveAIRouting } from "./ai-registry.js";
-import { FNF_TENANT_ID, FNF_WORKSPACE_ID, DRAWER_WORKFLOW_KEYS } from "./constants.js";
+import { FNF_ACCOUNT_ID, DRAWER_WORKFLOW_KEYS } from "./constants.js";
 import { detectBlockedFeatureRequest } from "./feature-gates.js";
 import { formatMcpForPrompt, selectMcpServers } from "./mcp-servers.js";
 import { formatSkillsForPrompt, resolveSkillsForChat } from "./skills.js";
@@ -86,10 +86,10 @@ async function loadWorkflow(env, workflowKey) {
       `SELECT id, workflow_key, display_name, description, default_mode, default_task_type,
               risk_level, requires_approval, quality_gate_json, metadata_json
        FROM agentsam_workflows
-       WHERE workflow_key = ? AND tenant_id = ? AND is_active = 1
+       WHERE workflow_key = ? AND account_id = ? AND is_active = 1
        LIMIT 1`
     )
-      .bind(workflowKey, FNF_TENANT_ID)
+      .bind(workflowKey, FNF_ACCOUNT_ID)
       .first();
   } catch {
     return null;
@@ -143,8 +143,7 @@ export async function routeAgentsamRequest(env, message, context = {}) {
         message,
         context
       ),
-      tenant_id: FNF_TENANT_ID,
-      workspace_id: FNF_WORKSPACE_ID,
+      account_id: FNF_ACCOUNT_ID,
     };
   }
 
@@ -217,8 +216,7 @@ export async function routeAgentsamRequest(env, message, context = {}) {
     })),
     system_blocks: systemBlocks,
     ai_routing,
-    tenant_id: FNF_TENANT_ID,
-    workspace_id: FNF_WORKSPACE_ID,
+    account_id: FNF_ACCOUNT_ID,
   };
 }
 
@@ -230,7 +228,7 @@ export async function listDrawerWorkflows(env) {
       `SELECT id, workflow_key, display_name, description, default_mode, default_task_type,
               risk_level, requires_approval, metadata_json
        FROM agentsam_workflows
-       WHERE tenant_id = ? AND is_active = 1
+       WHERE account_id = ? AND is_active = 1
          AND workflow_key IN (${placeholders})
        ORDER BY CASE workflow_key
          WHEN 'fnf_content_studio' THEN 1
@@ -238,7 +236,7 @@ export async function listDrawerWorkflows(env) {
          WHEN 'fnf_brand_refresh' THEN 3
          ELSE 99 END`
     )
-      .bind(FNF_TENANT_ID, ...DRAWER_WORKFLOW_KEYS)
+      .bind(FNF_ACCOUNT_ID, ...DRAWER_WORKFLOW_KEYS)
       .all();
 
     return (results || []).map((row) => mapWorkflowRow(row));
@@ -268,11 +266,11 @@ export async function listStudioWorkflows(env) {
       `SELECT id, workflow_key, display_name, description, default_mode, default_task_type,
               risk_level, requires_approval, metadata_json
        FROM agentsam_workflows
-       WHERE tenant_id = ? AND is_active = 1
+       WHERE account_id = ? AND is_active = 1
          AND workflow_key IN ('fnf_content_studio','fnf_creative_studio','fnf_brand_refresh','fnf_agentsam_chat')
        ORDER BY display_name ASC`
     )
-      .bind(FNF_TENANT_ID)
+      .bind(FNF_ACCOUNT_ID)
       .all();
 
     return (results || []).map((row) => mapWorkflowRow(row));

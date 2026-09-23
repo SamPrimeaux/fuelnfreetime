@@ -4,9 +4,8 @@
 
 import {
   FNF_PLATFORM_SCOPE,
-  FNF_TENANT_ID,
+  FNF_ACCOUNT_ID,
   FNF_TOOL_SCOPE_NOTE,
-  FNF_WORKSPACE_ID,
 } from "./constants.js";
 import { isToolKeyAllowed } from "./feature-gates.js";
 import { sanitizeAnalyticsText } from "./analytics.js";
@@ -45,7 +44,6 @@ function mapToolRow(row) {
     capability_key: row.capability_key,
     sort_priority: row.sort_priority,
     is_active: !!row.is_active,
-    workspace_scope: parseJson(row.workspace_scope, []),
   };
 }
 
@@ -67,11 +65,6 @@ function mapServerRow(row) {
   };
 }
 
-function matchesWorkspace(tool, workspaceId = FNF_WORKSPACE_ID) {
-  const scopes = tool.workspace_scope || [];
-  if (!scopes.length || scopes.includes("*")) return true;
-  return scopes.includes(workspaceId);
-}
 
 function matchesFnfPlatformScope(tool) {
   const cfg = tool.handler_config || {};
@@ -91,8 +84,7 @@ function matchesFnfPlatformScope(tool) {
     if (!ok) return false;
   }
 
-  if (scope.workspace_id && scope.workspace_id !== FNF_WORKSPACE_ID) return false;
-  if (scope.tenant_id && scope.tenant_id !== FNF_TENANT_ID) return false;
+  if (scope.account_id && scope.account_id !== FNF_ACCOUNT_ID) return false;
 
   return true;
 }
@@ -132,8 +124,8 @@ export async function listAgentSamTools(env, options = {}) {
   if (!env?.DB) return [];
 
   const includeInactive = options.includeInactive === true;
-  const clauses = ["tenant_id = ?", "(workspace_id IS NULL OR workspace_id = ?)"];
-  const binds = [options.tenant_id || FNF_TENANT_ID, options.workspace_id || FNF_WORKSPACE_ID];
+  const clauses = ["account_id = ?", "(account_id IS NULL OR account_id = ?)"];
+  const binds = [options.account_id || FNF_ACCOUNT_ID, options.account_id || FNF_ACCOUNT_ID];
 
   if (!includeInactive) clauses.push("is_active = 1");
   if (options.handler_type) {
@@ -161,7 +153,6 @@ export async function listAgentSamTools(env, options = {}) {
 
     return (results || [])
       .map(mapToolRow)
-      .filter((t) => matchesWorkspace(t, options.workspace_id))
       .filter((t) => matchesFnfPlatformScope(t))
       .filter((t) => isToolKeyAllowed(t.tool_key, t.display_name));
   } catch (err) {
@@ -175,10 +166,10 @@ export async function getAgentSamTool(env, toolKey) {
   try {
     const row = await env.DB.prepare(
       `SELECT * FROM agentsam_tools
-       WHERE tenant_id = ? AND tool_key = ? AND is_active = 1
+       WHERE account_id = ? AND tool_key = ? AND is_active = 1
        LIMIT 1`
     )
-      .bind(FNF_TENANT_ID, toolKey)
+      .bind(FNF_ACCOUNT_ID, toolKey)
       .first();
     return mapToolRow(row);
   } catch {
@@ -192,10 +183,10 @@ export async function listAgentSamMcpServers(env) {
     const { results } = await env.DB.prepare(
       `SELECT *
        FROM agentsam_mcp_servers
-       WHERE tenant_id = ? AND is_active = 1
+       WHERE account_id = ? AND is_active = 1
        ORDER BY display_name ASC`
     )
-      .bind(FNF_TENANT_ID)
+      .bind(FNF_ACCOUNT_ID)
       .all();
     return (results || []).map(mapServerRow);
   } catch (err) {
@@ -210,10 +201,10 @@ export async function listToolPolicyKeys(env, policyKind) {
     const { results } = await env.DB.prepare(
       `SELECT tool_key, sort_order, notes
        FROM agentsam_tool_policy_keys
-       WHERE tenant_id = ? AND policy_kind = ? AND is_active = 1
+       WHERE account_id = ? AND policy_kind = ? AND is_active = 1
        ORDER BY sort_order ASC`
     )
-      .bind(FNF_TENANT_ID, policyKind)
+      .bind(FNF_ACCOUNT_ID, policyKind)
       .all();
     return results || [];
   } catch {
@@ -250,23 +241,23 @@ export async function getToolsRegistryStatus(env) {
   try {
     if (env?.DB) {
       const t = await env.DB.prepare(
-        `SELECT COUNT(*) AS n FROM agentsam_tools WHERE tenant_id = ? AND is_active = 1`
+        `SELECT COUNT(*) AS n FROM agentsam_tools WHERE account_id = ? AND is_active = 1`
       )
-        .bind(FNF_TENANT_ID)
+        .bind(FNF_ACCOUNT_ID)
         .first();
       toolsCount = t?.n ?? 0;
 
       const s = await env.DB.prepare(
-        `SELECT COUNT(*) AS n FROM agentsam_mcp_servers WHERE tenant_id = ? AND is_active = 1`
+        `SELECT COUNT(*) AS n FROM agentsam_mcp_servers WHERE account_id = ? AND is_active = 1`
       )
-        .bind(FNF_TENANT_ID)
+        .bind(FNF_ACCOUNT_ID)
         .first();
       mcpServersCount = s?.n ?? 0;
 
       const p = await env.DB.prepare(
-        `SELECT COUNT(*) AS n FROM agentsam_tool_policy_keys WHERE tenant_id = ? AND is_active = 1`
+        `SELECT COUNT(*) AS n FROM agentsam_tool_policy_keys WHERE account_id = ? AND is_active = 1`
       )
-        .bind(FNF_TENANT_ID)
+        .bind(FNF_ACCOUNT_ID)
         .first();
       policyKeysCount = p?.n ?? 0;
     }
@@ -304,16 +295,15 @@ export async function logToolCall(env, event, options = {}) {
 
     const write = env.DB.prepare(
       `INSERT INTO agentsam_tool_call_log (
-         id, tenant_id, workspace_id, session_id, conversation_id, message_id, run_id, user_id,
+         id, account_id, session_id, conversation_id, message_id, run_id, user_id,
          tool_name, tool_key, agentsam_tools_id, tool_category, mcp_server_key, handler_type,
          status, duration_ms, error_message, cost_usd, input_tokens, output_tokens,
          input_summary, output_summary, retry_count
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
       .bind(
         id,
-        FNF_TENANT_ID,
-        FNF_WORKSPACE_ID,
+        FNF_ACCOUNT_ID,
         options.session_id ?? null,
         options.conversation_id ?? null,
         options.message_id ?? null,

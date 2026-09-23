@@ -2,7 +2,7 @@
  * AgentSam Workers AI model registry — D1-backed selection and fallback chains.
  */
 
-import { FNF_WORKSPACE_ID } from "./constants.js";
+import { FNF_ACCOUNT_ID } from "./constants.js";
 
 const ACTIVE_STATUSES = ["active", "experimental"];
 const CHAT_TASK_TYPES = new Set([
@@ -212,7 +212,7 @@ export function normalizeChatRouting(routing) {
 }
 
 export async function getAIModels(env, options = {}) {
-  const workspaceId = options.workspace_id || FNF_WORKSPACE_ID;
+  const accountId = options.account_id || FNF_ACCOUNT_ID;
   const includeDisabled = options.includeDisabled === true;
 
   if (!env.DB) return [];
@@ -221,8 +221,8 @@ export async function getAIModels(env, options = {}) {
     ? ["active", "experimental", "disabled", "deprecated"]
     : options.statuses || ACTIVE_STATUSES;
 
-  const clauses = [`workspace_id = ?`, `status IN (${statuses.map(() => "?").join(",")})`];
-  const binds = [workspaceId, ...statuses];
+  const clauses = [`account_id = ?`, `status IN (${statuses.map(() => "?").join(",")})`];
+  const binds = [accountId, ...statuses];
 
   if (options.task_type) {
     clauses.push("task_type = ?");
@@ -290,7 +290,7 @@ export async function getDefaultModelId(env, taskType, lane) {
     const row = await env.DB.prepare(
       `SELECT model_id
        FROM agentsam_ai
-       WHERE workspace_id = ?
+       WHERE account_id = ?
          AND task_type = ?
          AND lane = ?
          AND is_default = 1
@@ -298,7 +298,7 @@ export async function getDefaultModelId(env, taskType, lane) {
        ORDER BY priority ASC
        LIMIT 1`
     )
-      .bind(FNF_WORKSPACE_ID, taskType, lane)
+      .bind(FNF_ACCOUNT_ID, taskType, lane)
       .first();
     return row?.model_id || null;
   } catch {
@@ -315,16 +315,16 @@ export async function getAIRegistryStatus(env) {
   try {
     if (env.DB) {
       const total = await env.DB.prepare(
-        `SELECT COUNT(*) AS n FROM agentsam_ai WHERE workspace_id = ? AND status IN ('active','experimental')`
+        `SELECT COUNT(*) AS n FROM agentsam_ai WHERE account_id = ? AND status IN ('active','experimental')`
       )
-        .bind(FNF_WORKSPACE_ID)
+        .bind(FNF_ACCOUNT_ID)
         .first();
       aiRegistryCount = total?.n ?? 0;
 
       const disabled = await env.DB.prepare(
-        `SELECT COUNT(*) AS n FROM agentsam_ai WHERE workspace_id = ? AND status = 'disabled'`
+        `SELECT COUNT(*) AS n FROM agentsam_ai WHERE account_id = ? AND status = 'disabled'`
       )
-        .bind(FNF_WORKSPACE_ID)
+        .bind(FNF_ACCOUNT_ID)
         .first();
       disabledModelCount = disabled?.n ?? 0;
     }

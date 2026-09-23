@@ -2,7 +2,7 @@
  * AgentSam prompt registry — templates, fragments, and prompt pack assembly.
  */
 
-import { FNF_TENANT_ID, FNF_WORKSPACE_ID } from "./constants.js";
+import { FNF_ACCOUNT_ID } from "./constants.js";
 import { estimateTokens } from "./analytics.js";
 
 const PREVIEW_MAX = 480;
@@ -80,16 +80,16 @@ export async function loadPromptTemplate(env, options = {}) {
   if (prompt_key) {
     return env.DB.prepare(
       `SELECT * FROM agentsam_prompts
-       WHERE workspace_id = ? AND prompt_key = ? AND status = 'active'
+       WHERE account_id = ? AND prompt_key = ? AND status = 'active'
        ORDER BY version DESC LIMIT 1`
     )
-      .bind(FNF_WORKSPACE_ID, prompt_key)
+      .bind(FNF_ACCOUNT_ID, prompt_key)
       .first();
   }
 
   const rows = await env.DB.prepare(
     `SELECT * FROM agentsam_prompts
-     WHERE workspace_id = ? AND status = 'active'
+     WHERE account_id = ? AND status = 'active'
        AND (workflow_key IS NULL OR workflow_key = ?)
        AND (route_lane IS NULL OR route_lane = ?)
        AND (task_type IS NULL OR task_type = ?)
@@ -102,7 +102,7 @@ export async function loadPromptTemplate(env, options = {}) {
        version DESC`
   )
     .bind(
-      FNF_WORKSPACE_ID,
+      FNF_ACCOUNT_ID,
       workflow_key || "",
       route_lane || "",
       task_type || "",
@@ -117,10 +117,10 @@ export async function loadPromptTemplate(env, options = {}) {
   if (!results.length) {
     return env.DB.prepare(
       `SELECT * FROM agentsam_prompts
-       WHERE workspace_id = ? AND prompt_key = 'fnf_agentsam_base_system' AND status = 'active'
+       WHERE account_id = ? AND prompt_key = 'fnf_agentsam_base_system' AND status = 'active'
        ORDER BY version DESC LIMIT 1`
     )
-      .bind(FNF_WORKSPACE_ID)
+      .bind(FNF_ACCOUNT_ID)
       .first();
   }
 
@@ -138,10 +138,10 @@ export async function loadPromptFragments(env, options = {}) {
 
   const { results } = await env.DB.prepare(
     `SELECT * FROM agentsam_prompt_fragments
-     WHERE workspace_id = ? AND status = 'active'
+     WHERE account_id = ? AND status = 'active'
      ORDER BY priority ASC, fragment_key ASC`
   )
-    .bind(FNF_WORKSPACE_ID)
+    .bind(FNF_ACCOUNT_ID)
     .all();
 
   const seen = new Set();
@@ -237,9 +237,9 @@ export async function listPromptTemplates(env) {
   if (!env?.DB) return [];
   const { results } = await env.DB.prepare(
     `SELECT prompt_key, prompt_type, workflow_key, route_lane, task_type, status, version, priority, estimated_tokens
-     FROM agentsam_prompts WHERE workspace_id = ? ORDER BY prompt_type, priority`
+     FROM agentsam_prompts WHERE account_id = ? ORDER BY prompt_type, priority`
   )
-    .bind(FNF_WORKSPACE_ID)
+    .bind(FNF_ACCOUNT_ID)
     .all();
   return results || [];
 }
@@ -248,9 +248,9 @@ export async function listPromptFragments(env) {
   if (!env?.DB) return [];
   const { results } = await env.DB.prepare(
     `SELECT fragment_key, fragment_type, priority, status, estimated_tokens, version
-     FROM agentsam_prompt_fragments WHERE workspace_id = ? ORDER BY priority`
+     FROM agentsam_prompt_fragments WHERE account_id = ? ORDER BY priority`
   )
-    .bind(FNF_WORKSPACE_ID)
+    .bind(FNF_ACCOUNT_ID)
     .all();
   return results || [];
 }
@@ -260,8 +260,8 @@ export async function invalidatePromptRegistryCaches(env, reason = "registry_cha
   const now = Math.floor(Date.now() / 1000);
   await env.DB.prepare(
     `UPDATE agentsam_prompt_cache SET status = 'invalidated', invalidation_reason = ?, updated_at = datetime('now')
-     WHERE workspace_id = ? AND status = 'active'`
+     WHERE account_id = ? AND status = 'active'`
   )
-    .bind(reason, FNF_WORKSPACE_ID)
+    .bind(reason, FNF_ACCOUNT_ID)
     .run();
 }

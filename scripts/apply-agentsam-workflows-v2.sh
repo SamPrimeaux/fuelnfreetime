@@ -16,7 +16,7 @@ run "ALTER TABLE agentsam_workflows ADD COLUMN created_at_unix INTEGER;" || true
 
 run "UPDATE agentsam_workflows SET created_at_unix = unixepoch() WHERE created_at_unix IS NULL;"
 
-run "CREATE UNIQUE INDEX IF NOT EXISTS idx_agentsam_workflows_ws_key ON agentsam_workflows(workspace_id, workflow_key);"
+run "CREATE UNIQUE INDEX IF NOT EXISTS idx_agentsam_workflows_account_key ON agentsam_workflows(account_id, workflow_key);"
 
 bash "$ROOT/scripts/apply-agentsam-workflow-nodes-table.sh"
 

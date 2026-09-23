@@ -2,7 +2,7 @@
  * FNF Vectorize — dedicated BGE M3 1024-dim index (never agentsam-*-1536).
  */
 
-import { FNF_TENANT_ID, FNF_WORKSPACE_ID } from "./constants.js";
+import { FNF_ACCOUNT_ID } from "./constants.js";
 
 export const FNF_VECTORIZE_INDEX = "fnf-agentsam-bge-m3-1024";
 export const FNF_EMBED_MODEL = "@cf/baai/bge-m3";
@@ -29,7 +29,7 @@ export function getFnfVectorizeBinding(env) {
 }
 
 function workspaceFilter() {
-  return { workspace_id: FNF_WORKSPACE_ID, tenant_id: FNF_TENANT_ID };
+  return { account_id: FNF_ACCOUNT_ID };
 }
 
 export async function createFnfEmbedding(env, text) {
@@ -75,8 +75,8 @@ export async function queryFnfVectorize(env, queryText, options = {}) {
   });
 
   const matches = (result?.matches || result?.result?.matches || []).filter((m) => {
-    const ws = m?.metadata?.workspace_id;
-    return !ws || ws === FNF_WORKSPACE_ID;
+    const ws = m?.metadata?.account_id;
+    return !ws || ws === FNF_ACCOUNT_ID;
   });
 
   return {
@@ -157,7 +157,7 @@ export function formatSemanticSearchForPrompt(result) {
   });
 
   return [
-    "SEMANTIC SEARCH RESULTS (FNF_VECTORIZE — workspace ws_fuelnfreetime only):",
+    "SEMANTIC SEARCH RESULTS (FNF_VECTORIZE — workspace ede6590ac0d2fb7daf155b35653457b2 only):",
     `Query: ${result.query}`,
     "",
     lines.join("\n\n"),

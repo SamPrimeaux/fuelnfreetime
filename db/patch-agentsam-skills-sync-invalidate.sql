@@ -3,5 +3,5 @@ UPDATE agentsam_prompt_cache
 SET status = 'invalidated',
     invalidation_reason = 'skills_sync',
     updated_at = datetime('now')
-WHERE workspace_id = 'ws_fuelnfreetime'
+WHERE account_id = 'ede6590ac0d2fb7daf155b35653457b2'
   AND status = 'active';

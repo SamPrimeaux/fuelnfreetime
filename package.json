@@ -100,7 +100,9 @@
     "test:admin-boundary": "node tests/admin-boundary.mjs",
     "test:cms-warm": "node tests/cms-warm.mjs",
     "db:migrate:account-analytics-normalization": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-account-analytics-normalization-20260923.sql",
-    "db:migrate:account-analytics-stage": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-account-analytics-stage-20260923.sql"
+    "db:migrate:account-analytics-stage": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-account-analytics-stage-20260923.sql",
+    "db:migrate:account-ownership-stage": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-account-ownership-stage-20260923.sql",
+    "db:migrate:account-ownership-final": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-account-ownership-final-20260923.sql"
   },
   "devDependencies": {
     "wrangler": "^4.135.0"

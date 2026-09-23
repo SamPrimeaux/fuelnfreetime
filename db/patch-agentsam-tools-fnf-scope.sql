@@ -3,8 +3,8 @@
 
 UPDATE agentsam_mcp_servers
 SET
-  description = 'FNF-scoped IAM MCP bridge — dispatch only tools registered for ws_fuelnfreetime. No cross-tenant D1/R2/worker access.',
-  metadata_json = '{"scope":"ws_fuelnfreetime","worker":"fuelnfreetime","bridge_only":true,"github_repo":"SamPrimeaux/fuelnfreetime"}',
+  description = 'FNF-scoped IAM MCP bridge — dispatch only tools registered for ede6590ac0d2fb7daf155b35653457b2. No cross-tenant D1/R2/worker access.',
+  metadata_json = '{"scope":"ede6590ac0d2fb7daf155b35653457b2","worker":"fuelnfreetime","bridge_only":true,"github_repo":"SamPrimeaux/fuelnfreetime"}',
   repos_json = '["SamPrimeaux/fuelnfreetime"]',
   updated_at = unixepoch()
 WHERE server_key = 'inneranimalmedia-mcp-server';
@@ -14,10 +14,10 @@ SET
   notes = 'FNF-scoped: fuelnfreetime worker, D1 fuelnfreetime, R2 fuelnfreetime, SamPrimeaux/fuelnfreetime repo only.',
   handler_config = json_patch(
     COALESCE(handler_config, '{}'),
-    '{"fnf_scope":{"tenant_id":"tenant_fuelnfreetime","workspace_id":"ws_fuelnfreetime","worker":"fuelnfreetime","d1_binding":"DB","d1_database":"fuelnfreetime","r2_binding":"WEBSITE_ASSETS","r2_bucket":"fuelnfreetime","github_repo":"SamPrimeaux/fuelnfreetime","domain":"fuelnfreetime.com"}}'
+    '{"fnf_scope":{"account_id":"ede6590ac0d2fb7daf155b35653457b2","worker":"fuelnfreetime","d1_binding":"DB","d1_database":"fuelnfreetime","r2_binding":"WEBSITE_ASSETS","r2_bucket":"fuelnfreetime","github_repo":"SamPrimeaux/fuelnfreetime","domain":"fuelnfreetime.com"}}'
   ),
   updated_at = unixepoch()
-WHERE tenant_id = 'tenant_fuelnfreetime';
+WHERE account_id = 'ede6590ac0d2fb7daf155b35653457b2';
 
 UPDATE agentsam_tools
 SET handler_config = json_patch(

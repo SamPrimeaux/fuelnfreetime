@@ -2,7 +2,7 @@
  * AgentSam file uploads — R2 bodies + D1 metadata.
  */
 
-import { FNF_TENANT_ID, FNF_WORKSPACE_ID } from "./constants.js";
+import { FNF_ACCOUNT_ID } from "./constants.js";
 import { isFeatureEnabled } from "./feature-gates.js";
 import { getSessionUser } from "../lib/auth.js";
 
@@ -67,9 +67,9 @@ function r2PathFor(attachmentId, filename) {
 export async function getAttachmentById(env, id) {
   if (!env?.DB || !id) return null;
   return env.DB.prepare(
-    `SELECT * FROM agentsam_attachments WHERE id = ? AND workspace_id = ? AND status != 'deleted' LIMIT 1`
+    `SELECT * FROM agentsam_attachments WHERE id = ? AND account_id = ? AND status != 'deleted' LIMIT 1`
   )
-    .bind(id, FNF_WORKSPACE_ID)
+    .bind(id, FNF_ACCOUNT_ID)
     .first();
 }
 
@@ -188,14 +188,13 @@ export async function agentsamFileUpload(request, env) {
 
   await env.DB.prepare(
     `INSERT INTO agentsam_attachments (
-       id, tenant_id, workspace_id, conversation_id, uploaded_by,
+       id, account_id, conversation_id, uploaded_by,
        file_name, mime_type, file_size_bytes, r2_key, preview_url, status
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready')`
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready')`
   )
     .bind(
       attachmentId,
-      FNF_TENANT_ID,
-      FNF_WORKSPACE_ID,
+      FNF_ACCOUNT_ID,
       conversationId,
       user.id || null,
       fileName,
@@ -240,9 +239,9 @@ export async function agentsamFileDelete(env, id) {
   const row = await getAttachmentById(env, id);
   if (!row) return json({ error: "Not found" }, { status: 404 });
   await env.DB.prepare(
-    `UPDATE agentsam_attachments SET status = 'deleted' WHERE id = ? AND workspace_id = ?`
+    `UPDATE agentsam_attachments SET status = 'deleted' WHERE id = ? AND account_id = ?`
   )
-    .bind(id, FNF_WORKSPACE_ID)
+    .bind(id, FNF_ACCOUNT_ID)
     .run();
   return json({ ok: true, deleted: true });
 }

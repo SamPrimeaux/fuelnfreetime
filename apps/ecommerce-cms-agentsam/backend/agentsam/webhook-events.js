@@ -1,4 +1,4 @@
-import { FNF_TENANT_ID, FNF_WORKSPACE_ID } from "./constants.js";
+import { FNF_ACCOUNT_ID } from "./constants.js";
 
 /** Registry row IDs from agentsam_webhooks (db/seed-agentsam-fnf-hooks-webhooks-v2.sql). */
 export const WEBHOOK_ENDPOINT_IDS = {
@@ -65,15 +65,14 @@ export async function insertAgentSamWebhookEvent(env, {
   try {
     await env.DB.prepare(
       `INSERT INTO agentsam_webhook_events (
-         id, tenant_id, workspace_id, endpoint_id, provider, event_type, event_id,
+         id, account_id, endpoint_id, provider, event_type, event_id,
          payload_json, headers_json, metadata_json, status, signature_valid, ip_address,
          error_message, processing_error, received_at_unix, processed_at_unix
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
       .bind(
         id,
-        FNF_TENANT_ID,
-        FNF_WORKSPACE_ID,
+        FNF_ACCOUNT_ID,
         endpointId || null,
         provider,
         eventType,

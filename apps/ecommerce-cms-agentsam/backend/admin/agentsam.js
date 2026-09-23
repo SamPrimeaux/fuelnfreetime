@@ -38,7 +38,7 @@ import {
   probeBridge,
   probeGitHubConnection,
 } from "../agentsam/mcp-client.js";
-import { FNF_GITHUB_REPO, FNF_WORKSPACE_ID } from "../agentsam/constants.js";
+import { FNF_GITHUB_REPO, FNF_ACCOUNT_ID } from "../agentsam/constants.js";
 import {
   formatSemanticSearchForPrompt,
   maybeRunSemanticSearch,
@@ -908,10 +908,10 @@ export async function agentsamPromptCacheSummary(env) {
   try {
     const wf = await env.DB.prepare(
       `SELECT workflow_key, COUNT(*) AS n, SUM(saved_tokens_estimated) AS saved
-       FROM agentsam_prompt_usage WHERE workspace_id = ? AND created_at_unix >= ?
+       FROM agentsam_prompt_usage WHERE account_id = ? AND created_at_unix >= ?
        GROUP BY workflow_key ORDER BY n DESC LIMIT 5`
     )
-      .bind(FNF_WORKSPACE_ID, Math.floor(Date.now() / 1000) - 86400)
+      .bind(FNF_ACCOUNT_ID, Math.floor(Date.now() / 1000) - 86400)
       .all();
     top_workflows = wf.results || [];
 

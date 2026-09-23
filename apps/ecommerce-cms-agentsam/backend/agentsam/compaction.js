@@ -2,7 +2,7 @@
  * AgentSam compaction — roll hot D1 logs into daily stats and trim retention windows.
  */
 
-import { FNF_ACCOUNT_ID, FNF_TENANT_ID, FNF_WORKSPACE_ID } from "./constants.js";
+import { FNF_ACCOUNT_ID } from "./constants.js";
 import { trackAgentSamEvent } from "./analytics.js";
 
 export const RETENTION = {
@@ -37,10 +37,10 @@ function dayUnixRange(dateKey) {
 async function hasCompactionForDate(env, dateKey) {
   const row = await env.DB.prepare(
     `SELECT id FROM agentsam_compaction_runs
-     WHERE workspace_id = ? AND date_key = ? AND status = 'success'
+     WHERE account_id = ? AND date_key = ? AND status = 'success'
      LIMIT 1`
   )
-    .bind(FNF_WORKSPACE_ID, dateKey)
+    .bind(FNF_ACCOUNT_ID, dateKey)
     .first();
   return Boolean(row?.id);
 }
@@ -50,10 +50,10 @@ async function startCompactionRun(env, dateKey, triggerSource) {
   const startedAt = Math.floor(Date.now() / 1000);
   await env.DB.prepare(
     `INSERT INTO agentsam_compaction_runs (
-       id, tenant_id, workspace_id, date_key, trigger_source, status, started_at
-     ) VALUES (?, ?, ?, ?, ?, 'started', ?)`
+       id, account_id, date_key, trigger_source, status, started_at
+     ) VALUES (?, ?, ?, ?, 'started', ?)`
   )
-    .bind(runId, FNF_TENANT_ID, FNF_WORKSPACE_ID, dateKey, triggerSource, startedAt)
+    .bind(runId, FNF_ACCOUNT_ID, dateKey, triggerSource, startedAt)
     .run();
   return { runId, startedAt };
 }
@@ -162,7 +162,7 @@ export async function rollupPromptUsageDaily(env, dateKey) {
 
   const result = await env.DB.prepare(
     `INSERT INTO agentsam_prompt_usage_daily (
-       id, tenant_id, workspace_id, date_key,
+       id, account_id, date_key,
        workflow_key, route_lane, task_type, model_id,
        request_count, prompt_cache_hits, context_cache_hits, both_cache_hits,
        total_saved_tokens, total_saved_cost_usd,
@@ -171,7 +171,6 @@ export async function rollupPromptUsageDaily(env, dateKey) {
      )
      SELECT
        'apud_' || lower(hex(randomblob(8))),
-       ?,
        ?,
        ?,
        COALESCE(NULLIF(workflow_key, ''), '_all'),
@@ -191,9 +190,9 @@ export async function rollupPromptUsageDaily(env, dateKey) {
        SUM(CASE WHEN status IN ('failed', 'ai_failed') THEN 1 ELSE 0 END),
        unixepoch()
      FROM agentsam_prompt_usage
-     WHERE workspace_id = ? AND date_key = ?
+     WHERE account_id = ? AND date_key = ?
      GROUP BY workflow_key, route_lane, task_type, model_id
-     ON CONFLICT(workspace_id, date_key, workflow_key, route_lane, task_type, model_id)
+     ON CONFLICT(account_id, date_key, workflow_key, route_lane, task_type, model_id)
      DO UPDATE SET
        request_count = excluded.request_count,
        prompt_cache_hits = excluded.prompt_cache_hits,
@@ -208,7 +207,7 @@ export async function rollupPromptUsageDaily(env, dateKey) {
        failed_count = excluded.failed_count,
        compacted_at = excluded.compacted_at`
   )
-    .bind(FNF_TENANT_ID, FNF_WORKSPACE_ID, dateKey, FNF_WORKSPACE_ID, dateKey)
+    .bind(FNF_ACCOUNT_ID, dateKey, FNF_ACCOUNT_ID, dateKey)
     .run();
 
   return { ok: true, rows: result.meta?.changes ?? 0 };
@@ -221,13 +220,12 @@ export async function rollupToolCallDaily(env, dateKey) {
 
   const dailyResult = await env.DB.prepare(
     `INSERT INTO agentsam_tool_call_daily (
-       id, tenant_id, workspace_id, date_key, tool_key, tool_name, tool_category, mcp_server_key,
+       id, account_id, date_key, tool_key, tool_name, tool_category, mcp_server_key,
        total_calls, success_count, failure_count, success_rate,
        total_cost_usd, total_tokens, avg_duration_ms, max_duration_ms, compacted_at
      )
      SELECT
        'atcd_' || lower(hex(randomblob(8))),
-       ?,
        ?,
        ?,
        COALESCE(NULLIF(tool_key, ''), tool_name, 'unknown'),
@@ -246,9 +244,9 @@ export async function rollupToolCallDaily(env, dateKey) {
        COALESCE(MAX(duration_ms), 0),
        unixepoch()
      FROM agentsam_tool_call_log
-     WHERE workspace_id = ? AND created_at >= ? AND created_at < ?
+     WHERE account_id = ? AND created_at >= ? AND created_at < ?
      GROUP BY COALESCE(NULLIF(tool_key, ''), tool_name, 'unknown')
-     ON CONFLICT(workspace_id, date_key, tool_key)
+     ON CONFLICT(account_id, date_key, tool_key)
      DO UPDATE SET
        tool_name = excluded.tool_name,
        tool_category = excluded.tool_category,
@@ -263,19 +261,18 @@ export async function rollupToolCallDaily(env, dateKey) {
        max_duration_ms = excluded.max_duration_ms,
        compacted_at = excluded.compacted_at`
   )
-    .bind(FNF_TENANT_ID, FNF_WORKSPACE_ID, dateKey, FNF_WORKSPACE_ID, start, end)
+    .bind(FNF_ACCOUNT_ID, dateKey, FNF_ACCOUNT_ID, start, end)
     .run();
 
   const lifetimeResult = await env.DB.prepare(
     `INSERT INTO agentsam_tool_stats_compacted (
-       id, tenant_id, workspace_id, tool_key, tool_name,
+       id, account_id, tool_key, tool_name,
        total_calls, success_count, failure_count, success_rate,
        total_cost_usd, total_tokens, avg_duration_ms, p95_duration_ms,
        first_seen_at, last_seen_at, compacted_at
      )
      SELECT
        'atsc_' || lower(hex(randomblob(8))),
-       ?,
        ?,
        tool_key,
        tool_name,
@@ -291,8 +288,8 @@ export async function rollupToolCallDaily(env, dateKey) {
        ?,
        unixepoch()
      FROM agentsam_tool_call_daily
-     WHERE workspace_id = ? AND date_key = ?
-     ON CONFLICT(tenant_id, workspace_id, tool_key)
+     WHERE account_id = ? AND date_key = ?
+     ON CONFLICT(account_id, tool_key)
      DO UPDATE SET
        tool_name = excluded.tool_name,
        total_calls = agentsam_tool_stats_compacted.total_calls + excluded.total_calls,
@@ -314,7 +311,7 @@ export async function rollupToolCallDaily(env, dateKey) {
        last_seen_at = excluded.last_seen_at,
        compacted_at = excluded.compacted_at`
   )
-    .bind(FNF_TENANT_ID, FNF_WORKSPACE_ID, start, end, FNF_WORKSPACE_ID, dateKey)
+    .bind(FNF_ACCOUNT_ID, start, end, FNF_ACCOUNT_ID, dateKey)
     .run()
     .catch(() => ({ meta: { changes: 0 } }));
 
@@ -341,16 +338,16 @@ export async function trimHotLogs(env, dateKey) {
 
   const promptUsage = await env.DB.prepare(
     `DELETE FROM agentsam_prompt_usage
-     WHERE workspace_id = ? AND date_key <= ? AND created_at_unix < ?`
+     WHERE account_id = ? AND date_key <= ? AND created_at_unix < ?`
   )
-    .bind(FNF_WORKSPACE_ID, dateKey, promptCutoff)
+    .bind(FNF_ACCOUNT_ID, dateKey, promptCutoff)
     .run();
 
   const toolCalls = await env.DB.prepare(
     `DELETE FROM agentsam_tool_call_log
-     WHERE workspace_id = ? AND created_at < ?`
+     WHERE account_id = ? AND created_at < ?`
   )
-    .bind(FNF_WORKSPACE_ID, toolCutoff)
+    .bind(FNF_ACCOUNT_ID, toolCutoff)
     .run();
 
   return {
@@ -388,11 +385,11 @@ export async function refreshThreadSummaries(env, { limit = RETENTION.summaryRef
   const { results } = await env.DB.prepare(
     `SELECT id, title, r2_thread_key, r2_summary_key, message_count, last_active_unix
      FROM agentsam_conversations
-     WHERE workspace_id = ? AND status = 'active' AND message_count > 0
+     WHERE account_id = ? AND status = 'active' AND message_count > 0
      ORDER BY last_active_unix DESC
      LIMIT ?`
   )
-    .bind(FNF_WORKSPACE_ID, limit)
+    .bind(FNF_ACCOUNT_ID, limit)
     .all();
 
   let refreshed = 0;
@@ -421,9 +418,9 @@ export async function refreshThreadSummaries(env, { limit = RETENTION.summaryRef
       await env.DB.prepare(
         `UPDATE agentsam_conversations
          SET summary = ?, updated_at = datetime('now')
-         WHERE id = ? AND workspace_id = ?`
+         WHERE id = ? AND account_id = ?`
       )
-        .bind(excerpt.slice(0, 500), conv.id, FNF_WORKSPACE_ID)
+        .bind(excerpt.slice(0, 500), conv.id, FNF_ACCOUNT_ID)
         .run();
 
       refreshed += 1;
@@ -447,29 +444,29 @@ export async function getCompactionStatus(env, { limit = 10 } = {}) {
               analytics_deleted, prompt_usage_deleted, tool_call_deleted,
               summaries_refreshed, error_message
        FROM agentsam_compaction_runs
-       WHERE workspace_id = ?
+       WHERE account_id = ?
        ORDER BY started_at DESC
        LIMIT ?`
     )
-      .bind(FNF_WORKSPACE_ID, limit)
+      .bind(FNF_ACCOUNT_ID, limit)
       .all();
 
     const totals = await env.DB.prepare(
       `SELECT
          (SELECT COUNT(*) FROM agentsam_analytics WHERE account_id = ?) AS analytics_hot,
-         (SELECT COUNT(*) FROM agentsam_prompt_usage WHERE workspace_id = ?) AS prompt_usage_hot,
-         (SELECT COUNT(*) FROM agentsam_tool_call_log WHERE workspace_id = ?) AS tool_call_hot,
+         (SELECT COUNT(*) FROM agentsam_prompt_usage WHERE account_id = ?) AS prompt_usage_hot,
+         (SELECT COUNT(*) FROM agentsam_tool_call_log WHERE account_id = ?) AS tool_call_hot,
          (SELECT COUNT(*) FROM agentsam_analytics_daily WHERE account_id = ?) AS analytics_daily,
-         (SELECT COUNT(*) FROM agentsam_prompt_usage_daily WHERE workspace_id = ?) AS prompt_usage_daily,
-         (SELECT COUNT(*) FROM agentsam_tool_call_daily WHERE workspace_id = ?) AS tool_call_daily`
+         (SELECT COUNT(*) FROM agentsam_prompt_usage_daily WHERE account_id = ?) AS prompt_usage_daily,
+         (SELECT COUNT(*) FROM agentsam_tool_call_daily WHERE account_id = ?) AS tool_call_daily`
     )
       .bind(
         FNF_ACCOUNT_ID,
-        FNF_WORKSPACE_ID,
-        FNF_WORKSPACE_ID,
         FNF_ACCOUNT_ID,
-        FNF_WORKSPACE_ID,
-        FNF_WORKSPACE_ID
+        FNF_ACCOUNT_ID,
+        FNF_ACCOUNT_ID,
+        FNF_ACCOUNT_ID,
+        FNF_ACCOUNT_ID
       )
       .first()
       .catch(() => null);

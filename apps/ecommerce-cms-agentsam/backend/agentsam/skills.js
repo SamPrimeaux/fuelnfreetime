@@ -1,5 +1,5 @@
 import { hydrateSkillRowFromR2, hydrateSkillWithFiles, hydrateSkillsFromR2 } from "./skill-r2.js";
-import { FNF_TENANT_ID } from "./constants.js";
+import { FNF_ACCOUNT_ID } from "./constants.js";
 
 const MAX_CHAT_SKILLS = 3;
 
@@ -109,9 +109,9 @@ export async function recordSkillInvocations(env, skills = []) {
          SET invocation_count = invocation_count + 1,
              last_invoked_at = datetime('now'),
              updated_at = datetime('now')
-         WHERE id = ? AND tenant_id = ?`
+         WHERE id = ? AND account_id = ?`
       )
-        .bind(skill.id, FNF_TENANT_ID)
+        .bind(skill.id, FNF_ACCOUNT_ID)
         .run();
       updated += 1;
     } catch {
@@ -126,12 +126,12 @@ export async function listAgentSamSkills(env, { hydrate = false } = {}) {
     `SELECT id, slug, name, description, file_path, scope, slash_trigger,
             globs, tags_json, task_types_json, route_keys_json, metadata_json,
             retrieval_strategy, sort_order, version, is_active, updated_at,
-            tenant_id, workspace_id, access_mode, always_apply
+            account_id, access_mode, always_apply
      FROM agentsam_skill
-     WHERE is_active = 1 AND tenant_id = ?
+     WHERE is_active = 1 AND account_id = ?
      ORDER BY sort_order ASC, name ASC`
   )
-    .bind(FNF_TENANT_ID)
+    .bind(FNF_ACCOUNT_ID)
     .all();
 
   if (!hydrate) return results || [];
@@ -140,9 +140,9 @@ export async function listAgentSamSkills(env, { hydrate = false } = {}) {
 
 export async function getAgentSamSkill(env, slug, { includeReferences = false } = {}) {
   const row = await env.DB.prepare(
-    `SELECT * FROM agentsam_skill WHERE slug = ? AND tenant_id = ? AND is_active = 1 LIMIT 1`
+    `SELECT * FROM agentsam_skill WHERE slug = ? AND account_id = ? AND is_active = 1 LIMIT 1`
   )
-    .bind(slug, FNF_TENANT_ID)
+    .bind(slug, FNF_ACCOUNT_ID)
     .first();
 
   if (!row) return null;
@@ -167,9 +167,9 @@ export async function getAgentSamSkill(env, slug, { includeReferences = false } 
  */
 export async function resolveSkillsForChat(env, message, context = {}) {
   const { results: rows } = await env.DB.prepare(
-    `SELECT * FROM agentsam_skill WHERE is_active = 1 AND tenant_id = ? ORDER BY sort_order ASC`
+    `SELECT * FROM agentsam_skill WHERE is_active = 1 AND account_id = ? ORDER BY sort_order ASC`
   )
-    .bind(FNF_TENANT_ID)
+    .bind(FNF_ACCOUNT_ID)
     .all();
 
   if (!rows?.length) return [];

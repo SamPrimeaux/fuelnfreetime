@@ -2,10 +2,10 @@
  * AgentSam conversation metadata — D1 index + KV recent cache + R2 thread keys.
  */
 
-import { FNF_TENANT_ID, FNF_WORKSPACE_ID } from "./constants.js";
+import { FNF_ACCOUNT_ID } from "./constants.js";
 import { getSessionUser } from "../lib/auth.js";
 
-const KV_RECENT_KEY = `agentsam:recent:${FNF_WORKSPACE_ID}`;
+const KV_RECENT_KEY = `agentsam:recent:${FNF_ACCOUNT_ID}`;
 const RECENT_LIMIT = 20;
 const PREVIEW_MAX = 120;
 
@@ -47,11 +47,11 @@ export async function listConversations(env, { limit = RECENT_LIMIT, status = "a
               message_count, tool_call_count, attachment_count,
               last_active_at, last_active_unix, created_at
        FROM agentsam_conversations
-       WHERE workspace_id = ? AND status = ?
+       WHERE account_id = ? AND status = ?
        ORDER BY last_active_unix DESC
        LIMIT ?`
     )
-      .bind(FNF_WORKSPACE_ID, status, limit)
+      .bind(FNF_ACCOUNT_ID, status, limit)
       .all();
     return results || [];
   } catch {
@@ -62,9 +62,9 @@ export async function listConversations(env, { limit = RECENT_LIMIT, status = "a
 export async function getConversation(env, id) {
   if (!env?.DB || !id) return null;
   return env.DB.prepare(
-    `SELECT * FROM agentsam_conversations WHERE id = ? AND workspace_id = ? AND status != 'deleted' LIMIT 1`
+    `SELECT * FROM agentsam_conversations WHERE id = ? AND account_id = ? AND status != 'deleted' LIMIT 1`
   )
-    .bind(id, FNF_WORKSPACE_ID)
+    .bind(id, FNF_ACCOUNT_ID)
     .first();
 }
 
@@ -76,15 +76,14 @@ export async function createConversation(env, { title, createdBy, workflowKey } 
 
   await env.DB.prepare(
     `INSERT INTO agentsam_conversations (
-       id, tenant_id, workspace_id, title, status, source, workflow_key,
+       id, account_id, title, status, source, workflow_key,
        r2_thread_key, r2_summary_key, kv_recent_key, created_by,
        last_active_at, last_active_unix, created_at, created_at_unix, updated_at
-     ) VALUES (?, ?, ?, ?, 'active', 'admin_agentsam', ?, ?, ?, ?, ?, datetime('now'), ?, datetime('now'), ?, datetime('now'))`
+     ) VALUES (?, ?, ?, 'active', 'admin_agentsam', ?, ?, ?, ?, ?, datetime('now'), ?, datetime('now'), ?, datetime('now'))`
   )
     .bind(
       id,
-      FNF_TENANT_ID,
-      FNF_WORKSPACE_ID,
+      FNF_ACCOUNT_ID,
       safeTitle,
       workflowKey || null,
       r2Key,
@@ -136,7 +135,7 @@ export async function touchConversation(
        last_active_at = datetime('now'),
        last_active_unix = ?,
        updated_at = datetime('now')
-     WHERE id = ? AND workspace_id = ?`
+     WHERE id = ? AND account_id = ?`
   )
     .bind(
       title ? titleFromMessage(title) : null,
@@ -148,7 +147,7 @@ export async function touchConversation(
       attachmentDelta,
       now,
       conversationId,
-      FNF_WORKSPACE_ID
+      FNF_ACCOUNT_ID
     )
     .run();
 }
@@ -156,9 +155,9 @@ export async function touchConversation(
 export async function softDeleteConversation(env, id) {
   if (!env?.DB || !id) return false;
   await env.DB.prepare(
-    `UPDATE agentsam_conversations SET status = 'deleted', updated_at = datetime('now') WHERE id = ? AND workspace_id = ?`
+    `UPDATE agentsam_conversations SET status = 'deleted', updated_at = datetime('now') WHERE id = ? AND account_id = ?`
   )
-    .bind(id, FNF_WORKSPACE_ID)
+    .bind(id, FNF_ACCOUNT_ID)
     .run();
   return true;
 }

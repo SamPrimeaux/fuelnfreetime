@@ -2,7 +2,7 @@
  * Inner Animal MCP client — service dispatch via AGENTSAM_BRIDGE_KEY.
  */
 
-import { FNF_GITHUB_REPO, FNF_TENANT_ID, FNF_WORKSPACE_ID } from "./constants.js";
+import { FNF_GITHUB_REPO, FNF_ACCOUNT_ID } from "./constants.js";
 import { fetchGithubContextForAgent, githubStatus } from "./github-client.js";
 import { logToolCall } from "./tools-registry.js";
 
@@ -30,8 +30,8 @@ function bridgeHeaders(env, extra = {}) {
     Authorization: `Bearer ${bridgeKey(env)}`,
     "Content-Type": "application/json",
     Accept: "application/json",
-    "X-Tenant-Id": FNF_TENANT_ID,
-    "X-Workspace-Id": FNF_WORKSPACE_ID,
+    "X-Tenant-Id": FNF_ACCOUNT_ID,
+    "X-Workspace-Id": FNF_ACCOUNT_ID,
     ...extra,
   };
 }

@@ -2,7 +2,7 @@
  * Growth campaigns API — /api/admin/growth/*
  */
 
-import { FNF_TENANT_ID, FNF_WORKSPACE_ID } from "../agentsam/constants.js";
+import { FNF_ACCOUNT_ID } from "../agentsam/constants.js";
 import { updateSection, publishPage } from "../cms/api.js";
 import { readSectionContent } from "../cms/r2-store.js";
 import { PAGE_REGISTRY } from "../cms/registry.js";
@@ -77,9 +77,9 @@ async function uniqueSlug(env, base) {
   for (;;) {
     const candidate = n ? `${slug}-${n}` : slug;
     const existing = await env.DB.prepare(
-      `SELECT id FROM growth_campaigns WHERE tenant_id = ? AND slug = ? LIMIT 1`
+      `SELECT id FROM growth_campaigns WHERE account_id = ? AND slug = ? LIMIT 1`
     )
-      .bind(FNF_TENANT_ID, candidate)
+      .bind(FNF_ACCOUNT_ID, candidate)
       .first();
     if (!existing) return candidate;
     n += 1;
@@ -93,9 +93,9 @@ async function getOverview(env) {
          COUNT(*) AS total,
          SUM(CASE WHEN status IN ('draft','generating','review') THEN 1 ELSE 0 END) AS drafts,
          SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active
-       FROM growth_campaigns WHERE tenant_id = ?`
+       FROM growth_campaigns WHERE account_id = ?`
     )
-      .bind(FNF_TENANT_ID)
+      .bind(FNF_ACCOUNT_ID)
       .first()
       .catch(() => ({ total: 0, drafts: 0, active: 0 })),
     env.DB.prepare(`SELECT COUNT(*) AS n, COALESCE(SUM(total_cents), 0) AS revenue FROM orders`)
@@ -105,17 +105,17 @@ async function getOverview(env) {
       .first()
       .catch(() => ({ n: 0 })),
     env.DB.prepare(
-      `SELECT * FROM growth_campaigns WHERE tenant_id = ? ORDER BY updated_at DESC LIMIT 6`
+      `SELECT * FROM growth_campaigns WHERE account_id = ? ORDER BY updated_at DESC LIMIT 6`
     )
-      .bind(FNF_TENANT_ID)
+      .bind(FNF_ACCOUNT_ID)
       .all()
       .catch(() => ({ results: [] })),
   ]);
 
   const sessionRow = await env.DB.prepare(
-    `SELECT COALESCE(SUM(session_count), 0) AS n FROM growth_campaigns WHERE tenant_id = ?`
+    `SELECT COALESCE(SUM(session_count), 0) AS n FROM growth_campaigns WHERE account_id = ?`
   )
-    .bind(FNF_TENANT_ID)
+    .bind(FNF_ACCOUNT_ID)
     .first()
     .catch(() => ({ n: 0 }));
 
@@ -155,8 +155,8 @@ async function getOverview(env) {
 
 async function listCampaigns(env, url) {
   const status = url.searchParams.get("status");
-  let sql = `SELECT * FROM growth_campaigns WHERE tenant_id = ?`;
-  const binds = [FNF_TENANT_ID];
+  let sql = `SELECT * FROM growth_campaigns WHERE account_id = ?`;
+  const binds = [FNF_ACCOUNT_ID];
   if (status) {
     sql += ` AND status = ?`;
     binds.push(status);
@@ -168,9 +168,9 @@ async function listCampaigns(env, url) {
 
 async function getCampaign(env, id) {
   const row = await env.DB.prepare(
-    `SELECT * FROM growth_campaigns WHERE tenant_id = ? AND id = ? LIMIT 1`
+    `SELECT * FROM growth_campaigns WHERE account_id = ? AND id = ? LIMIT 1`
   )
-    .bind(FNF_TENANT_ID, id)
+    .bind(FNF_ACCOUNT_ID, id)
     .first();
   if (!row) return json({ error: "Campaign not found" }, { status: 404 });
   return json({ ok: true, campaign: mapCampaign(row) });
@@ -186,15 +186,14 @@ async function createCampaign(request, env, user) {
 
   await env.DB.prepare(
     `INSERT INTO growth_campaigns (
-       id, tenant_id, workspace_id, created_by, updated_by, name, slug, goal, audience,
+       id, account_id, created_by, updated_by, name, slug, goal, audience,
        priority, brief, channels_json, status, approval_mode, primary_source,
        start_date, end_date, metadata_json
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?)`
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?)`
   )
     .bind(
       id,
-      FNF_TENANT_ID,
-      FNF_WORKSPACE_ID,
+      FNF_ACCOUNT_ID,
       user.id,
       user.id,
       body.name.trim(),
@@ -218,9 +217,9 @@ async function createCampaign(request, env, user) {
 async function updateCampaign(request, env, user, id) {
   const body = await readJson(request);
   const existing = await env.DB.prepare(
-    `SELECT id FROM growth_campaigns WHERE tenant_id = ? AND id = ? LIMIT 1`
+    `SELECT id FROM growth_campaigns WHERE account_id = ? AND id = ? LIMIT 1`
   )
-    .bind(FNF_TENANT_ID, id)
+    .bind(FNF_ACCOUNT_ID, id)
     .first();
   if (!existing) return json({ error: "Campaign not found" }, { status: 404 });
 
@@ -262,9 +261,9 @@ async function updateCampaign(request, env, user, id) {
   binds.push(user.id);
 
   await env.DB.prepare(
-    `UPDATE growth_campaigns SET ${fields.join(", ")} WHERE tenant_id = ? AND id = ?`
+    `UPDATE growth_campaigns SET ${fields.join(", ")} WHERE account_id = ? AND id = ?`
   )
-    .bind(...binds, FNF_TENANT_ID, id)
+    .bind(...binds, FNF_ACCOUNT_ID, id)
     .run();
 
   return getCampaign(env, id);
@@ -272,9 +271,9 @@ async function updateCampaign(request, env, user, id) {
 
 async function generateCampaignPack(env, user, id) {
   const row = await env.DB.prepare(
-    `SELECT * FROM growth_campaigns WHERE tenant_id = ? AND id = ? LIMIT 1`
+    `SELECT * FROM growth_campaigns WHERE account_id = ? AND id = ? LIMIT 1`
   )
-    .bind(FNF_TENANT_ID, id)
+    .bind(FNF_ACCOUNT_ID, id)
     .first();
   if (!row) return json({ error: "Campaign not found" }, { status: 404 });
 
@@ -468,9 +467,9 @@ function campaignPackToHeroContent(currentHero, pack, campaign) {
 async function publishCampaign(request, env, user, id) {
   const body = await readJson(request);
   const row = await env.DB.prepare(
-    `SELECT * FROM growth_campaigns WHERE tenant_id = ? AND id = ? LIMIT 1`
+    `SELECT * FROM growth_campaigns WHERE account_id = ? AND id = ? LIMIT 1`
   )
-    .bind(FNF_TENANT_ID, id)
+    .bind(FNF_ACCOUNT_ID, id)
     .first();
   if (!row) return json({ error: "Campaign not found" }, { status: 404 });
 
@@ -539,15 +538,15 @@ async function publishCampaign(request, env, user, id) {
   await env.DB.prepare(
     `UPDATE growth_campaigns
      SET status = 'active', pack_json = ?, metadata_json = ?, updated_by = ?, updated_at = datetime('now')
-     WHERE tenant_id = ? AND id = ?`
+     WHERE account_id = ? AND id = ?`
   )
-    .bind(JSON.stringify(pack), JSON.stringify(metadata), user.id, FNF_TENANT_ID, id)
+    .bind(JSON.stringify(pack), JSON.stringify(metadata), user.id, FNF_ACCOUNT_ID, id)
     .run();
 
   const refreshed = await env.DB.prepare(
-    `SELECT * FROM growth_campaigns WHERE tenant_id = ? AND id = ? LIMIT 1`
+    `SELECT * FROM growth_campaigns WHERE account_id = ? AND id = ? LIMIT 1`
   )
-    .bind(FNF_TENANT_ID, id)
+    .bind(FNF_ACCOUNT_ID, id)
     .first();
 
   return json({ ok: true, campaign: mapCampaign(refreshed), publish: publishResult });

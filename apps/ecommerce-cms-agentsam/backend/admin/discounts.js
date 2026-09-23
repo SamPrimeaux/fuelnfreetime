@@ -2,7 +2,7 @@
  * Discounts admin API — /api/admin/discounts/*
  */
 
-import { FNF_TENANT_ID } from "../agentsam/constants.js";
+import { FNF_ACCOUNT_ID } from "../agentsam/constants.js";
 import {
   discountTypeLabel,
   mapDiscount,
@@ -55,15 +55,15 @@ async function getOverview(env) {
          SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active,
          SUM(CASE WHEN status = 'draft' THEN 1 ELSE 0 END) AS drafts,
          COALESCE(SUM(uses_count), 0) AS total_uses
-       FROM discounts WHERE tenant_id = ?`
+       FROM discounts WHERE account_id = ?`
     )
-      .bind(FNF_TENANT_ID)
+      .bind(FNF_ACCOUNT_ID)
       .first()
       .catch(() => ({ total: 0, active: 0, drafts: 0, total_uses: 0 })),
     env.DB.prepare(
-      `SELECT * FROM discounts WHERE tenant_id = ? ORDER BY updated_at DESC LIMIT 8`
+      `SELECT * FROM discounts WHERE account_id = ? ORDER BY updated_at DESC LIMIT 8`
     )
-      .bind(FNF_TENANT_ID)
+      .bind(FNF_ACCOUNT_ID)
       .all()
       .catch(() => ({ results: [] })),
     env.DB.prepare(
@@ -91,8 +91,8 @@ async function getOverview(env) {
 async function listDiscounts(env, url) {
   const status = url.searchParams.get("status");
   const q = (url.searchParams.get("q") || "").trim();
-  let sql = `SELECT * FROM discounts WHERE tenant_id = ?`;
-  const binds = [FNF_TENANT_ID];
+  let sql = `SELECT * FROM discounts WHERE account_id = ?`;
+  const binds = [FNF_ACCOUNT_ID];
 
   if (status) {
     sql += ` AND status = ?`;
@@ -118,9 +118,9 @@ async function createDiscount(request, env, user) {
 
   if (code) {
     const existing = await env.DB.prepare(
-      `SELECT id FROM discounts WHERE tenant_id = ? AND code = ? COLLATE NOCASE LIMIT 1`
+      `SELECT id FROM discounts WHERE account_id = ? AND code = ? COLLATE NOCASE LIMIT 1`
     )
-      .bind(FNF_TENANT_ID, code)
+      .bind(FNF_ACCOUNT_ID, code)
       .first();
     if (existing) return json({ error: "Discount code already exists" }, { status: 409 });
   }
@@ -130,7 +130,7 @@ async function createDiscount(request, env, user) {
 
   await env.DB.prepare(
     `INSERT INTO discounts (
-       id, tenant_id, title, code, method, discount_type, value_type, value,
+       id, account_id, title, code, method, discount_type, value_type, value,
        applies_to, applies_to_json, eligibility, min_requirement_type, min_requirement_value,
        max_uses_total, max_uses_per_customer, combine_product, combine_order, combine_shipping,
        starts_at, ends_at, status, metadata_json, created_by, updated_by
@@ -138,7 +138,7 @@ async function createDiscount(request, env, user) {
   )
     .bind(
       id,
-      FNF_TENANT_ID,
+      FNF_ACCOUNT_ID,
       body.title.trim(),
       code,
       method,
@@ -170,9 +170,9 @@ async function createDiscount(request, env, user) {
 
 async function getDiscount(env, id) {
   const row = await env.DB.prepare(
-    `SELECT * FROM discounts WHERE tenant_id = ? AND id = ? LIMIT 1`
+    `SELECT * FROM discounts WHERE account_id = ? AND id = ? LIMIT 1`
   )
-    .bind(FNF_TENANT_ID, id)
+    .bind(FNF_ACCOUNT_ID, id)
     .first();
   if (!row) return json({ error: "Discount not found" }, { status: 404 });
 
@@ -196,9 +196,9 @@ async function getDiscount(env, id) {
 
 async function updateDiscount(request, env, user, id) {
   const existing = await env.DB.prepare(
-    `SELECT * FROM discounts WHERE tenant_id = ? AND id = ? LIMIT 1`
+    `SELECT * FROM discounts WHERE account_id = ? AND id = ? LIMIT 1`
   )
-    .bind(FNF_TENANT_ID, id)
+    .bind(FNF_ACCOUNT_ID, id)
     .first();
   if (!existing) return json({ error: "Discount not found" }, { status: 404 });
 
@@ -211,9 +211,9 @@ async function updateDiscount(request, env, user, id) {
 
   if (code && code !== existing.code) {
     const dup = await env.DB.prepare(
-      `SELECT id FROM discounts WHERE tenant_id = ? AND code = ? COLLATE NOCASE AND id != ? LIMIT 1`
+      `SELECT id FROM discounts WHERE account_id = ? AND code = ? COLLATE NOCASE AND id != ? LIMIT 1`
     )
-      .bind(FNF_TENANT_ID, code, id)
+      .bind(FNF_ACCOUNT_ID, code, id)
       .first();
     if (dup) return json({ error: "Discount code already exists" }, { status: 409 });
   }
@@ -229,7 +229,7 @@ async function updateDiscount(request, env, user, id) {
        combine_product = ?, combine_order = ?, combine_shipping = ?,
        starts_at = ?, ends_at = ?, status = ?, metadata_json = ?,
        updated_by = ?, updated_at = datetime('now')
-     WHERE tenant_id = ? AND id = ?`
+     WHERE account_id = ? AND id = ?`
   )
     .bind(
       (body.title ?? existing.title).trim(),
@@ -257,7 +257,7 @@ async function updateDiscount(request, env, user, id) {
       status,
       JSON.stringify(body.metadata ?? parseJson(existing.metadata_json, {})),
       user.id,
-      FNF_TENANT_ID,
+      FNF_ACCOUNT_ID,
       id
     )
     .run();
@@ -268,9 +268,9 @@ async function updateDiscount(request, env, user, id) {
 
 async function exportDiscounts(env) {
   const { results } = await env.DB.prepare(
-    `SELECT * FROM discounts WHERE tenant_id = ? ORDER BY updated_at DESC`
+    `SELECT * FROM discounts WHERE account_id = ? ORDER BY updated_at DESC`
   )
-    .bind(FNF_TENANT_ID)
+    .bind(FNF_ACCOUNT_ID)
     .all();
 
   const header = [

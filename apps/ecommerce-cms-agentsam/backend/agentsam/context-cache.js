@@ -2,7 +2,7 @@
  * AgentSam context cache — compact retrieved context packs (not full transcripts).
  */
 
-import { FNF_TENANT_ID, FNF_WORKSPACE_ID, FNF_GITHUB_REPO } from "./constants.js";
+import { FNF_ACCOUNT_ID, FNF_GITHUB_REPO } from "./constants.js";
 import { estimateTokens, hashText } from "./prompt-registry.js";
 import { formatMcpForPrompt } from "./mcp-servers.js";
 import { formatSkillsForPrompt } from "./skills.js";
@@ -36,7 +36,7 @@ function previewText(text, max = 480) {
 
 export function buildContextCacheKey(parts = {}) {
   return [
-    parts.workspace_id || FNF_WORKSPACE_ID,
+    parts.account_id || FNF_ACCOUNT_ID,
     parts.context_type || "mixed",
     parts.workflow_key || "_",
     parts.route_lane || "_",
@@ -51,10 +51,10 @@ async function loadProjectContext(env) {
   const row = await env.DB.prepare(
     `SELECT project_name, description, goals, constraints, primary_tables, workers_involved, r2_buckets_involved, domains_involved, updated_at
      FROM agentsam_project_context
-     WHERE tenant_id = ? AND status = 'active'
+     WHERE account_id = ? AND status = 'active'
      ORDER BY priority ASC, updated_at DESC LIMIT 1`
   )
-    .bind(FNF_TENANT_ID)
+    .bind(FNF_ACCOUNT_ID)
     .first();
 
   if (!row) return "";
@@ -267,11 +267,11 @@ export async function getContextCache(env, cacheKey) {
 
   const row = await env.DB.prepare(
     `SELECT * FROM agentsam_context_cache
-     WHERE workspace_id = ? AND cache_key = ? AND status = 'active'
+     WHERE account_id = ? AND cache_key = ? AND status = 'active'
        AND (expires_unix IS NULL OR expires_unix > ?)
      LIMIT 1`
   )
-    .bind(FNF_WORKSPACE_ID, cacheKey, Math.floor(Date.now() / 1000))
+    .bind(FNF_ACCOUNT_ID, cacheKey, Math.floor(Date.now() / 1000))
     .first();
 
   if (!row) return null;
@@ -307,13 +307,13 @@ export async function putContextCache(env, contextPack, options = {}) {
 
   await env.DB.prepare(
     `INSERT INTO agentsam_context_cache (
-       id, tenant_id, workspace_id, cache_key, context_hash, context_type,
+       id, account_id, cache_key, context_hash, context_type,
        workflow_key, route_lane, task_type,
        source_tables_json, source_keys_json, source_updated_hash,
        context_preview, context_token_estimate, context_char_count,
        kv_key, r2_key, miss_count, expires_at, expires_unix, status
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime(?, 'unixepoch'), ?, 'active')
-     ON CONFLICT(workspace_id, cache_key) DO UPDATE SET
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime(?, 'unixepoch'), ?, 'active')
+     ON CONFLICT(account_id, cache_key) DO UPDATE SET
        context_hash = excluded.context_hash,
        context_preview = excluded.context_preview,
        context_token_estimate = excluded.context_token_estimate,
@@ -328,8 +328,7 @@ export async function putContextCache(env, contextPack, options = {}) {
   )
     .bind(
       id,
-      FNF_TENANT_ID,
-      FNF_WORKSPACE_ID,
+      FNF_ACCOUNT_ID,
       cacheKey,
       contextPack.contextHash,
       contextPack.contextType,
@@ -356,8 +355,8 @@ export async function putContextCache(env, contextPack, options = {}) {
 export async function invalidateContextCache(env, options = {}) {
   if (!env?.DB) return { invalidated: 0 };
   const reason = options.reason || "manual_invalidation";
-  let sql = `UPDATE agentsam_context_cache SET status = 'invalidated', invalidation_reason = ?, updated_at = datetime('now') WHERE workspace_id = ? AND status = 'active'`;
-  const binds = [reason, FNF_WORKSPACE_ID];
+  let sql = `UPDATE agentsam_context_cache SET status = 'invalidated', invalidation_reason = ?, updated_at = datetime('now') WHERE account_id = ? AND status = 'active'`;
+  const binds = [reason, FNF_ACCOUNT_ID];
   if (options.cache_key) {
     sql += ` AND cache_key = ?`;
     binds.push(options.cache_key);
@@ -382,7 +381,7 @@ export async function getOrBuildContextPack(env, routing, message, options = {})
   const built = await buildContextPack(env, routing, message, options);
 
   const cacheKey = buildContextCacheKey({
-    workspace_id: FNF_WORKSPACE_ID,
+    account_id: FNF_ACCOUNT_ID,
     context_type: built.contextType,
     workflow_key: built.workflow_key,
     route_lane: built.route_lane,
@@ -434,18 +433,18 @@ export async function summarizeContextCache(env) {
 
   const since = Math.floor(Date.now() / 1000) - 86400;
   const active = await env.DB.prepare(
-    `SELECT COUNT(*) AS n FROM agentsam_context_cache WHERE workspace_id = ? AND status = 'active'`
+    `SELECT COUNT(*) AS n FROM agentsam_context_cache WHERE account_id = ? AND status = 'active'`
   )
-    .bind(FNF_WORKSPACE_ID)
+    .bind(FNF_ACCOUNT_ID)
     .first();
 
   const usage = await env.DB.prepare(
     `SELECT
        SUM(CASE WHEN context_cache_hit = 1 THEN 1 ELSE 0 END) AS hits,
        SUM(CASE WHEN context_cache_hit = 0 THEN 1 ELSE 0 END) AS misses
-     FROM agentsam_prompt_usage WHERE workspace_id = ? AND created_at_unix >= ?`
+     FROM agentsam_prompt_usage WHERE account_id = ? AND created_at_unix >= ?`
   )
-    .bind(FNF_WORKSPACE_ID, since)
+    .bind(FNF_ACCOUNT_ID, since)
     .first();
 
   return {

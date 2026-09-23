@@ -2,7 +2,7 @@
  * D1-backed quick actions and + menu capabilities for AgentSam UI.
  */
 
-import { FNF_WORKSPACE_ID } from "./constants.js";
+import { FNF_ACCOUNT_ID } from "./constants.js";
 import {
   getAgentFeatures,
   isFeatureEnabled,
@@ -39,9 +39,9 @@ async function hasActiveImageModels(env) {
   try {
     const row = await env.DB.prepare(
       `SELECT COUNT(*) AS n FROM agentsam_ai
-       WHERE workspace_id = ? AND status = 'active' AND task_type = 'image_generation'`
+       WHERE account_id = ? AND status = 'active' AND task_type = 'image_generation'`
     )
-      .bind(FNF_WORKSPACE_ID)
+      .bind(FNF_ACCOUNT_ID)
       .first();
     return (row?.n ?? 0) > 0;
   } catch {

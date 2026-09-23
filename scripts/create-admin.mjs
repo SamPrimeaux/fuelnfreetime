@@ -11,8 +11,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const ITERATIONS = 100000;
-const TENANT_ID = "tenant_fuelnfreetime";
-const WORKSPACE_ID = "ws_fuelnfreetime";
+const ACCOUNT_ID = "ede6590ac0d2fb7daf155b35653457b2";
 
 function toHex(buf) {
   return Array.from(new Uint8Array(buf))
@@ -73,24 +72,21 @@ if (!email || !password) {
 const { hash, salt } = await hashPassword(password);
 const id = newAuthUserId();
 const resolvedDisplayName = displayName || email.split("@")[0];
+const membershipRole = ["owner", "admin", "member", "viewer"].includes(role) ? role : "admin";
 
 const sql = `-- generated auth user (do not commit)
 INSERT INTO auth_users (
-  id, email, name, password_hash, salt, tenant_id, role, display_name,
-  active_tenant_id, active_workspace_id, default_workspace_id,
-  is_verified, verified_at, status, timezone, account_type, updated_at
+  id, email, name, password_hash, salt, role, display_name,
+  default_account_id, is_verified, verified_at, status, timezone, account_type, updated_at
 ) VALUES (
   '${sqlEscape(id)}',
   '${sqlEscape(email)}',
   '${sqlEscape(resolvedDisplayName)}',
   '${sqlEscape(hash)}',
   '${sqlEscape(salt)}',
-  '${TENANT_ID}',
   '${sqlEscape(role)}',
   '${sqlEscape(resolvedDisplayName)}',
-  '${TENANT_ID}',
-  '${WORKSPACE_ID}',
-  '${WORKSPACE_ID}',
+  '${ACCOUNT_ID}',
   1,
   unixepoch(),
   'active',
@@ -104,7 +100,14 @@ ON CONFLICT(email) DO UPDATE SET
   role = excluded.role,
   name = excluded.name,
   display_name = excluded.display_name,
+  default_account_id = excluded.default_account_id,
   updated_at = datetime('now');
+
+INSERT INTO account_memberships (account_id, user_id, role)
+SELECT '${ACCOUNT_ID}', id, '${membershipRole}'
+FROM auth_users
+WHERE email = '${sqlEscape(email)}'
+ON CONFLICT(account_id, user_id) DO UPDATE SET role = excluded.role;
 `;
 
 const root = dirname(fileURLToPath(import.meta.url));

@@ -2,7 +2,7 @@
  * First-party UTM attribution — visits, redirects, order joins.
  */
 
-import { FNF_TENANT_ID } from "../agentsam/constants.js";
+import { FNF_ACCOUNT_ID } from "../agentsam/constants.js";
 
 const ATTR_COOKIE = "fnf_ca";
 const VID_COOKIE = "fnf_vid";
@@ -104,18 +104,18 @@ export function buildUtmLinks(origin, campaignId, slug) {
 export async function resolveCampaignId(env, { campaignId, utmCampaign }) {
   if (campaignId) {
     const row = await env.DB.prepare(
-      `SELECT id FROM growth_campaigns WHERE tenant_id = ? AND id = ? LIMIT 1`
+      `SELECT id FROM growth_campaigns WHERE account_id = ? AND id = ? LIMIT 1`
     )
-      .bind(FNF_TENANT_ID, campaignId)
+      .bind(FNF_ACCOUNT_ID, campaignId)
       .first()
       .catch(() => null);
     if (row) return row.id;
   }
   if (utmCampaign) {
     const row = await env.DB.prepare(
-      `SELECT id FROM growth_campaigns WHERE tenant_id = ? AND slug = ? LIMIT 1`
+      `SELECT id FROM growth_campaigns WHERE account_id = ? AND slug = ? LIMIT 1`
     )
-      .bind(FNF_TENANT_ID, utmCampaign)
+      .bind(FNF_ACCOUNT_ID, utmCampaign)
       .first()
       .catch(() => null);
     if (row) return row.id;
@@ -132,13 +132,13 @@ export async function recordVisit(env, payload) {
 
   await env.DB.prepare(
     `INSERT INTO attribution_visits (
-       id, tenant_id, campaign_id, session_id, landing_path, referrer,
+       id, account_id, campaign_id, session_id, landing_path, referrer,
        utm_source, utm_medium, utm_campaign, utm_content, utm_term, channel, user_agent
      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   )
     .bind(
       id,
-      FNF_TENANT_ID,
+      FNF_ACCOUNT_ID,
       campaignId,
       payload.session_id,
       payload.landing_path || null,
@@ -160,9 +160,9 @@ export async function recordVisit(env, payload) {
     await env.DB.prepare(
       `UPDATE growth_campaigns
        SET session_count = COALESCE(session_count, 0) + 1, updated_at = datetime('now')
-       WHERE tenant_id = ? AND id = ?`
+       WHERE account_id = ? AND id = ?`
     )
-      .bind(FNF_TENANT_ID, campaignId)
+      .bind(FNF_ACCOUNT_ID, campaignId)
       .run()
       .catch(() => {});
   }
@@ -205,9 +205,9 @@ export async function attachAttributionToOrder(env, orderId, attribution) {
         `UPDATE growth_campaigns
          SET attributed_revenue_cents = COALESCE(attributed_revenue_cents, 0) + ?,
              updated_at = datetime('now')
-         WHERE tenant_id = ? AND id = ?`
+         WHERE account_id = ? AND id = ?`
       )
-        .bind(order.total_cents, FNF_TENANT_ID, attribution.campaign_id)
+        .bind(order.total_cents, FNF_ACCOUNT_ID, attribution.campaign_id)
         .run()
         .catch(() => {});
     }
@@ -217,9 +217,9 @@ export async function attachAttributionToOrder(env, orderId, attribution) {
 export async function getAttributionMetrics(env) {
   const [visits, channels, revenue, conversions] = await Promise.all([
     env.DB.prepare(
-      `SELECT COUNT(*) AS n FROM attribution_visits WHERE tenant_id = ?`
+      `SELECT COUNT(*) AS n FROM attribution_visits WHERE account_id = ?`
     )
-      .bind(FNF_TENANT_ID)
+      .bind(FNF_ACCOUNT_ID)
       .first()
       .catch(() => ({ n: 0 })),
     env.DB.prepare(
@@ -227,18 +227,18 @@ export async function getAttributionMetrics(env) {
          COALESCE(utm_source, channel, 'direct') AS source,
          COUNT(*) AS sessions
        FROM attribution_visits
-       WHERE tenant_id = ?
+       WHERE account_id = ?
        GROUP BY COALESCE(utm_source, channel, 'direct')
        ORDER BY sessions DESC`
     )
-      .bind(FNF_TENANT_ID)
+      .bind(FNF_ACCOUNT_ID)
       .all()
       .catch(() => ({ results: [] })),
     env.DB.prepare(
       `SELECT COALESCE(SUM(attributed_revenue_cents), 0) AS cents
-       FROM growth_campaigns WHERE tenant_id = ?`
+       FROM growth_campaigns WHERE account_id = ?`
     )
-      .bind(FNF_TENANT_ID)
+      .bind(FNF_ACCOUNT_ID)
       .first()
       .catch(() => ({ cents: 0 })),
     env.DB.prepare(

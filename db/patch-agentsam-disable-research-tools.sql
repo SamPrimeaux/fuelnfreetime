@@ -5,7 +5,7 @@ UPDATE agentsam_tools
 SET
   is_active = 0,
   updated_at = unixepoch()
-WHERE (workspace_id = 'ws_fuelnfreetime' OR workspace_id IS NULL)
+WHERE (account_id = 'ede6590ac0d2fb7daf155b35653457b2' OR account_id IS NULL)
   AND is_active = 1
   AND tool_key NOT IN (
     'agentsam_github_repo_list',

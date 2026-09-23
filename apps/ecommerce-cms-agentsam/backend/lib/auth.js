@@ -2,7 +2,7 @@
  * Admin auth — auth_users + auth_sessions (PBKDF2, httpOnly cookie).
  */
 
-import { FNF_ACCOUNT_ID, FNF_TENANT_ID, FNF_WORKSPACE_ID } from "../agentsam/constants.js";
+import { FNF_ACCOUNT_ID } from "../agentsam/constants.js";
 
 const ITERATIONS = 100000;
 const SESSION_DAYS = 7;
@@ -144,4 +144,4 @@ export async function findAuthUserByEmail(env, email) {
     .first();
 }
 
-export { FNF_ACCOUNT_ID, FNF_TENANT_ID, FNF_WORKSPACE_ID };
+export { FNF_ACCOUNT_ID };

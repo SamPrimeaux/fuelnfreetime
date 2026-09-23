@@ -23,8 +23,7 @@ const SKILL_SOURCES = [
 ];
 const R2_PREFIX = "agentsam/skills";
 const BUCKET = "fuelnfreetime";
-const TENANT_ID = "tenant_fuelnfreetime";
-const WORKSPACE_ID = "ws_fuelnfreetime";
+const ACCOUNT_ID = "ede6590ac0d2fb7daf155b35653457b2";
 const SYSTEM_USER_ID = "au_fnf_system";
 const DRY_RUN = process.argv.includes("--dry-run");
 
@@ -272,8 +271,8 @@ function fetchExistingSkills() {
 }
 
 function revisionInsertSql({ skillId, contentHashValue, contentMarkdown, version }) {
-  return `INSERT INTO agentsam_skill_revision (skill_id, tenant_id, workspace_id, content_hash, content_markdown, version, source)
-VALUES ('${sqlEscape(skillId)}', '${TENANT_ID}', '${WORKSPACE_ID}', '${sqlEscape(contentHashValue)}', '${sqlEscape(contentMarkdown.slice(0, 8000))}', ${version}, 'skills_sync');`;
+  return `INSERT INTO agentsam_skill_revision (skill_id, account_id, content_hash, content_markdown, version, source)
+VALUES ('${sqlEscape(skillId)}', '${ACCOUNT_ID}', '${sqlEscape(contentHashValue)}', '${sqlEscape(contentMarkdown.slice(0, 8000))}', ${version}, 'skills_sync');`;
 }
 
 function skillInsertSql({
@@ -294,21 +293,20 @@ function skillInsertSql({
   alwaysApply = false,
 }) {
   return `INSERT OR REPLACE INTO agentsam_skill (
-  id, tenant_id, user_id, workspace_id, slug, name, description, content_markdown,
+  id, account_id, user_id, slug, name, description, content_markdown,
   file_path, scope, slash_trigger, globs, always_apply, task_types_json, route_keys_json,
   model_constraints_json, access_mode, tags_json, metadata_json, retrieval_strategy,
   sort_order, version, is_active, updated_at
 ) VALUES (
   '${sqlEscape(id)}',
-  '${TENANT_ID}',
+  '${ACCOUNT_ID}',
   '${SYSTEM_USER_ID}',
-  '${WORKSPACE_ID}',
   '${sqlEscape(slug)}',
   '${sqlEscape(name)}',
   '${sqlEscape(description)}',
   '',
   '${sqlEscape(filePath)}',
-  'tenant',
+  'account',
   '${sqlEscape(slashTrigger || slug)}',
   '${sqlEscape(JSON.stringify(globs || []))}',
   ${alwaysApply ? 1 : 0},
@@ -399,8 +397,8 @@ function buildSeedSql(skills, existingBySlug = new Map()) {
     let order = 0;
     for (const file of skill.files) {
       if (file.role === "skill") continue;
-      lines.push(`INSERT INTO agentsam_skill_file (skill_id, file_path, role, sort_order)
-VALUES ('${sqlEscape(skill.id)}', '${sqlEscape(file.r2Key)}', '${sqlEscape(file.role)}', ${order++});`);
+      lines.push(`INSERT INTO agentsam_skill_file (account_id, skill_id, file_path, role, sort_order)
+VALUES ('${ACCOUNT_ID}', '${sqlEscape(skill.id)}', '${sqlEscape(file.r2Key)}', '${sqlEscape(file.role)}', ${order++});`);
     }
     lines.push("");
   }

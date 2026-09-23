@@ -2,7 +2,7 @@
  * Shared discount validation + amount calculation (admin + storefront).
  */
 
-import { FNF_TENANT_ID } from "../agentsam/constants.js";
+import { FNF_ACCOUNT_ID } from "../agentsam/constants.js";
 
 export function parseJson(raw, fallback) {
   try {
@@ -149,9 +149,9 @@ export async function loadDiscountByCode(env, code) {
   const normalized = normalizeCode(code);
   if (!normalized) return null;
   return env.DB.prepare(
-    `SELECT * FROM discounts WHERE tenant_id = ? AND code = ? COLLATE NOCASE LIMIT 1`
+    `SELECT * FROM discounts WHERE account_id = ? AND code = ? COLLATE NOCASE LIMIT 1`
   )
-    .bind(FNF_TENANT_ID, normalized)
+    .bind(FNF_ACCOUNT_ID, normalized)
     .first();
 }
 
