@@ -32,11 +32,12 @@
       *{box-sizing:border-box}[hidden]{display:none!important}
       .outline{position:fixed;border:2px solid #8cab7c;border-radius:5px;background:#86ac7114;pointer-events:none}
       .hint{position:fixed;top:75px;left:50%;transform:translateX(-50%);max-width:90vw;background:#263022;padding:10px 16px;border-radius:24px;box-shadow:0 4px 24px #0003;text-align:center}
-      .composer{position:fixed;right:24px;bottom:24px;width:min(420px,calc(100vw - 32px));max-height:70dvh;overflow:auto;background:#20251f;border:1px solid #63725b;border-radius:20px;padding:18px;box-shadow:0 18px 60px #0005;pointer-events:auto}
-      header{display:flex;align-items:center;justify-content:space-between;gap:12px}h2{font-size:16px;margin:0}button{min-height:44px;border:0;border-radius:10px;padding:8px 14px;font:inherit;cursor:pointer;background:#d7e6cc;color:#1b2717}button:disabled{opacity:.5;cursor:wait}
+      .composer{position:fixed;width:min(390px,calc(100vw - 24px));background:rgba(255,255,255,.98);color:#1b211c;border:1px solid rgba(30,34,40,.13);border-radius:16px;padding:10px;box-shadow:0 18px 50px #1820182b;pointer-events:auto}
+      .composer::before{content:"";position:absolute;top:-7px;left:28px;width:12px;height:12px;background:#fff;border-left:1px solid rgba(30,34,40,.13);border-top:1px solid rgba(30,34,40,.13);transform:rotate(45deg)}
+      header{display:flex;align-items:center;gap:8px}h2{font-size:13px;margin:0;font-weight:700;flex:1}button{min-height:34px;border:0;border-radius:9px;padding:7px 12px;font:inherit;cursor:pointer;background:#243024;color:#fff}button:disabled{opacity:.5;cursor:wait}
       .close{background:transparent;color:inherit;font-size:22px}textarea{width:100%;resize:vertical;min-height:85px;border:1px solid #64745c;border-radius:12px;background:#30372e;color:white;font:16px/1.5 system-ui;padding:12px;margin:12px 0}
-      .context{color:#c0cdb9;font-size:12px;white-space:pre-wrap;max-height:110px;overflow:auto}footer{display:flex;justify-content:space-between;align-items:center;gap:12px}small{color:#bdc9b6}.reply{white-space:pre-wrap;margin-top:12px;overflow-wrap:anywhere}
-      @media(max-width:600px){.composer{right:16px;bottom:max(16px,env(safe-area-inset-bottom));max-height:65dvh}}
+      .context{color:#687267;font-size:12px;margin:4px 0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.composer label{display:block;font-size:11px;color:#687267;margin-top:8px}textarea{background:#fff;color:#1b211c;min-height:54px;margin:6px 0;font-size:14px;padding:9px;border-color:#d7ddd4}footer{display:flex;justify-content:space-between;align-items:center;gap:12px}small{color:#687267;font-size:11px}.reply{white-space:pre-wrap;margin-top:10px;overflow-wrap:anywhere;color:#3c493d;font-size:13px}
+      @media(max-width:600px){.composer{left:12px!important;right:12px;width:auto;bottom:max(12px,env(safe-area-inset-bottom));}.composer::before{display:none}}
       :focus-visible{outline:3px solid #a7c692;outline-offset:3px}
     </style>
     <div class="outline" hidden></div><div class="hint" hidden>Tap an element to annotate · Esc to exit</div>
@@ -68,6 +69,14 @@
     const box = root.querySelector(".outline"), r = bounds(el, frame);
     Object.assign(box.style, { left:r.left+"px", top:r.top+"px", width:r.width+"px", height:r.height+"px" }); box.hidden = false;
   }
+  function positionComposer(el, frame) {
+    const box = root.querySelector(".composer"), r = bounds(el, frame);
+    const width = Math.min(390, window.innerWidth - 24);
+    let left = Math.max(12, Math.min(window.innerWidth - width - 12, r.left + r.width / 2 - width / 2));
+    let top = r.top + r.height + 16;
+    if (top + 180 > window.innerHeight) top = Math.max(12, r.top - 196);
+    box.style.left = `${left}px`; box.style.top = `${top}px`; box.style.right = "auto"; box.style.bottom = "auto";
+  }
   function watch(doc, frame) {
     if (watched.has(doc)) return; watched.add(doc);
     doc.addEventListener("pointerover", e => {
@@ -91,7 +100,9 @@
       outline(target, frame);
       root.querySelector(".hint").hidden = true;
       root.querySelector(".composer").hidden = false;
-      root.querySelector(".context").textContent = JSON.stringify(selection, null, 2);
+      const label = selection.label || selection.section || selection.text || selection.tag || "selected element";
+      root.querySelector(".context").textContent = `Selected ${label}`;
+      positionComposer(target, frame);
       root.querySelector(".reply").textContent = "";
       root.querySelector("textarea").value = "";
       root.querySelector("textarea").focus();

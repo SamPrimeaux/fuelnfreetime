@@ -384,7 +384,18 @@ function hydrateShellNav(user, activeHref) {
   const navHtml = renderSideNav(activeHref, buildUserNav(user));
   const drawerNavHtml = renderSideNav(activeHref, buildUserNav(user), { drawer: true });
   document.querySelectorAll(".console-sidenav.admin-sidebar, .admin-nav--drawer").forEach((aside) => {
-    aside.innerHTML = aside.classList.contains("admin-nav--drawer") ? drawerNavHtml : navHtml;
+    // Keep the footer/profile DOM island stable. Replacing the whole aside here
+    // used to make the profile and collapse control disappear during hydration.
+    const next = document.createElement("div");
+    next.innerHTML = aside.classList.contains("admin-nav--drawer") ? drawerNavHtml : navHtml;
+    const nextScroll = next.querySelector(".console-sidenav-scroll");
+    const currentScroll = aside.querySelector(".console-sidenav-scroll");
+    if (nextScroll && currentScroll) currentScroll.replaceWith(nextScroll);
+    else if (nextScroll) aside.prepend(nextScroll);
+    if (!aside.querySelector(".console-sidenav-profile")) {
+      const footer = next.querySelector(".console-sidenav-profile");
+      if (footer) aside.appendChild(footer);
+    }
   });
   syncPersistentNavState();
   // Toggle click handling is wired ONCE, via delegation, in
