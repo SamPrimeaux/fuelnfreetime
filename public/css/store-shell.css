@@ -195,9 +195,13 @@ body.fnf-nav-open {
   height: 2px;
   background: currentColor;
   margin: 4px 0;
-  transition: transform 0.28s var(--fnf-ease), opacity 0.2s;
+  transition: transform 0.32s var(--fnf-ease), opacity 0.2s, width 0.22s var(--fnf-ease);
   transform-origin: center;
 }
+
+.fnf-burger span:nth-child(1) { width: 22px; }
+.fnf-burger span:nth-child(2) { width: 18px; margin-left: 4px; }
+.fnf-burger span:nth-child(3) { width: 22px; }
 
 .fnf-burger.is-open span:nth-child(1) {
   transform: translateY(6px) rotate(45deg);
@@ -212,7 +216,7 @@ body.fnf-nav-open {
   transform: translateY(-6px) rotate(-45deg);
 }
 
-/* Mobile drawer — glass slide-in from right */
+/* Mobile drawer — compact glass slide-in from the left */
 .fnf-mobile {
   position: fixed;
   inset: 0;
@@ -229,14 +233,14 @@ body.fnf-nav-open {
 .fnf-mobile-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: transparent;
   opacity: 0;
   transition: opacity 0.32s var(--fnf-ease);
 }
 
 @supports (backdrop-filter: blur(1px)) {
   .fnf-mobile-backdrop {
-    backdrop-filter: blur(6px);
+    backdrop-filter: none;
   }
 }
 
@@ -247,14 +251,15 @@ body.fnf-nav-open {
 .fnf-mobile-panel {
   position: absolute;
   top: 0;
+  left: 0;
   right: 0;
   bottom: 0;
   width: min(320px, 88vw);
   padding: calc(var(--fnf-header) + 1.25rem) 1.5rem 1.5rem;
   background: rgba(16, 16, 18, 0.78);
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.35);
-  transform: translateX(104%);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 12px 0 40px rgba(0, 0, 0, 0.35);
+  transform: translateX(-104%);
   transition: transform 0.34s var(--fnf-ease);
 }
 
