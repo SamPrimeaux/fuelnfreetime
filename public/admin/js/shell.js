@@ -307,9 +307,9 @@ function renderSideNav(activeHref, userNav, options = {}) {
           </span>
           ${icon("chev", 15, "console-profile-chevron")}
         </button>
-        <button type="button" class="console-nav-collapse" data-console-nav-toggle aria-label="${drawer ? "Close sidebar" : "Collapse sidebar"}" title="${drawer ? "Close sidebar" : "Collapse sidebar"}">
+        ${drawer ? `<button type="button" class="console-nav-collapse" data-console-nav-toggle aria-label="Close sidebar" title="Close sidebar">
           ${icon("arrowLeftToLine", 19, "console-nav-collapse-icon")}
-        </button>
+        </button>` : ""}
       </div>
       <div class="console-profile-menu" data-profile-menu>
         <div class="console-profile-menu-head">
@@ -633,7 +633,7 @@ function syncPersistentNavState() {
     const label = collapsed ? "Show sidebar" : (window.matchMedia?.("(max-width: 900px)")?.matches ? "Close sidebar" : "Collapse sidebar");
     button.setAttribute("aria-label", label);
     button.setAttribute("title", label);
-    button.innerHTML = icon(collapsed || !window.matchMedia?.("(max-width: 900px)")?.matches ? "textAlignStart" : "x", 21, "console-nav-ghost-icon");
+    button.innerHTML = icon(collapsed ? "textAlignStart" : "x", 21, "console-nav-ghost-icon");
   });
 }
 
