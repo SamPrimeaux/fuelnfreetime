@@ -3,7 +3,7 @@
  * Never throws; never stores secrets or full prompts by default.
  */
 
-import { FNF_TENANT_ID, FNF_WORKSPACE_ID } from "./constants.js";
+import { FNF_ACCOUNT_ID } from "./constants.js";
 
 const PREVIEW_MAX = 240;
 const ERROR_MAX = 500;
@@ -17,7 +17,7 @@ const COST_RATE = {
 
 const INSERT_SQL = `
 INSERT INTO agentsam_analytics (
-  tenant_id, workspace_id, event_type, event_name, status, source, environment,
+  account_id, event_type, event_name, status, source, environment,
   session_id, conversation_id, message_id, run_id,
   workflow_id, workflow_key, workflow_run_id,
   user_id, admin_user_id, user_email,
@@ -25,6 +25,7 @@ INSERT INTO agentsam_analytics (
   provider, model_id, model_lane, fallback_used, fallback_attempt_index, attempted_models_json,
   mcp_server, mcp_tool, mcp_success, mcp_latency_ms,
   github_repo, github_branch, github_operation,
+  channel, campaign_id, product_id, variant_id, order_id, customer_id, integration_key, operation,
   entity_type, entity_id, entity_label,
   input_chars, output_chars, prompt_preview, prompt_hash, response_preview, response_hash,
   input_tokens, output_tokens, total_tokens, estimated_cost_usd,
@@ -33,7 +34,7 @@ INSERT INTO agentsam_analytics (
   error_code, error_message, error_stage,
   metadata_json
 ) VALUES (
-  ?, ?, ?, ?, ?, ?, ?,
+  ?, ?, ?, ?, ?, ?,
   ?, ?, ?, ?,
   ?, ?, ?,
   ?, ?, ?,
@@ -41,6 +42,7 @@ INSERT INTO agentsam_analytics (
   ?, ?, ?, ?, ?, ?,
   ?, ?, ?, ?,
   ?, ?, ?,
+  ?, ?, ?, ?, ?, ?, ?, ?,
   ?, ?, ?,
   ?, ?, ?, ?, ?, ?,
   ?, ?, ?, ?,
@@ -128,8 +130,7 @@ async function insertEvent(env, row) {
 
   await env.DB.prepare(INSERT_SQL)
     .bind(
-      row.tenant_id,
-      row.workspace_id,
+      row.account_id,
       row.event_type,
       row.event_name,
       row.status,
@@ -162,6 +163,14 @@ async function insertEvent(env, row) {
       row.github_repo,
       row.github_branch,
       row.github_operation,
+      row.channel,
+      row.campaign_id,
+      row.product_id,
+      row.variant_id,
+      row.order_id,
+      row.customer_id,
+      row.integration_key,
+      row.operation,
       row.entity_type,
       row.entity_id,
       row.entity_label,
@@ -216,8 +225,7 @@ async function buildRow(env, event, options = {}) {
   const totalTokens = merged.total_tokens ?? inputTokens + outputTokens;
 
   return {
-    tenant_id: merged.tenant_id || FNF_TENANT_ID,
-    workspace_id: merged.workspace_id || FNF_WORKSPACE_ID,
+    account_id: merged.account_id || FNF_ACCOUNT_ID,
     event_type: merged.event_type,
     event_name: merged.event_name,
     status: merged.status || "success",
@@ -252,6 +260,14 @@ async function buildRow(env, event, options = {}) {
     github_repo: merged.github_repo ?? null,
     github_branch: merged.github_branch ?? null,
     github_operation: merged.github_operation ?? null,
+    channel: merged.channel ?? null,
+    campaign_id: merged.campaign_id ?? null,
+    product_id: merged.product_id ?? null,
+    variant_id: merged.variant_id ?? null,
+    order_id: merged.order_id ?? null,
+    customer_id: merged.customer_id ?? null,
+    integration_key: merged.integration_key ?? null,
+    operation: merged.operation ?? null,
     entity_type: merged.entity_type ?? null,
     entity_id: merged.entity_id ?? null,
     entity_label: merged.entity_label ?? null,
@@ -316,7 +332,7 @@ function rangeSeconds(range = "24h") {
 }
 
 export async function summarizeAgentSamAnalytics(env, options = {}) {
-  const workspaceId = options.workspace_id || FNF_WORKSPACE_ID;
+  const accountId = options.account_id || FNF_ACCOUNT_ID;
   const since = Math.floor(Date.now() / 1000) - rangeSeconds(options.range || "24h");
 
   if (!env?.DB) {
@@ -343,10 +359,10 @@ export async function summarizeAgentSamAnalytics(env, options = {}) {
          SUM(CASE WHEN event_type = 'approval' THEN 1 ELSE 0 END) AS approvals_required,
          COALESCE(SUM(estimated_cost_usd), 0) AS estimated_cost_usd
        FROM agentsam_analytics
-       WHERE workspace_id = ?
+       WHERE account_id = ?
          AND created_at_unix >= ?`
     )
-      .bind(workspaceId, since)
+      .bind(accountId, since)
       .first();
 
     const { results: byWorkflow } = await env.DB.prepare(
@@ -357,14 +373,14 @@ export async function summarizeAgentSamAnalytics(env, options = {}) {
          AVG(total_latency_ms) AS avg_latency_ms,
          SUM(estimated_cost_usd) AS estimated_cost_usd
        FROM agentsam_analytics
-       WHERE workspace_id = ?
+       WHERE account_id = ?
          AND created_at_unix >= ?
          AND workflow_key IS NOT NULL
        GROUP BY workflow_key
        ORDER BY events DESC
        LIMIT 12`
     )
-      .bind(workspaceId, since)
+      .bind(accountId, since)
       .all();
 
     const { results: byModel } = await env.DB.prepare(
@@ -375,26 +391,26 @@ export async function summarizeAgentSamAnalytics(env, options = {}) {
          AVG(ai_latency_ms) AS avg_ai_latency_ms,
          SUM(estimated_cost_usd) AS estimated_cost_usd
        FROM agentsam_analytics
-       WHERE workspace_id = ?
+       WHERE account_id = ?
          AND model_id IS NOT NULL
          AND created_at_unix >= ?
        GROUP BY model_id
        ORDER BY uses DESC
        LIMIT 12`
     )
-      .bind(workspaceId, since)
+      .bind(accountId, since)
       .all();
 
     const { results: recentErrors } = await env.DB.prepare(
       `SELECT event_type, event_name, status, workflow_key, model_id, error_code, error_message, created_at
        FROM agentsam_analytics
-       WHERE workspace_id = ?
+       WHERE account_id = ?
          AND (event_type = 'error' OR status = 'failed')
          AND created_at_unix >= ?
        ORDER BY created_at_unix DESC
        LIMIT 10`
     )
-      .bind(workspaceId, since)
+      .bind(accountId, since)
       .all();
 
     const latencyRow = await env.DB.prepare(
@@ -402,11 +418,11 @@ export async function summarizeAgentSamAnalytics(env, options = {}) {
          AVG(total_latency_ms) AS avg_total_latency_ms,
          AVG(ai_latency_ms) AS avg_ai_latency_ms
        FROM agentsam_analytics
-       WHERE workspace_id = ?
+       WHERE account_id = ?
          AND event_name = 'chat_response_completed'
          AND created_at_unix >= ?`
     )
-      .bind(workspaceId, since)
+      .bind(accountId, since)
       .first();
 
     return {
@@ -470,32 +486,32 @@ export async function getAgentSamAnalyticsStatus(env) {
          COALESCE(SUM(estimated_cost_usd), 0) AS cost,
          AVG(total_latency_ms) AS avg_latency
        FROM agentsam_analytics
-       WHERE workspace_id = ?
+       WHERE account_id = ?
          AND date_key = ?`
     )
-      .bind(FNF_WORKSPACE_ID, today)
+      .bind(FNF_ACCOUNT_ID, today)
       .first();
 
     const topModel = await env.DB.prepare(
       `SELECT model_id, COUNT(*) AS n
        FROM agentsam_analytics
-       WHERE workspace_id = ? AND date_key = ? AND model_id IS NOT NULL
+       WHERE account_id = ? AND date_key = ? AND model_id IS NOT NULL
        GROUP BY model_id
        ORDER BY n DESC
        LIMIT 1`
     )
-      .bind(FNF_WORKSPACE_ID, today)
+      .bind(FNF_ACCOUNT_ID, today)
       .first();
 
     const topWorkflow = await env.DB.prepare(
       `SELECT workflow_key, COUNT(*) AS n
        FROM agentsam_analytics
-       WHERE workspace_id = ? AND date_key = ? AND workflow_key IS NOT NULL
+       WHERE account_id = ? AND date_key = ? AND workflow_key IS NOT NULL
        GROUP BY workflow_key
        ORDER BY n DESC
        LIMIT 1`
     )
-      .bind(FNF_WORKSPACE_ID, today)
+      .bind(FNF_ACCOUNT_ID, today)
       .first();
 
     const chats = totals?.chats ?? 0;
