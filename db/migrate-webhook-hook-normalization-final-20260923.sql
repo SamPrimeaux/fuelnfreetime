@@ -4,7 +4,7 @@
 -- Intentionally clean-slates webhook receipt history while preserving webhook
 -- registrations and hook definitions.
 
-PRAGMA foreign_keys = OFF;
+PRAGMA defer_foreign_keys = ON;
 
 CREATE TABLE agentsam_webhooks__canonical (
   id TEXT PRIMARY KEY DEFAULT ('awh_' || lower(hex(randomblob(8)))),
