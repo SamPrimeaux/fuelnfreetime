@@ -144,4 +144,4 @@ export async function findAuthUserByEmail(env, email) {
     .first();
 }
 
-export { FNF_TENANT_ID, FNF_WORKSPACE_ID };
+export { FNF_ACCOUNT_ID, FNF_TENANT_ID, FNF_WORKSPACE_ID };
