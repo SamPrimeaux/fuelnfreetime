@@ -122,6 +122,15 @@ export async function inviteTeamMember(request, env, user) {
 
   const userRow = await env.DB.prepare(`SELECT id FROM auth_users WHERE email = ?`).bind(email).first();
   const userId = userRow?.id || id;
+
+  await env.DB.prepare(
+    `INSERT INTO account_memberships (account_id, user_id, role)
+     VALUES (?, ?, ?)
+     ON CONFLICT(account_id, user_id) DO UPDATE SET role = excluded.role`
+  )
+    .bind(FNF_ACCOUNT_ID, userId, role)
+    .run();
+
   const mailboxId = `mb_${localPart}`;
 
   await env.DB.prepare(
