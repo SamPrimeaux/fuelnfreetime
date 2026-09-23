@@ -1,12 +1,5 @@
--- Fuel & Free Time webhook/hook normalization — final canonical cutover
--- 2026-09-23
--- REFERENCE ONLY for local/SQLite rehearsal. Cloudflare D1 production must use
--- the four final phase files (prepare -> drop-view -> swap -> post) because D1
--- requires the dependent view removal to commit before the destructive table swap.
--- Run only after the canonical Worker has been deployed against the additive stage.
--- Intentionally clean-slates webhook receipt history while preserving webhook
--- registrations and hook definitions.
-
+-- D1 phase 1/4: build and populate verified canonical replacements.
+-- Run after migrate-webhook-hook-normalization-stage-20260923.sql.
 PRAGMA defer_foreign_keys = ON;
 
 CREATE TABLE agentsam_webhooks__canonical (
@@ -277,66 +270,5 @@ SELECT
   error_code, error_message, started_at_unix, finished_at_unix, duration_ms,
   resolved, resolved_at_unix, expires_at_unix, created_at_unix
 FROM agentsam_hook_execution;
-
-DROP VIEW IF EXISTS v_completeful_schema_summary;
-
-DROP TABLE agentsam_hook_execution;
-DROP TABLE agentsam_hook;
-DROP TABLE agentsam_webhook_events;
-DROP TABLE agentsam_webhooks;
-
-DROP TABLE IF EXISTS mail_webhook_events;
-DROP TABLE IF EXISTS stripe_webhook_events;
-DROP TABLE IF EXISTS completeful_webhook_events;
-DROP TABLE IF EXISTS completeful_webhook_subscriptions;
-
-ALTER TABLE agentsam_webhooks__canonical RENAME TO agentsam_webhooks;
-ALTER TABLE agentsam_webhook_events__canonical RENAME TO agentsam_webhook_events;
-ALTER TABLE agentsam_hook__canonical RENAME TO agentsam_hook;
-ALTER TABLE agentsam_hook_execution__canonical RENAME TO agentsam_hook_execution;
-
-CREATE INDEX idx_agentsam_webhooks_account_provider_status
-  ON agentsam_webhooks(account_id, provider, status);
-CREATE INDEX idx_agentsam_webhooks_resource
-  ON agentsam_webhooks(account_id, provider, provider_resource_type, provider_resource_id);
-CREATE INDEX idx_agentsam_webhook_events_account_received
-  ON agentsam_webhook_events(account_id, received_at_unix DESC);
-CREATE INDEX idx_agentsam_webhook_events_webhook_received
-  ON agentsam_webhook_events(webhook_id, received_at_unix DESC);
-CREATE INDEX idx_agentsam_webhook_events_provider_type_received
-  ON agentsam_webhook_events(account_id, provider, event_type, received_at_unix DESC);
-CREATE INDEX idx_agentsam_webhook_events_status_received
-  ON agentsam_webhook_events(account_id, status, received_at_unix DESC);
-CREATE INDEX idx_agentsam_webhook_events_expiry
-  ON agentsam_webhook_events(expires_at_unix);
-CREATE INDEX idx_agentsam_hook_event_active
-  ON agentsam_hook(account_id, source_kind, provider, event_type, is_active, priority);
-CREATE INDEX idx_agentsam_hook_webhook
-  ON agentsam_hook(webhook_id, is_active);
-CREATE INDEX idx_agentsam_hook_execution_account_created
-  ON agentsam_hook_execution(account_id, created_at_unix DESC);
-CREATE INDEX idx_agentsam_hook_execution_hook_created
-  ON agentsam_hook_execution(hook_id, created_at_unix DESC);
-CREATE INDEX idx_agentsam_hook_execution_webhook_event
-  ON agentsam_hook_execution(webhook_event_id);
-CREATE INDEX idx_agentsam_hook_execution_status_created
-  ON agentsam_hook_execution(account_id, status, created_at_unix DESC);
-CREATE INDEX idx_agentsam_hook_execution_expiry
-  ON agentsam_hook_execution(expires_at_unix);
-
-CREATE VIEW v_completeful_schema_summary AS
-SELECT
-  (SELECT COUNT(*) FROM completeful_shops) AS shops,
-  (SELECT COUNT(*) FROM completeful_catalog_products) AS catalog_products,
-  (SELECT COUNT(*) FROM completeful_catalog_variants) AS catalog_variants,
-  (SELECT COUNT(*) FROM completeful_catalog_print_locations) AS print_locations,
-  (SELECT COUNT(*) FROM completeful_catalog_images) AS catalog_images,
-  (SELECT COUNT(*) FROM completeful_catalog_mockups) AS catalog_mockups,
-  (SELECT COUNT(*) FROM completeful_product_links) AS product_links,
-  (SELECT COUNT(*) FROM completeful_order_links) AS order_links,
-  (SELECT COUNT(*) FROM agentsam_webhooks
-    WHERE provider = 'completeful' AND status != 'retired') AS webhook_subscriptions,
-  (SELECT COUNT(*) FROM agentsam_webhook_events
-    WHERE provider = 'completeful') AS webhook_events;
 
 PRAGMA defer_foreign_keys = OFF;

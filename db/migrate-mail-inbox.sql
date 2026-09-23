@@ -1,4 +1,4 @@
--- Mail inbox + Resend webhook event log (fuelnfreetime)
+-- Mail inbox domain state (fuelnfreetime)
 
 CREATE TABLE IF NOT EXISTS mail_messages (
   id              TEXT PRIMARY KEY,
@@ -25,14 +25,5 @@ CREATE INDEX IF NOT EXISTS idx_mail_messages_direction_created
 CREATE INDEX IF NOT EXISTS idx_mail_messages_provider_id
   ON mail_messages(provider_id);
 
-CREATE TABLE IF NOT EXISTS mail_webhook_events (
-  id              TEXT PRIMARY KEY,
-  channel         TEXT NOT NULL CHECK (channel IN ('outbound', 'inbound')),
-  event_type      TEXT NOT NULL,
-  provider_id     TEXT,
-  payload_json    TEXT NOT NULL,
-  received_at     TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_mail_webhook_events_channel
-  ON mail_webhook_events(channel, received_at DESC);
+-- Resend webhook registrations and receipts are canonical in
+-- agentsam_webhooks + agentsam_webhook_events.

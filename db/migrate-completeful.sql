@@ -362,44 +362,9 @@ CREATE INDEX IF NOT EXISTS idx_completeful_operations_status
 -- Webhooks
 -- ---------------------------------------------------------------------------
 
-CREATE TABLE IF NOT EXISTS completeful_webhook_subscriptions (
-  id                     INTEGER PRIMARY KEY AUTOINCREMENT,
-  completeful_shop_id    TEXT NOT NULL,
-  completeful_webhook_id TEXT NOT NULL UNIQUE,
-  topic                  TEXT NOT NULL,
-  target_url             TEXT NOT NULL,
-  status                 TEXT NOT NULL,
-  secret_last4           TEXT,
-  created_at             TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at             TEXT NOT NULL DEFAULT (datetime('now')),
-
-  UNIQUE(completeful_shop_id, topic, target_url),
-  FOREIGN KEY (completeful_shop_id)
-    REFERENCES completeful_shops(completeful_shop_id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_completeful_webhook_subscriptions_topic
-  ON completeful_webhook_subscriptions(completeful_shop_id, topic, status);
-
-CREATE TABLE IF NOT EXISTS completeful_webhook_events (
-  event_id               TEXT PRIMARY KEY,
-  completeful_shop_id    TEXT,
-  completeful_webhook_id TEXT,
-  topic                  TEXT NOT NULL,
-  provider_created_at    TEXT,
-  received_at            TEXT NOT NULL DEFAULT (datetime('now')),
-  processed_at           TEXT,
-  processing_status      TEXT NOT NULL DEFAULT 'received',
-  attempt_count          INTEGER NOT NULL DEFAULT 0,
-  payload_json           TEXT,
-  last_error             TEXT
-);
-
-CREATE INDEX IF NOT EXISTS idx_completeful_webhook_events_status
-  ON completeful_webhook_events(processing_status, received_at);
-
-CREATE INDEX IF NOT EXISTS idx_completeful_webhook_events_topic
-  ON completeful_webhook_events(topic, received_at);
+-- Completeful webhook registrations are canonical rows in agentsam_webhooks
+-- (provider='completeful'). Delivery receipts are canonical rows in
+-- agentsam_webhook_events. Do not create provider-specific webhook tables.
 
 -- ---------------------------------------------------------------------------
 -- Verification view: one-row summary useful in D1 Studio.
@@ -415,5 +380,7 @@ SELECT
   (SELECT COUNT(*) FROM completeful_catalog_mockups) AS catalog_mockups,
   (SELECT COUNT(*) FROM completeful_product_links) AS product_links,
   (SELECT COUNT(*) FROM completeful_order_links) AS order_links,
-  (SELECT COUNT(*) FROM completeful_webhook_subscriptions) AS webhook_subscriptions,
-  (SELECT COUNT(*) FROM completeful_webhook_events) AS webhook_events;
+  (SELECT COUNT(*) FROM agentsam_webhooks
+    WHERE provider = 'completeful' AND status != 'retired') AS webhook_subscriptions,
+  (SELECT COUNT(*) FROM agentsam_webhook_events
+    WHERE provider = 'completeful') AS webhook_events;

@@ -102,7 +102,13 @@
     "db:migrate:account-analytics-normalization": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-account-analytics-normalization-20260923.sql",
     "db:migrate:account-analytics-stage": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-account-analytics-stage-20260923.sql",
     "db:migrate:account-ownership-stage": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-account-ownership-stage-20260923.sql",
-    "db:migrate:account-ownership-final": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-account-ownership-final-20260923.sql"
+    "db:migrate:account-ownership-final": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-account-ownership-final-20260923.sql",
+    "db:migrate:webhook-hook-stage": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-webhook-hook-normalization-stage-20260923.sql",
+    "db:migrate:webhook-hook-final:prepare": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-webhook-hook-normalization-final-prepare-20260923.sql",
+    "db:migrate:webhook-hook-final:drop-view": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-webhook-hook-normalization-final-drop-view-20260923.sql",
+    "db:migrate:webhook-hook-final:swap": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-webhook-hook-normalization-final-swap-20260923.sql",
+    "db:migrate:webhook-hook-final:post": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-webhook-hook-normalization-final-post-20260923.sql",
+    "db:migrate:webhook-hook-final": "npm run db:migrate:webhook-hook-final:prepare && npm run db:migrate:webhook-hook-final:drop-view && npm run db:migrate:webhook-hook-final:swap && npm run db:migrate:webhook-hook-final:post"
   },
   "devDependencies": {
     "wrangler": "^4.135.0"

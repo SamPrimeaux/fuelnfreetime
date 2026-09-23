@@ -4,18 +4,15 @@
 -- IF NOT EXISTS lines are safe to re-run; the ALTERs are not.
 -- Tasks 1 & 2 of docs/RUNTIME-CONTRACTS-STRIPE.md.
 
--- Task 1: orders payment columns + webhook idempotency
+-- Task 1: orders payment columns
 ALTER TABLE orders ADD COLUMN stripe_checkout_session_id TEXT;
 ALTER TABLE orders ADD COLUMN stripe_payment_intent_id TEXT;
 ALTER TABLE orders ADD COLUMN paid_at TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_orders_stripe_session ON orders(stripe_checkout_session_id);
 
-CREATE TABLE IF NOT EXISTS stripe_webhook_events (
-  event_id     TEXT PRIMARY KEY,
-  event_type   TEXT NOT NULL,
-  processed_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
+-- Stripe webhook idempotency and audit receipts are canonical in
+-- agentsam_webhooks + agentsam_webhook_events.
 
 -- Task 2: inventory reservations (held -> committed | released)
 CREATE TABLE IF NOT EXISTS inventory_reservations (
