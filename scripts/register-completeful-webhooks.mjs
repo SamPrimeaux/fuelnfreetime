@@ -43,10 +43,56 @@ async function main() {
     const { webhook: wh } = await res.json();
     console.log(`[${topic}] id=${wh.id} secret_last4=${wh.secret_last4}`);
 
-    const sql = `INSERT INTO completeful_webhook_subscriptions (completeful_shop_id, completeful_webhook_id, topic, target_url, status, secret_last4) VALUES ('${shopId}', '${wh.id}', '${topic}', '${TARGET_URL}', '${wh.status}', '${wh.secret_last4}');`;
+    const envName = `COMPLETEFUL_WEBHOOK_SECRET_${topicToEnvSuffix(topic)}`;
+    const sqlEscape = (value) => String(value ?? "").replaceAll("'", "''");
+    const registryId = `awh_completeful_${String(wh.id).replace(/[^a-zA-Z0-9]/g, "").slice(0, 18)}`;
+    const slug = `completeful-${topic.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase()}-${String(shopId).replace(/[^a-zA-Z0-9]/g, "").slice(0, 8)}`;
+    const status = String(wh.status || "").toLowerCase() === "active" ? "active" : "pending";
+    const metadata = JSON.stringify({
+      secret_last4: wh.secret_last4 || null,
+      source: "register-completeful-webhooks.mjs",
+    });
+    const sql = `INSERT INTO agentsam_webhooks (
+      id, account_id, user_id, provider, provider_webhook_id,
+      provider_resource_type, provider_resource_id,
+      name, slug, status, endpoint_url, events_json,
+      signature_header, signature_algo, secret_ref, metadata_json,
+      created_at_unix, updated_at_unix
+    ) VALUES (
+      '${sqlEscape(registryId)}',
+      'ede6590ac0d2fb7daf155b35653457b2',
+      'au_fnf_system',
+      'completeful',
+      '${sqlEscape(wh.id)}',
+      'shop',
+      '${sqlEscape(shopId)}',
+      '${sqlEscape(`Completeful ${topic}`)}',
+      '${sqlEscape(slug)}',
+      '${sqlEscape(status)}',
+      '${sqlEscape(TARGET_URL)}',
+      '${sqlEscape(JSON.stringify([topic]))}',
+      'X-Capp-Signature',
+      'sha256',
+      '${sqlEscape(envName)}',
+      '${sqlEscape(metadata)}',
+      unixepoch(),
+      unixepoch()
+    )
+    ON CONFLICT(account_id, provider, provider_webhook_id) DO UPDATE SET
+      provider_resource_type = excluded.provider_resource_type,
+      provider_resource_id = excluded.provider_resource_id,
+      name = excluded.name,
+      slug = excluded.slug,
+      status = excluded.status,
+      endpoint_url = excluded.endpoint_url,
+      events_json = excluded.events_json,
+      signature_header = excluded.signature_header,
+      signature_algo = excluded.signature_algo,
+      secret_ref = excluded.secret_ref,
+      metadata_json = excluded.metadata_json,
+      updated_at_unix = unixepoch();`;
     execFileSync("npx", ["wrangler", "d1", "execute", "fuelnfreetime", "--remote", "--command", sql], { stdio: "inherit" });
 
-    const envName = `COMPLETEFUL_WEBHOOK_SECRET_${topicToEnvSuffix(topic)}`;
     execFileSync("npx", ["wrangler", "secret", "put", envName], { input: wh.secret, stdio: ["pipe", "inherit", "inherit"] });
   }
 }
