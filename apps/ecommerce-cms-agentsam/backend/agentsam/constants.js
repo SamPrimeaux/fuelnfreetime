@@ -23,6 +23,9 @@ export const FNF_EMBED_MODEL = "@cf/baai/bge-m3";
 
 /** Canonical platform scope for agentsam_tools handler_config.fnf_scope */
 export const FNF_PLATFORM_SCOPE = {
+  account_id: FNF_ACCOUNT_ID,
+  cloudflare_account_id: FNF_CLOUDFLARE_ACCOUNT_ID,
+  cloudflare_zone_id: FNF_CLOUDFLARE_ZONE_ID,
   tenant_id: FNF_TENANT_ID,
   workspace_id: FNF_WORKSPACE_ID,
   worker: FNF_WORKER_NAME,
