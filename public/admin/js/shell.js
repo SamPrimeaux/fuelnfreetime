@@ -90,7 +90,6 @@ const NAV = {
 // state so re-renders (hydrateShellNav) never silently discard a manual
 // expand/collapse the way the old per-render DOM-class toggling did.
 const navToggleState = new Map();
-let persistentNavHoverTimer;
 
 function ensureConsoleAssets() {
   document.body.classList.add("console-theme");
@@ -586,16 +585,6 @@ function bindConsoleGlobalHandlers() {
       setPersistentNav(document.body.classList.contains("console-nav-collapsed"));
     }
   });
-
-  document.addEventListener("pointerenter", (e) => {
-    if (e.target.closest?.(".console-nav-ghost-toggle--persistent")) {
-      clearTimeout(persistentNavHoverTimer);
-      persistentNavHoverTimer = setTimeout(() => setPersistentNav(true), 420);
-    }
-  }, true);
-  document.addEventListener("pointerleave", (e) => {
-    if (e.target.closest?.(".console-nav-ghost-toggle--persistent")) clearTimeout(persistentNavHoverTimer);
-  }, true);
 
   // Single delegated handler for every collapsible nav group, for the
   // lifetime of the page. Survives any number of aside.innerHTML swaps
