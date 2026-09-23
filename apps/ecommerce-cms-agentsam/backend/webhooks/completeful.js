@@ -1,19 +1,16 @@
-// src/webhooks/completeful.js
-// Receives signed Completeful webhook deliveries.
-// Verification: HMAC-SHA256 over `${t}.${rawBody}`, header `X-Capp-Signature: t=<unix>,v1=<hex>`.
-// Secret is never in source — looked up from env by topic (COMPLETEFUL_WEBHOOK_SECRET_<TOPIC>).
+import {
+  clientIp,
+  insertAgentSamWebhookEvent,
+  pickWebhookHeaders,
+} from "../agentsam/webhook-events.js";
 
-const STALE_WINDOW_SECONDS = 5 * 60; // matches Completeful's own docs
+const STALE_WINDOW_SECONDS = 5 * 60;
 
 function topicToEnvSuffix(topic) {
   return String(topic || "")
     .toUpperCase()
     .replace(/[^A-Z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
-}
-
-function newEventRowId() {
-  return `cwe_${crypto.randomUUID().replace(/-/g, "").slice(0, 20)}`;
 }
 
 async function hmacHex(secret, message) {
@@ -35,131 +32,198 @@ function timingSafeEqualHex(a, b) {
   return diff === 0;
 }
 
-async function logCompletefulWebhookEvent(env, {
-  eventId,
-  shopId = null,
-  webhookId = null,
-  topic,
-  providerCreatedAt = null,
-  payload = null,
-  processingStatus = "received",
-  lastError = null,
-}) {
-  try {
-    await env.DB.prepare(
-      `INSERT INTO completeful_webhook_events
-         (event_id, completeful_shop_id, completeful_webhook_id, topic, provider_created_at, processing_status, payload_json, last_error)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(event_id) DO UPDATE SET
-         processing_status = excluded.processing_status,
-         last_error = excluded.last_error`
-    )
-      .bind(
-        eventId,
-        shopId,
-        webhookId,
-        topic,
-        providerCreatedAt,
-        processingStatus,
-        payload ? JSON.stringify(payload) : null,
-        lastError
-      )
-      .run();
-  } catch (err) {
-    // Never let audit logging break webhook processing itself.
-    console.log("[completeful-webhook] log insert failed", err?.message || err);
+function toUnix(value) {
+  if (value == null || value === "") return null;
+  if (Number.isFinite(Number(value))) {
+    const n = Number(value);
+    return n > 1e12 ? Math.floor(n / 1000) : Math.floor(n);
   }
+  const ms = Date.parse(String(value));
+  return Number.isFinite(ms) ? Math.floor(ms / 1000) : null;
 }
 
-async function lookupWebhookId(env, topic) {
+function providerObjectId(event) {
+  const data = event?.data || {};
+  return (
+    data.order_id ||
+    data.product_id ||
+    data.shop_id ||
+    data.id ||
+    event?.resource_id ||
+    null
+  );
+}
+
+async function lookupWebhook(env, topic) {
   try {
-    const row = await env.DB.prepare(
-      `SELECT completeful_webhook_id, completeful_shop_id FROM completeful_webhook_subscriptions WHERE topic = ? LIMIT 1`
-    )
-      .bind(topic)
-      .first();
-    return row || {};
+    return (
+      (await env.DB.prepare(
+        `SELECT id, provider_webhook_id, provider_resource_id, secret_ref
+         FROM agentsam_webhooks
+         WHERE provider = 'completeful'
+           AND status = 'active'
+           AND json_extract(events_json, '$[0]') = ?
+         ORDER BY updated_at_unix DESC
+         LIMIT 1`
+      )
+        .bind(topic)
+        .first()) || {}
+    );
   } catch {
     return {};
   }
 }
 
 export async function handleCompletefulWebhook(request, env) {
-  const rawBody = await request.text();
+  if (request.method !== "POST") {
+    return Response.json({ error: "Method not allowed" }, { status: 405 });
+  }
 
+  const rawBody = await request.text();
+  const headers = pickWebhookHeaders(request);
+  const ipAddress = clientIp(request);
   const sigHeader = request.headers.get("x-capp-signature") || "";
   const [tPart, sigPart] = sigHeader.split(",");
   const t = (tPart || "").replace("t=", "").trim();
   const sig = (sigPart || "").replace("v1=", "").trim();
 
-  if (!t || !sig) {
-    return Response.json({ error: "missing signature" }, { status: 400 });
-  }
-
   let event = null;
   try {
     event = JSON.parse(rawBody);
   } catch {
+    await insertAgentSamWebhookEvent(env, {
+      provider: "completeful",
+      eventType: "invalid_json",
+      payload: rawBody,
+      headers,
+      metadata: { phase: "parse", ip_address: ipAddress },
+      status: "failed",
+      signatureValid: false,
+      errorCode: "invalid_json",
+      errorMessage: "invalid json",
+      retryFailed: false,
+    });
     return Response.json({ error: "invalid json" }, { status: 400 });
   }
 
   const topic = event?.type || "unknown";
+  const registry = await lookupWebhook(env, topic);
   const envSuffix = topicToEnvSuffix(topic);
   const secret = env[`COMPLETEFUL_WEBHOOK_SECRET_${envSuffix}`];
+  const providerEventId = event?.id || null;
+  const providerCreatedAtUnix = toUnix(event?.created || event?.created_at);
+  const objectId = providerObjectId(event);
 
-  const fallbackEventId = event?.id || newEventRowId();
+  if (!t || !sig) {
+    await insertAgentSamWebhookEvent(env, {
+      webhookId: registry.id || null,
+      provider: "completeful",
+      eventType: topic,
+      providerEventId,
+      providerObjectId: objectId,
+      payload: event,
+      headers,
+      metadata: { phase: "verify", ip_address: ipAddress },
+      status: "failed",
+      signatureValid: false,
+      errorCode: "missing_signature",
+      errorMessage: "missing signature",
+      providerCreatedAtUnix,
+      retryFailed: false,
+    });
+    return Response.json({ error: "missing signature" }, { status: 400 });
+  }
 
   if (!secret) {
-    await logCompletefulWebhookEvent(env, {
-      eventId: fallbackEventId,
-      topic,
+    await insertAgentSamWebhookEvent(env, {
+      webhookId: registry.id || null,
+      provider: "completeful",
+      eventType: topic,
+      providerEventId,
+      providerObjectId: objectId,
       payload: event,
-      processingStatus: "failed",
-      lastError: `no secret configured for topic (expected COMPLETEFUL_WEBHOOK_SECRET_${envSuffix})`,
+      headers,
+      metadata: {
+        phase: "verify",
+        ip_address: ipAddress,
+        expected_secret_ref: registry.secret_ref || `COMPLETEFUL_WEBHOOK_SECRET_${envSuffix}`,
+      },
+      status: "failed",
+      signatureValid: false,
+      errorCode: "secret_missing",
+      errorMessage: `no secret configured for topic ${topic}`,
+      providerCreatedAtUnix,
+      retryFailed: false,
     });
     return Response.json({ error: "unknown topic" }, { status: 401 });
   }
 
-  // Staleness check first — cheap, avoids doing crypto work on obviously-replayed requests.
   const nowSeconds = Math.floor(Date.now() / 1000);
   if (Math.abs(nowSeconds - Number(t)) > STALE_WINDOW_SECONDS) {
-    await logCompletefulWebhookEvent(env, {
-      eventId: fallbackEventId,
-      topic,
+    await insertAgentSamWebhookEvent(env, {
+      webhookId: registry.id || null,
+      provider: "completeful",
+      eventType: topic,
+      providerEventId,
+      providerObjectId: objectId,
       payload: event,
-      processingStatus: "failed",
-      lastError: "stale signature timestamp",
+      headers,
+      metadata: { phase: "verify", ip_address: ipAddress },
+      status: "failed",
+      signatureValid: false,
+      errorCode: "stale_signature",
+      errorMessage: "stale signature timestamp",
+      providerCreatedAtUnix,
+      retryFailed: false,
     });
     return Response.json({ error: "stale" }, { status: 401 });
   }
 
   const expected = await hmacHex(secret, `${t}.${rawBody}`);
   if (!timingSafeEqualHex(sig.toLowerCase(), expected.toLowerCase())) {
-    await logCompletefulWebhookEvent(env, {
-      eventId: fallbackEventId,
-      topic,
+    await insertAgentSamWebhookEvent(env, {
+      webhookId: registry.id || null,
+      provider: "completeful",
+      eventType: topic,
+      providerEventId,
+      providerObjectId: objectId,
       payload: event,
-      processingStatus: "failed",
-      lastError: "signature mismatch",
+      headers,
+      metadata: { phase: "verify", ip_address: ipAddress },
+      status: "failed",
+      signatureValid: false,
+      errorCode: "signature_mismatch",
+      errorMessage: "signature mismatch",
+      providerCreatedAtUnix,
+      retryFailed: false,
     });
     return Response.json({ error: "bad signature" }, { status: 401 });
   }
 
-  const { completeful_webhook_id: webhookId, completeful_shop_id: shopId } = await lookupWebhookId(env, topic);
-
-  await logCompletefulWebhookEvent(env, {
-    eventId: fallbackEventId,
-    shopId: shopId || event?.data?.shop_id || null,
-    webhookId: webhookId || null,
-    topic,
-    providerCreatedAt: event?.created || null,
+  const claim = await insertAgentSamWebhookEvent(env, {
+    webhookId: registry.id || null,
+    provider: "completeful",
+    eventType: topic,
+    providerEventId,
+    providerObjectId: objectId,
     payload: event,
-    processingStatus: "received",
+    headers,
+    metadata: {
+      completeful_shop_id: registry.provider_resource_id || event?.data?.shop_id || null,
+      completeful_webhook_id: registry.provider_webhook_id || null,
+      ip_address: ipAddress,
+    },
+    status: "processed",
+    signatureValid: true,
+    providerCreatedAtUnix,
   });
 
-  // Verified and stored. Topic-specific handling (order sync, product publish
-  // callbacks, etc.) is deliberately NOT here yet — this receiver's only job
-  // right now is: verify, store, ack fast. Dispatch logic comes with the
-  // task that actually needs each topic.
-  return new Response(null, { status: 200 });
+  return Response.json(
+    {
+      ok: true,
+      duplicate: claim.duplicate,
+      agentsam_event_id: claim.id,
+    },
+    { status: 200 }
+  );
 }
