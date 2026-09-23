@@ -359,11 +359,66 @@ export async function trimHotLogs(env, dateKey) {
     .bind(FNF_ACCOUNT_ID, toolCutoff)
     .run();
 
+  const webhookPayloads = await env.DB.prepare(
+    `UPDATE agentsam_webhook_events
+     SET payload_json = NULL,
+         headers_json = NULL
+     WHERE id IN (
+       SELECT id
+       FROM agentsam_webhook_events
+       WHERE account_id = ?
+         AND payload_expires_at_unix IS NOT NULL
+         AND payload_expires_at_unix <= unixepoch()
+         AND (payload_json IS NOT NULL OR headers_json IS NOT NULL)
+       ORDER BY payload_expires_at_unix
+       LIMIT ?
+     )`
+  )
+    .bind(FNF_ACCOUNT_ID, RETENTION.webhookCleanupBatch)
+    .run()
+    .catch(() => ({ meta: { changes: 0 } }));
+
+  const webhookEvents = await env.DB.prepare(
+    `DELETE FROM agentsam_webhook_events
+     WHERE id IN (
+       SELECT id
+       FROM agentsam_webhook_events
+       WHERE account_id = ?
+         AND expires_at_unix IS NOT NULL
+         AND expires_at_unix <= unixepoch()
+         AND status IN ('processed','ignored','failed','dead_letter')
+       ORDER BY expires_at_unix
+       LIMIT ?
+     )`
+  )
+    .bind(FNF_ACCOUNT_ID, RETENTION.webhookCleanupBatch)
+    .run()
+    .catch(() => ({ meta: { changes: 0 } }));
+
+  const hookExecutions = await env.DB.prepare(
+    `DELETE FROM agentsam_hook_execution
+     WHERE id IN (
+       SELECT id
+       FROM agentsam_hook_execution
+       WHERE account_id = ?
+         AND expires_at_unix IS NOT NULL
+         AND expires_at_unix <= unixepoch()
+       ORDER BY expires_at_unix
+       LIMIT ?
+     )`
+  )
+    .bind(FNF_ACCOUNT_ID, RETENTION.webhookCleanupBatch)
+    .run()
+    .catch(() => ({ meta: { changes: 0 } }));
+
   return {
     ok: true,
     analytics_deleted: analytics.meta?.changes ?? 0,
     prompt_usage_deleted: promptUsage.meta?.changes ?? 0,
     tool_call_deleted: toolCalls.meta?.changes ?? 0,
+    webhook_payloads_shed: webhookPayloads.meta?.changes ?? 0,
+    webhook_events_deleted: webhookEvents.meta?.changes ?? 0,
+    hook_executions_deleted: hookExecutions.meta?.changes ?? 0,
   };
 }
 
