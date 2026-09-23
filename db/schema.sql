@@ -7,6 +7,31 @@ CREATE TABLE IF NOT EXISTS newsletter_subscribers (
   created_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- ===== Account identity =====
+
+CREATE TABLE IF NOT EXISTS accounts (
+  id           TEXT PRIMARY KEY,
+  account_key  TEXT NOT NULL UNIQUE,
+  display_name TEXT NOT NULL,
+  status       TEXT NOT NULL DEFAULT 'active'
+    CHECK (status IN ('active','suspended','closed')),
+  created_at   INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at   INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+CREATE TABLE IF NOT EXISTS account_cloudflare_resources (
+  id            TEXT PRIMARY KEY,
+  account_id    TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  resource_type TEXT NOT NULL,
+  resource_id   TEXT NOT NULL,
+  resource_name TEXT,
+  zone_id       TEXT,
+  metadata_json TEXT NOT NULL DEFAULT '{}',
+  created_at    INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at    INTEGER NOT NULL DEFAULT (unixepoch()),
+  UNIQUE(account_id, resource_type, resource_id)
+);
+
 -- ===== Admin auth =====
 
 CREATE TABLE IF NOT EXISTS auth_users (
@@ -17,20 +42,16 @@ CREATE TABLE IF NOT EXISTS auth_users (
   salt                    TEXT NOT NULL,
   created_at              TEXT DEFAULT (datetime('now')),
   updated_at              TEXT DEFAULT (datetime('now')),
-  tenant_id               TEXT,
   is_verified             INTEGER NOT NULL DEFAULT 0,
   verified_at             INTEGER,
   status                  TEXT DEFAULT 'active',
-  active_tenant_id        TEXT,
-  active_workspace_id     TEXT,
   display_name            TEXT,
   avatar_url              TEXT,
   last_login_at           INTEGER,
   login_count             INTEGER DEFAULT 0,
-  phone                   TEXT,
+  phone                    TEXT,
   mfa_enabled             INTEGER DEFAULT 0,
   timezone                TEXT DEFAULT 'America/Chicago',
-  default_workspace_id    TEXT,
   role                    TEXT NOT NULL DEFAULT 'member',
   account_type            TEXT NOT NULL DEFAULT 'human',
   iam_owned               INTEGER NOT NULL DEFAULT 0,
@@ -38,19 +59,34 @@ CREATE TABLE IF NOT EXISTS auth_users (
   notification_email      TEXT,
   plan                    TEXT NOT NULL DEFAULT 'free',
   stripe_customer_id      TEXT,
-  meta_json               TEXT NOT NULL DEFAULT '{}'
+  meta_json               TEXT NOT NULL DEFAULT '{}',
+  default_account_id      TEXT REFERENCES accounts(id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_auth_users_tenant ON auth_users(tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_auth_users_account_status
+  ON auth_users(default_account_id, status);
+CREATE INDEX IF NOT EXISTS idx_auth_users_email
+  ON auth_users(email);
 
 CREATE TABLE IF NOT EXISTS auth_sessions (
-  token_hash  TEXT PRIMARY KEY,
-  user_id     TEXT NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
-  expires_at  TEXT NOT NULL,
-  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+  token_hash        TEXT PRIMARY KEY,
+  user_id           TEXT NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
+  expires_at        TEXT NOT NULL,
+  created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+  active_account_id TEXT REFERENCES accounts(id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_auth_sessions_account ON auth_sessions(active_account_id);
+
+CREATE TABLE IF NOT EXISTS account_memberships (
+  account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  user_id    TEXT NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
+  role       TEXT NOT NULL DEFAULT 'member'
+    CHECK (role IN ('owner','admin','member','viewer')),
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  PRIMARY KEY (account_id, user_id)
+);
 
 -- ===== Products / inventory =====
 
