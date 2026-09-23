@@ -103,6 +103,7 @@ SELECT
   COALESCE(CAST(strftime('%s', created_at) AS INTEGER), unixepoch()),
   COALESCE(CAST(strftime('%s', updated_at) AS INTEGER), unixepoch())
 FROM completeful_webhook_subscriptions
+WHERE 1
 ON CONFLICT(account_id, provider, provider_webhook_id) DO UPDATE SET
   provider_resource_type = excluded.provider_resource_type,
   provider_resource_id = excluded.provider_resource_id,
