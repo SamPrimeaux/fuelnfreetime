@@ -321,4 +321,19 @@ CREATE INDEX idx_agentsam_hook_execution_status_created
 CREATE INDEX idx_agentsam_hook_execution_expiry
   ON agentsam_hook_execution(expires_at_unix);
 
+CREATE VIEW v_completeful_schema_summary AS
+SELECT
+  (SELECT COUNT(*) FROM completeful_shops) AS shops,
+  (SELECT COUNT(*) FROM completeful_catalog_products) AS catalog_products,
+  (SELECT COUNT(*) FROM completeful_catalog_variants) AS catalog_variants,
+  (SELECT COUNT(*) FROM completeful_catalog_print_locations) AS print_locations,
+  (SELECT COUNT(*) FROM completeful_catalog_images) AS catalog_images,
+  (SELECT COUNT(*) FROM completeful_catalog_mockups) AS catalog_mockups,
+  (SELECT COUNT(*) FROM completeful_product_links) AS product_links,
+  (SELECT COUNT(*) FROM completeful_order_links) AS order_links,
+  (SELECT COUNT(*) FROM agentsam_webhooks
+    WHERE provider = 'completeful' AND status != 'retired') AS webhook_subscriptions,
+  (SELECT COUNT(*) FROM agentsam_webhook_events
+    WHERE provider = 'completeful') AS webhook_events;
+
 PRAGMA defer_foreign_keys = OFF;
