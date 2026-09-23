@@ -2,7 +2,7 @@
  * Team + mailbox provisioning (Resend-only — no Gmail forwarding).
  */
 
-import { hashPassword, newAuthUserId, FNF_TENANT_ID, FNF_WORKSPACE_ID } from "../lib/auth.js";
+import { hashPassword, newAuthUserId, FNF_ACCOUNT_ID } from "../lib/auth.js";
 import { listMailboxes, getMailboxBySlug } from "../lib/mail-mailboxes.js";
 
 const DOMAIN = "fuelnfreetime.com";
