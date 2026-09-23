@@ -36,10 +36,11 @@
       .composer::before{content:"";position:absolute;top:-7px;left:28px;width:12px;height:12px;background:#fff;border-left:1px solid rgba(30,34,40,.13);border-top:1px solid rgba(30,34,40,.13);transform:rotate(45deg)}
       .composer.expanded{width:min(360px,calc(100vw - 24px));height:auto;border-radius:18px;padding:9px}
       .composer-row{display:flex;align-items:center;gap:7px;height:32px}.composer-logo{width:25px;height:25px;border-radius:50%;object-fit:cover;flex:none}.composer textarea{width:100%;height:30px;min-height:30px;max-height:150px;resize:none;overflow:hidden;border:0;background:transparent;color:#1b211c;font:14px/1.35 system-ui;padding:5px 2px;margin:0;outline:0}.composer.expanded textarea{height:88px;overflow:auto;resize:vertical}.composer textarea::placeholder{color:#717971}.composer button{min-height:30px;border:0;border-radius:50%;padding:0;font:inherit;cursor:pointer;background:transparent;color:#556156;display:grid;place-items:center}.composer .send{background:#26352a;color:#fff;width:30px;height:30px;flex:none}.composer .mic{width:28px;height:30px;flex:none}.composer button:disabled{opacity:.5;cursor:wait}.composer .context,.composer label,.composer footer,.composer .reply,.composer .close{display:none}.composer .reply{white-space:pre-wrap;margin:8px 2px 0;color:#3c493d;font-size:13px}.composer.expanded .reply{display:block}.composer.thinking textarea{color:#7e55e8}.composer.thinking textarea::placeholder{color:#7e55e8}.composer.thinking{box-shadow:0 0 0 2px #8b5cf633,0 14px 38px #18201826}
+      .work-preview{position:fixed;width:230px;height:230px;padding:18px;border-radius:22px;background:linear-gradient(145deg,#7c3aed,#ec4899 48%,#f59e0b);box-shadow:0 20px 50px #24133d35;color:#fff;pointer-events:none;overflow:hidden}.work-preview::after{content:"";position:absolute;inset:-50%;background:linear-gradient(110deg,transparent 35%,#ffffff66 48%,transparent 62%);transform:translateX(-45%);animation:previewShimmer 1.8s linear infinite}.work-preview strong{position:absolute;left:18px;bottom:18px;font-size:14px;z-index:1}.work-preview span{position:absolute;left:18px;top:18px;font-size:11px;opacity:.8;z-index:1}@keyframes previewShimmer{to{transform:translateX(45%)}}
       @media(max-width:600px){.composer{left:12px!important;right:12px;width:auto;bottom:max(12px,env(safe-area-inset-bottom));}.composer::before{display:none}.composer.expanded{width:auto}}
       :focus-visible{outline:3px solid #a7c692;outline-offset:3px}
     </style>
-    <div class="outline" hidden></div><div class="hint" hidden>Tap an element to annotate · Esc to exit</div>
+    <div class="outline" hidden></div><div class="hint" hidden>Tap an element to annotate · Esc to exit</div><div class="work-preview" hidden><span>AgentSam</span><strong>Building interface</strong></div>
     <section class="composer" role="dialog" aria-label="Mini AgentSam composer" hidden>
       <div class="composer-row"><img class="composer-logo" src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ac515729-af6b-4ea5-8b10-e581a4d02100/thumbnail" alt="AgentSam"><textarea id="comment" rows="1" placeholder="Ask for changes"></textarea><button class="mic" aria-label="Talk to type"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="3" width="8" height="12" rx="4"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg></button><button class="send" aria-label="Send"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h13M12 5l7 7-7 7"/></svg></button></div>
       <p class="context"></p><div class="reply" role="status" aria-live="polite"></div>
@@ -54,6 +55,7 @@
     requestController?.abort(); active = false;
     root.querySelector(".composer").hidden = true;
     root.querySelector(".composer").classList.remove("expanded", "thinking");
+    root.querySelector(".work-preview").hidden = true;
     root.querySelector(".outline").hidden = true;
     root.querySelector(".hint").hidden = true;
     document.querySelector("[data-inspect-toggle]")?.setAttribute("aria-pressed", "false");
@@ -99,6 +101,7 @@
       root.querySelector(".hint").hidden = true;
       root.querySelector(".composer").hidden = false;
       root.querySelector(".composer").classList.remove("expanded", "thinking");
+      root.querySelector(".work-preview").hidden = true;
       const label = selection.label || selection.section || selection.text || selection.tag || "selected element";
       root.querySelector(".context").textContent = `Selected ${label}`;
       positionComposer(target, frame);
@@ -115,7 +118,13 @@
     const context = { ...selection };
     button.disabled = true;
     root.querySelector(".composer").classList.add("thinking");
-    root.querySelector("textarea").placeholder = "MiniAgentSam is thinking…";
+    root.querySelector("textarea").placeholder = "Mini AgentSam is thinking…";
+    if (/\b(code|build|generate|implement)\b/i.test(text)) {
+      const preview = root.querySelector(".work-preview"), r = bounds(target);
+      preview.style.left = `${Math.max(12, r.left - 242)}px`;
+      preview.style.top = `${Math.max(12, Math.min(window.innerHeight - 242, r.top))}px`;
+      preview.hidden = false;
+    }
     try {
       window.openAgentsamDrawer?.();
       const message = `Annotation request: ${text}\nSelected element: ${context.label || context.section || context.tag || "UI element"}.`;
