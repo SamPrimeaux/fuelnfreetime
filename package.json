@@ -98,7 +98,8 @@
     "db:migrate:catalog:all": "npm run db:migrate:catalog && npm run db:migrate:catalog:iam",
     "test:catalog": "python3 tests/catalog-migration.py",
     "test:admin-boundary": "node tests/admin-boundary.mjs",
-    "test:cms-warm": "node tests/cms-warm.mjs"
+    "test:cms-warm": "node tests/cms-warm.mjs",
+    "db:migrate:account-analytics-normalization": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-account-analytics-normalization-20260923.sql"
   },
   "devDependencies": {
     "wrangler": "^4.135.0"
