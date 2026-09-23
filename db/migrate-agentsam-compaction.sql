@@ -3,14 +3,17 @@
 
 CREATE TABLE IF NOT EXISTS agentsam_analytics_daily (
   id TEXT PRIMARY KEY,
-  tenant_id TEXT NOT NULL DEFAULT 'tenant_fuelnfreetime',
-  workspace_id TEXT NOT NULL DEFAULT 'ws_fuelnfreetime',
+  account_id TEXT NOT NULL REFERENCES accounts(id),
   date_key TEXT NOT NULL,
   event_type TEXT NOT NULL DEFAULT '_all',
   event_name TEXT NOT NULL DEFAULT '_all',
   workflow_key TEXT NOT NULL DEFAULT '_all',
   task_type TEXT NOT NULL DEFAULT '_all',
   model_id TEXT NOT NULL DEFAULT '_all',
+  provider TEXT NOT NULL DEFAULT '_all',
+  channel TEXT NOT NULL DEFAULT '_all',
+  campaign_id TEXT NOT NULL DEFAULT '_all',
+  product_id TEXT NOT NULL DEFAULT '_all',
   event_count INTEGER NOT NULL DEFAULT 0,
   success_count INTEGER NOT NULL DEFAULT 0,
   failed_count INTEGER NOT NULL DEFAULT 0,
@@ -23,18 +26,31 @@ CREATE TABLE IF NOT EXISTS agentsam_analytics_daily (
   avg_ai_latency_ms REAL NOT NULL DEFAULT 0,
   compacted_at INTEGER NOT NULL DEFAULT (unixepoch()),
   UNIQUE(
-    workspace_id,
+    account_id,
     date_key,
     event_type,
     event_name,
     workflow_key,
     task_type,
-    model_id
+    model_id,
+    provider,
+    channel,
+    campaign_id,
+    product_id
   )
 );
 
 CREATE INDEX IF NOT EXISTS idx_agentsam_analytics_daily_date
-  ON agentsam_analytics_daily(workspace_id, date_key DESC);
+  ON agentsam_analytics_daily(account_id, date_key DESC);
+
+CREATE INDEX IF NOT EXISTS idx_agentsam_analytics_daily_event
+  ON agentsam_analytics_daily(account_id, event_type, date_key DESC);
+
+CREATE INDEX IF NOT EXISTS idx_agentsam_analytics_daily_product
+  ON agentsam_analytics_daily(account_id, product_id, date_key DESC);
+
+CREATE INDEX IF NOT EXISTS idx_agentsam_analytics_daily_campaign
+  ON agentsam_analytics_daily(account_id, campaign_id, date_key DESC);
 
 CREATE TABLE IF NOT EXISTS agentsam_prompt_usage_daily (
   id TEXT PRIMARY KEY,
