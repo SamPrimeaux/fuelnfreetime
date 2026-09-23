@@ -96,16 +96,16 @@ export async function inviteTeamMember(request, env, user) {
 
   await env.DB.prepare(
     `INSERT INTO auth_users (
-       id, email, name, password_hash, salt, tenant_id, role, display_name,
-       active_tenant_id, active_workspace_id, default_workspace_id,
-       is_verified, verified_at, status, timezone, account_type, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, unixepoch(), 'active', 'America/Chicago', 'human', datetime('now'))
+       id, email, name, password_hash, salt, role, display_name,
+       default_account_id, is_verified, verified_at, status, timezone, account_type, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, unixepoch(), 'active', 'America/Chicago', 'human', datetime('now'))
      ON CONFLICT(email) DO UPDATE SET
        password_hash = excluded.password_hash,
        salt = excluded.salt,
        role = excluded.role,
        name = excluded.name,
        display_name = excluded.display_name,
+       default_account_id = excluded.default_account_id,
        updated_at = datetime('now')`
   )
     .bind(
@@ -114,12 +114,9 @@ export async function inviteTeamMember(request, env, user) {
       displayName,
       hash,
       salt,
-      FNF_TENANT_ID,
       role,
       displayName,
-      FNF_TENANT_ID,
-      FNF_WORKSPACE_ID,
-      FNF_WORKSPACE_ID
+      FNF_ACCOUNT_ID
     )
     .run();
 
