@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import { RangePicker } from "../../components/analytics-ui";
+import { RangePicker } from "@inneranimalmedia/commerce-analytics";
 import type { AnalyticsOutletContext } from "../../App";
 import type { RangeKey } from "../../lib/types";
 

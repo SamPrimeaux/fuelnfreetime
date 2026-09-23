@@ -1,5 +1,5 @@
 {
-  "products": [
+  "agentsam_products": [
     {"slug":"agentsam-sdk","name":"AgentSam SDK","kind":"sdk-package","status":"production","canonical_path":".","package_name":"@inneranimalmedia/agentsam-sdk","version":"2.6.2"},
     {"slug":"agentsam-sdk-python","name":"AgentSam SDK for Python","kind":"sdk-package","status":"wired","canonical_path":"python","package_name":"agentsam-sdk","version":"0.1.0"},
     {"slug":"agentsam-cad-creator","name":"AgentSam CAD Creator","kind":"app","status":"wired","canonical_path":"apps/cad-creator","package_name":"@inneranimalmedia/agentsam-sdk-cad-creator","version":"0.1.0"},

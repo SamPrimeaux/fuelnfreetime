@@ -4,7 +4,7 @@ import {
   Icon,
   KPI,
   Sparkline,
-} from "../../components/analytics-ui";
+} from "@inneranimalmedia/commerce-analytics";
 import { fmtNum, genSeries } from "../../lib/format";
 import type { RangeKey } from "../../lib/types";
 

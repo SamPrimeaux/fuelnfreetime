@@ -4,7 +4,7 @@ import {
   Donut,
   Icon,
   KPI,
-} from "../../components/analytics-ui";
+} from "@inneranimalmedia/commerce-analytics";
 import { fmtNum } from "../../lib/format";
 import { fetchFinanceAnalytics } from "../../lib/api";
 import type { FinanceAnalyticsResponse, RangeKey } from "../../lib/types";

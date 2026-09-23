@@ -8,8 +8,8 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
-import { fmtNum } from "../lib/format";
-import type { ChartSeries, DonutSlice, RangeKey } from "../lib/types";
+import { fmtNum } from "./format";
+import type { ChartSeries, DonutSlice, RangeKey } from "./types";
 
 type IconName =
   | "home"

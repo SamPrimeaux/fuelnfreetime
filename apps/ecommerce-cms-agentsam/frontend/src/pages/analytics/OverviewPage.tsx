@@ -3,7 +3,7 @@ import {
   AreaChart,
   Icon,
   KPI,
-} from "../../components/analytics-ui";
+} from "@inneranimalmedia/commerce-analytics";
 import { fmtNum, genSeries, seedRand } from "../../lib/format";
 import type { RangeKey } from "../../lib/types";
 
