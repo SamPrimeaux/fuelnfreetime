@@ -1,11 +1,12 @@
--- AgentSam event ledger (not a transcript store)
+-- AgentSam + commerce event ledger (not a transcript store)
+-- Canonical ownership: account_id. Fuel & Free Time does not use tenant/workspace
+-- parameters for this ledger.
 -- Run: npm run db:migrate:agentsam-analytics
 
 CREATE TABLE IF NOT EXISTS agentsam_analytics (
   id TEXT PRIMARY KEY DEFAULT ('evt_' || lower(hex(randomblob(12)))),
 
-  tenant_id TEXT NOT NULL DEFAULT 'tenant_fuelnfreetime',
-  workspace_id TEXT NOT NULL DEFAULT 'ws_fuelnfreetime',
+  account_id TEXT NOT NULL REFERENCES accounts(id),
 
   event_type TEXT NOT NULL CHECK(event_type IN (
     'chat',
@@ -20,7 +21,34 @@ CREATE TABLE IF NOT EXISTS agentsam_analytics (
     'approval',
     'ui',
     'error',
-    'system'
+    'system',
+    'product',
+    'variant',
+    'inventory',
+    'catalog',
+    'order',
+    'fulfillment',
+    'customer',
+    'subscriber',
+    'campaign',
+    'promotion',
+    'discount',
+    'conversion',
+    'checkout',
+    'cart',
+    'search',
+    'media',
+    'cms',
+    'webhook',
+    'integration',
+    'deployment',
+    'security',
+    'cloudflare',
+    'performance',
+    'traffic',
+    'payment',
+    'refund',
+    'shipping'
   )),
 
   event_name TEXT NOT NULL,
@@ -71,6 +99,15 @@ CREATE TABLE IF NOT EXISTS agentsam_analytics (
   github_branch TEXT,
   github_operation TEXT,
 
+  channel TEXT,
+  campaign_id TEXT,
+  product_id TEXT,
+  variant_id TEXT,
+  order_id TEXT,
+  customer_id TEXT,
+  integration_key TEXT,
+  operation TEXT,
+
   entity_type TEXT,
   entity_id TEXT,
   entity_label TEXT,
@@ -112,23 +149,23 @@ CREATE TABLE IF NOT EXISTS agentsam_analytics (
   created_at_unix INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
-CREATE INDEX IF NOT EXISTS idx_agentsam_analytics_workspace_date
-ON agentsam_analytics(workspace_id, date_key, created_at_unix DESC);
-
+CREATE INDEX IF NOT EXISTS idx_agentsam_analytics_account_date
+  ON agentsam_analytics(account_id, date_key, created_at_unix DESC);
 CREATE INDEX IF NOT EXISTS idx_agentsam_analytics_event
-ON agentsam_analytics(workspace_id, event_type, event_name, created_at_unix DESC);
-
+  ON agentsam_analytics(account_id, event_type, event_name, created_at_unix DESC);
 CREATE INDEX IF NOT EXISTS idx_agentsam_analytics_workflow
-ON agentsam_analytics(workspace_id, workflow_key, created_at_unix DESC);
-
+  ON agentsam_analytics(account_id, workflow_key, created_at_unix DESC);
 CREATE INDEX IF NOT EXISTS idx_agentsam_analytics_model
-ON agentsam_analytics(workspace_id, model_id, created_at_unix DESC);
-
+  ON agentsam_analytics(account_id, model_id, created_at_unix DESC);
 CREATE INDEX IF NOT EXISTS idx_agentsam_analytics_session
-ON agentsam_analytics(workspace_id, session_id, created_at_unix DESC);
-
+  ON agentsam_analytics(account_id, session_id, created_at_unix DESC);
 CREATE INDEX IF NOT EXISTS idx_agentsam_analytics_status
-ON agentsam_analytics(workspace_id, status, created_at_unix DESC);
-
+  ON agentsam_analytics(account_id, status, created_at_unix DESC);
 CREATE INDEX IF NOT EXISTS idx_agentsam_analytics_entity
-ON agentsam_analytics(workspace_id, entity_type, entity_id, created_at_unix DESC);
+  ON agentsam_analytics(account_id, entity_type, entity_id, created_at_unix DESC);
+CREATE INDEX IF NOT EXISTS idx_agentsam_analytics_product
+  ON agentsam_analytics(account_id, product_id, created_at_unix DESC);
+CREATE INDEX IF NOT EXISTS idx_agentsam_analytics_campaign
+  ON agentsam_analytics(account_id, campaign_id, created_at_unix DESC);
+CREATE INDEX IF NOT EXISTS idx_agentsam_analytics_order
+  ON agentsam_analytics(account_id, order_id, created_at_unix DESC);
