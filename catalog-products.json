@@ -1,0 +1,14 @@
+{
+  "products": [
+    {"slug":"ecommerce-cms-agentsam","name":"AgentSam Ecommerce + CMS","kind":"app","canonical_path":"apps/ecommerce-cms-agentsam","package_name":"@inneranimalmedia/ecommerce-cms-agentsam","version":"0.2.0"},
+    {"slug":"heuristic","name":"Heuristic","kind":"theme","canonical_path":"packages/heuristic-theme","package_name":"@inneranimalmedia/heuristic-theme","version":"0.1.0"},
+    {"slug":"agentsam-workbench","name":"AgentSam Workbench","kind":"sdk-package","canonical_path":"packages/agentsam-workbench","package_name":"@inneranimalmedia/agentsam-workbench","version":"0.1.0"},
+    {"slug":"mini-agentsam","name":"miniAgentSam","kind":"ui-component","canonical_path":"packages/agentsam-workbench/src/mini-agentsam.js","package_name":"@inneranimalmedia/agentsam-workbench","version":"0.1.0"}
+  ],
+  "relationships": [
+    ["mini-agentsam","packaged_as","agentsam-workbench"],
+    ["mini-agentsam","consumed_by","ecommerce-cms-agentsam"],
+    ["heuristic","consumed_by","ecommerce-cms-agentsam"],
+    ["agentsam-workbench","consumed_by","ecommerce-cms-agentsam"]
+  ]
+}

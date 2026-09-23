@@ -1,0 +1,7 @@
+{
+  "name": "@inneranimalmedia/agentsam-workbench",
+  "version": "0.1.0",
+  "type": "module",
+  "files": ["src", "README.md"],
+  "exports": {".": "./src/index.js", "./composer": "./src/composer.js"}
+}

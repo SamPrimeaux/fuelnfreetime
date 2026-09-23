@@ -5,13 +5,13 @@
   "scripts": {
     "app:frontend:sync": "node scripts/sync-app-frontend.mjs",
     "build": "npm run build:admin",
-    "build:admin": "npm ci --include=dev --prefix admin-ui && npm run build --prefix admin-ui && npm run app:frontend:sync",
-    "build:admin:skip": "npm run app:frontend:sync && node scripts/embed-mail-template.mjs",
-    "predeploy:worker": "npm run app:frontend:sync && node scripts/embed-mail-template.mjs",
-    "dev:admin": "npm run dev --prefix admin-ui",
-    "dev": "npm run app:frontend:sync && wrangler dev",
+    "build:admin": "npm ci --include=dev --prefix apps/ecommerce-cms-agentsam/frontend && npm run build --prefix apps/ecommerce-cms-agentsam/frontend && npm run app:frontend:sync && npm run guard:boundaries",
+    "build:admin:skip": "npm run app:frontend:sync && npm run guard:boundaries",
+    "predeploy:worker": "npm run guard:boundaries",
+    "dev:admin": "npm run dev --prefix apps/ecommerce-cms-agentsam/frontend",
+    "dev": "npm run build:admin && wrangler dev",
     "deploy": "npm run build:admin && npm run predeploy:worker && ./scripts/with-cf-admin-env.sh npx wrangler deploy --install-skills && npm run cms:post-deploy",
-    "deploy:plain": "npm run predeploy:worker && wrangler deploy && npm run cms:post-deploy",
+    "deploy:plain": "npm run build:admin && wrangler deploy && npm run cms:post-deploy",
     "db:migrate": "wrangler d1 execute fuelnfreetime --remote --file=db/schema.sql",
     "db:migrate:local": "wrangler d1 execute fuelnfreetime --local --file=db/schema.sql",
     "db:seed:cms": "wrangler d1 execute fuelnfreetime --remote --file=db/seed-cms.sql",
@@ -91,7 +91,12 @@
     "mail:e2e": "node scripts/send-mail-e2e.mjs",
     "mail:backfill": "node scripts/backfill-inbound-mail.mjs",
     "mail:hydrate": "node scripts/hydrate-inbound-bodies.mjs",
-    "cf:status": "./scripts/with-cf-admin-env.sh node scripts/cf-status.mjs"
+    "cf:status": "./scripts/with-cf-admin-env.sh node scripts/cf-status.mjs",
+    "guard:boundaries": "node scripts/guard-boundaries.mjs",
+    "db:migrate:catalog": "./scripts/with-cf-admin-env.sh ./node_modules/.bin/wrangler d1 execute fuelnfreetime --remote --file=db/migrate-agentsam-catalog.sql",
+    "db:migrate:catalog:iam": "./scripts/with-cf-admin-env.sh ./node_modules/.bin/wrangler d1 execute inneranimalmedia-business --remote -c ../inneranimalmedia/wrangler.production.toml --file=db/migrate-agentsam-catalog.sql",
+    "db:migrate:catalog:all": "npm run db:migrate:catalog && npm run db:migrate:catalog:iam",
+    "test:catalog": "python3 tests/catalog-migration.py"
   },
   "devDependencies": {
     "wrangler": "^4.135.0"

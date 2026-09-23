@@ -1,3 +1,7 @@
+# Current source and build ownership
+
+See `docs/PIPELINE-OWNERSHIP.md` for the complete authority map. Build assets are assembled into `dist/assets`; root `public/` contains supplementary public assets only.
+
 # Agent guide — Fuel & Free Time
 
 **Repo:** `fuelnfreetime`  
@@ -26,7 +30,7 @@ This file is the entry point for human and AI collaborators (including Connor's 
 | **Commerce** — products, variants, inventory, media, cart, checkout, orders | [`docs/RUNTIME-CONTRACTS-COMMERCE.md`](docs/RUNTIME-CONTRACTS-COMMERCE.md) | Products/inventory + Stripe Checkout live |
 | **Stripe** — implementation/history checklist | [`docs/RUNTIME-CONTRACTS-STRIPE.md`](docs/RUNTIME-CONTRACTS-STRIPE.md) | Checkout session + signed webhook + reservation flow implemented |
 | **Completeful** — provider/catalog/fulfillment bridge | [`docs/RUNTIME-CONTRACTS-COMPLETEFUL.md`](docs/RUNTIME-CONTRACTS-COMPLETEFUL.md) | Phase A runtime coded; CAPP_KEY + first provider sync pending |
-| **AgentSam app/runtime/UI** — Chat, Work, composer, tools, frontend/backend source authority | [`docs/RUNTIME-CONTRACTS-AGENTSAM.md`](docs/RUNTIME-CONTRACTS-AGENTSAM.md) | `app/` is canonical; legacy paths are bridges/output |
+| **AgentSam app/runtime/UI** — Chat, Work, composer, tools, frontend/backend source authority | [`docs/RUNTIME-CONTRACTS-AGENTSAM.md`](docs/RUNTIME-CONTRACTS-AGENTSAM.md) | `apps/ecommerce-cms-agentsam/` is canonical; canonical frontend/backend ownership |
 | **Agent Sam skills (R2 + D1)** | [`docs/AGENTSAM-SKILLS.md`](docs/AGENTSAM-SKILLS.md) | Sync with `npm run agentsam:skills:sync` |
 | **Project context** | D1 `agentsam_project_context.id = ctx_fuelnfreetime` | Worker + IAM registry — `npm run db:seed:ctx-fuelnfreetime:all` |
 | **CMS** — pages, sections, publish, KV, R2 bodies, live editor | [`docs/FNF-CMS-SPRINT-2026-06-20.md`](docs/FNF-CMS-SPRINT-2026-06-20.md) | Live |
@@ -39,22 +43,22 @@ If a feature does not fit an existing contract, **update the contract first** (o
 
 | Area | Path |
 |------|------|
-| Worker router | `src/index.js` |
-| Public store API | `src/store/api.js` |
-| Admin API router | `src/admin/api.js` |
-| Completeful admin API | `src/admin/completeful.js` |
-| Completeful provider client / catalog mirror | `src/completeful/client.js`, `src/completeful/catalog.js` |
-| AgentSam frontend | `app/frontend/admin/agentsam/` |
-| AgentSam backend handler | `app/backend/admin/agentsam.js` |
-| AgentSam runtime modules | `app/backend/agentsam/` |
-| Media library | `src/admin/media.js` |
-| Store preferences | `src/admin/store.js` |
-| Admin auth | `src/lib/auth.js` |
-| Admin clean URLs | `src/lib/admin-routes.js` |
+| Worker router | `apps/ecommerce-cms-agentsam/backend/index.js` |
+| Public store API | `apps/ecommerce-cms-agentsam/backend/store/api.js` |
+| Admin API router | `apps/ecommerce-cms-agentsam/backend/admin/api.js` |
+| Completeful admin API | `apps/ecommerce-cms-agentsam/backend/admin/completeful.js` |
+| Completeful provider client / catalog mirror | `apps/ecommerce-cms-agentsam/backend/completeful/client.js`, `apps/ecommerce-cms-agentsam/backend/completeful/catalog.js` |
+| AgentSam frontend | `apps/ecommerce-cms-agentsam/frontend/static/` |
+| AgentSam backend handler | `apps/ecommerce-cms-agentsam/backend/admin/agentsam.js` |
+| AgentSam runtime modules | `apps/ecommerce-cms-agentsam/backend/agentsam/` |
+| Media library | `apps/ecommerce-cms-agentsam/backend/admin/media.js` |
+| Store preferences | `apps/ecommerce-cms-agentsam/backend/admin/store.js` |
+| Admin auth | `apps/ecommerce-cms-agentsam/backend/lib/auth.js` |
+| Admin clean URLs | `apps/ecommerce-cms-agentsam/backend/lib/admin-routes.js` |
 | D1 schema / migrations | `db/schema.sql` + `db/migrate-*.sql` |
-| Storefront JS | `public/js/store-catalog.js`, `store-product.js`, `store-cart.js` |
-| Admin product editor | `public/admin/product-edit.html`, `public/admin/js/media-picker.js` |
-| CMS | `src/cms/api.js`, `src/cms/registry.js`, `src/cms/r2-store.js` |
+| Storefront JS | `packages/heuristic-theme/storefront/js/` |
+| Admin product editor | `apps/ecommerce-cms-agentsam/frontend/static/product-edit.html`, `apps/ecommerce-cms-agentsam/frontend/static/js/media-picker.js` |
+| CMS | `apps/ecommerce-cms-agentsam/backend/cms/api.js`, `apps/ecommerce-cms-agentsam/backend/cms/registry.js`, `apps/ecommerce-cms-agentsam/backend/cms/r2-store.js` |
 
 ---
 
@@ -74,7 +78,7 @@ If a feature does not fit an existing contract, **update the contract first** (o
 ## Common commands
 
 ```bash
-npm run app:frontend:sync       # materialize app/frontend AgentSam assets into public/
+npm run app:frontend:sync       # assemble built frontend and theme into dist/assets
 npm run dev                    # local Worker
 npm run deploy                 # production deploy
 npm run admin:create -- <email> <password>
@@ -114,9 +118,9 @@ See commerce contract § "Implementation status" for the full matrix.
 
 - Admin-only: `POST /api/admin/agentsam/chat`
 - Uses live D1 reads for inventory/products — do not invent counts in prompts
-- Frontend source authority: `app/frontend/admin/agentsam/`
-- Backend source authority: `app/backend/admin/agentsam.js` + `app/backend/agentsam/`
-- `public/admin/agentsam*` is generated runtime output; `src/admin/agentsam.js` and `src/agentsam/*` are compatibility bridges, not implementation targets
+- Frontend source authority: `apps/ecommerce-cms-agentsam/frontend/static/`
+- Backend source authority: `apps/ecommerce-cms-agentsam/backend/admin/agentsam.js` + `apps/ecommerce-cms-agentsam/backend/agentsam/`
+- These frontend and backend paths are canonical implementation targets. Only `dist/assets/` is generated runtime output; the old root source and compatibility bridges have been retired.
 - **Skills:** D1 `agentsam_skill` registry + R2 `agentsam/skills/` markdown — see [`docs/AGENTSAM-SKILLS.md`](docs/AGENTSAM-SKILLS.md)
 
 ---

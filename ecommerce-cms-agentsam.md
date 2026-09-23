@@ -41,9 +41,9 @@ CommerceAdminNav
 │   ├── left slide-in presentation
 │   └── click-controlled hamburger/X state
 ├── shell styling
-│   └── public/admin/css/console.css
+│   └── apps/ecommerce-cms-agentsam/frontend/static/css/console.css
 ├── served runtime mirror
-│   └── public/admin/js/shell.js
+│   └── dist/assets/admin/js/shell.js
 └── public storefront adapter
     ├── public/js/store-shell.js
     └── public/css/store-shell.css

@@ -1,0 +1,7 @@
+{
+  "name": "@inneranimalmedia/heuristic-theme",
+  "version": "0.1.0",
+  "type": "module",
+  "files": ["storefront", "theme.json", "README.md"],
+  "exports": {"./theme.json": "./theme.json", "./storefront/*": "./storefront/*"}
+}

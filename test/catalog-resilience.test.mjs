@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 import { readFileSync } from "node:fs";
-import { syncCompletefulCatalog } from "../src/completeful/catalog.js";
-import { catalogImageSource } from "../src/completeful/images.js";
+import { syncCompletefulCatalog } from "../apps/ecommerce-cms-agentsam/backend/completeful/catalog.js";
+import { catalogImageSource } from "../apps/ecommerce-cms-agentsam/backend/completeful/images.js";
 
 function database() {
   const db = new DatabaseSync(":memory:");

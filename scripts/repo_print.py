@@ -24,15 +24,15 @@ TEXT_EXTS = {
 
 GENERATED_MIRRORS = {
     "apps/ecommerce-cms-agentsam/frontend/shell.js":
-        ["public/admin/js/shell.js"],
+        ["dist/assets/admin/js/shell.js"],
     "apps/ecommerce-cms-agentsam/frontend/inspector.js":
-        ["public/admin/js/inspector.js"],
-    "app/frontend/admin/agentsam/agentsam.html":
-        ["public/admin/agentsam.html"],
-    "app/frontend/admin/agentsam/agentsam-page.css":
-        ["public/admin/css/agentsam-page.css"],
-    "app/frontend/admin/agentsam/agentsam-page.js":
-        ["public/admin/js/agentsam-page.js"],
+        ["dist/assets/admin/js/inspector.js"],
+    "apps/ecommerce-cms-agentsam/frontend/static/agentsam.html":
+        ["dist/assets/admin/agentsam.html"],
+    "apps/ecommerce-cms-agentsam/frontend/static/css/agentsam-page.css":
+        ["dist/assets/admin/css/agentsam-page.css"],
+    "apps/ecommerce-cms-agentsam/frontend/static/js/agentsam-page.js":
+        ["dist/assets/admin/js/agentsam-page.js"],
 }
 
 GENERATED_TO_CANONICAL = {
@@ -42,28 +42,29 @@ GENERATED_TO_CANONICAL = {
 }
 
 SUBSYSTEM_RULES = [
-    (r"^src/index\.js$", "worker-router"),
-    (r"^src/admin/", "admin-backend"),
-    (r"^src/store/", "commerce-runtime"),
-    (r"^src/cms/", "cms-runtime"),
-    (r"^src/completeful/", "completeful-provider"),
-    (r"^src/webhooks/", "webhooks"),
-    (r"^src/agentsam/", "agentsam-compat"),
-    (r"^src/do/", "collaboration-runtime"),
-    (r"^src/lib/", "runtime-lib"),
-    (r"^app/backend/agentsam/", "agentsam-backend"),
-    (r"^app/backend/admin/agentsam\.js$", "agentsam-backend"),
-    (r"^app/frontend/admin/agentsam/", "agentsam-frontend"),
-    (r"^app/frontend/admin/home/", "admin-home-donor"),
+    (r"^apps/ecommerce-cms-agentsam/backend/index\.js$", "worker-router"),
+    (r"^apps/ecommerce-cms-agentsam/backend/admin/", "admin-backend"),
+    (r"^apps/ecommerce-cms-agentsam/backend/store/", "commerce-runtime"),
+    (r"^apps/ecommerce-cms-agentsam/backend/cms/", "cms-runtime"),
+    (r"^apps/ecommerce-cms-agentsam/backend/completeful/", "completeful-provider"),
+    (r"^apps/ecommerce-cms-agentsam/backend/webhooks/", "webhooks"),
+    (r"^apps/ecommerce-cms-agentsam/backend/agentsam/", "agentsam-backend"),
+    (r"^apps/ecommerce-cms-agentsam/backend/do/", "collaboration-runtime"),
+    (r"^apps/ecommerce-cms-agentsam/backend/lib/", "runtime-lib"),
+    (r"^apps/ecommerce-cms-agentsam/backend/admin/agentsam\.js$", "agentsam-backend"),
+    (r"^apps/ecommerce-cms-agentsam/frontend/static/(js|css)/agentsam", "agentsam-frontend"),
+    (r"^apps/ecommerce-cms-agentsam/frontend/reference/", "admin-home-donor"),
+    (r"^apps/ecommerce-cms-agentsam/frontend/src/layout/", "admin-spa-shell"),
+    (r"^apps/ecommerce-cms-agentsam/frontend/src/pages/analytics/", "analytics-ui"),
+    (r"^apps/ecommerce-cms-agentsam/frontend/src/pages/products/", "product-studio-ui"),
+    (r"^apps/ecommerce-cms-agentsam/frontend/src/", "admin-spa"),
+    (r"^apps/ecommerce-cms-agentsam/frontend/static/", "admin-browser-source"),
     (r"^apps/ecommerce-cms-agentsam/", "ecommerce-app-package"),
-    (r"^admin-ui/src/layout/", "admin-spa-shell"),
-    (r"^admin-ui/src/pages/analytics/", "analytics-ui"),
-    (r"^admin-ui/src/pages/products/", "product-studio-ui"),
-    (r"^admin-ui/src/", "admin-spa"),
-    (r"^public/admin/", "admin-runtime-assets"),
-    (r"^public/js/", "storefront-runtime"),
-    (r"^public/css/", "storefront-styles"),
-    (r"^public/(index|shop|product|cart|about|community|order-confirmation)\.html$", "storefront-pages"),
+    (r"^packages/agentsam-workbench/", "agentsam-workbench"),
+    (r"^dist/assets/admin/", "admin-runtime-assets"),
+    (r"^packages/heuristic-theme/storefront/js/", "storefront-runtime"),
+    (r"^packages/heuristic-theme/storefront/css/", "storefront-styles"),
+    (r"^packages/heuristic-theme/storefront/.*\.html$", "storefront-pages"),
     (r"^db/", "database"),
     (r"^scripts/", "ops-scripts"),
     (r"^skills/", "skills"),
@@ -203,8 +204,8 @@ def canonicality(path: str):
     if path.startswith("src/agentsam/"):
         app_equiv = "app/backend/" + path[len("src/"):]
         return "compatibility", app_equiv
-    if path.startswith("public/admin/_spa/"):
-        return "built-output", "admin-ui/src/**"
+    if path.startswith("dist/assets/admin/_spa/"):
+        return "built-output", "apps/ecommerce-cms-agentsam/frontend/src/**"
     if path.startswith("legacy/"):
         return "legacy", None
     if path.startswith("FuelnFreeTime/"):

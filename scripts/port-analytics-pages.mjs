@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * Port legacy analytics page scripts to admin-ui TSX modules.
+ * Port legacy analytics page scripts to apps/ecommerce-cms-agentsam/frontend TSX modules.
  */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const assets = path.join(root, "public/admin/analytics/assets");
-const outDir = path.join(root, "admin-ui/src/pages/analytics");
+const assets = path.join(root, "apps/ecommerce-cms-agentsam/frontend/static/analytics/assets");
+const outDir = path.join(root, "apps/ecommerce-cms-agentsam/frontend/src/pages/analytics");
 
 const pages = [
   { file: "98b26e01-8bb8-4a43-b3db-55326925c916.js", export: "OverviewPage", out: "OverviewPage.tsx" },

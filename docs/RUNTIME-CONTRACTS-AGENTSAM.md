@@ -1,33 +1,16 @@
+# Current source and build ownership
+
+See `docs/PIPELINE-OWNERSHIP.md` for the complete authority map. Build assets are assembled into `dist/assets`; root `public/` contains supplementary public assets only.
+
 # Runtime Contract — AgentSam
 
 This document is the source-of-truth contract for the Fuel & Free Time AgentSam surface and runtime.
 
 ## Source authority
 
-AgentSam application code lives under `app/`.
+All dashboard browser source lives in `apps/ecommerce-cms-agentsam/frontend/`. The React SPA is under `src/`, static dashboard pages and scripts under `static/`, and shell/annotation adapters at the frontend root. AgentSam backend implementation lives in `apps/ecommerce-cms-agentsam/backend/agentsam/` and `backend/admin/agentsam.js`. Shared auth is `backend/lib/auth.js`.
 
-```text
-app/
-  frontend/
-    admin/
-      agentsam/
-        agentsam.html
-        agentsam-page.css
-        agentsam-page.js
-  backend/
-    admin/
-      agentsam.js
-    agentsam/
-      *.js
-    lib/
-      auth.js
-```
-
-`public/` is Cloudflare static-asset **output**, not AgentSam source authority. `npm run app:frontend:sync` copies the three AgentSam frontend assets into the legacy `/admin/...` public paths required by the current Worker asset binding.
-
-`src/admin/agentsam.js` and `src/agentsam/*.js` are compatibility re-export bridges only. New AgentSam implementation work must be made under `app/backend/`.
-
-The broader admin shell and shared auth are still migrating. `app/backend/lib/auth.js` currently bridges to `src/lib/auth.js`; do not create another auth implementation.
+`packages/agentsam-workbench` owns miniAgentSam and shared composer capabilities. `packages/heuristic-theme` owns storefront presentation. No legacy root `src/` or `app/` bridge is authoritative or required.
 
 ## Routes
 
@@ -157,19 +140,6 @@ Do not create separate state machines for the full-page AgentSam and docked Agen
 
 ## Build / deploy
 
-Because Wrangler currently serves `[assets].directory = "./public"`, source files under `app/frontend/` are materialized into `public/` before local Worker startup and deployment.
+`npm run build:admin` installs locked frontend dependencies, typechecks/builds the SPA, assembles dashboard and theme assets into `dist/assets`, and checks source boundaries. `npm run deploy` uses this build and the canonical Worker entry. `npm run app:frontend:sync` reassembles only after an SPA build exists. Neither command writes source into `public/admin`.
 
-Commands:
-
-```bash
-npm run app:frontend:sync
-npm run dev
-npm run build
-npm run deploy
-```
-
-`npm run dev`, admin builds, and worker predeploy all run the sync step so a clean checkout does not require manually editing or restoring generated `public/admin/agentsam*` files.
-
-## Migration rule
-
-New AgentSam source belongs under `app/frontend` or `app/backend`. Legacy `public/admin/agentsam*`, `src/admin/agentsam.js`, and `src/agentsam/*` paths must not regain implementation authority.
+The Worker gates dashboard pages, module assets and partials behind the existing session. Login remains public; authenticated responses use private/no-store caching.

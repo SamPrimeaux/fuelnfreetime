@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 /**
- * Generate db/seed-cms-full.sql from src/cms/registry.js
+ * Generate db/seed-cms-full.sql from apps/ecommerce-cms-agentsam/backend/cms/registry.js
  * Run: node scripts/generate-cms-seed.mjs
  */
 import { writeFileSync } from "node:fs";
-import { PAGE_REGISTRY } from "../src/cms/registry.js";
+import { PAGE_REGISTRY } from "../apps/ecommerce-cms-agentsam/backend/cms/registry.js";
 
 function sqlEscape(s) {
   return String(s).replace(/'/g, "''");
 }
 
 const lines = [
-  "-- Auto-generated from src/cms/registry.js — do not edit by hand",
+  "-- Auto-generated from apps/ecommerce-cms-agentsam/backend/cms/registry.js — do not edit by hand",
   "-- Run: npm run db:seed:cms:full",
   "",
 ];

@@ -1,0 +1,9 @@
+{
+  "name": "Heuristic",
+  "version": "0.1.0",
+  "entry": "storefront/index.html",
+  "pages": ["index", "shop", "product", "cart", "about", "community", "order-confirmation"],
+  "runtime": {"catalog": "/api/store", "cms": "/api/cms", "media": "/media"},
+  "referenceBrand": "Fuel & Free Time",
+  "status": "extracted-reference-theme"
+}

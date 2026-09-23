@@ -371,7 +371,7 @@ function buildSeedSql(skills, existingBySlug = new Map()) {
         tags: skill.tags,
         globs:
           skill.domain === "cloudflare"
-            ? ["wrangler.toml", "src/**/*.js", "docs/AGENTSAM-SKILLS.md"]
+            ? ["wrangler.toml", "apps/ecommerce-cms-agentsam/backend/**/*.js", "docs/AGENTSAM-SKILLS.md"]
             : [],
         taskTypes,
         routeKeys,
@@ -428,7 +428,7 @@ VALUES ('${sqlEscape(skill.id)}', '${sqlEscape(file.r2Key)}', '${sqlEscape(file.
       domain: "commerce",
       slashTrigger: "commerce",
       tags: ["commerce", "products", "inventory", "orders", "checkout"],
-      globs: ["docs/RUNTIME-CONTRACTS-COMMERCE.md", "src/store/**", "src/admin/api.js"],
+      globs: ["docs/RUNTIME-CONTRACTS-COMMERCE.md", "apps/ecommerce-cms-agentsam/backend/store/**", "apps/ecommerce-cms-agentsam/backend/admin/api.js"],
       taskTypes: ["commerce", "products", "inventory", "orders"],
       routeKeys: inferRouteKeys("commerce", "fnf-commerce-runtime", ["commerce", "store_ops"]),
       metadata: {

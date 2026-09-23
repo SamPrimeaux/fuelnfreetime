@@ -10,6 +10,5 @@ node_modules/
 .fnf-backups/
 
 # Generated from app/frontend by scripts/sync-app-frontend.mjs
-public/admin/agentsam.html
-public/admin/css/agentsam-page.css
-public/admin/js/agentsam-page.js
+dist/
+public/admin/

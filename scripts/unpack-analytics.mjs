@@ -6,8 +6,8 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
 const src = path.join(root, "analytics-3pt-dashboard-buildin.html");
-const outAssets = path.join(root, "public/admin/analytics/assets");
-const outCss = path.join(root, "public/admin/analytics/analytics.css");
+const outAssets = path.join(root, "apps/ecommerce-cms-agentsam/frontend/static/analytics/assets");
+const outCss = path.join(root, "apps/ecommerce-cms-agentsam/frontend/static/analytics/analytics.css");
 
 const html = fs.readFileSync(src, "utf8");
 const manifest = JSON.parse(html.match(/<script type="__bundler\/manifest">\s*([\s\S]*?)\s*<\/script>/)[1]);
@@ -49,7 +49,7 @@ fs.writeFileSync(appPath, appJs);
 const viewBootstrap = `<script>window.__FNF_INITIAL_VIEW = new URLSearchParams(location.search).get('view') || 'overview';</script>`;
 let embedHtml = template.replace(/<\/head>/i, `${viewBootstrap}\n</head>`);
 embedHtml = embedHtml.replace(/\s+integrity="[^"]*"/gi, "").replace(/\s+crossorigin="[^"]*"/gi, "");
-fs.writeFileSync(path.join(root, "public/admin/analytics/embed.html"), embedHtml);
+fs.writeFileSync(path.join(root, "apps/ecommerce-cms-agentsam/frontend/static/analytics/embed.html"), embedHtml);
 
 console.log("Unpacked", Object.keys(manifest).length, "assets to", outAssets);
 console.log("Wrote", outCss);
