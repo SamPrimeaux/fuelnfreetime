@@ -1,0 +1,69 @@
+{
+  "schema": "agentsam.feature.v1",
+  "id": "provider.completeful",
+  "name": "Completeful Commerce Provider",
+  "kind": "provider",
+  "status": "incubating",
+  "package": {
+    "name": "@inneranimalmedia/provider-completeful",
+    "version": "0.0.0-incubating",
+    "directory": "apps/ecommerce-cms-agentsam/backend/completeful"
+  },
+  "provides": [
+    "commerce.catalog.read",
+    "commerce.catalog.sync",
+    "commerce.fulfillment.orders",
+    "commerce.provider.webhooks"
+  ],
+  "requires": ["storage.sql"],
+  "optional": [],
+  "runtime": ["worker", "node"],
+  "contributes": {
+    "routes": [
+      "GET /api/admin/completeful/catalog",
+      "POST /api/admin/completeful/sync",
+      "GET /api/admin/completeful/status"
+    ],
+    "tools": [
+      "completeful.catalog.search",
+      "completeful.catalog.sync"
+    ],
+    "webhooks": ["POST /webhooks/completeful"],
+    "migrations": ["db/migrate-completeful.sql"],
+    "skills": ["skills/completeful/"]
+  },
+  "secrets": {
+    "server_only": ["CAPP_KEY"],
+    "optional": ["CAPP_API_URL", "COMPLETEFUL_ALLOW_LIVE_WRITES"]
+  },
+  "host_bindings": {
+    "required": ["env.CAPP_*", "db", "admin_session"],
+    "forbidden_in_feature": ["FNF_ACCOUNT_ID", "browser_exposure_of_CAPP_KEY"]
+  },
+  "source": {
+    "proving_ground": "fuelnfreetime",
+    "implementation_paths": [
+      "apps/ecommerce-cms-agentsam/backend/completeful/client.js",
+      "apps/ecommerce-cms-agentsam/backend/completeful/catalog.js",
+      "apps/ecommerce-cms-agentsam/backend/completeful/images.js",
+      "apps/ecommerce-cms-agentsam/backend/admin/completeful.js",
+      "apps/ecommerce-cms-agentsam/backend/webhooks/completeful.js",
+      "apps/ecommerce-cms-agentsam/backend/agentsam/completeful-tools.js"
+    ],
+    "notes": "Already free of FNF_ACCOUNT_ID imports — strongest first extraction after identity manifests."
+  },
+  "activation": {
+    "steps": [
+      "validate_manifest",
+      "check_runtime",
+      "resolve_requires",
+      "plan_migrations",
+      "plan_routes",
+      "plan_webhooks",
+      "operator_approval",
+      "activate",
+      "verify",
+      "write_install_receipt"
+    ]
+  }
+}

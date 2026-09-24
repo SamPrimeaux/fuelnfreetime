@@ -23,5 +23,14 @@
     "annotation": true,
     "fulfillment_automation": false
   },
-  "notes": "Fuel & Free Time reference installation. New owners must provision resources and configure branding and providers. Workspace source is required for scaffolding."
+  "modes": ["standalone", "embedded"],
+  "features": [
+    "admin.shell-nav",
+    "agentsam.mini-composer",
+    "commerce.product-studio",
+    "growth.campaigns",
+    "provider.completeful",
+    "provider.resend"
+  ],
+  "notes": "Fuel & Free Time reference installation. Feature capsules under ../../features/*. App contract twin: .agentsam/app.json"
 }

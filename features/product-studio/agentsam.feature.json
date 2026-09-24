@@ -1,0 +1,52 @@
+{
+  "schema": "agentsam.feature.v1",
+  "id": "commerce.product-studio",
+  "name": "Product Studio",
+  "kind": "domain",
+  "status": "incubating",
+  "package": {
+    "name": "@inneranimalmedia/agentsam-product-studio",
+    "version": "0.0.0-incubating",
+    "directory": "apps/ecommerce-cms-agentsam/frontend/src/pages/products"
+  },
+  "provides": [
+    "commerce.product.draft",
+    "commerce.product.studio",
+    "commerce.catalog.browse"
+  ],
+  "requires": ["commerce.catalog.read"],
+  "optional": ["media.assets", "agentsam.mini-composer"],
+  "runtime": ["browser", "worker"],
+  "contributes": {
+    "ui": ["ProductStudioPage", "StudioWorkspace"],
+    "routes": [
+      "/admin/products/create",
+      "/admin/products/create/:productId"
+    ]
+  },
+  "host_bindings": {
+    "required": ["commerce.catalog adapter", "admin_session"],
+    "forbidden_in_feature": ["CAPP_KEY", "Completeful URL shapes", "FNF_ACCOUNT_ID"]
+  },
+  "source": {
+    "proving_ground": "fuelnfreetime",
+    "implementation_paths": [
+      "apps/ecommerce-cms-agentsam/frontend/src/pages/products/ProductStudioPage.tsx",
+      "apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx",
+      "apps/ecommerce-cms-agentsam/frontend/src/pages/products/studio-model.ts"
+    ],
+    "notes": "UI understands CatalogProduct contracts; Completeful specifics stay in provider.completeful."
+  },
+  "activation": {
+    "steps": [
+      "validate_manifest",
+      "check_runtime",
+      "resolve_requires",
+      "plan_routes",
+      "operator_approval",
+      "activate",
+      "verify",
+      "write_install_receipt"
+    ]
+  }
+}

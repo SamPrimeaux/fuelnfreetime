@@ -1,0 +1,55 @@
+{
+  "schema": "agentsam.feature.v1",
+  "id": "agentsam.mini-composer",
+  "name": "miniAgentSam Composer",
+  "kind": "composer",
+  "status": "extracted",
+  "package": {
+    "name": "@inneranimalmedia/agentsam-workbench",
+    "version": "0.1.0",
+    "directory": "packages/agentsam-workbench"
+  },
+  "provides": [
+    "agentsam.composer.mount",
+    "agentsam.mini.select",
+    "agentsam.composer.capabilities",
+    "agentsam.composer.attachments"
+  ],
+  "requires": ["agentsam.runtime.send"],
+  "optional": ["agentsam.voice", "agentsam.generation.mount"],
+  "runtime": ["browser", "common"],
+  "contributes": {
+    "ui": ["mini-agentsam", "composer", "capability-menu", "attachment-controller"]
+  },
+  "host_bindings": {
+    "required": [
+      "send({prompt,resource,capabilities,attachments,signal,onPhase})",
+      "server_side_resource_authorization"
+    ],
+    "forbidden_in_feature": [
+      "whole_application_instance",
+      "secrets_in_preview",
+      "tool_payloads_in_pseudo_preview"
+    ]
+  },
+  "source": {
+    "proving_ground": "fuelnfreetime",
+    "implementation_paths": [
+      "packages/agentsam-workbench/src/mini-agentsam.js",
+      "packages/agentsam-workbench/src/composer.js",
+      "packages/agentsam-workbench/src/index.js"
+    ],
+    "notes": "Already packaged. Framework-neutral; HTML and React hosts share one implementation."
+  },
+  "activation": {
+    "steps": [
+      "validate_manifest",
+      "check_runtime",
+      "resolve_requires",
+      "operator_approval",
+      "activate",
+      "verify",
+      "write_install_receipt"
+    ]
+  }
+}

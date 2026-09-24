@@ -1,0 +1,52 @@
+{
+  "schema": "agentsam.feature.v1",
+  "id": "growth.campaigns",
+  "name": "Growth Campaigns",
+  "kind": "domain",
+  "status": "incubating",
+  "package": {
+    "name": "@inneranimalmedia/agentsam-growth",
+    "version": "0.0.0-incubating",
+    "directory": "apps/ecommerce-cms-agentsam"
+  },
+  "provides": [
+    "campaign.create",
+    "campaign.manage",
+    "campaign.analytics",
+    "attribution.read"
+  ],
+  "requires": ["account.context", "storage.sql"],
+  "optional": ["email.send", "cms.publish", "commerce.catalog.read"],
+  "runtime": ["browser", "worker"],
+  "contributes": {
+    "ui": ["growth-app"],
+    "routes": ["GET /admin/growth", "GET/POST /api/admin/growth/*"],
+    "migrations": ["db/migrate-growth-campaigns.sql"]
+  },
+  "host_bindings": {
+    "required": ["account_id", "db", "cms_publisher?", "email.send?"],
+    "forbidden_in_feature": ["FNF_ACCOUNT_ID", "hardcoded https://fuelnfreetime.com shop URLs"]
+  },
+  "source": {
+    "proving_ground": "fuelnfreetime",
+    "implementation_paths": [
+      "apps/ecommerce-cms-agentsam/frontend/static/growth.html",
+      "apps/ecommerce-cms-agentsam/frontend/static/js/growth.js",
+      "apps/ecommerce-cms-agentsam/backend/admin/growth.js"
+    ],
+    "notes": "Broader than email-campaigns (attribution, banners, social, autopilot). Port static → React before extraction. Email is a channel via provider.resend."
+  },
+  "activation": {
+    "steps": [
+      "validate_manifest",
+      "check_runtime",
+      "resolve_requires",
+      "plan_migrations",
+      "plan_routes",
+      "operator_approval",
+      "activate",
+      "verify",
+      "write_install_receipt"
+    ]
+  }
+}

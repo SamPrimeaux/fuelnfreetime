@@ -1,0 +1,48 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "fuelnfreetime",
+  "name": "Fuel & Free Time",
+  "package": "fuelnfreetime",
+  "version": "0.1.0",
+  "modes": ["standalone"],
+  "role": "host",
+  "surfaces": [
+    "storefront",
+    "admin",
+    "agentsam",
+    "growth",
+    "analytics",
+    "email",
+    "commerce"
+  ],
+  "mounts": {
+    "apps": [
+      {
+        "id": "ecommerce-cms-agentsam",
+        "package": "@inneranimalmedia/ecommerce-cms-agentsam",
+        "path": "apps/ecommerce-cms-agentsam"
+      }
+    ]
+  },
+  "features": [
+    "provider.resend",
+    "provider.completeful",
+    "admin.shell-nav",
+    "agentsam.mini-composer",
+    "growth.campaigns",
+    "commerce.product-studio"
+  ],
+  "providers": {
+    "email.send": "provider.resend",
+    "commerce.catalog": "provider.completeful"
+  },
+  "runtime": {
+    "cloudflare": "ready",
+    "browser": "ready",
+    "worker": "ready"
+  },
+  "generated": {
+    "features": "features/*/agentsam.feature.json"
+  },
+  "notes": "Branded host APP. Supplies account.context, D1, R2, CMS publish. Must not leak FNF_ACCOUNT_ID into mounted feature packages."
+}

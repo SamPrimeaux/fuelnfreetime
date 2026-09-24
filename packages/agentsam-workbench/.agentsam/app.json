@@ -1,0 +1,22 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "agentsam-workbench",
+  "name": "AgentSam Workbench (miniAgentSam)",
+  "package": "@inneranimalmedia/agentsam-workbench",
+  "version": "0.1.0",
+  "modes": ["embedded"],
+  "surfaces": ["composer", "mini-agentsam"],
+  "provides": [
+    "agentsam.composer.mount",
+    "agentsam.mini.select"
+  ],
+  "requires": ["agentsam.runtime.send"],
+  "features": ["agentsam.mini-composer"],
+  "mounts": {
+    "web": "/admin/workbench"
+  },
+  "runtime": {
+    "browser": "ready"
+  },
+  "notes": "Embedded APP/package — framework-neutral composer for HTML and React hosts."
+}

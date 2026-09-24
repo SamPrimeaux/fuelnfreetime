@@ -1,0 +1,22 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "heuristic-theme",
+  "name": "Heuristic Commerce Theme",
+  "package": "@inneranimalmedia/heuristic-theme",
+  "version": "0.1.0",
+  "modes": ["embedded"],
+  "surfaces": ["storefront"],
+  "provides": [
+    "theme.storefront.shell",
+    "theme.storefront.assets"
+  ],
+  "requires": [],
+  "optional": ["commerce.catalog.read", "email.subscription.create"],
+  "mounts": {
+    "web": "/"
+  },
+  "runtime": {
+    "browser": "ready"
+  },
+  "notes": "Theme as product composition preset — UI + asset paths, not provider implementations."
+}

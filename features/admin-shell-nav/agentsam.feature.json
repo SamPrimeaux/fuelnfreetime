@@ -1,0 +1,46 @@
+{
+  "schema": "agentsam.feature.v1",
+  "id": "admin.shell-nav",
+  "name": "Admin Console Shell + Nav",
+  "kind": "ui",
+  "status": "incubating",
+  "package": {
+    "name": "@inneranimalmedia/admin-shell-nav",
+    "version": "0.0.0-incubating",
+    "directory": "apps/ecommerce-cms-agentsam/frontend"
+  },
+  "provides": [
+    "admin.shell.render",
+    "admin.nav.model",
+    "admin.chrome.theme"
+  ],
+  "requires": [],
+  "optional": ["agentsam.mini-composer"],
+  "runtime": ["browser"],
+  "contributes": {
+    "ui": ["console-sidenav", "console-topbar", "console-theme"],
+    "routes": []
+  },
+  "host_bindings": {
+    "required": ["nav_model_or_defaults", "active_href", "logo_url"],
+    "forbidden_in_feature": ["FNF_ACCOUNT_ID"]
+  },
+  "source": {
+    "proving_ground": "fuelnfreetime",
+    "implementation_paths": [
+      "apps/ecommerce-cms-agentsam/frontend/shell.js",
+      "apps/ecommerce-cms-agentsam/frontend/static/css/console.css"
+    ],
+    "notes": "Reusable admin chrome. Hosts pass NAV model; default NAV in shell.js is FNF-shaped and should become a host preset."
+  },
+  "activation": {
+    "steps": [
+      "validate_manifest",
+      "check_runtime",
+      "operator_approval",
+      "activate",
+      "verify",
+      "write_install_receipt"
+    ]
+  }
+}

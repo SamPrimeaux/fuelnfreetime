@@ -1,0 +1,18 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "commerce-analytics",
+  "name": "Commerce Analytics UI Kit",
+  "package": "@inneranimalmedia/commerce-analytics",
+  "version": "0.1.0",
+  "modes": ["embedded"],
+  "surfaces": ["analytics"],
+  "provides": [
+    "analytics.commerce.charts",
+    "analytics.commerce.kpi"
+  ],
+  "requires": ["analytics.read"],
+  "runtime": {
+    "browser": "ready"
+  },
+  "notes": "Embedded chart/KPI kit already consumed by ecommerce dashboard."
+}

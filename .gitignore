@@ -1,4 +1,16 @@
-.agentsam/
+# AgentSam machine state — keep contracts, ignore generated runtime state
+.agentsam/*
+!.agentsam/app.json
+!.agentsam/README.md
+!.agentsam/.gitignore
+
+# Allow nested app/feature contracts under packages and apps
+!**/.agentsam/app.json
+!**/.agentsam/feature.json
+!**/.agentsam/features/
+!**/.agentsam/features/**
+!**/.agentsam/README.md
+
 node_modules/
 .wrangler/
 .dev.vars

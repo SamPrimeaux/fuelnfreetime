@@ -1,0 +1,63 @@
+{
+  "schema": "agentsam.feature.v1",
+  "id": "provider.resend",
+  "name": "Resend Email Provider",
+  "kind": "provider",
+  "status": "incubating",
+  "package": {
+    "name": "@inneranimalmedia/provider-resend",
+    "version": "0.0.0-incubating",
+    "directory": "apps/ecommerce-cms-agentsam/backend/lib"
+  },
+  "provides": [
+    "email.send",
+    "email.batch.send",
+    "email.webhook.receive",
+    "email.delivery.status"
+  ],
+  "requires": [],
+  "optional": [],
+  "runtime": ["worker", "node"],
+  "contributes": {
+    "routes": [],
+    "tools": ["email.send"],
+    "webhooks": [
+      "POST /webhooks/resend/outbound",
+      "POST /webhooks/resend/inbound"
+    ],
+    "hooks": ["email.sent", "email.delivered", "email.bounced"]
+  },
+  "secrets": {
+    "server_only": [
+      "RESEND_API_KEY",
+      "RESEND_WEBHOOK_SECRET_OUTBOUND",
+      "RESEND_WEBHOOK_SECRET_INBOUND"
+    ],
+    "optional": ["RESEND_FROM"]
+  },
+  "host_bindings": {
+    "required": ["env.RESEND_*", "from_address_default"],
+    "forbidden_in_feature": ["FNF_ACCOUNT_ID", "hardcoded fuelnfreetime.com brand"]
+  },
+  "source": {
+    "proving_ground": "fuelnfreetime",
+    "implementation_paths": [
+      "apps/ecommerce-cms-agentsam/backend/lib/resend.js",
+      "apps/ecommerce-cms-agentsam/backend/webhooks/resend.js",
+      "apps/ecommerce-cms-agentsam/backend/admin/mail.js"
+    ],
+    "notes": "Extract portable send/verify from lib/resend.js. Keep brand defaults and mail_settings orchestration in the host adapter."
+  },
+  "activation": {
+    "steps": [
+      "validate_manifest",
+      "check_runtime",
+      "resolve_requires",
+      "plan_webhooks",
+      "operator_approval",
+      "activate",
+      "verify",
+      "write_install_receipt"
+    ]
+  }
+}
