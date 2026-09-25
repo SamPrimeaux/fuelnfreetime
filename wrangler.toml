@@ -18,7 +18,7 @@ FNF_GITHUB_REPO = "SamPrimeaux/fuelnfreetime"
 FNF_GITHUB_CLIENT_ID = "Ov23li6BZYxjVtGUWibX"
 RESEND_FROM = "Fuel & Free Time <hello@fuelnfreetime.com>"
 CAPP_API_URL = "https://vxapi.completeful.com"
-COMPLETEFUL_ALLOW_LIVE_WRITES = "false"
+COMPLETEFUL_ALLOW_LIVE_WRITES = "true"
 CLOUDFLARE_ACCOUNT_ID = "ede6590ac0d2fb7daf155b35653457b2"
 CLOUDFLARE_ZONE_ID = "816a5d2284103e4481987ceeb16c2ca9"
 
