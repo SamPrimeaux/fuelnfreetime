@@ -5,7 +5,11 @@ import StudioIcon from "./StudioIcon";
 import ProductImage from "./ProductImage";
 import StudioWorkspace from "./StudioWorkspace";
 import {
+  catalogProductId,
+  catalogVariantId,
   costLabel,
+  normalizeCatalogProduct,
+  normalizeVariant,
   printSizeLabel,
   productImage,
   type CatalogProduct,
@@ -68,7 +72,10 @@ export default function ProductStudioPage() {
     })
       .then((d) => {
         if (!controller.signal.aborted) {
-          setCatalog((prev) => (offset ? [...prev, ...d.items] : d.items));
+          const items = (d.items || []).map((item) =>
+            normalizeCatalogProduct(item as CatalogProduct & Record<string, unknown>),
+          );
+          setCatalog((prev) => (offset ? [...prev, ...items] : items));
           setTotal(d.pagination.total);
           setMore(d.pagination.has_more);
         }
@@ -96,8 +103,19 @@ export default function ProductStudioPage() {
     )
       .then((d) => {
         if (!controller.signal.aborted) {
-          setDetail(d);
-          setGallery(productImage(d.product) || d.images[0]?.url || "");
+          const normalized: ProductDetail = {
+            ...d,
+            product: normalizeCatalogProduct(
+              d.product as CatalogProduct & Record<string, unknown>,
+            ),
+            variants: (d.variants || []).map((v) =>
+              normalizeVariant(v as Record<string, unknown>),
+            ),
+          };
+          setDetail(normalized);
+          setGallery(
+            productImage(normalized.product) || d.images[0]?.url || "",
+          );
         }
       })
       .catch((e) => {
@@ -190,7 +208,7 @@ export default function ProductStudioPage() {
                   {catalog.slice(0, 3).map((p, i) => (
                     <div
                       className={`ps-hero-tile tile-${i}`}
-                      key={p.completeful_product_id}
+                      key={catalogProductId(p)}
                     >
                       <ProductImage
                         sources={[
@@ -319,10 +337,10 @@ export default function ProductStudioPage() {
                   : catalog.map((p) => (
                       <button
                         className="ps-product-card"
-                        key={p.completeful_product_id}
+                        key={catalogProductId(p)}
                         onClick={() =>
                           navigate(
-                            `/products/create/${encodeURIComponent(p.completeful_product_id)}`,
+                            `/products/create/${encodeURIComponent(catalogProductId(p))}`,
                           )
                         }
                       >
@@ -515,7 +533,7 @@ export default function ProductStudioPage() {
                       </summary>
                       <div className="ps-option-tags">
                         {detail.variants.map((v) => (
-                          <span key={v.completeful_variant_id}>
+                          <span key={catalogVariantId(v)}>
                             {v.variant_title || v.name || "Default"}
                           </span>
                         ))}

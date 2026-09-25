@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { adminFetch } from "../../lib/api";
 import StudioIcon from "./StudioIcon";
 import {
+  catalogProductId,
+  catalogVariantId,
   printPixelSize,
   printSizeLabel,
   productImage,
@@ -34,7 +36,7 @@ export default function StudioWorkspace({
     detail.print_locations.find((l) => l.enabled)?.print_location_id || "",
   );
   const [variantId, setVariantId] = useState(
-    detail.variants[0]?.completeful_variant_id || "",
+    catalogVariantId(detail.variants[0]) || "",
   );
   const [scale, setScale] = useState(80);
   const [x, setX] = useState(50);
@@ -68,7 +70,7 @@ export default function StudioWorkspace({
     (l) => l.print_location_id === locationId,
   );
   const variant = detail.variants.find(
-    (v) => v.completeful_variant_id === variantId,
+    (v) => catalogVariantId(v) === variantId,
   );
   const baseImage =
     variant?.realistic_image_url ||
@@ -224,7 +226,7 @@ export default function StudioWorkspace({
         JSON.stringify(
           {
             version: 1,
-            catalog_product_id: detail.product.completeful_product_id,
+            catalog_product_id: catalogProductId(detail.product),
             variant_id: variantId,
             print_location_id: locationId,
             artwork: asset,
@@ -253,7 +255,7 @@ export default function StudioWorkspace({
       const saved = JSON.parse(await file.text());
       if (
         saved.version !== 1 ||
-        saved.catalog_product_id !== detail.product.completeful_product_id
+        saved.catalog_product_id !== catalogProductId(detail.product)
       )
         throw new Error(
           "This layout belongs to a different product. Open that product first.",
@@ -283,7 +285,7 @@ export default function StudioWorkspace({
       setRotation(limit(saved.placement?.rotation, -180, 180, 0));
       if (
         detail.variants.some(
-          (v) => v.completeful_variant_id === saved.variant_id,
+          (v) => catalogVariantId(v) === saved.variant_id,
         )
       )
         setVariantId(saved.variant_id);
@@ -406,8 +408,8 @@ export default function StudioWorkspace({
                 >
                   {detail.variants.map((v) => (
                     <option
-                      key={v.completeful_variant_id}
-                      value={v.completeful_variant_id}
+                      key={catalogVariantId(v)}
+                      value={catalogVariantId(v)}
                     >
                       {v.variant_title || v.name || "Default"}
                     </option>

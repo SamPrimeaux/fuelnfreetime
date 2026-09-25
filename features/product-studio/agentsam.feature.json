@@ -24,9 +24,12 @@
       "/admin/products/create/:productId"
     ]
   },
+  "contracts": {
+    "catalog": "agentsam-sdk/protocol/commerce/catalog.v1.json"
+  },
   "host_bindings": {
     "required": ["commerce.catalog adapter", "admin_session"],
-    "forbidden_in_feature": ["CAPP_KEY", "Completeful URL shapes", "FNF_ACCOUNT_ID"]
+    "forbidden_in_feature": ["CAPP_KEY", "Completeful URL shapes", "FNF_ACCOUNT_ID", "completeful_* as primary UI ids"]
   },
   "source": {
     "proving_ground": "fuelnfreetime",
@@ -35,7 +38,7 @@
       "apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx",
       "apps/ecommerce-cms-agentsam/frontend/src/pages/products/studio-model.ts"
     ],
-    "notes": "UI understands CatalogProduct contracts; Completeful specifics stay in provider.completeful."
+    "notes": "UI consumes commerce.catalog (catalog_product_id / catalog_variant_id). Completeful provider ids are adapter aliases only."
   },
   "activation": {
     "steps": [

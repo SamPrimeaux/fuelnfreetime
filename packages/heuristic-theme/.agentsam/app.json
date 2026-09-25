@@ -18,5 +18,5 @@
   "runtime": {
     "browser": "ready"
   },
-  "notes": "Theme as product composition preset — UI + asset paths, not provider implementations."
+  "notes": "Theme as product composition preset — UI + asset paths, not provider implementations. Proving ground for SDK stock CMS theme (@inneranimalmedia/heuristic-theme); Fuel & Free Time is the ideal-state example, not the permanent home."
 }

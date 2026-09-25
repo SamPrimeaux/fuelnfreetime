@@ -18,5 +18,5 @@
   "runtime": {
     "browser": "ready"
   },
-  "notes": "Embedded APP/package — framework-neutral composer for HTML and React hosts."
+  "notes": "Embedded APP/package — framework-neutral composer for HTML and React hosts. Proving ground for SDK @inneranimalmedia/agentsam-workbench (contextual composer + miniAgentSam). FNF is the ideal-state example."
 }
