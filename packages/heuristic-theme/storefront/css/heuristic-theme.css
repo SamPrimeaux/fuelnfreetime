@@ -29,12 +29,6 @@ html[data-theme-preset="fuel-free-time"] {
   --h-color-positive: #22adae;
 }
 
-html[data-theme-preset="inner-animals"] {
-  --h-color-accent: #b3ff2e;
-  --h-color-accent-soft: #f0ffb8;
-  --h-color-positive: #79d7ff;
-}
-
 .h-container {
   width: min(100%, var(--h-container));
   margin-inline: auto;

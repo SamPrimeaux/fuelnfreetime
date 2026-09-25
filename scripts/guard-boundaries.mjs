@@ -43,7 +43,7 @@ const spaMain = fs.readFileSync(path.join(root, 'apps/ecommerce-cms-agentsam/fro
 const spaCss = fs.readFileSync(path.join(root, 'apps/ecommerce-cms-agentsam/frontend/src/index.css'), 'utf8');
 if (/id=["']root["']/.test(spaIndex) || /#root\s*\{/.test(spaCss)) failures.push('SPA viewport root drift: React must mount inside the admin shell');
 if (!spaMain.includes('getElementById("ecommerce-react-content")') || !spaMain.includes('createRoot(host)')) failures.push('SPA shell mount drift: expected ecommerce-react-content root');
-for (const entry of ['index.html','admin/login.html','admin/_spa/index.html','admin/js/shell.js','admin/js/inspector.js']) {
+for (const entry of ['home.html','theme/presets/fuel-free-time/preset.json','admin/login.html','admin/_spa/index.html','admin/js/shell.js','admin/js/inspector.js']) {
   if (!fs.existsSync(path.join(root, 'dist/assets', entry))) failures.push(`Missing assembled asset: ${entry}`);
 }
 if (failures.length) throw new Error(failures.join('\n'));

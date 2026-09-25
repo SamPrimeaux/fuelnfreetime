@@ -35,6 +35,7 @@ export const PAGES_CLEAN_REDIRECTS = new Map([
 
 /** Legacy .html URLs → clean paths (301) */
 export const STORE_HTML_REDIRECTS = new Map([
+  ["/index.html", "/"],
   ["/shop.html", "/shop"],
   ["/about.html", "/about"],
   ["/community.html", "/community"],

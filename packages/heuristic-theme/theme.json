@@ -3,9 +3,9 @@
   "id": "heuristic-commerce",
   "name": "Heuristic Commerce",
   "version": "0.2.0",
-  "entry": "storefront/index.html",
+  "entry": "presets/fuel-free-time/preset.json",
   "pages": [
-    "index",
+    "home",
     "shop",
     "collections",
     "collection",
@@ -24,7 +24,10 @@
   },
   "contracts": {
     "tokens": "heuristic.tokens.v1",
+    "preset": "contracts/preset.schema.json",
+    "page": "contracts/page.schema.json",
     "sections": "contracts/section.schema.json",
+    "blocks": "contracts/block.schema.json",
     "collection": "commerce.collection.v1",
     "product": "commerce.product.v1",
     "cart": "commerce.cart.v1"
@@ -32,21 +35,7 @@
   "presets": {
     "fuel-free-time": {
       "label": "Fuel & Free Time",
-      "tokens": {
-        "accent": "#ff4d00",
-        "accentSoft": "#d99142",
-        "positive": "#22adae"
-      },
-      "assetsRoot": "/assets/presets/fuel-free-time"
-    },
-    "inner-animals": {
-      "label": "Inner Animals",
-      "tokens": {
-        "accent": "#b3ff2e",
-        "accentSoft": "#f0ffb8",
-        "positive": "#79d7ff"
-      },
-      "assetsRoot": "/assets/presets/inner-animals"
+      "manifest": "presets/fuel-free-time/preset.json"
     }
   },
   "sections": [
@@ -55,8 +44,12 @@
     "collections.editorial-grid",
     "products.grid",
     "story.immersive",
+    "content.feature-grid",
+    "community.callout",
+    "newsletter.signup",
     "product.purchase-panel",
-    "cart.summary"
+    "cart.summary",
+    "order.confirmation"
   ],
   "status": "reference-implementation"
 }

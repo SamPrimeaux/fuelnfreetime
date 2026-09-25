@@ -1,0 +1,28 @@
+{
+  "id": "fnf-global-shell",
+  "announcement": {
+    "enabled": false,
+    "text": "",
+    "href": ""
+  },
+  "header": {
+    "logoAsset": "brand/logo",
+    "mobileMenuStyle": "orange-two-line",
+    "navigation": [
+      { "id": "home", "label": "Home", "href": "/", "visible": true },
+      { "id": "shop", "label": "Shop", "href": "/shop", "visible": true },
+      { "id": "about", "label": "About", "href": "/about", "visible": true },
+      { "id": "community", "label": "Community", "href": "/community", "visible": true }
+    ]
+  },
+  "footer": {
+    "tagline": "Time is the real flex.",
+    "description": "For those who've earned their freedom through hard work, service, and dedication.",
+    "navigationSource": "header.navigation",
+    "legal": [
+      { "label": "Privacy", "href": "/privacy" },
+      { "label": "Terms", "href": "/terms" },
+      { "label": "Accessibility", "href": "/accessibility" }
+    ]
+  }
+}

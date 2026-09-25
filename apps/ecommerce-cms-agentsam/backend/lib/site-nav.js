@@ -104,6 +104,11 @@ export function resolveNavConfig(settings = {}) {
     brandAccent: String(settings.navBrandAccent || DEFAULT_NAV_CONFIG.brandAccent).slice(0, 32),
     brandAccentLight: String(settings.navBrandAccentLight || DEFAULT_NAV_CONFIG.brandAccentLight).slice(0, 32),
     items: sanitizeNavItems(settings.navItems),
+    announcement: {
+      enabled: settings.announcementEnabled === true,
+      text: String(settings.announcementText ?? "").trim().slice(0, 160),
+      href: String(settings.announcementHref ?? "").trim().slice(0, 512),
+    },
   };
 }
 
@@ -114,5 +119,10 @@ export function mergeNavIntoSettings(settings, navPatch) {
   if (navPatch.brandAccent != null) next.navBrandAccent = navPatch.brandAccent;
   if (navPatch.brandAccentLight != null) next.navBrandAccentLight = navPatch.brandAccentLight;
   if (navPatch.items != null) next.navItems = sanitizeNavItems(navPatch.items);
+  if (navPatch.announcement != null) {
+    next.announcementEnabled = navPatch.announcement.enabled === true;
+    next.announcementText = String(navPatch.announcement.text ?? "").trim().slice(0, 160);
+    next.announcementHref = String(navPatch.announcement.href ?? "").trim().slice(0, 512);
+  }
   return next;
 }

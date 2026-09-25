@@ -90,7 +90,7 @@ renderShell("/admin/preferences", `
 
     <section class="prefs-card">
       <h2>Site navigation</h2>
-      <p style="margin:0 0 1rem;color:var(--muted,#888);max-width:60ch">Header logo, brand accent, and menu links for every storefront page. Add a row when you publish a new page — no code changes required.</p>
+      <p>Header and footer use this same ordered route list. Add, hide, move, or remove a page here and both public shell surfaces update together.</p>
       <div class="prefs-seo-grid" style="grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
         <div class="prefs-field">
           <label for="nav-logo-url">Logo URL</label>
@@ -111,6 +111,18 @@ renderShell("/admin/preferences", `
       </div>
       <div id="nav-items-root"></div>
       <button type="button" class="btn ghost small" id="nav-add-item" style="margin-top:.75rem">+ Add menu link</button>
+    </section>
+
+    <section class="prefs-card">
+      <h2>Announcement banner</h2>
+      <div class="prefs-row">
+        <div class="prefs-row-copy"><div><div class="prefs-row-title">Show announcement</div><div class="prefs-row-desc">Displays a compact orange banner above the public header.</div></div></div>
+        <label class="prefs-switch"><input type="checkbox" id="announcement-enabled"><span class="prefs-switch-slider"></span></label>
+      </div>
+      <div class="prefs-seo-grid prefs-seo-grid--equal">
+        <div class="prefs-field"><label for="announcement-text">Message</label><input type="text" id="announcement-text" maxlength="160" placeholder="Free shipping on orders over $100"></div>
+        <div class="prefs-field"><label for="announcement-href">Link</label><input type="text" id="announcement-href" placeholder="/shop"></div>
+      </div>
     </section>
 
     <section class="prefs-card">
@@ -221,27 +233,35 @@ function togglePasswordField() {
   document.getElementById("password-field").hidden = !on;
 }
 
+function escapeAttr(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
 function renderNavItems() {
   const root = document.getElementById("nav-items-root");
   if (!root) return;
   root.innerHTML = navItems
     .map(
       (item, idx) => `
-    <div class="prefs-nav-row" data-idx="${idx}" data-id="${item.id || `nav-${idx}`}" style="display:grid;grid-template-columns:1fr 1.2fr 1.4fr auto auto;gap:.5rem;align-items:end;margin-bottom:.65rem;padding:.65rem;border:1px solid rgba(255,255,255,.08);border-radius:8px">
+    <div class="prefs-nav-row" data-idx="${idx}" data-id="${escapeAttr(item.id || `nav-${idx}`)}">
       <div class="prefs-field" style="margin:0">
         <label>Label</label>
-        <input type="text" class="nav-label" value="${item.label || ""}" maxlength="40">
+        <input type="text" class="nav-label" value="${escapeAttr(item.label)}" maxlength="40">
       </div>
       <div class="prefs-field" style="margin:0">
         <label>Link (href)</label>
-        <input type="text" class="nav-href" value="${item.href || ""}" placeholder="/about.html">
+        <input type="text" class="nav-href" value="${escapeAttr(item.href)}" placeholder="/about">
       </div>
       <div class="prefs-field" style="margin:0">
         <label>Match prefixes (comma-separated)</label>
-        <input type="text" class="nav-prefixes" value="${(item.matchPrefixes || []).join(", ")}" placeholder="/about">
+        <input type="text" class="nav-prefixes" value="${escapeAttr((item.matchPrefixes || []).join(", "))}" placeholder="/about">
       </div>
       <label class="prefs-switch" title="Visible in menu" style="margin-bottom:.35rem"><input type="checkbox" class="nav-visible" ${item.visible !== false ? "checked" : ""}><span class="prefs-switch-slider"></span></label>
-      <button type="button" class="btn ghost small nav-remove" aria-label="Remove">×</button>
+      <div class="prefs-nav-actions"><button type="button" class="btn ghost small nav-up" aria-label="Move up" ${idx === 0 ? "disabled" : ""}>↑</button><button type="button" class="btn ghost small nav-down" aria-label="Move down" ${idx === navItems.length - 1 ? "disabled" : ""}>↓</button><button type="button" class="btn ghost small nav-remove" aria-label="Remove">×</button></div>
     </div>`
     )
     .join("");
@@ -254,6 +274,16 @@ function renderNavItems() {
     btn.addEventListener("click", () => {
       const idx = Number(btn.closest(".prefs-nav-row").dataset.idx);
       navItems.splice(idx, 1);
+      renderNavItems();
+      setDirty(true);
+    });
+  });
+  root.querySelectorAll(".nav-up, .nav-down").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const idx = Number(btn.closest(".prefs-nav-row").dataset.idx);
+      const nextIdx = btn.classList.contains("nav-up") ? idx - 1 : idx + 1;
+      if (nextIdx < 0 || nextIdx >= navItems.length) return;
+      [navItems[idx], navItems[nextIdx]] = [navItems[nextIdx], navItems[idx]];
       renderNavItems();
       setDirty(true);
     });
@@ -296,6 +326,9 @@ function applySettings(data) {
   document.getElementById("nav-brand-accent").value = data.nav?.brandAccent || settings.navBrandAccent || "#ff4500";
   document.getElementById("nav-brand-accent-light").value =
     data.nav?.brandAccentLight || settings.navBrandAccentLight || "#E5A558";
+  document.getElementById("announcement-enabled").checked = data.nav?.announcement?.enabled === true;
+  document.getElementById("announcement-text").value = data.nav?.announcement?.text || "";
+  document.getElementById("announcement-href").value = data.nav?.announcement?.href || "";
 
   renderNavItems();
   togglePasswordField();
@@ -321,6 +354,9 @@ function collectSettings() {
     navBrandAccent: document.getElementById("nav-brand-accent").value,
     navBrandAccentLight: document.getElementById("nav-brand-accent-light").value,
     navItems: collectNavItemsFromDom(),
+    announcementEnabled: document.getElementById("announcement-enabled").checked,
+    announcementText: document.getElementById("announcement-text").value.trim(),
+    announcementHref: document.getElementById("announcement-href").value.trim(),
   };
 }
 
@@ -337,6 +373,11 @@ document.getElementById("nav-add-item")?.addEventListener("click", () => {
 });
 
 ["nav-logo-url", "nav-logo-height", "nav-brand-accent", "nav-brand-accent-light"].forEach((id) => {
+  document.getElementById(id)?.addEventListener("input", () => setDirty(true));
+  document.getElementById(id)?.addEventListener("change", () => setDirty(true));
+});
+
+["announcement-enabled", "announcement-text", "announcement-href"].forEach((id) => {
   document.getElementById(id)?.addEventListener("input", () => setDirty(true));
   document.getElementById(id)?.addEventListener("change", () => setDirty(true));
 });

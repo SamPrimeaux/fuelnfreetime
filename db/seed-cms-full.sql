@@ -26,7 +26,7 @@ ON CONFLICT(page_id, section_key) DO UPDATE SET
   updated_at = datetime('now');
 
 INSERT INTO page_sections (page_id, section_key, sort_order, content_json, status, updated_at)
-SELECT p.id, 'hero', 0, '{"titleLine1":"TIME IS THE","titleLine2":"REAL HORSEPOWER","subheadline":"For those who''ve earned their freedom — on two wheels, four wheels, water, or in the garage.","ctaLabel":"Explore More","ctaHref":"./shop.html","glbUrl":"/media/archive/shopify-import/3d-models/Emblem_of_Elegance.glb"}', 'published', datetime('now')
+SELECT p.id, 'hero', 0, '{"titleLine1":"TIME IS THE","titleLine2":"REAL HORSEPOWER","subheadline":"For those who''ve earned their freedom — on two wheels, four wheels, water, or in the garage.","ctaLabel":"Explore More","ctaHref":"/shop","glbUrl":"/media/archive/shopify-import/3d-models/Emblem_of_Elegance.glb"}', 'published', datetime('now')
 FROM pages p WHERE p.slug = 'home'
 ON CONFLICT(page_id, section_key) DO UPDATE SET
   sort_order = excluded.sort_order,

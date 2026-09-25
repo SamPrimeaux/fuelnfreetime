@@ -107,6 +107,15 @@ async function saveStorePreferences(env, incoming) {
   if (incoming.navItems != null) {
     next.navItems = sanitizeNavItems(incoming.navItems);
   }
+  if (incoming.announcementEnabled != null) {
+    next.announcementEnabled = incoming.announcementEnabled === true;
+  }
+  if (incoming.announcementText != null) {
+    next.announcementText = String(incoming.announcementText).trim().slice(0, 160);
+  }
+  if (incoming.announcementHref != null) {
+    next.announcementHref = String(incoming.announcementHref).trim().slice(0, 512);
+  }
 
   if (incoming.storePassword != null && incoming.storePassword !== "" && incoming.storePassword !== "••••••••") {
     next.storePassword = String(incoming.storePassword).slice(0, 128);
@@ -164,6 +173,23 @@ export async function postStorePreferences(request, env) {
   }
 
   const incoming = body?.settings || body;
+  if (incoming.announcementEnabled === true) {
+    const announcementText = String(incoming.announcementText ?? "").trim();
+    const announcementHref = String(incoming.announcementHref ?? "").trim();
+    const validHref =
+      announcementHref.startsWith("/") ||
+      announcementHref.startsWith("#") ||
+      announcementHref.startsWith("https://");
+    if (!announcementText) {
+      return json({ error: "Announcement text is required when the banner is enabled." }, { status: 400 });
+    }
+    if (!validHref) {
+      return json(
+        { error: "Announcement link must start with /, #, or https://." },
+        { status: 400 }
+      );
+    }
+  }
   const saved = await saveStorePreferences(env, incoming);
   return json({
     ok: true,

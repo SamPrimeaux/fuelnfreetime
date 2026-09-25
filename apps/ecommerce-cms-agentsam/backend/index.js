@@ -460,7 +460,7 @@ export default {
     // html_handling = "none" means Cloudflare won't auto-map "/" to
     // index.html, so do it ourselves before falling through to ASSETS.
     if (path === "/") {
-      return serveStorefrontPage(request, env, "/index.html", "home");
+      return serveStorefrontPage(request, env, "/home.html", "home");
     }
 
     const marketingSlug = slugForStorefrontPath(path);

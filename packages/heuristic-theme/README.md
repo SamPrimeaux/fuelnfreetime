@@ -1,7 +1,14 @@
 # Heuristic
 
-The current Fuel & Free Time storefront, extracted without a redesign. This package owns its HTML, styles, header/drawer, footer, catalog presentation and browser behavior. The commerce application supplies the API and CMS adapter. Root `public/` contains only supplementary public assets; deployment output is `dist/assets`.
+Heuristic is the reusable ecommerce theme engine. Fuel & Free Time is its first offered stock preset and the only brand preset owned by this repository.
 
-Install a locally packed tarball and copy `storefront/` into the host's asset build. Provide the endpoints in `theme.json`. The Fuel & Free Time build consumes this source directly. This package has not been published to npm.
+The package contract is compositional:
 
-This first extraction retains Fuel & Free Time branding and media references. Replace those in a consumer before launch; it is not yet a brand-neutral visual editor theme. Source repository ownership remains Fuel & Free Time until the canonical files actually move elsewhere.
+- a preset owns scoped tokens, an asset namespace, global shell settings, and page manifests;
+- a page is an ordered list of section instances;
+- a section is an ordered list of block instances plus appearance, motion, responsive, and visibility settings;
+- commerce data is referenced through bindings and is never duplicated into theme content.
+
+`theme.json` points to `presets/fuel-free-time/preset.json`; it does not point to an HTML page. HTML files under `storefront/` are runtime hosts and renderers, not page-definition authority. The compiled asset build publishes the theme contracts and preset manifests under `/theme/`.
+
+There are no cross-brand presets, assets, tokens, or silent content fallbacks in this package. A missing required preset, page, section, block, shell, or API contract is an explicit error.

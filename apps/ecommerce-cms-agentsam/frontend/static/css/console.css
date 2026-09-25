@@ -37,6 +37,8 @@ body.console-theme {
 .console-shell {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  max-width: none;
   height: 100dvh;
   overflow: hidden;
 }
@@ -267,11 +269,16 @@ body.console-theme {
 .console-body {
   flex: 1;
   display: flex;
+  width: 100%;
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .console-workspace {
   flex: 1;
+  width: 100%;
+  max-width: none;
   min-width: 0;
   min-height: 0;
   display: flex;
@@ -590,8 +597,12 @@ body.agentsam-open .agentsam-dock {
 /* ---- Main ---- */
 .console-main {
   flex: 1;
+  width: 100%;
+  max-width: none;
   min-width: 0;
   overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
   background: var(--c-bg);
 }
 

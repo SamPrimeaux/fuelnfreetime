@@ -1,31 +1,16 @@
 (function () {
   const CART_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6 5 3H2"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg>`;
 
-  const FALLBACK_NAV = {
-    logoUrl:
-      "https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ad23b2d9-e2e4-4ad6-eb81-9e4c983df000/thumbnail",
-    logoHeight: 68,
-    brandAccent: "#ff4500",
-    brandAccentLight: "#E5A558",
-    items: [
-      { id: "home", label: "Home", href: "/", matchPrefixes: ["/", "/index.html"] },
-      {
-        id: "shop",
-        label: "Shop",
-        href: "/shop",
-        matchPrefixes: ["/shop", "/products/", "/collections/"],
-      },
-      { id: "about", label: "About", href: "/about", matchPrefixes: ["/about"] },
-      {
-        id: "community",
-        label: "Community",
-        href: "/community",
-        matchPrefixes: ["/community"],
-      },
-    ],
-  };
+  let navConfig;
 
-  let navConfig = FALLBACK_NAV;
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
 
   function normalizePath(pathname) {
     const p = (pathname || "/").replace(/\/+$/, "") || "/";
@@ -81,17 +66,30 @@
   function headerBlock(includeSpacer) {
     const visibleItems = navConfig.items.filter((i) => i.visible !== false);
     const navItems = visibleItems
-      .map((n) => `<li><a href="${n.href}" data-nav-id="${n.id}">${n.label}</a></li>`)
+      .map((n) => `<li><a href="${escapeHtml(n.href)}" data-nav-id="${escapeHtml(n.id)}">${escapeHtml(n.label)}</a></li>`)
       .join("");
     const mobileItems = visibleItems
-      .map((n) => `<li><a href="${n.href}" data-nav-id="${n.id}">${n.label}</a></li>`)
+      .map((n) => `<li><a href="${escapeHtml(n.href)}" data-nav-id="${escapeHtml(n.id)}">${escapeHtml(n.label)}</a></li>`)
       .join("");
+    const announcementHref = String(navConfig.announcement?.href || "").trim();
+    const announcementEnabled = navConfig.announcement?.enabled === true && navConfig.announcement?.text;
+    if (announcementEnabled && !(
+      announcementHref.startsWith("/") ||
+      announcementHref.startsWith("#") ||
+      /^https:\/\//i.test(announcementHref)
+    )) {
+      throw new Error("Store announcement link is invalid");
+    }
+    const announcement = announcementEnabled
+      ? `<a class="fnf-announcement" href="${escapeHtml(announcementHref)}">${escapeHtml(navConfig.announcement.text)}</a>`
+      : "";
 
     return `
       <header class="fnf-header" id="fnfHeader">
+        ${announcement}
         <div class="fnf-row">
           <a class="fnf-logo" href="/" aria-label="Fuel & Free Time">
-            <img src="${navConfig.logoUrl}" alt="Fuel & Free Time" width="256" height="${navConfig.logoHeight}">
+            <img src="${escapeHtml(navConfig.logoUrl)}" alt="Fuel & Free Time" width="256" height="${navConfig.logoHeight}">
           </a>
           <nav class="fnf-primary" aria-label="Primary">
             <ul class="fnf-nav">${navItems}</ul>
@@ -99,7 +97,7 @@
           <div class="fnf-actions">
             ${cartIconHtml()}
             <button class="fnf-burger" id="fnfBurger" type="button" aria-label="Open menu" aria-controls="fnfMobile" aria-expanded="false">
-              <span></span><span></span><span></span>
+              <span></span><span></span>
             </button>
           </div>
         </div>
@@ -233,20 +231,23 @@
       ? `<div class="fnf-shell" id="fnfApp">${headerBlock(true)}</div>`
       : headerBlock(false);
     applyTheme();
+    document.documentElement.style.setProperty(
+      "--fnf-announcement-h",
+      navConfig.announcement?.enabled && navConfig.announcement?.text ? "34px" : "0px"
+    );
     setActiveNav();
     bindHeader();
     updateCartBadge();
   }
 
   async function loadNavConfig() {
-    try {
-      const res = await fetch("/api/store/nav");
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data.ok && data.nav) navConfig = data.nav;
-    } catch {
-      /* fallback */
+    const res = await fetch("/api/store/nav", { headers: { accept: "application/json" } });
+    if (!res.ok) throw new Error(`Store shell config request failed (${res.status})`);
+    const data = await res.json();
+    if (!data?.ok || !data?.nav || !Array.isArray(data.nav.items)) {
+      throw new Error("Store shell config is missing or invalid");
     }
+    navConfig = data.nav;
   }
 
   async function mount() {
@@ -255,7 +256,14 @@
 
     if (!storeMount && !headerMount) return;
 
-    await loadNavConfig();
+    try {
+      await loadNavConfig();
+    } catch (error) {
+      console.error(error);
+      const failedMount = storeMount || headerMount;
+      failedMount.innerHTML = '<div class="fnf-shell-error" role="alert">Store navigation is unavailable.</div>';
+      return;
+    }
 
     if (storeMount) renderInto(storeMount, !document.documentElement.hasAttribute("data-header-overlay"));
     if (headerMount) renderInto(headerMount, false);
