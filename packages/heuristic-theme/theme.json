@@ -1,9 +1,62 @@
 {
-  "name": "Heuristic",
-  "version": "0.1.0",
+  "$schema": "./theme.schema.json",
+  "id": "heuristic-commerce",
+  "name": "Heuristic Commerce",
+  "version": "0.2.0",
   "entry": "storefront/index.html",
-  "pages": ["index", "shop", "product", "cart", "about", "community", "order-confirmation"],
-  "runtime": {"catalog": "/api/store", "cms": "/api/cms", "media": "/media"},
-  "referenceBrand": "Fuel & Free Time",
-  "status": "extracted-reference-theme"
+  "pages": [
+    "index",
+    "shop",
+    "collections",
+    "collection",
+    "product",
+    "cart",
+    "about",
+    "community",
+    "order-confirmation"
+  ],
+  "runtime": {
+    "catalog": "/api/store/products",
+    "collections": "/api/store/collections",
+    "checkout": "/api/store/checkout/session",
+    "cms": "/api/cms",
+    "media": "/media"
+  },
+  "contracts": {
+    "tokens": "heuristic.tokens.v1",
+    "sections": "contracts/section.schema.json",
+    "collection": "commerce.collection.v1",
+    "product": "commerce.product.v1",
+    "cart": "commerce.cart.v1"
+  },
+  "presets": {
+    "fuel-free-time": {
+      "label": "Fuel & Free Time",
+      "tokens": {
+        "accent": "#ff4d00",
+        "accentSoft": "#d99142",
+        "positive": "#22adae"
+      },
+      "assetsRoot": "/assets/presets/fuel-free-time"
+    },
+    "inner-animals": {
+      "label": "Inner Animals",
+      "tokens": {
+        "accent": "#b3ff2e",
+        "accentSoft": "#f0ffb8",
+        "positive": "#79d7ff"
+      },
+      "assetsRoot": "/assets/presets/inner-animals"
+    }
+  },
+  "sections": [
+    "hero.editorial",
+    "collections.lineup",
+    "collections.editorial-grid",
+    "products.grid",
+    "story.immersive",
+    "product.purchase-panel",
+    "cart.summary"
+  ],
+  "status": "reference-implementation"
 }

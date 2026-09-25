@@ -47,7 +47,7 @@
     render(
       "<h1>Checkout incomplete</h1>" +
         "<p>This checkout didn't complete — your cart is still saved.</p>" +
-        '<p><a href="/cart.html">Return to cart</a></p>'
+        '<p><a href="/cart">Return to cart</a></p>'
     );
   }
 

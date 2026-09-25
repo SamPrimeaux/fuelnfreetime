@@ -75,7 +75,7 @@
   }
 
   function cartIconHtml() {
-    return `<a href="/cart.html" class="fnf-cart-btn" id="fnfCartBtn" aria-label="Cart">${CART_SVG}<span class="fnf-cart-count" data-cart-count hidden>0</span></a>`;
+    return `<a href="/cart" class="fnf-cart-btn" id="fnfCartBtn" aria-label="Cart">${CART_SVG}<span class="fnf-cart-count" data-cart-count hidden>0</span></a>`;
   }
 
   function headerBlock(includeSpacer) {
@@ -107,7 +107,7 @@
       <div class="fnf-mobile" id="fnfMobile" aria-hidden="true">
         <div class="fnf-mobile-backdrop" id="fnfMobileBackdrop"></div>
         <nav class="fnf-mobile-panel" aria-label="Mobile">
-          <ul>${mobileItems}<li><a href="/cart.html" data-nav-id="cart">Cart</a></li></ul>
+          <ul>${mobileItems}<li><a href="/cart" data-nav-id="cart">Cart</a></li></ul>
         </nav>
       </div>
       ${includeSpacer ? '<div class="fnf-spacer" aria-hidden="true"></div>' : ""}`;
@@ -257,7 +257,7 @@
 
     await loadNavConfig();
 
-    if (storeMount) renderInto(storeMount, true);
+    if (storeMount) renderInto(storeMount, !document.documentElement.hasAttribute("data-header-overlay"));
     if (headerMount) renderInto(headerMount, false);
   }
 

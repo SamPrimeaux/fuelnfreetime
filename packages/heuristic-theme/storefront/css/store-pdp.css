@@ -174,6 +174,28 @@ a {
   margin-bottom: 0.65rem;
 }
 
+.pdp-buy {
+  position: sticky;
+  top: calc(var(--fnf-header, 80px) + 1.5rem);
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: linear-gradient(145deg, rgba(255,255,255,.045), rgba(255,255,255,.018));
+}
+
+.pdp-drop-label {
+  display: inline-flex;
+  margin-bottom: 1rem;
+  padding: .35rem .6rem;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: .65rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
 .pdp-price {
   font-size: 1.65rem;
   font-weight: 900;
@@ -325,6 +347,37 @@ a {
   margin-top: 0.75rem;
 }
 
+.pdp-assurances {
+  display: grid;
+  gap: .85rem;
+  margin-top: 1.4rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+
+.pdp-assurances div { display: grid; gap: .1rem; }
+.pdp-assurances strong { font-size: .82rem; }
+.pdp-assurances span { color: var(--muted); font-size: .76rem; }
+
+.pdp-story {
+  margin-top: clamp(3rem, 7vw, 6rem);
+  padding: clamp(2rem, 6vw, 5rem);
+  border-radius: var(--radius);
+  background: linear-gradient(125deg, #1a120d, #121619);
+}
+
+.pdp-story h2 {
+  max-width: 16ch;
+  margin: 0 0 1rem;
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 6vw, 5rem);
+  font-weight: 400;
+  line-height: .95;
+  text-transform: uppercase;
+}
+
+.pdp-story > p:last-child { max-width: 54ch; color: var(--muted); }
+
 .pdp-error-wrap {
   text-align: center;
   padding: 4rem 1rem;
@@ -402,4 +455,5 @@ a {
   .pdp-loading-grid {
     grid-template-columns: 1fr;
   }
+  .pdp-buy { position: static; }
 }

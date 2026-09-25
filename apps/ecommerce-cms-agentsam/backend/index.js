@@ -435,6 +435,28 @@ export default {
       return env.ASSETS.fetch(new Request(productUrl, request));
     }
 
+    if (path === "/shop/collections" || path === "/shop/collections/") {
+      const collectionsUrl = new URL(request.url);
+      collectionsUrl.pathname = "/collections.html";
+      return env.ASSETS.fetch(new Request(collectionsUrl, request));
+    }
+
+    const collectionMatch = path.match(/^\/shop\/collections\/([^/]+)\/?$/);
+    if (collectionMatch) {
+      const collectionUrl = new URL(request.url);
+      collectionUrl.pathname = "/collection.html";
+      collectionUrl.searchParams.set("slug", collectionMatch[1]);
+      return env.ASSETS.fetch(new Request(collectionUrl, request));
+    }
+
+    const legacyCollectionMatch = path.match(/^\/collections\/([^/]+)\/?$/);
+    if (legacyCollectionMatch) {
+      const canonical = new URL(request.url);
+      canonical.pathname = `/shop/collections/${legacyCollectionMatch[1]}`;
+      canonical.search = "";
+      return Response.redirect(canonical.toString(), 301);
+    }
+
     // html_handling = "none" means Cloudflare won't auto-map "/" to
     // index.html, so do it ourselves before falling through to ASSETS.
     if (path === "/") {

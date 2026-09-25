@@ -19,12 +19,6 @@ const PAGE_ALIASES = new Map([
   ["/pages/cart/", "/cart.html"],
   ["/cart", "/cart.html"],
   ["/cart/", "/cart.html"],
-  ["/collections/high-octane-performance-gear", "/shop.html"],
-  ["/collections/high-octane-performance-gear/", "/shop.html"],
-  ["/collections/masters", "/shop.html"],
-  ["/collections/masters/", "/shop.html"],
-  ["/collections/essentials", "/shop.html"],
-  ["/collections/essentials/", "/shop.html"],
 ]);
 
 /** /pages/* → canonical clean paths (301) */

@@ -10,6 +10,7 @@ import {
 import { checkoutUrls, createCheckoutSession, createCoupon } from "./stripe.js";
 import { availableQty, holdInventory, releaseReservations } from "./inventory.js";
 import { handleStripeWebhook } from "./stripe-webhook.js";
+import { getStoreCollection, listStoreCollections } from "./collections.js";
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -455,6 +456,15 @@ export async function handleStoreApi(request, env, url) {
 
   if (path === "/api/store/products" && method === "GET") {
     return listStoreProducts(env);
+  }
+
+  if (path === "/api/store/collections" && method === "GET") {
+    return listStoreCollections(env);
+  }
+
+  const collectionMatch = path.match(/^\/api\/store\/collections\/([^/]+)$/);
+  if (collectionMatch && method === "GET") {
+    return getStoreCollection(env, decodeURIComponent(collectionMatch[1]));
   }
 
   const m = path.match(/^\/api\/store\/products\/([^/]+)$/);

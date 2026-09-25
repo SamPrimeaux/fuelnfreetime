@@ -115,6 +115,34 @@ CREATE TABLE IF NOT EXISTS product_variants (
   updated_at     TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Merchandising layer: products own commerce truth; collections own grouping, order, and presentation.
+CREATE TABLE IF NOT EXISTS store_collections (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  slug            TEXT NOT NULL UNIQUE,
+  title           TEXT NOT NULL,
+  description     TEXT NOT NULL DEFAULT '',
+  eyebrow         TEXT NOT NULL DEFAULT '',
+  image_url       TEXT,
+  accent_color    TEXT NOT NULL DEFAULT '#ff4d00',
+  status          TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','active','archived')),
+  sort_order      INTEGER NOT NULL DEFAULT 0,
+  seo_title       TEXT,
+  seo_description TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS store_collection_products (
+  collection_id INTEGER NOT NULL REFERENCES store_collections(id) ON DELETE CASCADE,
+  product_id    INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  sort_order    INTEGER NOT NULL DEFAULT 0,
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (collection_id, product_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_store_collections_status_sort ON store_collections(status, sort_order);
+CREATE INDEX IF NOT EXISTS idx_store_collection_products_product ON store_collection_products(product_id);
+
 -- ===== Orders (schema ready; no checkout wired yet) =====
 
 CREATE TABLE IF NOT EXISTS orders (

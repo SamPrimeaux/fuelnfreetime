@@ -102,19 +102,19 @@ export const PAGE_REGISTRY = {
             name: "High Octane",
             description: "Performance gear for redline living",
             imageUrl: M.highOctane,
-            href: "/collections/high-octane-performance-gear",
+            href: "/shop/collections/high-octane-performance-gear",
           },
           card2: {
             name: "Masters",
             description: "For those who've earned their stripes",
             imageUrl: M.masters,
-            href: "/collections/masters",
+            href: "/shop/collections/masters",
           },
           card3: {
             name: "Essentials",
             description: "Daily drivers for the daily grind",
             imageUrl: M.goneFishing,
-            href: "/collections/essentials",
+            href: "/shop/collections/essentials",
           },
         },
       },
@@ -217,9 +217,9 @@ export const PAGE_REGISTRY = {
           headline: "A lifestyle built from grit — and time.",
           subheadline:
             "Shop High Octane, Masters, and Essentials. Clean grid. Real stories. Fire-orange attitude.",
-          imageUrl: M.highOctane,
-          ctaPrimary: { label: "Shop All", href: "#fft-grid" },
-          ctaSecondary: { label: "Browse Collections", href: "#fft-collections" },
+          imageUrl: "/assets/presets/fuel-free-time/earned-hours-hero.webp",
+          ctaPrimary: { label: "Shop the Drop", href: "#catalog" },
+          ctaSecondary: { label: "Browse Collections", href: "/shop/collections" },
         },
       },
       collections: {
@@ -238,9 +238,9 @@ export const PAGE_REGISTRY = {
         ],
         defaultContent: {
           title: "Collections",
-          card1: { name: "High Octane Collection", imageUrl: M.highOctane, href: "#fft-grid" },
-          card2: { name: "Masters Collection", imageUrl: M.masters, href: "#fft-grid" },
-          card3: { name: "Everyday Essentials", imageUrl: M.goneFishing, href: "#fft-grid" },
+          card1: { name: "High Octane Collection", imageUrl: "/assets/presets/fuel-free-time/earned-hours-hero.webp", href: "/shop/collections/high-octane-performance-gear" },
+          card2: { name: "Masters Collection", imageUrl: "/assets/presets/fuel-free-time/masters.webp", href: "/shop/collections/masters" },
+          card3: { name: "Everyday Essentials", imageUrl: "/assets/presets/fuel-free-time/essentials.webp", href: "/shop/collections/essentials" },
         },
       },
       stories: {

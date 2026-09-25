@@ -128,6 +128,7 @@
           ${images.length > 1 ? `<div class="pdp-thumbs">${thumbs}</div>` : ""}
         </div>
         <div class="pdp-buy">
+          <p class="pdp-drop-label">Small-batch release</p>
           <p class="pdp-kicker">${product.collection || "Essentials"}</p>
           <h1>${product.title}</h1>
           <p class="pdp-price ${price.tbd ? "is-tbd" : ""}">${price.label}</p>
@@ -139,8 +140,18 @@
           </div>
           <p class="pdp-note" id="pdp-stock"></p>
           ${canBuy ? `<p class="pdp-checkout-note">Secure checkout powered by Stripe.</p>` : ""}
+          <div class="pdp-assurances" aria-label="Purchase benefits">
+            <div><strong>Live availability</strong><span>Inventory is checked again at checkout.</span></div>
+            <div><strong>Secure payment</strong><span>Payment details stay with Stripe.</span></div>
+            <div><strong>Built for the long haul</strong><span>Premium blanks and durable decoration.</span></div>
+          </div>
         </div>
       </div>
+      <section class="pdp-story">
+        <p class="pdp-kicker">The piece, in context</p>
+        <h2>Made for the hours after the work is done.</h2>
+        <p>Every Fuel & Free Time piece starts with the same idea: what you wear off the clock should feel as considered as the work that bought you that freedom.</p>
+      </section>
       <section class="pdp-related" id="pdp-related" hidden></section>`;
 
     bind();
@@ -245,7 +256,7 @@
   function cartIconButton() {
     const svg = window.FNF_SHELL?.CART_SVG || `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6 5 3H2"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg>`;
     const n = window.FNF_STORE?.cartCount() || 0;
-    return `<a class="pdp-btn icon" href="/cart.html" aria-label="View cart">${svg}<span class="fnf-cart-count" data-cart-count ${n ? "" : "hidden"}>${n}</span></a>`;
+    return `<a class="pdp-btn icon" href="/cart" aria-label="View cart">${svg}<span class="fnf-cart-count" data-cart-count ${n ? "" : "hidden"}>${n}</span></a>`;
   }
 
   document.addEventListener("fnf:cart-updated", updateCartBadge);
@@ -266,6 +277,7 @@
     .then((data) => {
       product = data.product;
       variants = data.variants || [];
+      root.dataset.hProduct = product.slug;
       setMeta(product);
       render();
     })
