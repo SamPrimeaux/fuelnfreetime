@@ -1004,6 +1004,46 @@ export async function handleAdminCmsApi(request, env, url) {
     return json(result);
   }
 
+  m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections\/([a-z0-9-]+)\/blocks$/);
+  if (m && method === "POST") {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: "Invalid JSON" }, { status: 400 });
+    }
+    const result = await insertBlock(env, m[1], m[2], body);
+    if (result.error) return json({ error: result.error }, { status: result.status });
+    return json(result);
+  }
+
+  m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections\/([a-z0-9-]+)\/blocks\/([a-z0-9-]+)\/duplicate$/);
+  if (m && method === "POST") {
+    const result = await duplicateBlock(env, m[1], m[2], m[3]);
+    if (result.error) return json({ error: result.error }, { status: result.status });
+    return json(result);
+  }
+
+  m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections\/([a-z0-9-]+)\/blocks\/([a-z0-9-]+)\/move$/);
+  if (m && method === "POST") {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: "Invalid JSON" }, { status: 400 });
+    }
+    const result = await moveBlock(env, m[1], m[2], m[3], body);
+    if (result.error) return json({ error: result.error }, { status: result.status });
+    return json(result);
+  }
+
+  m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections\/([a-z0-9-]+)\/blocks\/([a-z0-9-]+)$/);
+  if (m && method === "DELETE") {
+    const result = await removeBlock(env, m[1], m[2], m[3]);
+    if (result.error) return json({ error: result.error }, { status: result.status });
+    return json(result);
+  }
+
   m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections\/([a-z0-9-]+)$/);
   if (m && method === "PUT") {
     let body;
