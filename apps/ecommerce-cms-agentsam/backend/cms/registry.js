@@ -643,13 +643,15 @@ export function listRegistryPages() {
 
 export function mergeWithRegistry(slug, sections) {
   const def = PAGE_REGISTRY[slug];
-  if (!def) return sections;
+  if (!def) return sections.filter((section) => section.status !== "removed");
 
-  const byKey = Object.fromEntries(sections.map((s) => [s.key, s]));
-  return Object.entries(def.sections)
+  const byKey = Object.fromEntries(sections.map((section) => [section.key, section]));
+  const knownKeys = new Set(Object.keys(def.sections));
+  const merged = Object.entries(def.sections)
     .sort(([, a], [, b]) => a.sortOrder - b.sortOrder)
     .map(([key, sec]) => {
       const existing = byKey[key];
+      if (existing?.status === "removed") return null;
       if (!existing) {
         return {
           key,
@@ -663,7 +665,16 @@ export function mergeWithRegistry(slug, sections) {
         ...existing,
         content: deepMerge(structuredClone(sec.defaultContent), existing.content || {}),
       };
-    });
+    })
+    .filter(Boolean);
+
+  const dynamic = sections
+    .filter((section) => !knownKeys.has(section.key) && section.status !== "removed")
+    .map((section) => ({ ...section, source: section.source || "r2" }));
+
+  return [...merged, ...dynamic].sort(
+    (a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0)
+  );
 }
 
 function deepMerge(base, over) {
