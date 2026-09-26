@@ -249,6 +249,22 @@ export async function listPagesAdmin(env) {
     });
   }
 
+  const existing = new Set(pages.map((page) => page.slug));
+  for (const registryPage of listRegistryPages()) {
+    if (existing.has(registryPage.slug)) continue;
+    pages.push({
+      id: null,
+      slug: registryPage.slug,
+      title: registryPage.title,
+      status: "draft",
+      updated_at: null,
+      section_count: registryPage.section_count,
+      preview: previewFromRegistry(registryPage.slug),
+      source: "registry",
+    });
+  }
+
+  pages.sort((a, b) => String(a.title || a.slug).localeCompare(String(b.title || b.slug)));
   return { ok: true, pages };
 }
 
