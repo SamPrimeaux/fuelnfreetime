@@ -61,7 +61,7 @@ async function buildHeadContext(env, slug) {
     try {
       const { getPublishedPage } = await import("./api.js");
       const page = await getPublishedPage(env, slug);
-      pageTitle = page?.title || null;
+      pageTitle = page?.title || PAGE_REGISTRY[slug]?.title || null;
     } catch {
       /* prefs-only fallback */
     }
