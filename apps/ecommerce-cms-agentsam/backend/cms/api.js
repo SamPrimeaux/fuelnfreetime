@@ -539,6 +539,191 @@ export async function removeSection(env, slug, sectionKey) {
   return { ok: true, section_key: sectionKey, removed: true };
 }
 
+function sectionDefinitionForInstance(slug, sectionKey, content) {
+  const templateKey =
+    content?.__editor?.templateKey ||
+    (PAGE_REGISTRY[slug]?.sections?.[sectionKey] ? sectionKey : null);
+  if (!templateKey) return { templateKey: null, section: null };
+  return {
+    templateKey,
+    section: PAGE_REGISTRY[slug]?.sections?.[templateKey] || null,
+  };
+}
+
+function ensureBlockState(content, sectionDef) {
+  content.__editor = { ...(content.__editor || {}) };
+  if (!Array.isArray(content.__editor.blocks)) {
+    content.__editor.blocks = structuredClone(
+      sectionDef?.defaultContent?.__editor?.blocks || []
+    );
+  }
+  return content.__editor.blocks;
+}
+
+function blockDefinition(sectionDef, templateKey) {
+  return (sectionDef?.blocks || []).find((block) => block.key === templateKey) || null;
+}
+
+function blockIdBase(value) {
+  return String(value || "block")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .slice(0, 44) || "block";
+}
+
+async function editableSection(env, slug, sectionKey) {
+  const ensured = await ensurePage(env, slug);
+  if (ensured.error) return ensured;
+  const page = ensured.page;
+  const rows = await orderedSectionRows(env, page.id);
+  const row = rows.find(
+    (entry) => entry.section_key === sectionKey && entry.status !== "removed"
+  );
+  if (!row) return { error: "Section not found", status: 404 };
+  const content = await sectionContentForRow(env, slug, row);
+  const resolved = sectionDefinitionForInstance(slug, sectionKey, content);
+  if (!resolved.section) {
+    return { error: "Section template is not registered", status: 409 };
+  }
+  return { page, row, content, ...resolved };
+}
+
+export async function insertBlock(env, slug, sectionKey, body = {}) {
+  const editable = await editableSection(env, slug, sectionKey);
+  if (editable.error) return editable;
+
+  const templateKey = String(body.templateKey || body.template_key || "").trim();
+  const def = blockDefinition(editable.section, templateKey);
+  if (!def) return { error: "Unknown block template", status: 400 };
+
+  const blocks = ensureBlockState(editable.content, editable.section);
+  const sameType = blocks.filter((block) => block.templateKey === templateKey);
+  if (Number.isFinite(def.max) && sameType.length >= Number(def.max)) {
+    return { error: "Block limit reached", status: 409 };
+  }
+
+  const blockId = `${blockIdBase(templateKey)}-${crypto.randomUUID().slice(0, 8)}`;
+  editable.content[blockId] = structuredClone(def.defaultContent || {});
+  const meta = { id: blockId, templateKey, enabled: true };
+
+  const toIndex = Number.isInteger(body.toIndex)
+    ? Math.max(0, Math.min(body.toIndex, blocks.length))
+    : blocks.length;
+  blocks.splice(toIndex, 0, meta);
+
+  await persistSectionDraft(
+    env,
+    slug,
+    editable.page.id,
+    sectionKey,
+    editable.content,
+    editable.row.sort_order
+  );
+  await markPageDraft(env, editable.page.id, slug);
+
+  return { ok: true, section_key: sectionKey, block_id: blockId, template_key: templateKey };
+}
+
+export async function duplicateBlock(env, slug, sectionKey, blockId) {
+  const editable = await editableSection(env, slug, sectionKey);
+  if (editable.error) return editable;
+
+  const blocks = ensureBlockState(editable.content, editable.section);
+  const sourceIndex = blocks.findIndex((block) => block.id === blockId);
+  if (sourceIndex < 0) return { error: "Block not found", status: 404 };
+
+  const sourceMeta = blocks[sourceIndex];
+  const def = blockDefinition(editable.section, sourceMeta.templateKey);
+  if (!def) return { error: "Block template is not registered", status: 409 };
+
+  const sameType = blocks.filter((block) => block.templateKey === sourceMeta.templateKey);
+  if (Number.isFinite(def.max) && sameType.length >= Number(def.max)) {
+    return { error: "Block limit reached", status: 409 };
+  }
+
+  const newId = `${blockIdBase(sourceMeta.templateKey)}-${crypto.randomUUID().slice(0, 8)}`;
+  editable.content[newId] = structuredClone(
+    editable.content[blockId] || def.defaultContent || {}
+  );
+  blocks.splice(sourceIndex + 1, 0, {
+    id: newId,
+    templateKey: sourceMeta.templateKey,
+    enabled: true,
+  });
+
+  await persistSectionDraft(
+    env,
+    slug,
+    editable.page.id,
+    sectionKey,
+    editable.content,
+    editable.row.sort_order
+  );
+  await markPageDraft(env, editable.page.id, slug);
+
+  return { ok: true, section_key: sectionKey, block_id: newId };
+}
+
+export async function moveBlock(env, slug, sectionKey, blockId, body = {}) {
+  const editable = await editableSection(env, slug, sectionKey);
+  if (editable.error) return editable;
+
+  const blocks = ensureBlockState(editable.content, editable.section);
+  const fromIndex = blocks.findIndex((block) => block.id === blockId);
+  if (fromIndex < 0) return { error: "Block not found", status: 404 };
+
+  const parsed = Number(body.toIndex);
+  if (!Number.isInteger(parsed)) return { error: "toIndex integer required", status: 400 };
+  const toIndex = Math.max(0, Math.min(parsed, blocks.length - 1));
+  const [moved] = blocks.splice(fromIndex, 1);
+  blocks.splice(toIndex, 0, moved);
+
+  await persistSectionDraft(
+    env,
+    slug,
+    editable.page.id,
+    sectionKey,
+    editable.content,
+    editable.row.sort_order
+  );
+  await markPageDraft(env, editable.page.id, slug);
+
+  return { ok: true, section_key: sectionKey, block_id: blockId, to_index: toIndex };
+}
+
+export async function removeBlock(env, slug, sectionKey, blockId) {
+  const editable = await editableSection(env, slug, sectionKey);
+  if (editable.error) return editable;
+
+  const blocks = ensureBlockState(editable.content, editable.section);
+  const index = blocks.findIndex((block) => block.id === blockId);
+  if (index < 0) return { error: "Block not found", status: 404 };
+
+  const meta = blocks[index];
+  const def = blockDefinition(editable.section, meta.templateKey);
+  const sameType = blocks.filter((block) => block.templateKey === meta.templateKey);
+  if (def && Number.isFinite(def.min) && sameType.length <= Number(def.min)) {
+    return { error: "At least one block of this type is required", status: 409 };
+  }
+
+  blocks.splice(index, 1);
+  delete editable.content[blockId];
+
+  await persistSectionDraft(
+    env,
+    slug,
+    editable.page.id,
+    sectionKey,
+    editable.content,
+    editable.row.sort_order
+  );
+  await markPageDraft(env, editable.page.id, slug);
+
+  return { ok: true, section_key: sectionKey, block_id: blockId, removed: true };
+}
+
 export async function publishPage(env, slug) {
   let page = await loadPageRow(env, slug);
   if (!page) {
