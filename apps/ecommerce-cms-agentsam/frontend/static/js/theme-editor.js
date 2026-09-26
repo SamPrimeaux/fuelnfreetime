@@ -97,7 +97,12 @@
   }
 
   function currentSectionSchema() {
-    return (window.SECTION_SCHEMAS && window.SECTION_SCHEMAS[slug] && window.SECTION_SCHEMAS[slug][activeSectionKey]) || null;
+    const schemas = window.SECTION_SCHEMAS && window.SECTION_SCHEMAS[slug];
+    if (!schemas) return null;
+    if (schemas[activeSectionKey]) return schemas[activeSectionKey];
+    const section = currentSection();
+    const templateKey = section && section.content && section.content.__editor && section.content.__editor.templateKey;
+    return templateKey && schemas[templateKey] ? schemas[templateKey] : null;
   }
 
   function currentSchema() {
