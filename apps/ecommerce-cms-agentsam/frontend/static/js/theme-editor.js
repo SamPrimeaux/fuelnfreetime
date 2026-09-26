@@ -96,13 +96,16 @@
     return pageData.sections.find(function(section) { return section.key === activeSectionKey; }) || null;
   }
 
-  function currentSectionSchema() {
+  function schemaForSection(section) {
     const schemas = window.SECTION_SCHEMAS && window.SECTION_SCHEMAS[slug];
-    if (!schemas) return null;
-    if (schemas[activeSectionKey]) return schemas[activeSectionKey];
-    const section = currentSection();
-    const templateKey = section && section.content && section.content.__editor && section.content.__editor.templateKey;
+    if (!schemas || !section) return null;
+    if (schemas[section.key]) return schemas[section.key];
+    const templateKey = section.content && section.content.__editor && section.content.__editor.templateKey;
     return templateKey && schemas[templateKey] ? schemas[templateKey] : null;
+  }
+
+  function currentSectionSchema() {
+    return schemaForSection(currentSection());
   }
 
   function currentSchema() {
