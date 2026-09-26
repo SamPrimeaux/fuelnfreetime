@@ -907,6 +907,89 @@
     });
   }
 
+  async function insertSection(templateKey) {
+    setNote('Adding section…');
+    try {
+      const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections', {
+        method: 'POST',
+        body: JSON.stringify({ templateKey: templateKey, toIndex: (pageData?.sections || []).length })
+      });
+      activeSectionKey = result.section_key;
+      activeFieldKey = null;
+      setNote('Section added.', 'success');
+      await loadPage();
+      selectSection(result.section_key, null, true);
+    } catch (error) {
+      setNote(error.message || String(error), 'error');
+    }
+  }
+
+  async function duplicateSection(sectionKey) {
+    setNote('Duplicating section…');
+    try {
+      const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/duplicate', {
+        method: 'POST',
+        body: JSON.stringify({})
+      });
+      activeSectionKey = result.section_key;
+      activeFieldKey = null;
+      setNote('Section duplicated.', 'success');
+      await loadPage();
+      selectSection(result.section_key, null, true);
+    } catch (error) {
+      setNote(error.message || String(error), 'error');
+    }
+  }
+
+  async function moveSection(sectionKey, toIndex) {
+    try {
+      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/move', {
+        method: 'POST',
+        body: JSON.stringify({ toIndex: toIndex })
+      });
+      setNote('Section moved.', 'success');
+      await loadPage();
+      selectSection(sectionKey, null, true);
+    } catch (error) {
+      setNote(error.message || String(error), 'error');
+    }
+  }
+
+  async function setSectionVisibility(sectionKey, enabled) {
+    try {
+      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/visibility', {
+        method: 'PUT',
+        body: JSON.stringify({ enabled: enabled })
+      });
+      setNote(enabled ? 'Section shown.' : 'Section hidden.', 'success');
+      await loadPage();
+      if ((pageData?.sections || []).some(function(section) { return section.key === sectionKey; })) {
+        selectSection(sectionKey, null, false);
+      }
+    } catch (error) {
+      setNote(error.message || String(error), 'error');
+    }
+  }
+
+  async function removeSection(sectionKey) {
+    const section = (pageData?.sections || []).find(function(item) { return item.key === sectionKey; });
+    if (!section) return;
+    const label = (schemaForSection(section)?.label || humanize(sectionKey));
+    if (!confirm('Remove "' + label + '" from this page? You can add it again later.')) return;
+
+    try {
+      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey), {
+        method: 'DELETE'
+      });
+      setNote('Section removed.', 'success');
+      activeSectionKey = null;
+      activeFieldKey = null;
+      await loadPage();
+    } catch (error) {
+      setNote(error.message || String(error), 'error');
+    }
+  }
+
   async function switchPage(nextSlug) {
     if (!nextSlug || nextSlug === slug) {
       closePageMenu();
