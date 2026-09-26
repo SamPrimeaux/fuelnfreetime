@@ -920,6 +920,10 @@
         if (selected) break;
       }
     }
+    if (!selected && activeBlockId && activeSectionKey) {
+      const section = doc.querySelector('[data-cms-section="' + CSS.escape(activeSectionKey) + '"], [data-section-id="' + CSS.escape(activeSectionKey) + '"]');
+      selected = section && section.querySelector('[data-cms-block="' + CSS.escape(activeBlockId) + '"]');
+    }
     if (!selected && activeSectionKey) {
       selected = doc.querySelector('[data-cms-section="' + CSS.escape(activeSectionKey) + '"], [data-section-id="' + CSS.escape(activeSectionKey) + '"]');
     }
