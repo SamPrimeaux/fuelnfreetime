@@ -103,22 +103,12 @@ export async function loadSectionsFromR2(env, slug, sectionRows, { publishedOnly
       ? publishedKey(slug, row.section_key)
       : row.content_r2_key || draftKey(slug, row.section_key);
     let doc = await readR2Json(env, r2Key);
-    if (!doc && publishedOnly) {
-      doc = await readR2Json(env, publishedKey(slug, row.section_key));
-    }
-    if (!doc && !publishedOnly) {
+    if (!doc && !publishedOnly && r2Key !== draftKey(slug, row.section_key)) {
       doc = await readR2Json(env, draftKey(slug, row.section_key));
     }
+    if (!doc) continue;
 
-    let content = doc?.content;
-    if (!content && row.content_json) {
-      try {
-        content = JSON.parse(row.content_json);
-      } catch {
-        content = {};
-      }
-    }
-    if (!content) content = {};
+    const content = doc.content && typeof doc.content === "object" ? doc.content : {};
 
     sections.push({
       key: row.section_key,
@@ -127,7 +117,7 @@ export async function loadSectionsFromR2(env, slug, sectionRows, { publishedOnly
       content,
       updated_at: row.updated_at || doc?.updated_at || null,
       version: row.content_version ?? doc?.version ?? 0,
-      source: doc ? "r2" : row.content_json ? "d1" : "empty",
+      source: "r2",
     });
   }
 

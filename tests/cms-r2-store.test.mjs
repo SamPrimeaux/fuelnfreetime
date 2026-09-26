@@ -56,3 +56,34 @@ test("published CMS reads ignore the editable draft pointer", async () => {
   assert.equal(sections[0].content.headline, "Published headline");
   assert.equal(sections[0].status, "published");
 });
+
+test("published CMS reads do not fall back to legacy D1 section bodies", async () => {
+  const reads = [];
+  const env = {
+    WEBSITE_ASSETS: {
+      async get(key) {
+        reads.push(key);
+        return null;
+      },
+    },
+  };
+
+  const sections = await loadSectionsFromR2(
+    env,
+    "home",
+    [
+      {
+        section_key: "hero",
+        sort_order: 0,
+        status: "published",
+        content_r2_key: "cms/pages/home/draft/hero.json",
+        content_version: 3,
+        content_json: JSON.stringify({ headline: "Legacy fallback" }),
+      },
+    ],
+    { publishedOnly: true },
+  );
+
+  assert.deepEqual(reads, ["cms/pages/home/published/hero.json"]);
+  assert.deepEqual(sections, []);
+});

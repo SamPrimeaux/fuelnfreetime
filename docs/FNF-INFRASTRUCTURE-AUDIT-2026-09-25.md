@@ -16,7 +16,7 @@ This report records the production state inspected during the Heuristic storefro
 
 | Priority | Finding | Resolution or next action |
 | --- | --- | --- |
-| P0 fixed | Published CMS assembly could follow `page_sections.content_r2_key`, which is the editable draft pointer. | Published reads now derive the immutable published R2 key and a regression test proves drafts cannot leak into the public KV snapshot. |
+| P0 fixed | Published CMS assembly could follow `page_sections.content_r2_key`, which is the editable draft pointer, or use legacy D1 body JSON when R2 content was absent. | Published reads now require the canonical published R2 object. Regression tests prove drafts and legacy D1 bodies cannot leak into the public KV snapshot. |
 | P0 fixed | `cms:post-deploy` called public read endpoints when `CMS_WARM_SECRET` was missing and reported that as warming. | The script now fails visibly. A warm is only successful after authenticated `POST /api/internal/cms/warm`. |
 | P1 | `assets.fuelnfreetime.com` is active in the R2 control plane but currently returns 404 for known objects. | Keep storefront URLs on the verified `/media/*` Worker route until DNS/custom-domain routing is repaired and a known object returns 200. |
 | P1 | Vector content was last embedded in June 2026 and is stale relative to the September storefront/CMS changes. | Re-index CMS, product, and repository sources before treating retrieval as current. |
