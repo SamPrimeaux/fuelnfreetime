@@ -814,6 +814,44 @@
     highlightPreviewSelection();
   }
 
+  function selectBlock(sectionKey, blockId, fieldKey, scrollPreview) {
+    const section = pageData && pageData.sections && pageData.sections.find(function(item) { return item.key === sectionKey; });
+    const blocks = section && section.content && section.content.__editor && section.content.__editor.blocks;
+    const block = Array.isArray(blocks) ? blocks.find(function(item) { return item.id === blockId; }) : null;
+    if (!section || !block) return;
+
+    activeSectionKey = sectionKey;
+    activeBlockId = blockId;
+    activeFieldKey = fieldKey || null;
+
+    if (activeFieldKey && activeFieldKey.indexOf(blockId + '.') !== 0) {
+      activeFieldKey = blockId + '.' + activeFieldKey;
+    }
+
+    if (activeFieldKey) {
+      const field = currentSchema().find(function(item) { return item.key === activeFieldKey; });
+      activeTab = field ? fieldKind(field) : 'content';
+    } else if (!currentSchema().some(function(field) { return fieldKind(field) === activeTab; }) && activeTab !== 'settings') {
+      activeTab = 'content';
+    }
+
+    renderTree();
+    renderInspector();
+    byId('te-selected-path').textContent = activeFieldKey
+      ? slug + ' / ' + sectionKey + ' / ' + blockId + ' / ' + activeFieldKey.replace(blockId + '.', '')
+      : slug + ' / ' + sectionKey + ' / ' + blockId;
+
+    if (scrollPreview) {
+      try {
+        const doc = byId('theme-preview').contentDocument;
+        const sectionNode = doc && doc.querySelector('[data-cms-section="' + CSS.escape(sectionKey) + '"], [data-section-id="' + CSS.escape(sectionKey) + '"]');
+        const target = sectionNode && sectionNode.querySelector('[data-cms-block="' + CSS.escape(blockId) + '"]');
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } catch {}
+    }
+    highlightPreviewSelection();
+  }
+
   function bindPreviewSelection() {
     const frame = byId('theme-preview');
     let doc;
