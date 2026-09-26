@@ -431,6 +431,26 @@ export const PAGE_REGISTRY = {
       },
       collections: {
         sortOrder: 1,
+        settings: [
+          {
+            key: "__editor.layout.columns",
+            label: "Columns",
+            type: "range",
+            group: "layout",
+            default: 3,
+            min: 1,
+            max: 6,
+            step: 1,
+          },
+          {
+            key: "__editor.responsive.carouselMobile",
+            label: "Carousel on mobile",
+            type: "boolean",
+            group: "responsive",
+            default: true,
+            help: "Use horizontal snap scrolling on narrow screens.",
+          },
+        ],
         fields: [
           { key: "title", label: "Section title", type: "text" },
         ],
