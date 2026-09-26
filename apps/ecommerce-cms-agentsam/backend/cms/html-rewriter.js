@@ -20,6 +20,12 @@ const PATH_TO_SLUG = new Map([
   ["/about.html", "about"],
   ["/community", "community"],
   ["/community.html", "community"],
+  ["/collaborate", "collaborate"],
+  ["/collaborate.html", "collaborate"],
+  ["/policies", "policies"],
+  ["/policies.html", "policies"],
+  ["/terms", "terms"],
+  ["/terms.html", "terms"],
 ]);
 
 function escapeAttr(value) {
