@@ -89,7 +89,17 @@ body a { color: inherit; }
 @media (max-width: 900px) {
   .collection-lineup__grid, .editorial-strip__grid { grid-template-columns: 1fr; }
   .collection-lineup__grid { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; }
+  .collection-lineup[data-cms-carousel-mobile="false"] .collection-lineup__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    overflow: visible;
+    scroll-snap-type: none;
+  }
   .collection-card { flex: 0 0 min(82vw, 420px); scroll-snap-align: start; }
+  .collection-lineup[data-cms-carousel-mobile="false"] .collection-card {
+    flex: initial;
+    scroll-snap-align: none;
+  }
   .editorial-tile { min-height: 460px; }
   .fft-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .shop-qv__dialog { grid-template-columns: 1fr; }
