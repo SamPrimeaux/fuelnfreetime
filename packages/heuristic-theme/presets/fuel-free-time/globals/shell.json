@@ -20,9 +20,9 @@
     "description": "For those who've earned their freedom through hard work, service, and dedication.",
     "navigationSource": "header.navigation",
     "legal": [
-      { "label": "Privacy", "href": "/privacy" },
+      { "label": "Policies", "href": "/policies" },
       { "label": "Terms", "href": "/terms" },
-      { "label": "Accessibility", "href": "/accessibility" }
+      { "label": "Collaborate", "href": "/collaborate" }
     ]
   }
 }
