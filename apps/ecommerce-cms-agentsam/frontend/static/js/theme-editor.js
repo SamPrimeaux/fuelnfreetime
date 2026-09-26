@@ -11,6 +11,7 @@
   let refreshTimer = null;
   let mediaLibrary = [];
   let mediaTarget = null;
+  const resourceCache = Object.create(null);
   let dirty = false;
   const dirtySections = new Set();
   let connected = false;
@@ -95,15 +96,55 @@
     return pageData.sections.find(function(section) { return section.key === activeSectionKey; }) || null;
   }
 
+  function currentSectionSchema() {
+    return (window.SECTION_SCHEMAS && window.SECTION_SCHEMAS[slug] && window.SECTION_SCHEMAS[slug][activeSectionKey]) || null;
+  }
+
   function currentSchema() {
-    return (window.SECTION_FIELDS && window.SECTION_FIELDS[slug] && window.SECTION_FIELDS[slug][activeSectionKey]) || [];
+    const schema = currentSectionSchema();
+    return (schema && schema.fields) || (window.SECTION_FIELDS && window.SECTION_FIELDS[slug] && window.SECTION_FIELDS[slug][activeSectionKey]) || [];
+  }
+
+  function currentSettings() {
+    const schema = currentSectionSchema();
+    return (schema && schema.settings) || [];
+  }
+
+  function allEditableFields() {
+    return currentSchema().concat(currentSettings());
   }
 
   function fieldKind(field) {
-    const hay = (String(field.key || '') + ' ' + String(field.label || '')).toLowerCase();
-    if (field.media || /image|video|glb|gltf|media|logo/.test(hay)) return 'media';
-    if (/href|link|url/.test(hay)) return 'links';
+    if (field.type === 'media' || field.type === 'video' || field.media) return 'media';
+    if (field.type === 'link' || field.type === 'product' || field.type === 'collection' || field.type === 'variant') return 'links';
     return 'content';
+  }
+
+  function fieldByKey(key) {
+    return allEditableFields().find(function(field) { return field.key === key; }) || null;
+  }
+
+  function valueForField(section, field) {
+    const value = cmsGetPath(section.content, field.key);
+    if (value !== undefined && value !== null && value !== '') return value;
+    return field.default !== undefined ? field.default : '';
+  }
+
+  function setFieldValue(field, value) {
+    const section = currentSection();
+    if (!section) return;
+    let next = value;
+    if (field.type === 'number' || field.type === 'range') {
+      const parsed = Number(value);
+      next = Number.isFinite(parsed) ? parsed : (field.default ?? 0);
+    } else if (field.type === 'boolean') {
+      next = Boolean(value);
+    }
+    cmsSetPath(section.content, field.key, next);
+    dirtySections.add(section.key);
+    setDirty(true);
+    schedulePatch();
+    byId('te-selected-path').textContent = slug + ' / ' + section.key + ' / ' + field.key;
   }
 
   function setNote(message, kind) {
@@ -161,43 +202,112 @@
   }
 
   function renderField(section, field) {
-    const value = cmsGetPath(section.content, field.key) || '';
+    const value = valueForField(section, field);
     const safeValue = cmsEscapeAttr(String(value));
     const id = 'te-field-' + section.key + '-' + field.key.replace(/[^a-zA-Z0-9_-]/g, '-');
+    const help = field.help ? '<div class="te-field-help">' + cmsEscapeHtml(field.help) + '</div>' : '';
 
-    if (fieldKind(field) === 'media') {
-      const isImage = /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(String(value));
-      return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label>' + cmsEscapeHtml(field.label) + '<span>Media</span></label>' +
-        '<div class="te-media-drop" data-media-drop="' + cmsEscapeAttr(field.key) + '"><div class="te-media-preview">' +
-        (value && isImage ? '<img src="' + safeValue + '" alt="">' : '<div class="te-media-empty">' + (value ? cmsEscapeHtml(String(value).split('/').pop()) : 'Drop media here or choose from library') + '</div>') +
+    if (field.type === 'media' || field.type === 'video' || field.media) {
+      const isImage = field.type !== 'video' && /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(String(value));
+      const isVideo = field.type === 'video' || /\.(mp4|mov|webm)(\?|$)/i.test(String(value));
+      let preview = '<div class="te-media-empty">' + (value ? cmsEscapeHtml(String(value).split('/').pop()) : 'Drop media here or choose from library') + '</div>';
+      if (value && isImage) preview = '<img src="' + safeValue + '" alt="">';
+      if (value && isVideo) preview = '<video src="' + safeValue + '" muted playsinline></video>';
+      return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label>' + cmsEscapeHtml(field.label) + '<span>' + (field.type === 'video' ? 'Video' : 'Media') + '</span></label>' +
+        '<div class="te-media-drop" data-media-drop="' + cmsEscapeAttr(field.key) + '"><div class="te-media-preview">' + preview +
         '</div><div class="te-media-actions"><button type="button" class="te-media-button" data-pick-media="' + cmsEscapeAttr(field.key) + '">Choose</button>' +
-        '<label class="te-media-button" style="display:inline-flex;align-items:center">Upload<input type="file" hidden data-upload-media="' + cmsEscapeAttr(field.key) + '" accept="image/*,video/*,.glb,.gltf,.usdz"></label></div></div>' +
-        '<input class="te-media-url" id="' + id + '" data-field-input="' + cmsEscapeAttr(field.key) + '" value="' + safeValue + '" placeholder="Media URL or path"></div>';
+        '<label class="te-media-button" style="display:inline-flex;align-items:center">Upload<input type="file" hidden data-upload-media="' + cmsEscapeAttr(field.key) + '" accept="' + (field.type === 'video' ? 'video/*' : 'image/*,video/*,.glb,.gltf,.usdz') + '"></label></div></div>' +
+        '<input class="te-media-url" id="' + id + '" data-field-input="' + cmsEscapeAttr(field.key) + '" value="' + safeValue + '" placeholder="' + cmsEscapeAttr(field.placeholder || 'Media URL or path') + '">' + help + '</div>';
     }
 
-    const input = field.type === 'textarea'
-      ? '<textarea id="' + id + '" rows="4" data-field-input="' + cmsEscapeAttr(field.key) + '">' + cmsEscapeHtml(String(value)) + '</textarea>'
-      : '<input id="' + id + '" type="' + (field.type === 'url' ? 'url' : 'text') + '" data-field-input="' + cmsEscapeAttr(field.key) + '" value="' + safeValue + '">';
+    if (field.type === 'boolean') {
+      return '<div class="te-setting-row te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><div><strong>' + cmsEscapeHtml(field.label) + '</strong>' +
+        (field.help ? '<span>' + cmsEscapeHtml(field.help) + '</span>' : '') +
+        '</div><button type="button" class="te-switch" role="switch" data-boolean-field="' + cmsEscapeAttr(field.key) + '" aria-checked="' + (Boolean(value) ? 'true' : 'false') + '"></button></div>';
+    }
 
-    return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label for="' + id + '">' + cmsEscapeHtml(field.label) + '<span>' + cmsEscapeHtml(field.key) + '</span></label>' + input + '</div>';
+    if (field.type === 'select') {
+      const options = Array.isArray(field.options) ? field.options : [];
+      return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label for="' + id + '">' + cmsEscapeHtml(field.label) + '<span>' + cmsEscapeHtml(field.group || 'Select') + '</span></label>' +
+        '<select id="' + id + '" data-field-input="' + cmsEscapeAttr(field.key) + '">' +
+        options.map(function(option) {
+          return '<option value="' + cmsEscapeAttr(option.value) + '"' + (String(option.value) === String(value) ? ' selected' : '') + '>' + cmsEscapeHtml(option.label) + '</option>';
+        }).join('') + '</select>' + help + '</div>';
+    }
+
+    if (field.type === 'range') {
+      const min = field.min ?? 0;
+      const max = field.max ?? 100;
+      const step = field.step ?? 1;
+      return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label for="' + id + '">' + cmsEscapeHtml(field.label) + '<span>' + cmsEscapeHtml(field.unit || '') + '</span></label>' +
+        '<div class="te-range-control"><input id="' + id + '" type="range" min="' + min + '" max="' + max + '" step="' + step + '" value="' + safeValue + '" data-range-field="' + cmsEscapeAttr(field.key) + '">' +
+        '<input type="number" min="' + min + '" max="' + max + '" step="' + step + '" value="' + safeValue + '" data-number-pair="' + cmsEscapeAttr(field.key) + '"><span>' + cmsEscapeHtml(field.unit || '') + '</span></div>' + help + '</div>';
+    }
+
+    if (field.type === 'color') {
+      const colorValue = /^#[0-9a-f]{6}$/i.test(String(value)) ? String(value) : '#ffffff';
+      return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label for="' + id + '">' + cmsEscapeHtml(field.label) + '<span>Color</span></label>' +
+        '<div class="te-color-control"><input id="' + id + '" type="color" value="' + cmsEscapeAttr(colorValue) + '" data-color-field="' + cmsEscapeAttr(field.key) + '"><input type="text" value="' + safeValue + '" data-color-text="' + cmsEscapeAttr(field.key) + '"></div>' + help + '</div>';
+    }
+
+    if (field.type === 'rich_text') {
+      return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label>' + cmsEscapeHtml(field.label) + '<span>Rich text</span></label>' +
+        '<div class="te-rich-toolbar" data-rich-toolbar="' + cmsEscapeAttr(field.key) + '">' +
+          '<button type="button" data-rich-command="bold"><strong>B</strong></button>' +
+          '<button type="button" data-rich-command="italic"><em>I</em></button>' +
+          '<button type="button" data-rich-command="createLink">Link</button>' +
+          '<button type="button" data-rich-command="insertUnorderedList">• List</button>' +
+          '<button type="button" data-rich-command="insertOrderedList">1. List</button>' +
+        '</div><div class="te-rich-input" contenteditable="true" data-rich-field="' + cmsEscapeAttr(field.key) + '">' + String(value || '') + '</div>' + help + '</div>';
+    }
+
+    if (field.type === 'product' || field.type === 'collection' || field.type === 'variant') {
+      return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label for="' + id + '">' + cmsEscapeHtml(field.label) + '<span>' + cmsEscapeHtml(humanize(field.type)) + '</span></label>' +
+        '<select id="' + id + '" data-resource-field="' + cmsEscapeAttr(field.key) + '" data-resource-type="' + cmsEscapeAttr(field.type) + '"><option value="' + safeValue + '">' + cmsEscapeHtml(value ? String(value) : 'Loading…') + '</option></select>' + help + '</div>';
+    }
+
+    const inputType = field.type === 'number' ? 'number' : (field.type === 'link' || field.type === 'url' ? 'url' : 'text');
+    const input = field.type === 'textarea'
+      ? '<textarea id="' + id + '" rows="4" data-field-input="' + cmsEscapeAttr(field.key) + '" placeholder="' + cmsEscapeAttr(field.placeholder || '') + '">' + cmsEscapeHtml(String(value)) + '</textarea>'
+      : '<input id="' + id + '" type="' + inputType + '" data-field-input="' + cmsEscapeAttr(field.key) + '" value="' + safeValue + '" placeholder="' + cmsEscapeAttr(field.placeholder || '') + '"' +
+        (field.min !== undefined ? ' min="' + field.min + '"' : '') + (field.max !== undefined ? ' max="' + field.max + '"' : '') + (field.step !== undefined ? ' step="' + field.step + '"' : '') + '>';
+
+    return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label for="' + id + '">' + cmsEscapeHtml(field.label) + '<span>' + cmsEscapeHtml(field.type || field.key) + '</span></label>' + input + help + '</div>';
   }
 
   function renderSettings() {
-    byId('te-inspector-body').innerHTML =
-      '<div class="te-setting-card">' +
-        '<div class="te-setting-row"><div><strong>Editable outlines</strong><span>Show CMS boundaries in the live preview.</span></div><button type="button" class="te-switch" id="te-outline-switch" role="switch" aria-checked="' + showOutlines + '"></button></div>' +
-        '<div class="te-setting-row"><div><strong>Auto-refresh preview</strong><span>Refresh after live draft updates.</span></div><button type="button" class="te-switch" id="te-auto-switch" role="switch" aria-checked="' + autoPreview + '"></button></div>' +
-      '</div>' +
-      '<div class="te-setting-card"><div class="te-setting-row"><div><strong>Preview route</strong><span>' + cmsEscapeHtml(pageRoute(slug)) + '</span></div><a class="te-media-button" style="text-decoration:none;display:inline-flex;align-items:center" target="_blank" rel="noopener" href="' + cmsEscapeAttr(pageRoute(slug)) + '?preview=1">Open</a></div></div>';
+    const section = currentSection();
+    const settings = currentSettings();
+    const grouped = {};
+    settings.forEach(function(field) {
+      const group = field.group || 'settings';
+      if (!grouped[group]) grouped[group] = [];
+      grouped[group].push(field);
+    });
 
-    byId('te-outline-switch').addEventListener('click', function(event) {
+    let html = Object.keys(grouped).map(function(group) {
+      return '<div class="te-setting-group"><div class="te-setting-group__title">' + cmsEscapeHtml(humanize(group)) + '</div>' +
+        grouped[group].map(function(field) { return renderField(section, field); }).join('') + '</div>';
+    }).join('');
+
+    html += '<div class="te-setting-group"><div class="te-setting-group__title">Editor view</div><div class="te-setting-card">' +
+      '<div class="te-setting-row"><div><strong>Editable outlines</strong><span>Show CMS boundaries in the live preview.</span></div><button type="button" class="te-switch" id="te-outline-switch" role="switch" aria-checked="' + showOutlines + '"></button></div>' +
+      '<div class="te-setting-row"><div><strong>Auto-refresh preview</strong><span>Refresh after live draft updates.</span></div><button type="button" class="te-switch" id="te-auto-switch" role="switch" aria-checked="' + autoPreview + '"></button></div>' +
+      '</div></div>';
+
+    byId('te-inspector-body').innerHTML = html || '<div class="te-empty">No section settings registered.</div>';
+    wireFields();
+
+    const outlineSwitch = byId('te-outline-switch');
+    if (outlineSwitch) outlineSwitch.addEventListener('click', function(event) {
       showOutlines = event.currentTarget.getAttribute('aria-checked') !== 'true';
       localStorage.setItem('fnf-theme-editor-outlines', showOutlines ? '1' : '0');
       event.currentTarget.setAttribute('aria-checked', String(showOutlines));
       bindPreviewSelection();
     });
 
-    byId('te-auto-switch').addEventListener('click', function(event) {
+    const autoSwitch = byId('te-auto-switch');
+    if (autoSwitch) autoSwitch.addEventListener('click', function(event) {
       autoPreview = event.currentTarget.getAttribute('aria-checked') !== 'true';
       localStorage.setItem('fnf-theme-editor-auto-preview', autoPreview ? '1' : '0');
       event.currentTarget.setAttribute('aria-checked', String(autoPreview));
@@ -252,15 +362,92 @@
         highlightPreviewSelection();
       });
       input.addEventListener('input', function() {
-        const section = currentSection();
-        if (!section) return;
-        activeFieldKey = input.dataset.fieldInput;
-        cmsSetPath(section.content, activeFieldKey, input.value);
-        syncMediaPreview(activeFieldKey, input.value);
-        setDirty(true);
-        dirtySections.add(section.key);
-        schedulePatch();
-        byId('te-selected-path').textContent = slug + ' / ' + section.key + ' / ' + activeFieldKey;
+        const field = fieldByKey(input.dataset.fieldInput);
+        if (!field) return;
+        activeFieldKey = field.key;
+        setFieldValue(field, input.value);
+        syncMediaPreview(field.key, input.value);
+      });
+      input.addEventListener('change', function() {
+        const field = fieldByKey(input.dataset.fieldInput);
+        if (!field) return;
+        activeFieldKey = field.key;
+        setFieldValue(field, input.value);
+      });
+    });
+
+    document.querySelectorAll('[data-boolean-field]').forEach(function(button) {
+      button.addEventListener('click', function() {
+        const field = fieldByKey(button.dataset.booleanField);
+        if (!field) return;
+        const next = button.getAttribute('aria-checked') !== 'true';
+        button.setAttribute('aria-checked', String(next));
+        activeFieldKey = field.key;
+        setFieldValue(field, next);
+      });
+    });
+
+    document.querySelectorAll('[data-range-field]').forEach(function(range) {
+      const key = range.dataset.rangeField;
+      const number = document.querySelector('[data-number-pair="' + CSS.escape(key) + '"]');
+      function apply(value) {
+        const field = fieldByKey(key);
+        if (!field) return;
+        range.value = value;
+        if (number) number.value = value;
+        activeFieldKey = key;
+        setFieldValue(field, value);
+      }
+      range.addEventListener('input', function() { apply(range.value); });
+      if (number) number.addEventListener('input', function() { apply(number.value); });
+    });
+
+    document.querySelectorAll('[data-color-field]').forEach(function(picker) {
+      const key = picker.dataset.colorField;
+      const text = document.querySelector('[data-color-text="' + CSS.escape(key) + '"]');
+      function apply(value) {
+        const field = fieldByKey(key);
+        if (!field) return;
+        if (/^#[0-9a-f]{6}$/i.test(value)) picker.value = value;
+        if (text && text.value !== value) text.value = value;
+        activeFieldKey = key;
+        setFieldValue(field, value);
+      }
+      picker.addEventListener('input', function() { apply(picker.value); });
+      if (text) text.addEventListener('change', function() { apply(text.value.trim()); });
+    });
+
+    document.querySelectorAll('[data-rich-field]').forEach(function(editor) {
+      editor.addEventListener('input', function() {
+        const field = fieldByKey(editor.dataset.richField);
+        if (!field) return;
+        activeFieldKey = field.key;
+        setFieldValue(field, editor.innerHTML);
+      });
+    });
+
+    document.querySelectorAll('[data-rich-toolbar]').forEach(function(toolbar) {
+      toolbar.querySelectorAll('[data-rich-command]').forEach(function(button) {
+        button.addEventListener('click', function() {
+          const command = button.dataset.richCommand;
+          const editor = toolbar.nextElementSibling;
+          if (!editor) return;
+          editor.focus();
+          let value = null;
+          if (command === 'createLink') value = prompt('Link URL') || null;
+          if (command !== 'createLink' || value) document.execCommand(command, false, value);
+          editor.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+      });
+    });
+
+    document.querySelectorAll('[data-resource-field]').forEach(function(select) {
+      hydrateResourceSelect(select);
+      select.addEventListener('change', function() {
+        const field = fieldByKey(select.dataset.resourceField);
+        if (!field) return;
+        activeFieldKey = field.key;
+        setFieldValue(field, select.value);
       });
     });
 
@@ -308,12 +495,64 @@
     });
   }
 
+  async function hydrateResourceSelect(select) {
+    const type = select.dataset.resourceType;
+    const field = fieldByKey(select.dataset.resourceField);
+    const section = currentSection();
+    const current = field && section ? valueForField(section, field) : '';
+
+    try {
+      let options = [];
+      if (type === 'product') {
+        if (!resourceCache.products) {
+          const data = await adminFetch('/api/admin/products');
+          resourceCache.products = (data.products || []).map(function(product) {
+            return { value: product.slug || String(product.id), label: product.title || product.slug };
+          });
+        }
+        options = resourceCache.products;
+      } else if (type === 'collection') {
+        if (!resourceCache.collections) {
+          const data = await adminFetch('/api/store/collections');
+          resourceCache.collections = (data.collections || []).map(function(collection) {
+            return { value: collection.slug || String(collection.id), label: collection.title || collection.slug };
+          });
+        }
+        options = resourceCache.collections;
+      } else if (type === 'variant' && field && field.productKey) {
+        const productSlug = cmsGetPath(section.content, field.productKey);
+        if (productSlug) {
+          const cacheKey = 'variants:' + productSlug;
+          if (!resourceCache[cacheKey]) {
+            const data = await adminFetch('/api/store/products/' + encodeURIComponent(productSlug));
+            resourceCache[cacheKey] = (data.variants || []).map(function(variant) {
+              const label = [variant.title, variant.size, variant.color, variant.sku].filter(Boolean).join(' · ');
+              return { value: variant.sku || String(variant.id), label: label || String(variant.id) };
+            });
+          }
+          options = resourceCache[cacheKey];
+        }
+      }
+
+      const emptyLabel = type === 'variant' && field && !field.productKey ? 'Enter variant in schema' : 'None';
+      select.innerHTML = '<option value="">' + emptyLabel + '</option>' + options.map(function(option) {
+        return '<option value="' + cmsEscapeAttr(option.value) + '"' + (String(option.value) === String(current) ? ' selected' : '') + '>' + cmsEscapeHtml(option.label) + '</option>';
+      }).join('');
+    } catch (error) {
+      select.innerHTML = '<option value="' + cmsEscapeAttr(String(current || '')) + '">' + cmsEscapeHtml(current ? String(current) : 'Unable to load options') + '</option>';
+    }
+  }
+
   function syncMediaPreview(fieldKey, value) {
     const zone = document.querySelector('[data-media-drop="' + CSS.escape(fieldKey) + '"]');
     if (!zone) return;
     const preview = zone.querySelector('.te-media-preview');
-    const isImage = /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(String(value));
-    preview.innerHTML = value && isImage ? '<img src="' + cmsEscapeAttr(value) + '" alt="">' : '<div class="te-media-empty">' + (value ? cmsEscapeHtml(String(value).split('/').pop()) : 'Drop media here or choose from library') + '</div>';
+    const field = fieldByKey(fieldKey);
+    const isVideo = field && field.type === 'video' || /\.(mp4|mov|webm)(\?|$)/i.test(String(value));
+    const isImage = !isVideo && /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(String(value));
+    if (value && isVideo) preview.innerHTML = '<video src="' + cmsEscapeAttr(value) + '" muted playsinline></video>';
+    else if (value && isImage) preview.innerHTML = '<img src="' + cmsEscapeAttr(value) + '" alt="">';
+    else preview.innerHTML = '<div class="te-media-empty">' + (value ? cmsEscapeHtml(String(value).split('/').pop()) : 'Drop media here or choose from library') + '</div>';
   }
 
   function setMediaValue(fieldKey, url) {
