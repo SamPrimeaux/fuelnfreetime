@@ -783,6 +783,7 @@
     const section = pageData && pageData.sections && pageData.sections.find(function(item) { return item.key === sectionKey; });
     if (!section) return;
     activeSectionKey = sectionKey;
+    activeBlockId = null;
     activeFieldKey = fieldKey || null;
 
     if (fieldKey) {
