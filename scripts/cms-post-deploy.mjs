@@ -35,19 +35,11 @@ const env = {
 const workerUrl = env.FNF_WORKER_URL || "https://fuelnfreetime.com";
 const secret = env.CMS_WARM_SECRET || "";
 
-async function warmViaPublicApi() {
-  const slugs = ["site", "home", "shop", "about", "community"];
-  for (const slug of slugs) {
-    const res = await fetch(`${workerUrl}/api/cms/pages/${slug}`);
-    console.log(`${slug}: ${res.ok ? "ok" : `HTTP ${res.status}`}`);
-  }
-}
-
 async function main() {
   if (!secret) {
-    console.warn("CMS_WARM_SECRET not set — falling back to public API warm.");
-    await warmViaPublicApi();
-    return;
+    throw new Error(
+      "CMS_WARM_SECRET is required; refusing to report a public cache read as a CMS warm",
+    );
   }
 
   const res = await fetch(`${workerUrl}/api/internal/cms/warm`, {

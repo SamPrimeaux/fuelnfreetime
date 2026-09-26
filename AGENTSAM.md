@@ -21,6 +21,8 @@ Project ID:     proj_fuelnfreetime
 Collaborators:  Connor McNeely (repo + CF, Stripe lane)
 ```
 
+The tenant/workspace/project values above are IAM coordination identifiers. They are not Fuel N Free Time D1 ownership columns. The client database uses `accounts`, `account_memberships`, and `auth_users.default_account_id` as its current authority.
+
 ---
 
 ## What This System Is
@@ -74,7 +76,7 @@ _D1 database ID: `9fd6ff92-e407-4b51-8b01-3c93f3845bb2` · KV namespace ID: `bc3
 ```
 Routing method:         DB-driven (client D1 agentsam_* + IAM catalog when on platform chat)
 Routing table:          agentsam_ai (client D1)
-Routing key column:     model_key
+Routing key column:     model_id
 Routing value column:   provider
 Classification method:  IAM prompt builder + ctx_fuelnfreetime
 Classification cost:    Per-turn when agentsam_usage wired; manual time entry fallback on IAM Collaborate
@@ -92,7 +94,7 @@ Valid platform values:  openai, anthropic, workers_ai
 4. Stripe is NOT live — checkout v1 without payment capture; Connor owns Stripe lane when approved.
 5. Connor (non-superadmin): MCP D1 tools blocked — use agentsam_terminal_sandbox with workspace_slug fuelnfreetime.
 6. CMS publish: R2 bodies + KV snapshots — run cms:republish / cms:post-deploy after deploy when needed.
-7. Each actor keeps own tenant_id on IAM CMS — workspace membership + cms_site registry, never route Connor through Sam's tenant.
+7. IAM coordination keeps each actor's tenant/workspace context; Fuel N Free Time D1 authorization uses account membership and must not add tenant/workspace fallbacks.
 8. Never commit secrets — wrangler secret put only.
 ```
 
@@ -106,10 +108,11 @@ Valid platform values:  openai, anthropic, workers_ai
 | product_variants | SKUs / sizes | product_id, sku | Inventory linked |
 | inventory | Stock counts | variant_id, quantity | Admin managed |
 | orders | Checkout records | id, status | Stripe pending |
-| cms_pages | CMS routes | route, status | R2-backed sections |
-| cms_sections | Section registry | page_id, section_key | KV publish |
-| admin_users | Admin auth | email, password_hash | npm run admin:create |
-| agentsam_project_context | Layer 0 | id=ctx_fuelnfreetime | ws_fuelnfreetime |
+| pages | CMS routes | slug, title, status | Page metadata; section bodies are R2-backed |
+| page_sections | Section registry | page_id, section_key, content_r2_key | Draft pointer + publish metadata; KV is derived |
+| auth_users | Admin auth | id, email, default_account_id | Authorized through account memberships |
+| accounts / account_memberships | Client ownership | account_id, user_id, role | Current Fuel N Free Time authority |
+| agentsam_project_context | Layer 0 | id=ctx_fuelnfreetime | IAM coordination label only |
 
 ---
 
@@ -180,7 +183,7 @@ Step 5: Log time manually in IAM Collaborate Time insights when auto-track misse
 ```
 Per-turn cost:          agentsam_usage when wired
 Per-session cost:       MISSING on client — use IAM collaborate manual entry
-Model used:             agentsam_ai.model_key
+Model used:             agentsam_ai.model_id
 Token count:            IAM telemetry when configured
 Latency:                Worker observability enabled on fuel worker (logs on)
 Billing lane:           time_projects project_key=fuelnfreetime · client_fuelnfreetime

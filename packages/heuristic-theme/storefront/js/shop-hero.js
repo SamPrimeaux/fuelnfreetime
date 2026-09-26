@@ -4,7 +4,7 @@
   const glbWrap = document.querySelector(".fnf-shop-glb");
   const parallaxLayers = hero ? hero.querySelectorAll("[data-parallax-speed]") : [];
 
-  const GLB_SRC = "/media/archive/shopify-import/3d-models/Emblem_of_Elegance.glb";
+  const GLB_SRC = "/media/3d-models/emblem-of-elegance.glb";
   const prefersReduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   if (mv && mv.getAttribute("src") !== GLB_SRC) {

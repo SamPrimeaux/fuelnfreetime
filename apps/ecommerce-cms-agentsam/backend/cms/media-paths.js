@@ -8,7 +8,7 @@ export const M = {
   fuelUp: "/media/archive/shopify-import/graphics/fuel_up.png",
   coreCollection: "/media/archive/shopify-import/graphics/50C9CEB5.png",
   vette: "/media/archive/shopify-import/graphics/Vette.png",
-  glbEmblem: "/media/archive/shopify-import/3d-models/Emblem_of_Elegance.glb",
+  glbEmblem: "/media/3d-models/emblem-of-elegance.glb",
   videoAbout1: "/media/archive/shopify-import/videos/video-2-48add6d0.mp4",
   videoAbout2: "/media/archive/shopify-import/videos/video-1-f506d934.mp4",
   teeFront: "/media/products/shirts/fft-tee-frontside.webp",

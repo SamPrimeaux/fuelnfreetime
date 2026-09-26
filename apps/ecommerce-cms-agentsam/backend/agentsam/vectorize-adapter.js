@@ -27,8 +27,6 @@ function configuredFilter(config, params) {
 
   // Configured scope always wins over model/user input.
   if (config.account_id) filter.account_id = String(config.account_id);
-  if (config.account_id) filter.account_id = String(config.account_id);
-  if (config.account_id) filter.account_id = String(config.account_id);
 
   const sourceType = params.source_type || config.default_source_type;
   if (sourceType) filter.source_type = String(sourceType);

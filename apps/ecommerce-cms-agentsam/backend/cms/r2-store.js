@@ -97,7 +97,11 @@ export async function loadSectionsFromR2(env, slug, sectionRows, { publishedOnly
   const sections = [];
 
   for (const row of sectionRows) {
-    const r2Key = row.content_r2_key || (publishedOnly ? publishedKey(slug, row.section_key) : draftKey(slug, row.section_key));
+    // content_r2_key is the editable draft pointer. Published reads must never
+    // follow it, otherwise an unpublished edit can leak into the public KV snapshot.
+    const r2Key = publishedOnly
+      ? publishedKey(slug, row.section_key)
+      : row.content_r2_key || draftKey(slug, row.section_key);
     let doc = await readR2Json(env, r2Key);
     if (!doc && publishedOnly) {
       doc = await readR2Json(env, publishedKey(slug, row.section_key));
