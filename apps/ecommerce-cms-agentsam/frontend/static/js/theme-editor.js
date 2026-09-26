@@ -526,8 +526,16 @@
       return;
     }
 
-    byId('te-inspector-title').textContent = humanize(section.key);
-    byId('te-inspector-subtitle').textContent = ((pageData && pageData.title) || humanize(slug)) + ' · ' + section.key;
+    const sectionSchema = currentSectionSchema();
+    const blockMeta = currentBlockMeta();
+    const blockSchema = currentBlockSchema();
+    const sectionLabel = (sectionSchema && sectionSchema.label) || humanize(section.key);
+    byId('te-inspector-title').textContent = blockMeta
+      ? ((blockSchema && blockSchema.label) || humanize(blockMeta.templateKey || blockMeta.id))
+      : sectionLabel;
+    byId('te-inspector-subtitle').textContent = blockMeta
+      ? sectionLabel + ' · ' + blockMeta.id
+      : ((pageData && pageData.title) || humanize(slug)) + ' · ' + section.key;
     byId('te-section-status').textContent = section.status || 'draft';
     byId('te-section-status').className = 'te-badge' + (section.status === 'published' ? ' is-published' : '');
 
