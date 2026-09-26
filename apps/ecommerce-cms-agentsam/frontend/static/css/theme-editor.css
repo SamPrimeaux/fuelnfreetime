@@ -282,11 +282,25 @@
 .te-tree-row {
   width: 100%;
   min-height: 38px;
-  padding: 7px 8px;
+  padding: 3px 5px;
   border: 0;
   border-radius: 8px;
   background: transparent;
   color: var(--te-text);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  text-align: left;
+}
+
+.te-tree-row__main {
+  min-width: 0;
+  flex: 1;
+  min-height: 32px;
+  padding: 4px 3px;
+  border: 0;
+  background: transparent;
+  color: inherit;
   display: flex;
   align-items: center;
   gap: 8px;
