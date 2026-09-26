@@ -3,12 +3,15 @@
 window.PAGE_ROUTES = {
   home: "/",
   shop: "/shop",
-  about: "/about.html",
-  community: "/community.html",
+  about: "/about",
+  community: "/community",
+  collaborate: "/collaborate",
+  policies: "/policies",
+  terms: "/terms",
   site: "/",
 };
 
-window.PAGE_SLUG_ORDER = ["home", "shop", "about", "community", "site"];
+window.PAGE_SLUG_ORDER = ["home", "shop", "about", "community", "collaborate", "policies", "terms", "site"];
 
 window.SECTION_FIELDS = {};
 window.SECTION_SCHEMAS = {};
