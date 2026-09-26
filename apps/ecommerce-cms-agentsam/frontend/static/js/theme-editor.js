@@ -136,7 +136,8 @@
 
   function currentSettings() {
     const block = currentBlockSchema();
-    if (block && Array.isArray(block.settings)) {
+    if (activeBlockId) {
+      if (!block || !Array.isArray(block.settings)) return [];
       return block.settings.map(function(field) {
         return { ...field, key: activeBlockId + '.__settings.' + field.key, blockRelativeKey: field.key };
       });
