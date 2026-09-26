@@ -874,12 +874,14 @@
     if (doc.documentElement.dataset.fnfThemeEditorBound !== '1') {
       doc.documentElement.dataset.fnfThemeEditorBound = '1';
       doc.addEventListener('click', function(event) {
-        const target = event.target && event.target.closest && event.target.closest('[data-cms], [data-cms-section], [data-section-id]');
+        const target = event.target && event.target.closest && event.target.closest('[data-cms], [data-cms-block], [data-cms-section], [data-section-id]');
         if (!target) return;
 
         const cmsNode = target.closest('[data-cms]');
+        const blockNode = target.closest('[data-cms-block]');
         const sectionNode = target.closest('[data-cms-section], [data-section-id]');
         let sectionKey = sectionNode ? (sectionNode.getAttribute('data-cms-section') || sectionNode.getAttribute('data-section-id') || '') : '';
+        const blockId = blockNode ? (blockNode.getAttribute('data-cms-block') || '') : '';
         let fieldKey = cmsNode ? (cmsNode.getAttribute('data-cms') || '') : '';
 
         if (!sectionKey && fieldKey.indexOf('.') > 0) {
