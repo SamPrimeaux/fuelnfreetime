@@ -80,6 +80,23 @@ archive/...
 
 `archive/` is immutable provenance, not a live-content destination. New CMS media should be selected by media ID/object key in the editor and rendered through `/media/{key}`. Product and CMS tables should not hardcode the public hostname.
 
+The media library still has 45 records under `archive/`. The currently published snapshots/product table actively reference the following archive objects; these are the next copy-and-repoint batch:
+
+| Current R2 object | Preferred R2 object |
+| --- | --- |
+| `archive/shopify-import/logos/fandft-clear-background.png` | `cms/global/branding/logo-clear.png` |
+| `archive/shopify-import/graphics/50C9CEB5.png` | `cms/global/graphics/core-collection.png` |
+| `archive/shopify-import/graphics/high_octane.jpg` | `cms/global/graphics/high-octane.jpg` |
+| `archive/shopify-import/graphics/Gone_Fishing.png` | `cms/pages/home/media/gone-fishing.png` |
+| `archive/shopify-import/graphics/Masters.png` | `cms/pages/home/media/masters.png` |
+| `archive/shopify-import/graphics/Vette.png` | `cms/pages/about/media/vette.png` |
+| `archive/shopify-import/graphics/fuel_up.png` | `cms/pages/about/media/fuel-up.png` |
+| `archive/shopify-import/videos/video-1-f506d934.mp4` | `cms/pages/about/media/video-1.mp4` |
+| `archive/shopify-import/videos/video-2-48add6d0.mp4` | `cms/pages/about/media/video-2.mp4` |
+| `archive/shopify-import/photos/IMG_1509.jpg` | `products/fuel-and-adventure-cotton-tee/img-1509.jpg` |
+
+Migration order is copy object, update the media record and CMS/product reference, publish and warm, verify the new URL, then retain the archive source as provenance. The last row is the only inspected product still actively pointing into `archive/`.
+
 Do not make a public R2 bucket the sole backup for executable Worker/admin/login code. Git plus reviewed release artifacts remains the deploy authority. If disaster recovery independent of GitHub is required, publish private, versioned source/build bundles to a locked R2 prefix with checksums and retention; do not serve those bundles publicly.
 
 ### 3D relocation and optimization
