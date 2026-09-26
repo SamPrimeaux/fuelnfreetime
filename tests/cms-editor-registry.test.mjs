@@ -42,6 +42,23 @@ test("CMS editor registry exposes the reusable GUI field contract", () => {
   assert.ok(hero.guardrails);
   assert.ok(hero.motion);
   assert.ok(hero.responsive);
+
+  const collections = admin.pages.shop.sections.collections;
+  assert.ok(collections.settings.some((field) =>
+    field.key === "__editor.layout.columns" &&
+    field.type === "range" &&
+    field.min === 1 &&
+    field.max === 6
+  ));
+  assert.ok(collections.settings.some((field) =>
+    field.key === "__editor.responsive.carouselMobile" &&
+    field.type === "boolean"
+  ));
+  assert.equal(collections.blocks.length, 1);
+  assert.equal(collections.blocks[0].key, "collection-card");
+  assert.equal(collections.blocks[0].repeatable, true);
+  assert.equal(collections.blocks[0].max, 12);
+  assert.equal(collections.blocks[0].fields.find((field) => field.key === "imageUrl").type, "media");
 });
 
 test("legacy URL fields normalize to link, media, and video controls without losing media compatibility", () => {
