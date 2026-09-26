@@ -57,6 +57,9 @@ export const STORE_HTML_REDIRECTS = new Map([
   ["/shop.html", "/shop"],
   ["/about.html", "/about"],
   ["/community.html", "/community"],
+  ["/collaborate.html", "/collaborate"],
+  ["/policies.html", "/policies"],
+  ["/terms.html", "/terms"],
   ["/cart.html", "/cart"],
 ]);
 
