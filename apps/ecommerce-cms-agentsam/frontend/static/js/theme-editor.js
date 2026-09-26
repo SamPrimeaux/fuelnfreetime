@@ -1156,6 +1156,7 @@
       });
       setNote('Section removed.', 'success');
       activeSectionKey = null;
+      activeBlockId = null;
       activeFieldKey = null;
       await loadPage();
     } catch (error) {
