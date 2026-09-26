@@ -18,10 +18,23 @@ function escapeHtml(value) {
 
 function safeHref(value) {
   const href = String(value ?? "").trim();
-  if (href.startsWith("/") || href.startsWith("#") || /^https:\/\//i.test(href)) {
+  if (!href) return fail("invalid link: empty");
+  if (href.startsWith("#") || /^https:\/\//i.test(href)) {
     return escapeHtml(href);
   }
-  return fail(`invalid link: ${href || "empty"}`);
+
+  // Normalize same-origin legacy/static CMS links such as "./shop.html" to
+  // the canonical storefront route. Old published CMS data must not be able
+  // to blank the entire composed page just because it predates clean routes.
+  try {
+    const url = new URL(href, location.origin + "/");
+    if (url.origin !== location.origin) return fail(`invalid link: ${href}`);
+    let pathname = url.pathname || "/";
+    pathname = pathname === "/index.html" ? "/" : pathname.replace(/\.html$/i, "");
+    return escapeHtml(`${pathname}${url.search}${url.hash}`);
+  } catch {
+    return fail(`invalid link: ${href}`);
+  }
 }
 
 async function requiredJson(url) {
