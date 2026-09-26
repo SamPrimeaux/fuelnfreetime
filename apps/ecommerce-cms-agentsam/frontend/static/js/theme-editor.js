@@ -1086,6 +1086,7 @@
         body: JSON.stringify({ templateKey: templateKey, toIndex: (pageData?.sections || []).length })
       });
       activeSectionKey = result.section_key;
+      activeBlockId = null;
       activeFieldKey = null;
       setNote('Section added.', 'success');
       await loadPage();
@@ -1103,6 +1104,7 @@
         body: JSON.stringify({})
       });
       activeSectionKey = result.section_key;
+      activeBlockId = null;
       activeFieldKey = null;
       setNote('Section duplicated.', 'success');
       await loadPage();
