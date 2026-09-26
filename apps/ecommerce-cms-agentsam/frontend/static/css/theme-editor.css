@@ -1072,6 +1072,141 @@
   flex: 1;
 }
 
+.te-tree-section {
+  margin-bottom: 3px;
+}
+
+.te-block-list {
+  margin: 1px 0 7px 20px;
+  padding-left: 7px;
+  border-left: 1px solid #e2e2dd;
+}
+
+.te-block-row {
+  min-height: 31px;
+  padding: 2px 3px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: #555550;
+}
+
+.te-block-row:hover {
+  background: #f6f6f3;
+}
+
+.te-block-row.is-active {
+  background: #f0ecff;
+  color: #35238f;
+}
+
+.te-block-row__main {
+  min-width: 0;
+  flex: 1;
+  min-height: 27px;
+  padding: 2px 3px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.te-block-row__rail {
+  width: 7px;
+  height: 16px;
+  flex: 0 0 auto;
+  opacity: .45;
+  background-image: radial-gradient(circle, currentColor 1px, transparent 1.2px);
+  background-size: 4px 4px;
+}
+
+.te-block-row__copy {
+  min-width: 0;
+  display: block;
+}
+
+.te-block-row__copy strong,
+.te-block-row__copy small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.te-block-row__copy strong {
+  font-size: 11px;
+  font-weight: 550;
+}
+
+.te-block-row__copy small {
+  margin-top: 1px;
+  color: #8b8b86;
+  font-size: 9px;
+}
+
+.te-block-row:hover .te-tree-row__actions,
+.te-block-row.is-active .te-tree-row__actions {
+  display: flex;
+}
+
+.te-block-row[draggable="true"] {
+  cursor: grab;
+}
+
+.te-block-row.is-dragging {
+  opacity: .45;
+}
+
+.te-block-row.is-drop-target {
+  box-shadow: inset 0 -2px 0 var(--te-accent);
+}
+
+.te-add-block {
+  width: 100%;
+  min-height: 29px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #5c43c6;
+  text-align: left;
+  padding: 0 7px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.te-add-block:hover {
+  background: #f5f2ff;
+}
+
+.te-block-menu {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px;
+  padding: 5px 2px 6px;
+}
+
+.te-block-menu[hidden] {
+  display: none;
+}
+
+.te-block-menu select {
+  min-width: 0;
+  height: 29px;
+  border: 1px solid var(--te-border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--te-text);
+  padding: 0 6px;
+  font: inherit;
+  font-size: 10px;
+}
+
 @media (max-width: 1180px) {
   .theme-studio-workspace {
     grid-template-columns: 210px minmax(360px, 1fr) 292px;
