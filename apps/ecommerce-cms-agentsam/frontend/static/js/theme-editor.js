@@ -1248,6 +1248,7 @@
     if (dirty && !confirm('You have unsaved changes in this section. Switch pages anyway?')) return;
     slug = nextSlug;
     activeSectionKey = null;
+    activeBlockId = null;
     activeFieldKey = null;
     history.replaceState(null, '', '?slug=' + encodeURIComponent(slug));
     closePageMenu();
