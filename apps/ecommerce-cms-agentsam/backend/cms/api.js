@@ -365,7 +365,9 @@ async function markPageDraft(env, pageId, slug) {
   await env.DB.prepare(`UPDATE pages SET status = 'draft', updated_at = datetime('now') WHERE id = ?`)
     .bind(pageId)
     .run();
-  await env.CMS_CACHE?.delete(kvKey(slug));
+  // Keep the last published KV snapshot live while a draft is being edited.
+  // Publishing replaces it atomically via writePublishedSnapshot().
+  void slug;
 }
 
 async function rewriteSectionOrder(env, pageId, orderedKeys) {
