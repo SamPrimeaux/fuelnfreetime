@@ -41,6 +41,12 @@ export const PAGES_CLEAN_REDIRECTS = new Map([
   ["/pages/about/", "/about"],
   ["/pages/community", "/community"],
   ["/pages/community/", "/community"],
+  ["/pages/collaborate", "/collaborate"],
+  ["/pages/collaborate/", "/collaborate"],
+  ["/pages/policies", "/policies"],
+  ["/pages/policies/", "/policies"],
+  ["/pages/terms", "/terms"],
+  ["/pages/terms/", "/terms"],
   ["/pages/cart", "/cart"],
   ["/pages/cart/", "/cart"],
 ]);
