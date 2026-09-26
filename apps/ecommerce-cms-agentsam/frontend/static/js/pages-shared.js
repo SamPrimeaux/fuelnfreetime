@@ -11,6 +11,7 @@ window.PAGE_ROUTES = {
 window.PAGE_SLUG_ORDER = ["home", "shop", "about", "community", "site"];
 
 window.SECTION_FIELDS = {};
+window.SECTION_SCHEMAS = {};
 window.cmsRegistry = null;
 
 window.loadCmsRegistry = async function loadCmsRegistry() {
@@ -18,10 +19,13 @@ window.loadCmsRegistry = async function loadCmsRegistry() {
   const data = await adminFetch("/api/admin/cms/registry");
   window.cmsRegistry = data;
   window.SECTION_FIELDS = {};
+  window.SECTION_SCHEMAS = {};
   for (const [slug, page] of Object.entries(data.pages || {})) {
     window.SECTION_FIELDS[slug] = {};
+    window.SECTION_SCHEMAS[slug] = {};
     for (const [sectionKey, sec] of Object.entries(page.sections || {})) {
-      window.SECTION_FIELDS[slug][sectionKey] = sec.fields;
+      window.SECTION_FIELDS[slug][sectionKey] = sec.fields || [];
+      window.SECTION_SCHEMAS[slug][sectionKey] = sec;
     }
   }
   return data;
