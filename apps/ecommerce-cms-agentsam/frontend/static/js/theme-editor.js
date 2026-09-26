@@ -1161,6 +1161,82 @@
     }
   }
 
+  async function insertBlock(sectionKey, templateKey) {
+    setNote('Adding block…');
+    try {
+      const section = (pageData?.sections || []).find(function(item) { return item.key === sectionKey; });
+      const blocks = section?.content?.__editor?.blocks || [];
+      const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks', {
+        method: 'POST',
+        body: JSON.stringify({ templateKey: templateKey, toIndex: blocks.length })
+      });
+      activeSectionKey = sectionKey;
+      activeBlockId = result.block_id;
+      activeFieldKey = null;
+      setNote('Block added.', 'success');
+      await loadPage();
+      selectBlock(sectionKey, result.block_id, null, true);
+    } catch (error) {
+      setNote(error.message || String(error), 'error');
+    }
+  }
+
+  async function duplicateBlock(sectionKey, blockId) {
+    setNote('Duplicating block…');
+    try {
+      const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId) + '/duplicate', {
+        method: 'POST',
+        body: JSON.stringify({})
+      });
+      activeSectionKey = sectionKey;
+      activeBlockId = result.block_id;
+      activeFieldKey = null;
+      setNote('Block duplicated.', 'success');
+      await loadPage();
+      selectBlock(sectionKey, result.block_id, null, true);
+    } catch (error) {
+      setNote(error.message || String(error), 'error');
+    }
+  }
+
+  async function moveBlock(sectionKey, blockId, toIndex) {
+    try {
+      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId) + '/move', {
+        method: 'POST',
+        body: JSON.stringify({ toIndex: toIndex })
+      });
+      setNote('Block moved.', 'success');
+      await loadPage();
+      selectBlock(sectionKey, blockId, null, true);
+    } catch (error) {
+      setNote(error.message || String(error), 'error');
+    }
+  }
+
+  async function removeBlock(sectionKey, blockId) {
+    const section = (pageData?.sections || []).find(function(item) { return item.key === sectionKey; });
+    const meta = section?.content?.__editor?.blocks?.find(function(item) { return item.id === blockId; });
+    const blockSchema = blockSchemaFor(section, meta);
+    const label = (blockSchema && blockSchema.label) || humanize(blockId);
+    if (!confirm('Remove "' + label + '" from this section?')) return;
+
+    try {
+      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId), {
+        method: 'DELETE'
+      });
+      setNote('Block removed.', 'success');
+      if (activeBlockId === blockId) {
+        activeBlockId = null;
+        activeFieldKey = null;
+      }
+      activeSectionKey = sectionKey;
+      await loadPage();
+      selectSection(sectionKey, null, false);
+    } catch (error) {
+      setNote(error.message || String(error), 'error');
+    }
+  }
+
   async function switchPage(nextSlug) {
     if (!nextSlug || nextSlug === slug) {
       closePageMenu();
