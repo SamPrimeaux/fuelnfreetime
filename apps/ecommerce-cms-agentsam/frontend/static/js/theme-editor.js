@@ -109,12 +109,38 @@
     return schemaForSection(currentSection());
   }
 
+  function currentBlockMeta() {
+    const section = currentSection();
+    const blocks = section && section.content && section.content.__editor && section.content.__editor.blocks;
+    if (!activeBlockId || !Array.isArray(blocks)) return null;
+    return blocks.find(function(block) { return block.id === activeBlockId; }) || null;
+  }
+
+  function currentBlockSchema() {
+    const sectionSchema = currentSectionSchema();
+    const meta = currentBlockMeta();
+    if (!sectionSchema || !meta || !Array.isArray(sectionSchema.blocks)) return null;
+    return sectionSchema.blocks.find(function(block) { return block.key === meta.templateKey; }) || null;
+  }
+
   function currentSchema() {
+    const block = currentBlockSchema();
+    if (block) {
+      return (block.fields || []).map(function(field) {
+        return { ...field, key: activeBlockId + '.' + field.key, blockRelativeKey: field.key };
+      });
+    }
     const schema = currentSectionSchema();
     return (schema && schema.fields) || (window.SECTION_FIELDS && window.SECTION_FIELDS[slug] && window.SECTION_FIELDS[slug][activeSectionKey]) || [];
   }
 
   function currentSettings() {
+    const block = currentBlockSchema();
+    if (block && Array.isArray(block.settings)) {
+      return block.settings.map(function(field) {
+        return { ...field, key: activeBlockId + '.__settings.' + field.key, blockRelativeKey: field.key };
+      });
+    }
     const schema = currentSectionSchema();
     return (schema && schema.settings) || [];
   }
