@@ -875,6 +875,189 @@
 
 .te-upload-target input { display: none; }
 
+
+.te-setting-group {
+  margin-bottom: 18px;
+}
+
+.te-setting-group__title {
+  margin: 2px 0 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #777772;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.te-range-control {
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) 70px auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.te-range-control input[type="range"] {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  accent-color: var(--te-accent);
+}
+
+.te-range-control input[type="number"] {
+  min-width: 0;
+  text-align: right;
+}
+
+.te-range-control > span {
+  font-size: 10px;
+  color: var(--te-muted);
+  min-width: 16px;
+}
+
+.te-color-control {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 8px;
+}
+
+.te-color-control input[type="color"] {
+  width: 42px;
+  min-height: 36px;
+  padding: 3px;
+  cursor: pointer;
+}
+
+.te-rich-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 5px;
+  border: 1px solid #deded9;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background: #f7f7f5;
+}
+
+.te-rich-toolbar button {
+  min-width: 28px;
+  height: 26px;
+  border: 0;
+  border-radius: 5px;
+  padding: 0 7px;
+  background: transparent;
+  color: #4c4c48;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.te-rich-toolbar button:hover {
+  background: #e9e9e5;
+}
+
+.te-rich-input {
+  min-height: 92px;
+  padding: 9px 10px;
+  border: 1px solid #deded9;
+  border-radius: 0 0 8px 8px;
+  background: #fff;
+  font-size: 12px;
+  line-height: 1.45;
+  outline: none;
+}
+
+.te-rich-input:focus {
+  border-color: var(--te-accent);
+  box-shadow: 0 0 0 2px var(--te-accent-soft);
+}
+
+.te-tree-row[draggable="true"] {
+  cursor: grab;
+}
+
+.te-tree-row.is-dragging {
+  opacity: .45;
+}
+
+.te-tree-row.is-drop-target {
+  box-shadow: inset 0 -2px 0 var(--te-accent);
+}
+
+.te-tree-row__actions {
+  display: none;
+  gap: 2px;
+  align-items: center;
+}
+
+.te-tree-row:hover .te-tree-row__actions,
+.te-tree-row.is-active .te-tree-row__actions {
+  display: flex;
+}
+
+.te-tree-mini {
+  width: 23px;
+  height: 23px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #777772;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+}
+
+.te-tree-mini:hover {
+  background: rgba(0,0,0,.06);
+  color: #222;
+}
+
+.te-add-section {
+  width: calc(100% - 16px);
+  margin: 8px;
+  height: 34px;
+  border: 1px dashed #cbc9c5;
+  border-radius: 8px;
+  background: #fafaf8;
+  color: #5c43c6;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.te-add-section:hover {
+  border-color: #9b8ce7;
+  background: #f5f2ff;
+}
+
+.te-section-menu {
+  margin: 10px 8px 0;
+  padding: 8px;
+  border: 1px solid var(--te-border);
+  border-radius: 9px;
+  background: #fff;
+}
+
+.te-section-menu select {
+  width: 100%;
+  height: 34px;
+  border: 1px solid var(--te-border);
+  border-radius: 7px;
+  font: inherit;
+  font-size: 11px;
+  padding: 0 8px;
+  background: #fff;
+}
+
+.te-section-menu__actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.te-section-menu__actions button {
+  flex: 1;
+}
+
 @media (max-width: 1180px) {
   .theme-studio-workspace {
     grid-template-columns: 210px minmax(360px, 1fr) 292px;
