@@ -89,6 +89,11 @@
 
     const responsive = editor.responsive || {};
     sectionEl.dataset.cmsHideMobile = responsive.hideMobile === true ? "true" : "false";
+    if (responsive.carouselMobile !== undefined) {
+      sectionEl.dataset.cmsCarouselMobile = responsive.carouselMobile === false ? "false" : "true";
+    } else {
+      delete sectionEl.dataset.cmsCarouselMobile;
+    }
   }
 
   function rewriteCloneIdentity(node, fromKey, toKey) {
