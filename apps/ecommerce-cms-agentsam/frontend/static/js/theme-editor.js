@@ -12,6 +12,7 @@
   let mediaLibrary = [];
   let mediaTarget = null;
   let dirty = false;
+  const dirtySections = new Set();
   let connected = false;
   let device = localStorage.getItem('fnf-theme-editor-device') || 'desktop';
   let showOutlines = localStorage.getItem('fnf-theme-editor-outlines') !== '0';
@@ -165,7 +166,7 @@
     const id = 'te-field-' + section.key + '-' + field.key.replace(/[^a-zA-Z0-9_-]/g, '-');
 
     if (fieldKind(field) === 'media') {
-      const isImage = /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(String(value)) || String(value).startsWith('/media/');
+      const isImage = /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(String(value));
       return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label>' + cmsEscapeHtml(field.label) + '<span>Media</span></label>' +
         '<div class="te-media-drop" data-media-drop="' + cmsEscapeAttr(field.key) + '"><div class="te-media-preview">' +
         (value && isImage ? '<img src="' + safeValue + '" alt="">' : '<div class="te-media-empty">' + (value ? cmsEscapeHtml(String(value).split('/').pop()) : 'Drop media here or choose from library') + '</div>') +
@@ -257,6 +258,7 @@
         cmsSetPath(section.content, activeFieldKey, input.value);
         syncMediaPreview(activeFieldKey, input.value);
         setDirty(true);
+        dirtySections.add(section.key);
         schedulePatch();
         byId('te-selected-path').textContent = slug + ' / ' + section.key + ' / ' + activeFieldKey;
       });
@@ -310,7 +312,7 @@
     const zone = document.querySelector('[data-media-drop="' + CSS.escape(fieldKey) + '"]');
     if (!zone) return;
     const preview = zone.querySelector('.te-media-preview');
-    const isImage = /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(String(value)) || String(value).startsWith('/media/');
+    const isImage = /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(String(value));
     preview.innerHTML = value && isImage ? '<img src="' + cmsEscapeAttr(value) + '" alt="">' : '<div class="te-media-empty">' + (value ? cmsEscapeHtml(String(value).split('/').pop()) : 'Drop media here or choose from library') + '</div>';
   }
 
@@ -320,6 +322,7 @@
     cmsSetPath(section.content, fieldKey, url);
     activeFieldKey = fieldKey;
     setDirty(true);
+    dirtySections.add(section.key);
     renderInspector();
     schedulePatch();
     closeMediaPicker();
@@ -476,6 +479,7 @@
       renderPageOptions('');
       renderTree();
       renderInspector();
+      dirtySections.clear();
       setDirty(false);
       refreshPreview();
     } catch (error) {
@@ -486,27 +490,34 @@
   }
 
   async function saveDraft() {
-    const section = currentSection();
-    if (!section) return;
+    const keys = dirtySections.size ? Array.from(dirtySections) : (activeSectionKey ? [activeSectionKey] : []);
+    if (!keys.length) return true;
     const button = byId('te-save');
     button.disabled = true;
     setNote('Saving…');
     try {
-      const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(section.key), {
-        method: 'PUT',
-        body: JSON.stringify({ content: section.content })
-      });
-      section.status = 'draft';
-      section.updated_at = result.updated_at || section.updated_at;
+      for (const key of keys) {
+        const section = pageData && pageData.sections && pageData.sections.find(function(item) { return item.key === key; });
+        if (!section) continue;
+        const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(section.key), {
+          method: 'PUT',
+          body: JSON.stringify({ content: section.content })
+        });
+        section.status = 'draft';
+        section.updated_at = result.updated_at || section.updated_at;
+      }
       pageData.status = 'draft';
+      dirtySections.clear();
       setDirty(false);
-      setNote('Draft saved.', 'success');
+      setNote(keys.length > 1 ? keys.length + ' section drafts saved.' : 'Draft saved.', 'success');
       renderTree();
       renderInspector();
       schedulePreview();
+      return true;
     } catch (error) {
       setNote(error.message || String(error), 'error');
       setSaveState('Save failed', 'error');
+      return false;
     } finally {
       button.disabled = false;
     }
@@ -517,7 +528,7 @@
     button.disabled = true;
     button.textContent = 'Publishing…';
     try {
-      if (dirty) await saveDraft();
+      if (dirty && !(await saveDraft())) throw new Error('Could not save draft before publishing');
       const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/publish', { method: 'POST' });
       pageData.status = 'published';
       (pageData.sections || []).forEach(function(section) { section.status = 'published'; });
@@ -559,6 +570,7 @@
       onPublished: function() {
         if (pageData) pageData.status = 'published';
         (pageData && pageData.sections || []).forEach(function(section) { section.status = 'published'; });
+        dirtySections.clear();
         setDirty(false);
         renderTree();
         renderInspector();
@@ -645,7 +657,6 @@
     const form = new FormData();
     files.forEach(function(file) { form.append('files', file); });
     form.append('prefix', 'uploads/theme-editor/');
-    form.append('folder', 'images');
 
     const response = await fetch('/api/admin/media', { method: 'POST', credentials: 'include', body: form });
     if (response.status === 401) {
