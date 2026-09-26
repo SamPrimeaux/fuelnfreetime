@@ -433,21 +433,38 @@ export const PAGE_REGISTRY = {
         sortOrder: 1,
         fields: [
           { key: "title", label: "Section title", type: "text" },
-          { key: "card1.name", label: "Tile 1 name", type: "text" },
-          { key: "card1.imageUrl", label: "Tile 1 image", type: "url", media: true },
-          { key: "card1.href", label: "Tile 1 link", type: "text" },
-          { key: "card2.name", label: "Tile 2 name", type: "text" },
-          { key: "card2.imageUrl", label: "Tile 2 image", type: "url", media: true },
-          { key: "card2.href", label: "Tile 2 link", type: "text" },
-          { key: "card3.name", label: "Tile 3 name", type: "text" },
-          { key: "card3.imageUrl", label: "Tile 3 image", type: "url", media: true },
-          { key: "card3.href", label: "Tile 3 link", type: "text" },
+        ],
+        blocks: [
+          {
+            key: "collection-card",
+            label: "Collection card",
+            repeatable: true,
+            min: 1,
+            max: 12,
+            fields: [
+              { key: "name", label: "Name", type: "text" },
+              { key: "imageUrl", label: "Image", type: "media" },
+              { key: "href", label: "Link", type: "link" },
+            ],
+            defaultContent: {
+              name: "New collection",
+              imageUrl: "/assets/presets/fuel-free-time/earned-hours-hero.webp",
+              href: "/shop/collections",
+            },
+          },
         ],
         defaultContent: {
           title: "Collections",
           card1: { name: "High Octane Collection", imageUrl: "/assets/presets/fuel-free-time/earned-hours-hero.webp", href: "/shop/collections/high-octane-performance-gear" },
           card2: { name: "Masters Collection", imageUrl: "/assets/presets/fuel-free-time/masters.webp", href: "/shop/collections/masters" },
           card3: { name: "Everyday Essentials", imageUrl: "/assets/presets/fuel-free-time/essentials.webp", href: "/shop/collections/essentials" },
+          __editor: {
+            blocks: [
+              { id: "card1", templateKey: "collection-card", enabled: true },
+              { id: "card2", templateKey: "collection-card", enabled: true },
+              { id: "card3", templateKey: "collection-card", enabled: true },
+            ],
+          },
         },
       },
       stories: {
