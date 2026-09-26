@@ -175,9 +175,11 @@ function inferredGuiType(field) {
 
 export function normalizeCmsField(field) {
   const type = inferredGuiType(field);
-  const normalized = { ...field, type };
-  delete normalized.media;
-  return normalized;
+  return {
+    ...field,
+    type,
+    media: type === "media" || type === "video",
+  };
 }
 
 function defaultSectionMetadata(key, sec) {
