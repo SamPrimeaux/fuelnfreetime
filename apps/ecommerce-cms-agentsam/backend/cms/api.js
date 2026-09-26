@@ -139,6 +139,7 @@ async function publishSectionsToR2(env, slug, pageId) {
     .all();
 
   for (const row of results) {
+    if (row.status === "removed") continue;
     let draft = await readR2Json(env, row.content_r2_key || draftKey(slug, row.section_key));
     if (!draft) {
       const content = parseContent(row.content_json);
@@ -331,6 +332,211 @@ export async function updateSection(env, slug, sectionKey, body) {
   return { ok: true, version: meta.version, updated_at: meta.updated_at };
 }
 
+function sectionKeyBase(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .slice(0, 48) || "section";
+}
+
+async function ensurePage(env, slug) {
+  let page = await loadPageRow(env, slug);
+  if (!page) {
+    const seeded = await seedPageFromRegistry(env, slug);
+    if (seeded.error) return seeded;
+    page = await loadPageRow(env, slug);
+  }
+  return { page };
+}
+
+async function orderedSectionRows(env, pageId) {
+  const { results } = await env.DB.prepare(
+    `SELECT id, section_key, sort_order, content_r2_key, content_version, status, updated_at
+     FROM page_sections
+     WHERE page_id = ?
+     ORDER BY sort_order ASC, id ASC`
+  ).bind(pageId).all();
+  return results || [];
+}
+
+async function markPageDraft(env, pageId, slug) {
+  await env.DB.prepare(`UPDATE pages SET status = 'draft', updated_at = datetime('now') WHERE id = ?`)
+    .bind(pageId)
+    .run();
+  await env.CMS_CACHE?.delete(kvKey(slug));
+}
+
+async function rewriteSectionOrder(env, pageId, orderedKeys) {
+  let order = 0;
+  for (const key of orderedKeys) {
+    await env.DB.prepare(
+      `UPDATE page_sections SET sort_order = ?, updated_at = datetime('now') WHERE page_id = ? AND section_key = ?`
+    ).bind(order, pageId, key).run();
+    order += 10;
+  }
+}
+
+async function sectionContentForRow(env, slug, row) {
+  const doc = await readSectionContent(env, slug, row.section_key);
+  return doc?.content || {};
+}
+
+export async function insertSection(env, slug, body = {}) {
+  const def = PAGE_REGISTRY[slug];
+  if (!def) return { error: "Unknown page", status: 404 };
+
+  const templateKey = String(body.templateKey || body.template_key || "").trim();
+  const template = def.sections?.[templateKey];
+  if (!template) return { error: "Unknown section template", status: 400 };
+
+  const ensured = await ensurePage(env, slug);
+  if (ensured.error) return ensured;
+  const page = ensured.page;
+  const rows = await orderedSectionRows(env, page.id);
+
+  const removedCanonical = rows.find((row) => row.section_key === templateKey && row.status === "removed");
+  let sectionKey = removedCanonical?.section_key || null;
+  let sortOrder = rows.length ? Math.max(...rows.map((row) => Number(row.sort_order || 0))) + 10 : 0;
+
+  if (!sectionKey) {
+    const canonicalExists = rows.some((row) => row.section_key === templateKey && row.status !== "removed");
+    sectionKey = canonicalExists
+      ? `${sectionKeyBase(templateKey)}-${crypto.randomUUID().slice(0, 8)}`
+      : templateKey;
+  }
+
+  const content = structuredClone(template.defaultContent || {});
+  content.__editor = {
+    ...(content.__editor || {}),
+    templateKey,
+    visibility: { enabled: true, ...(content.__editor?.visibility || {}) },
+  };
+
+  const existing = rows.find((row) => row.section_key === sectionKey);
+  const meta = await persistSectionDraft(env, slug, page.id, sectionKey, content, sortOrder);
+  if (existing?.status === "removed") {
+    await env.DB.prepare(
+      `UPDATE page_sections SET status = 'draft', updated_at = datetime('now') WHERE page_id = ? AND section_key = ?`
+    ).bind(page.id, sectionKey).run();
+  }
+
+  const nextRows = await orderedSectionRows(env, page.id);
+  const activeKeys = nextRows.filter((row) => row.status !== "removed").map((row) => row.section_key);
+  const currentIndex = activeKeys.indexOf(sectionKey);
+  if (currentIndex >= 0) activeKeys.splice(currentIndex, 1);
+  const toIndex = Number.isInteger(body.toIndex)
+    ? Math.max(0, Math.min(body.toIndex, activeKeys.length))
+    : activeKeys.length;
+  activeKeys.splice(toIndex, 0, sectionKey);
+  await rewriteSectionOrder(env, page.id, activeKeys);
+  await markPageDraft(env, page.id, slug);
+
+  return { ok: true, section_key: sectionKey, template_key: templateKey, version: meta.version };
+}
+
+export async function duplicateSection(env, slug, sectionKey, body = {}) {
+  const ensured = await ensurePage(env, slug);
+  if (ensured.error) return ensured;
+  const page = ensured.page;
+  const rows = await orderedSectionRows(env, page.id);
+  const sourceRow = rows.find((row) => row.section_key === sectionKey && row.status !== "removed");
+  if (!sourceRow) return { error: "Section not found", status: 404 };
+
+  const source = await sectionContentForRow(env, slug, sourceRow);
+  const templateKey = source.__editor?.templateKey || (PAGE_REGISTRY[slug]?.sections?.[sectionKey] ? sectionKey : null);
+  if (!templateKey || !PAGE_REGISTRY[slug]?.sections?.[templateKey]) {
+    return { error: "Section template is not registered", status: 409 };
+  }
+
+  const newKey = `${sectionKeyBase(templateKey)}-${crypto.randomUUID().slice(0, 8)}`;
+  const content = structuredClone(source);
+  content.__editor = {
+    ...(content.__editor || {}),
+    templateKey,
+    visibility: { enabled: true, ...(content.__editor?.visibility || {}) },
+  };
+
+  await persistSectionDraft(env, slug, page.id, newKey, content, Number(sourceRow.sort_order || 0) + 5);
+  const activeKeys = (await orderedSectionRows(env, page.id))
+    .filter((row) => row.status !== "removed")
+    .map((row) => row.section_key);
+  const from = activeKeys.indexOf(newKey);
+  if (from >= 0) activeKeys.splice(from, 1);
+  const sourceIndex = activeKeys.indexOf(sectionKey);
+  activeKeys.splice(sourceIndex < 0 ? activeKeys.length : sourceIndex + 1, 0, newKey);
+  await rewriteSectionOrder(env, page.id, activeKeys);
+  await markPageDraft(env, page.id, slug);
+
+  return { ok: true, section_key: newKey, template_key: templateKey };
+}
+
+export async function moveSection(env, slug, sectionKey, body = {}) {
+  const ensured = await ensurePage(env, slug);
+  if (ensured.error) return ensured;
+  const page = ensured.page;
+  const rows = await orderedSectionRows(env, page.id);
+  const activeKeys = rows.filter((row) => row.status !== "removed").map((row) => row.section_key);
+  const fromIndex = activeKeys.indexOf(sectionKey);
+  if (fromIndex < 0) return { error: "Section not found", status: 404 };
+
+  const parsed = Number(body.toIndex);
+  if (!Number.isInteger(parsed)) return { error: "toIndex integer required", status: 400 };
+  const toIndex = Math.max(0, Math.min(parsed, activeKeys.length - 1));
+  activeKeys.splice(fromIndex, 1);
+  activeKeys.splice(toIndex, 0, sectionKey);
+  await rewriteSectionOrder(env, page.id, activeKeys);
+  await markPageDraft(env, page.id, slug);
+
+  return { ok: true, section_key: sectionKey, to_index: toIndex };
+}
+
+export async function setSectionVisibility(env, slug, sectionKey, body = {}) {
+  const ensured = await ensurePage(env, slug);
+  if (ensured.error) return ensured;
+  const page = ensured.page;
+  const rows = await orderedSectionRows(env, page.id);
+  const row = rows.find((entry) => entry.section_key === sectionKey && entry.status !== "removed");
+  if (!row) return { error: "Section not found", status: 404 };
+
+  const content = await sectionContentForRow(env, slug, row);
+  content.__editor = {
+    ...(content.__editor || {}),
+    visibility: {
+      ...(content.__editor?.visibility || {}),
+      enabled: body.enabled !== false,
+    },
+  };
+  await persistSectionDraft(env, slug, page.id, sectionKey, content, row.sort_order);
+  await markPageDraft(env, page.id, slug);
+
+  return { ok: true, section_key: sectionKey, enabled: body.enabled !== false };
+}
+
+export async function removeSection(env, slug, sectionKey) {
+  const ensured = await ensurePage(env, slug);
+  if (ensured.error) return ensured;
+  const page = ensured.page;
+  const rows = await orderedSectionRows(env, page.id);
+  const row = rows.find((entry) => entry.section_key === sectionKey && entry.status !== "removed");
+  if (!row) return { error: "Section not found", status: 404 };
+
+  const content = await sectionContentForRow(env, slug, row);
+  content.__editor = {
+    ...(content.__editor || {}),
+    removed: true,
+    visibility: { ...(content.__editor?.visibility || {}), enabled: false },
+  };
+  await persistSectionDraft(env, slug, page.id, sectionKey, content, row.sort_order);
+  await env.DB.prepare(
+    `UPDATE page_sections SET status = 'removed', updated_at = datetime('now') WHERE page_id = ? AND section_key = ?`
+  ).bind(page.id, sectionKey).run();
+  await markPageDraft(env, page.id, slug);
+
+  return { ok: true, section_key: sectionKey, removed: true };
+}
+
 export async function publishPage(env, slug) {
   let page = await loadPageRow(env, slug);
   if (!page) {
@@ -342,7 +548,7 @@ export async function publishPage(env, slug) {
   await publishSectionsToR2(env, slug, page.id);
 
   await env.DB.prepare(
-    `UPDATE page_sections SET status = 'published', updated_at = datetime('now') WHERE page_id = ?`
+    `UPDATE page_sections SET status = 'published', updated_at = datetime('now') WHERE page_id = ? AND status != 'removed'`
   )
     .bind(page.id)
     .run();
@@ -559,6 +765,58 @@ export async function handleAdminCmsApi(request, env, url) {
     return json(result);
   }
 
+  m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections$/);
+  if (m && method === "POST") {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: "Invalid JSON" }, { status: 400 });
+    }
+    const result = await insertSection(env, m[1], body);
+    if (result.error) return json({ error: result.error }, { status: result.status });
+    return json(result);
+  }
+
+  m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections\/([a-z0-9-]+)\/duplicate$/);
+  if (m && method === "POST") {
+    let body = {};
+    try {
+      body = await request.json();
+    } catch {
+      /* optional body */
+    }
+    const result = await duplicateSection(env, m[1], m[2], body);
+    if (result.error) return json({ error: result.error }, { status: result.status });
+    return json(result);
+  }
+
+  m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections\/([a-z0-9-]+)\/move$/);
+  if (m && method === "POST") {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: "Invalid JSON" }, { status: 400 });
+    }
+    const result = await moveSection(env, m[1], m[2], body);
+    if (result.error) return json({ error: result.error }, { status: result.status });
+    return json(result);
+  }
+
+  m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections\/([a-z0-9-]+)\/visibility$/);
+  if (m && method === "PUT") {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: "Invalid JSON" }, { status: 400 });
+    }
+    const result = await setSectionVisibility(env, m[1], m[2], body);
+    if (result.error) return json({ error: result.error }, { status: result.status });
+    return json(result);
+  }
+
   m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections\/([a-z0-9-]+)$/);
   if (m && method === "PUT") {
     let body;
@@ -568,6 +826,11 @@ export async function handleAdminCmsApi(request, env, url) {
       return json({ error: "Invalid JSON" }, { status: 400 });
     }
     const result = await updateSection(env, m[1], m[2], body);
+    if (result.error) return json({ error: result.error }, { status: result.status });
+    return json(result);
+  }
+  if (m && method === "DELETE") {
+    const result = await removeSection(env, m[1], m[2]);
     if (result.error) return json({ error: result.error }, { status: result.status });
     return json(result);
   }
