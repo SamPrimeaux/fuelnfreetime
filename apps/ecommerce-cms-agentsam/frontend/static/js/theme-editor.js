@@ -968,7 +968,16 @@
       if (!pages.some(function(page) { return page.slug === slug; })) pages.unshift({ slug: slug, title: pageData.title || humanize(slug) });
       if (!activeSectionKey || !pageData.sections.some(function(section) { return section.key === activeSectionKey; })) {
         activeSectionKey = pageData.sections && pageData.sections[0] ? pageData.sections[0].key : null;
+        activeBlockId = null;
         activeFieldKey = null;
+      }
+      if (activeBlockId) {
+        const selectedSection = pageData.sections.find(function(section) { return section.key === activeSectionKey; });
+        const selectedBlocks = selectedSection?.content?.__editor?.blocks;
+        if (!Array.isArray(selectedBlocks) || !selectedBlocks.some(function(block) { return block.id === activeBlockId; })) {
+          activeBlockId = null;
+          activeFieldKey = null;
+        }
       }
 
       byId('te-page-title').textContent = pageData.title || humanize(slug);
