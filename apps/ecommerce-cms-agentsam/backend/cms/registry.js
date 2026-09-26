@@ -4,11 +4,216 @@
  */
 import { M } from "./media-paths.js";
 
-/** @typedef {{ key: string, label: string, type: 'text'|'textarea'|'url', media?: boolean }} FieldDef */
-
 /**
- * @type {Record<string, { title: string, sections: Record<string, { sortOrder: number, fields: FieldDef[], defaultContent: object }> }>}
+ * GUI field types supported by the CMS editor. Existing registry entries can keep
+ * legacy "url" declarations; registryForAdmin() normalizes them to link/media/video.
+ *
+ * @typedef {'text'|'rich_text'|'textarea'|'boolean'|'select'|'range'|'number'|'color'|'link'|'media'|'video'|'product'|'collection'|'variant'|'url'} CmsFieldType
+ * @typedef {{
+ *   key: string,
+ *   label: string,
+ *   type: CmsFieldType,
+ *   media?: boolean,
+ *   help?: string,
+ *   group?: string,
+ *   default?: unknown,
+ *   options?: Array<{label:string,value:string}>,
+ *   min?: number,
+ *   max?: number,
+ *   step?: number,
+ *   unit?: string,
+ *   placeholder?: string,
+ *   productKey?: string
+ * }} FieldDef
+ *
+ * @typedef {{
+ *   sortOrder: number,
+ *   label?: string,
+ *   icon?: string,
+ *   capabilities?: Record<string, boolean>,
+ *   fields: FieldDef[],
+ *   blocks?: Array<object>,
+ *   settings?: FieldDef[],
+ *   motion?: object,
+ *   responsive?: object,
+ *   guardrails?: object,
+ *   defaultContent: object
+ * }} SectionDef
+ *
+ * @type {Record<string, { title: string, sections: Record<string, SectionDef> }>}
  */
+export const CMS_FIELD_TYPES = Object.freeze([
+  "text",
+  "rich_text",
+  "textarea",
+  "boolean",
+  "select",
+  "range",
+  "number",
+  "color",
+  "link",
+  "media",
+  "video",
+  "product",
+  "collection",
+  "variant",
+]);
+
+const COMMON_SECTION_SETTINGS = Object.freeze([
+  {
+    key: "__editor.layout.width",
+    label: "Width",
+    type: "select",
+    group: "layout",
+    default: "inherit",
+    options: [
+      { label: "Theme default", value: "inherit" },
+      { label: "Contained", value: "contained" },
+      { label: "Wide", value: "wide" },
+      { label: "Full bleed", value: "full-bleed" },
+    ],
+  },
+  {
+    key: "__editor.layout.alignment",
+    label: "Alignment",
+    type: "select",
+    group: "layout",
+    default: "inherit",
+    options: [
+      { label: "Theme default", value: "inherit" },
+      { label: "Left", value: "left" },
+      { label: "Center", value: "center" },
+      { label: "Right", value: "right" },
+    ],
+  },
+  {
+    key: "__editor.spacing.paddingTop",
+    label: "Top padding",
+    type: "range",
+    group: "spacing",
+    default: 0,
+    min: 0,
+    max: 160,
+    step: 4,
+    unit: "px",
+  },
+  {
+    key: "__editor.spacing.paddingBottom",
+    label: "Bottom padding",
+    type: "range",
+    group: "spacing",
+    default: 0,
+    min: 0,
+    max: 160,
+    step: 4,
+    unit: "px",
+  },
+  {
+    key: "__editor.appearance.backgroundEnabled",
+    label: "Background",
+    type: "boolean",
+    group: "appearance",
+    default: false,
+  },
+  {
+    key: "__editor.appearance.backgroundColor",
+    label: "Background color",
+    type: "color",
+    group: "appearance",
+    default: "#ffffff",
+  },
+  {
+    key: "__editor.motion.preset",
+    label: "Motion preset",
+    type: "select",
+    group: "motion",
+    default: "inherit",
+    options: [
+      { label: "Theme default", value: "inherit" },
+      { label: "None", value: "none" },
+      { label: "Fade", value: "fade" },
+      { label: "Parallax", value: "parallax" },
+      { label: "Blur + recede", value: "blur-recede" },
+      { label: "Horizontal scrub", value: "horizontal-scrub" },
+      { label: "Sticky", value: "sticky" },
+      { label: "Marquee", value: "marquee" },
+    ],
+  },
+  {
+    key: "__editor.motion.intensity",
+    label: "Motion intensity",
+    type: "range",
+    group: "motion",
+    default: 0.25,
+    min: 0,
+    max: 1,
+    step: 0.05,
+  },
+  {
+    key: "__editor.responsive.hideMobile",
+    label: "Hide on mobile",
+    type: "boolean",
+    group: "responsive",
+    default: false,
+  },
+  {
+    key: "__editor.visibility.enabled",
+    label: "Visible",
+    type: "boolean",
+    group: "visibility",
+    default: true,
+  },
+]);
+
+function inferredGuiType(field) {
+  if (CMS_FIELD_TYPES.includes(field.type)) return field.type;
+  const haystack = `${field.key || ""} ${field.label || ""}`.toLowerCase();
+  if (field.media) return /video/.test(haystack) ? "video" : "media";
+  if (field.type === "url") return /image|video|media|logo|glb|gltf|model/.test(haystack) ? (/video/.test(haystack) ? "video" : "media") : "link";
+  return field.type || "text";
+}
+
+export function normalizeCmsField(field) {
+  const type = inferredGuiType(field);
+  const normalized = { ...field, type };
+  delete normalized.media;
+  return normalized;
+}
+
+function defaultSectionMetadata(key, sec) {
+  return {
+    label: sec.label || key.replace(/[_-]+/g, " ").replace(/\b\w/g, (m) => m.toUpperCase()),
+    icon: sec.icon || "section",
+    capabilities: {
+      edit: true,
+      media: true,
+      settings: true,
+      reorder: false,
+      duplicate: false,
+      remove: false,
+      blocks: Array.isArray(sec.blocks) && sec.blocks.length > 0,
+      ...(sec.capabilities || {}),
+    },
+    blocks: structuredClone(sec.blocks || []),
+    settings: [...COMMON_SECTION_SETTINGS, ...(sec.settings || [])].map(normalizeCmsField),
+    motion: structuredClone(sec.motion || {
+      presets: ["inherit", "none", "fade", "parallax", "blur-recede", "horizontal-scrub", "sticky", "marquee"],
+      default: "inherit",
+    }),
+    responsive: structuredClone(sec.responsive || {
+      desktop: true,
+      tablet: true,
+      mobile: true,
+    }),
+    guardrails: structuredClone(sec.guardrails || {
+      maxBlocks: 24,
+      destructiveRequiresConfirmation: true,
+      allowRawCss: false,
+      allowRawHtml: false,
+    }),
+  };
+}
+
 export const PAGE_REGISTRY = {
   site: {
     title: "Site (global)",
@@ -477,15 +682,30 @@ export function registryForAdmin() {
     pages[slug] = {
       title: def.title,
       sections: Object.fromEntries(
-        Object.entries(def.sections).map(([key, sec]) => [
-          key,
-          { sortOrder: sec.sortOrder, fields: sec.fields },
-        ])
+        Object.entries(def.sections).map(([key, sec]) => {
+          const meta = defaultSectionMetadata(key, sec);
+          return [
+            key,
+            {
+              sortOrder: sec.sortOrder,
+              label: meta.label,
+              icon: meta.icon,
+              capabilities: meta.capabilities,
+              fields: sec.fields.map(normalizeCmsField),
+              blocks: meta.blocks,
+              settings: meta.settings,
+              motion: meta.motion,
+              responsive: meta.responsive,
+              guardrails: meta.guardrails,
+            },
+          ];
+        })
       ),
     };
   }
   return {
     ok: true,
+    fieldTypes: CMS_FIELD_TYPES,
     pages,
     pageSlugs: PAGE_SLUGS,
     storefrontSlugs: PAGE_SLUGS.filter((s) => s !== "site"),
