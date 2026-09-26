@@ -146,6 +146,81 @@
     }
   }
 
+  function rewriteBlockIdentity(node, fromId, toId, templateKey) {
+    node.dataset.cmsBlock = toId;
+    if (templateKey) node.dataset.cmsBlockTemplate = templateKey;
+    node.querySelectorAll("[data-cms]").forEach((el) => {
+      const value = el.dataset.cms || "";
+      if (value.startsWith(fromId + ".")) {
+        el.dataset.cms = toId + value.slice(fromId.length);
+      }
+    });
+    if ((node.dataset.cms || "").startsWith(fromId + ".")) {
+      node.dataset.cms = toId + node.dataset.cms.slice(fromId.length);
+    }
+
+    const idMap = new Map();
+    node.querySelectorAll("[id]").forEach((el) => {
+      const original = el.id;
+      const next = original + "--" + toId;
+      idMap.set(original, next);
+      el.id = next;
+    });
+    node.querySelectorAll("[href^='#']").forEach((el) => {
+      const original = el.getAttribute("href").slice(1);
+      if (idMap.has(original)) el.setAttribute("href", "#" + idMap.get(original));
+    });
+    return node;
+  }
+
+  function applyBlocks(sectionEl, content) {
+    const blockMeta = content?.__editor?.blocks;
+    if (!Array.isArray(blockMeta)) return;
+
+    const existing = new Map(
+      Array.from(sectionEl.querySelectorAll("[data-cms-block]")).map((el) => [el.dataset.cmsBlock, el])
+    );
+    const templates = new Map();
+    for (const el of existing.values()) {
+      const templateKey = el.dataset.cmsBlockTemplate;
+      if (templateKey && !templates.has(templateKey)) templates.set(templateKey, el.cloneNode(true));
+    }
+
+    const allowed = new Set(blockMeta.map((block) => block.id));
+    for (const [id, node] of existing) {
+      if (!allowed.has(id)) node.hidden = true;
+    }
+
+    for (const block of blockMeta) {
+      let node = existing.get(block.id);
+      if (!node) {
+        const template = templates.get(block.templateKey);
+        if (!template) continue;
+        const sourceId = template.dataset.cmsBlock;
+        node = rewriteBlockIdentity(template.cloneNode(true), sourceId, block.id, block.templateKey);
+        template.parentNode?.appendChild(node);
+        const anchor = Array.from(sectionEl.querySelectorAll("[data-cms-block-template]"))
+          .find((candidate) => candidate.dataset.cmsBlockTemplate === block.templateKey);
+        anchor?.parentNode?.appendChild(node);
+        existing.set(block.id, node);
+      }
+      node.hidden = block.enabled === false;
+    }
+
+    const orderedNodes = blockMeta
+      .map((block) => existing.get(block.id))
+      .filter(Boolean);
+    const groups = new Map();
+    for (const node of orderedNodes) {
+      if (!node.parentNode) continue;
+      if (!groups.has(node.parentNode)) groups.set(node.parentNode, []);
+      groups.get(node.parentNode).push(node);
+    }
+    for (const [parent, nodes] of groups) {
+      for (const node of nodes) parent.appendChild(node);
+    }
+  }
+
   function applySections(sections) {
     editorStyle();
     const byKey = Object.fromEntries(sections.map((section) => [section.key, section.content || {}]));
@@ -155,7 +230,10 @@
 
     document.querySelectorAll("[data-cms-section]").forEach((sectionEl) => {
       const content = byKey[sectionEl.dataset.cmsSection];
-      if (content) applyEditorSettings(sectionEl, content);
+      if (content) {
+        applyEditorSettings(sectionEl, content);
+        applyBlocks(sectionEl, content);
+      }
     });
 
     document.querySelectorAll("[data-cms]").forEach((el) => {
