@@ -114,8 +114,9 @@
   }
 
   function navItem(label, href, labelKey, hrefKey) {
-    return '<li><a data-cms="' + labelKey + '" href="' + escapeHtml(safeHref(href, "#")) +
-      '" data-cms-href="' + hrefKey + '">' + escapeHtml(label) + "</a></li>";
+    return '<li><a data-cms="' + hrefKey + '" data-cms-attr="href" href="' +
+      escapeHtml(safeHref(href, "#")) + '"><span data-cms="' + labelKey + '">' +
+      escapeHtml(label) + "</span></a></li>";
   }
 
   function renderFooter(mount, state) {
