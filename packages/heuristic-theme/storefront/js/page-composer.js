@@ -239,16 +239,6 @@ const renderers = new Map([
   ["newsletter.signup", renderNewsletter],
 ]);
 
-function renderFooter(shell, sitePage, assets, navConfig) {
-  const footerMount = document.getElementById("fnf-footer-mount");
-  if (!footerMount) fail("footer mount is required");
-  const brand = cmsSectionMap(sitePage).get("brand");
-  if (!brand) fail("CMS site.brand section is required");
-  if (!Array.isArray(navConfig?.items)) fail("store navigation contract is required for the footer");
-  const nav = navConfig.items.filter((item) => item.visible !== false);
-  footerMount.innerHTML = `<footer class="hc-footer"><div class="h-container hc-footer__grid"><div><img src="${escapeHtml(requiredAsset(assets, shell.header.logoAsset))}" alt="Fuel & Free Time"><p class="hc-footer__tagline">${escapeHtml(requiredString(brand, "tagline", "site.brand"))}</p><p>${escapeHtml(requiredString(brand, "footerDescription", "site.brand"))}</p></div><nav aria-label="Footer"><strong>Explore</strong>${nav.map((item) => `<a href="${safeHref(item.href)}">${escapeHtml(item.label)}</a>`).join("")}</nav><div class="hc-footer__legal"><span>© ${new Date().getFullYear()} Fuel &amp; Free Time</span><span>${shell.footer.legal.map((item) => `<a href="${safeHref(item.href)}">${escapeHtml(item.label)}</a>`).join("")}</span></div></div></footer>`;
-}
-
 async function compose() {
   if (!root || !presetId || !pageId) fail("composer mount, preset, and page are required");
   const base = `/theme/presets/${encodeURIComponent(presetId)}`;
@@ -257,19 +247,14 @@ async function compose() {
   const pagePath = preset.pages?.[pageId];
   if (!pagePath) fail(`page ${pageId} is not declared by preset ${presetId}`);
 
-  const [tokens, assets, shell, page, cmsResponse, siteResponse, navResponse] = await Promise.all([
+  const [tokens, assets, page, cmsResponse] = await Promise.all([
     requiredJson(`${base}/${preset.tokens.replace(/^\.\//, "")}`),
     requiredJson(`${base}/${preset.assets.replace(/^\.\//, "")}`),
-    requiredJson(`${base}/${preset.globals.shell.replace(/^\.\//, "")}`),
     requiredJson(`${base}/${pagePath.replace(/^\.\//, "")}`),
     requiredJson(`/api/cms/pages/${encodeURIComponent(pageId)}`),
-    requiredJson("/api/cms/pages/site"),
-    requiredJson("/api/store/nav"),
   ]);
 
   if (!cmsResponse?.ok || !cmsResponse.page) fail(`CMS page ${pageId} is required`);
-  if (!siteResponse?.ok || !siteResponse.page) fail("CMS site page is required");
-  if (!navResponse?.ok || !navResponse.nav) fail("store navigation contract is required");
   applyTokens(tokens);
   const cmsSections = cmsSectionMap(cmsResponse.page);
 
@@ -283,7 +268,6 @@ async function compose() {
       return renderer(section, assets);
     })
     .join("");
-  renderFooter(shell, siteResponse.page, assets, navResponse.nav);
   document.dispatchEvent(new CustomEvent("heuristic:page-composed", { detail: { presetId, pageId } }));
 }
 
