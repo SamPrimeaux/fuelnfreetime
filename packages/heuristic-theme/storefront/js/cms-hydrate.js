@@ -57,6 +57,14 @@
     } else {
       sectionEl.style.removeProperty("text-align");
     }
+    if (Number.isFinite(Number(layout.columns))) {
+      const columns = Math.max(1, Math.min(12, Number(layout.columns)));
+      sectionEl.dataset.cmsColumns = String(columns);
+      sectionEl.style.setProperty("--cms-layout-columns", String(columns));
+    } else {
+      delete sectionEl.dataset.cmsColumns;
+      sectionEl.style.removeProperty("--cms-layout-columns");
+    }
 
     const spacing = editor.spacing || {};
     if (Number.isFinite(Number(spacing.paddingTop))) {
