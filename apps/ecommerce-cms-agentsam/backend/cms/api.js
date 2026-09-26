@@ -413,7 +413,7 @@ export async function insertSection(env, slug, body = {}) {
   content.__editor = {
     ...(content.__editor || {}),
     templateKey,
-    visibility: { enabled: true, ...(content.__editor?.visibility || {}) },
+    visibility: { ...(content.__editor?.visibility || {}), enabled: true },
   };
 
   const existing = rows.find((row) => row.section_key === sectionKey);
@@ -457,7 +457,7 @@ export async function duplicateSection(env, slug, sectionKey, body = {}) {
   content.__editor = {
     ...(content.__editor || {}),
     templateKey,
-    visibility: { enabled: true, ...(content.__editor?.visibility || {}) },
+    visibility: { ...(content.__editor?.visibility || {}), enabled: true },
   };
 
   await persistSectionDraft(env, slug, page.id, newKey, content, Number(sourceRow.sort_order || 0) + 5);
