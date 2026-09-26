@@ -223,7 +223,7 @@ export const PAGE_REGISTRY = {
       brand: {
         sortOrder: 0,
         fields: [
-          { key: "logoUrl", label: "Logo URL", type: "url", media: true },
+          { key: "logoUrl", label: "Logo URL", type: "media" },
           { key: "tagline", label: "Tagline", type: "text" },
           { key: "footerDescription", label: "Footer description", type: "textarea" },
         ],
@@ -232,6 +232,69 @@ export const PAGE_REGISTRY = {
           tagline: "Time is the real flex.",
           footerDescription:
             "For those who've earned their freedom through hard work, service, and dedication. This is more than apparel — it's a badge of the life you've built.",
+        },
+      },
+      footer: {
+        sortOrder: 1,
+        label: "Global Footer",
+        icon: "footer",
+        fields: [
+          { key: "exploreTitle", label: "Explore heading", type: "text", group: "Explore" },
+          { key: "exploreShopLabel", label: "Shop label", type: "text", group: "Explore" },
+          { key: "exploreShopHref", label: "Shop link", type: "link", group: "Explore" },
+          { key: "exploreCommunityLabel", label: "Community label", type: "text", group: "Explore" },
+          { key: "exploreCommunityHref", label: "Community link", type: "link", group: "Explore" },
+          { key: "exploreCollaborateLabel", label: "Collaborate label", type: "text", group: "Explore" },
+          { key: "exploreCollaborateHref", label: "Collaborate link", type: "link", group: "Explore" },
+
+          { key: "supportTitle", label: "Support heading", type: "text", group: "Support" },
+          { key: "supportContactLabel", label: "Contact label", type: "text", group: "Support" },
+          { key: "supportContactHref", label: "Contact link", type: "link", group: "Support" },
+          { key: "supportPoliciesLabel", label: "Policies label", type: "text", group: "Support" },
+          { key: "supportPoliciesHref", label: "Policies link", type: "link", group: "Support" },
+          { key: "supportTermsLabel", label: "Terms label", type: "text", group: "Support" },
+          { key: "supportTermsHref", label: "Terms link", type: "link", group: "Support" },
+          { key: "supportDashboardLabel", label: "Dashboard label", type: "text", group: "Support" },
+          { key: "supportDashboardHref", label: "Dashboard link", type: "link", group: "Support" },
+
+          { key: "connectTitle", label: "Connect heading", type: "text", group: "Connect" },
+          { key: "instagramUrl", label: "Instagram URL", type: "link", group: "Connect" },
+          { key: "facebookUrl", label: "Facebook URL", type: "link", group: "Connect" },
+          { key: "youtubeUrl", label: "YouTube URL", type: "link", group: "Connect" },
+
+          { key: "newsletterTitle", label: "Newsletter heading", type: "text", group: "Newsletter" },
+          { key: "newsletterPlaceholder", label: "Email placeholder", type: "text", group: "Newsletter" },
+          { key: "newsletterButtonLabel", label: "Button label", type: "text", group: "Newsletter" },
+
+          { key: "copyright", label: "Copyright text", type: "text", group: "Footer bottom" },
+          { key: "closingLine", label: "Closing line", type: "text", group: "Footer bottom" },
+        ],
+        defaultContent: {
+          exploreTitle: "Explore",
+          exploreShopLabel: "Shop",
+          exploreShopHref: "/shop",
+          exploreCommunityLabel: "Community",
+          exploreCommunityHref: "/community",
+          exploreCollaborateLabel: "Collaborate",
+          exploreCollaborateHref: "/collaborate",
+          supportTitle: "Support",
+          supportContactLabel: "Contact",
+          supportContactHref: "/collaborate",
+          supportPoliciesLabel: "Policies",
+          supportPoliciesHref: "/policies",
+          supportTermsLabel: "Terms",
+          supportTermsHref: "/terms",
+          supportDashboardLabel: "Dashboard",
+          supportDashboardHref: "/admin/",
+          connectTitle: "Stay Connected",
+          instagramUrl: "",
+          facebookUrl: "",
+          youtubeUrl: "",
+          newsletterTitle: "Get Updates",
+          newsletterPlaceholder: "Your email",
+          newsletterButtonLabel: "Join",
+          copyright: "Fuel & Free Time. All rights reserved.",
+          closingLine: "Built for those who've earned it.",
         },
       },
     },
@@ -637,6 +700,177 @@ export const PAGE_REGISTRY = {
           body: "Join the movement. Get early access to drops, event invites, and the stories that matter.",
           ctaLabel: "Join the Movement",
           ctaHref: "#newsletter",
+        },
+      },
+    },
+  },
+  collaborate: {
+    title: "Collaborate",
+    sections: {
+      hero: {
+        sortOrder: 0,
+        fields: [
+          { key: "eyebrow", label: "Eyebrow", type: "text" },
+          { key: "headline", label: "Headline", type: "text" },
+          { key: "intro", label: "Introduction", type: "textarea" },
+        ],
+        defaultContent: {
+          eyebrow: "Build something worth remembering",
+          headline: "Collaborate with Fuel & Free Time",
+          intro:
+            "Partnerships should feel earned, useful, and real. We are open to aligned brands, makers, events, creators, retailers, and community projects that respect the hours people put in.",
+        },
+      },
+      pathways: {
+        sortOrder: 1,
+        fields: [
+          { key: "heading", label: "Section heading", type: "text" },
+          { key: "brandTitle", label: "Brand partnerships title", type: "text" },
+          { key: "brandBody", label: "Brand partnerships copy", type: "textarea" },
+          { key: "eventsTitle", label: "Events title", type: "text" },
+          { key: "eventsBody", label: "Events copy", type: "textarea" },
+          { key: "retailTitle", label: "Retail title", type: "text" },
+          { key: "retailBody", label: "Retail copy", type: "textarea" },
+          { key: "creatorTitle", label: "Creators title", type: "text" },
+          { key: "creatorBody", label: "Creators copy", type: "textarea" },
+        ],
+        defaultContent: {
+          heading: "Ways to work together",
+          brandTitle: "Brand & Product",
+          brandBody:
+            "Capsules, co-branded goods, product storytelling, and projects where both sides bring something meaningful to the table.",
+          eventsTitle: "Events & Community",
+          eventsBody:
+            "Garage nights, rides, launches, pop-ups, fundraisers, and experiences built around people instead of impressions.",
+          retailTitle: "Retail & Wholesale",
+          retailBody:
+            "Thoughtful retail relationships for shops and spaces that understand the Fuel & Free Time customer.",
+          creatorTitle: "Creators & Stories",
+          creatorBody:
+            "Photography, film, editorial, machines, craft, travel, and earned-time stories that fit the world we are building.",
+        },
+      },
+      approach: {
+        sortOrder: 2,
+        fields: [
+          { key: "heading", label: "Heading", type: "text" },
+          { key: "body", label: "Body", type: "textarea" },
+          { key: "ctaLabel", label: "CTA label", type: "text" },
+          { key: "ctaHref", label: "CTA link", type: "link" },
+        ],
+        defaultContent: {
+          heading: "Bring a clear idea — or just the right fit.",
+          body:
+            "If there is a natural reason for us to build together, start with the idea, audience, timing, and what a good outcome looks like. We would rather do fewer strong projects than force a partnership that does not fit.",
+          ctaLabel: "Explore the community",
+          ctaHref: "/community",
+        },
+      },
+    },
+  },
+  policies: {
+    title: "Policies",
+    sections: {
+      hero: {
+        sortOrder: 0,
+        fields: [
+          { key: "eyebrow", label: "Eyebrow", type: "text" },
+          { key: "headline", label: "Headline", type: "text" },
+          { key: "intro", label: "Introduction", type: "textarea" },
+        ],
+        defaultContent: {
+          eyebrow: "Store policies",
+          headline: "Straightforward by design",
+          intro:
+            "This page is the working policy baseline for the Fuel & Free Time storefront. Product-specific notices and checkout terms can add detail where needed.",
+        },
+      },
+      policy: {
+        sortOrder: 1,
+        fields: [
+          { key: "shippingTitle", label: "Shipping heading", type: "text" },
+          { key: "shippingBody", label: "Shipping policy", type: "textarea" },
+          { key: "returnsTitle", label: "Returns heading", type: "text" },
+          { key: "returnsBody", label: "Returns policy", type: "textarea" },
+          { key: "privacyTitle", label: "Privacy heading", type: "text" },
+          { key: "privacyBody", label: "Privacy policy", type: "textarea" },
+          { key: "accessibilityTitle", label: "Accessibility heading", type: "text" },
+          { key: "accessibilityBody", label: "Accessibility policy", type: "textarea" },
+          { key: "contactTitle", label: "Contact heading", type: "text" },
+          { key: "contactBody", label: "Contact copy", type: "textarea" },
+        ],
+        defaultContent: {
+          shippingTitle: "Shipping & Fulfillment",
+          shippingBody:
+            "Orders are prepared according to the availability and fulfillment information shown on the product page and at checkout. Tracking information is provided when available. Carrier delays, weather, address issues, and other events outside our control can affect delivery timing.",
+          returnsTitle: "Returns & Exchanges",
+          returnsBody:
+            "If an item arrives damaged, incorrect, or materially different from what you ordered, contact us promptly with the order details. Eligibility for discretionary returns or exchanges can depend on the product type, condition, fulfillment partner, and any product-specific terms shown at purchase.",
+          privacyTitle: "Privacy",
+          privacyBody:
+            "We use information you provide to operate the store, fulfill orders, provide support, prevent fraud, understand site performance, and communicate when you ask us to. Payment information is handled through our payment providers rather than stored as raw card data by this storefront.",
+          accessibilityTitle: "Accessibility",
+          accessibilityBody:
+            "We want the storefront to be usable across devices and assistive technologies. If you encounter a barrier, let us know through the collaboration/contact page so we can review and improve it.",
+          contactTitle: "Questions",
+          contactBody:
+            "For an order, policy, accessibility, collaboration, or storefront question, use the Collaborate / Contact page and include enough context for us to route it correctly.",
+        },
+      },
+    },
+  },
+  terms: {
+    title: "Terms",
+    sections: {
+      hero: {
+        sortOrder: 0,
+        fields: [
+          { key: "eyebrow", label: "Eyebrow", type: "text" },
+          { key: "headline", label: "Headline", type: "text" },
+          { key: "intro", label: "Introduction", type: "textarea" },
+        ],
+        defaultContent: {
+          eyebrow: "Store terms",
+          headline: "Terms for using the Fuel & Free Time storefront",
+          intro:
+            "These terms provide a practical baseline for browsing the site and purchasing goods from Fuel & Free Time. Product, checkout, promotion, and fulfillment notices shown at the time of purchase also apply.",
+        },
+      },
+      terms: {
+        sortOrder: 1,
+        fields: [
+          { key: "ordersTitle", label: "Orders heading", type: "text" },
+          { key: "ordersBody", label: "Orders terms", type: "textarea" },
+          { key: "pricingTitle", label: "Pricing heading", type: "text" },
+          { key: "pricingBody", label: "Pricing terms", type: "textarea" },
+          { key: "useTitle", label: "Site use heading", type: "text" },
+          { key: "useBody", label: "Site use terms", type: "textarea" },
+          { key: "ipTitle", label: "IP heading", type: "text" },
+          { key: "ipBody", label: "IP terms", type: "textarea" },
+          { key: "availabilityTitle", label: "Availability heading", type: "text" },
+          { key: "availabilityBody", label: "Availability terms", type: "textarea" },
+          { key: "changesTitle", label: "Changes heading", type: "text" },
+          { key: "changesBody", label: "Changes terms", type: "textarea" },
+        ],
+        defaultContent: {
+          ordersTitle: "Orders & Acceptance",
+          ordersBody:
+            "Submitting an order is an offer to purchase the listed items. An order may be declined or canceled when an item is unavailable, payment cannot be verified, an order appears fraudulent, pricing is materially incorrect, or fulfillment cannot reasonably be completed.",
+          pricingTitle: "Pricing, Promotions & Payment",
+          pricingBody:
+            "Prices and promotions can change before an order is submitted. Taxes, shipping, discounts, and other applicable charges are shown through the checkout flow. Payment is processed by the payment provider presented at checkout.",
+          useTitle: "Acceptable Use",
+          useBody:
+            "Do not misuse the site, attempt unauthorized access, interfere with store operations, scrape protected account information, submit fraudulent orders, or use the storefront in a way that violates applicable law or the rights of others.",
+          ipTitle: "Brand & Content",
+          ipBody:
+            "Fuel & Free Time names, marks, artwork, photography, product designs, copy, and other original storefront materials remain protected by their applicable intellectual-property rights unless a different license is expressly stated.",
+          availabilityTitle: "Availability & Service",
+          availabilityBody:
+            "Inventory, product details, site features, and third-party services can change. We work to keep storefront information accurate, but temporary outages, fulfillment changes, supplier updates, and technical errors can occur.",
+          changesTitle: "Updates to These Terms",
+          changesBody:
+            "We may revise these terms as the storefront, products, or operating requirements change. The version displayed on this page is the current storefront version, and material purchase-specific terms are the ones presented when an order is placed.",
         },
       },
     },
