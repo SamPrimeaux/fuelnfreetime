@@ -4,6 +4,7 @@
   let pageData = null;
   let pages = [];
   let activeSectionKey = null;
+  let activeBlockId = null;
   let activeFieldKey = null;
   let activeTab = 'content';
   let liveEditor = null;
