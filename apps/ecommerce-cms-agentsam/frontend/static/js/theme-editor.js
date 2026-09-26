@@ -194,18 +194,98 @@
 
   function renderTree() {
     const sections = (pageData && pageData.sections) || [];
+    const registrySections = (window.SECTION_SCHEMAS && window.SECTION_SCHEMAS[slug]) || {};
     byId('te-tree-title').textContent = (pageData && pageData.title) || humanize(slug);
     byId('te-tree-path').textContent = pageRoute(slug);
 
-    byId('te-tree').innerHTML = '<div class="te-tree-group"><div class="te-tree-group__label">Template</div>' + sections.map(function(section) {
-      const fields = (window.SECTION_FIELDS && window.SECTION_FIELDS[slug] && window.SECTION_FIELDS[slug][section.key]) || [];
-      return '<button type="button" class="te-tree-row' + (section.key === activeSectionKey ? ' is-active' : '') + '" data-section-key="' + cmsEscapeAttr(section.key) + '">' +
-        '<span class="te-tree-row__icon">' + icon.section + '</span><span class="te-tree-row__copy"><span class="te-tree-row__name">' + cmsEscapeHtml(humanize(section.key)) +
-        '</span><span class="te-tree-row__meta">' + cmsEscapeHtml(section.status || 'draft') + ' · ' + fields.length + ' fields</span></span></button>';
-    }).join('') + '</div>';
+    const rows = sections.map(function(section, index) {
+      const schema = schemaForSection(section) || {};
+      const fields = schema.fields || [];
+      const editor = section.content && section.content.__editor || {};
+      const visible = !editor.visibility || editor.visibility.enabled !== false;
+      const capabilities = schema.capabilities || {};
+      const label = schema.label || humanize(editor.templateKey || section.key);
+      return '<div class="te-tree-row' + (section.key === activeSectionKey ? ' is-active' : '') + '" data-section-key="' + cmsEscapeAttr(section.key) + '" draggable="' + (capabilities.reorder !== false) + '" data-index="' + index + '">' +
+        '<button type="button" class="te-tree-row__main" data-select-section="' + cmsEscapeAttr(section.key) + '">' +
+          '<span class="te-tree-row__icon">' + icon.section + '</span><span class="te-tree-row__copy"><span class="te-tree-row__name">' + cmsEscapeHtml(label) +
+          '</span><span class="te-tree-row__meta">' + (visible ? cmsEscapeHtml(section.status || 'draft') : 'hidden') + ' · ' + fields.length + ' fields</span></span>' +
+        '</button>' +
+        '<span class="te-tree-row__actions">' +
+          '<button type="button" class="te-tree-mini" data-toggle-section="' + cmsEscapeAttr(section.key) + '" title="' + (visible ? 'Hide section' : 'Show section') + '">' + (visible ? '◉' : '○') + '</button>' +
+          (capabilities.duplicate !== false ? '<button type="button" class="te-tree-mini" data-duplicate-section="' + cmsEscapeAttr(section.key) + '" title="Duplicate section">⧉</button>' : '') +
+          (capabilities.remove !== false ? '<button type="button" class="te-tree-mini" data-remove-section="' + cmsEscapeAttr(section.key) + '" title="Remove section">×</button>' : '') +
+        '</span></div>';
+    }).join('');
 
-    byId('te-tree').querySelectorAll('[data-section-key]').forEach(function(button) {
-      button.addEventListener('click', function() { selectSection(button.dataset.sectionKey, null, true); });
+    const templateOptions = Object.entries(registrySections).map(function(entry) {
+      const key = entry[0];
+      const schema = entry[1] || {};
+      return '<option value="' + cmsEscapeAttr(key) + '">' + cmsEscapeHtml(schema.label || humanize(key)) + '</option>';
+    }).join('');
+
+    byId('te-tree').innerHTML =
+      '<div class="te-tree-group"><div class="te-tree-group__label">Template</div>' + rows + '</div>' +
+      '<button type="button" class="te-add-section" id="te-add-section">+ Add section</button>' +
+      '<div class="te-section-menu" id="te-section-menu" hidden><select id="te-section-template">' + templateOptions + '</select>' +
+      '<div class="te-section-menu__actions"><button type="button" class="te-media-button" id="te-section-cancel">Cancel</button><button type="button" class="te-media-button" id="te-section-insert">Add</button></div></div>';
+
+    byId('te-tree').querySelectorAll('[data-select-section]').forEach(function(button) {
+      button.addEventListener('click', function() { selectSection(button.dataset.selectSection, null, true); });
+    });
+    byId('te-tree').querySelectorAll('[data-toggle-section]').forEach(function(button) {
+      button.addEventListener('click', function(event) {
+        event.stopPropagation();
+        const section = sections.find(function(item) { return item.key === button.dataset.toggleSection; });
+        const currentVisible = !section?.content?.__editor?.visibility || section.content.__editor.visibility.enabled !== false;
+        setSectionVisibility(button.dataset.toggleSection, !currentVisible);
+      });
+    });
+    byId('te-tree').querySelectorAll('[data-duplicate-section]').forEach(function(button) {
+      button.addEventListener('click', function(event) {
+        event.stopPropagation();
+        duplicateSection(button.dataset.duplicateSection);
+      });
+    });
+    byId('te-tree').querySelectorAll('[data-remove-section]').forEach(function(button) {
+      button.addEventListener('click', function(event) {
+        event.stopPropagation();
+        removeSection(button.dataset.removeSection);
+      });
+    });
+
+    const add = byId('te-add-section');
+    const menu = byId('te-section-menu');
+    if (add && menu) add.addEventListener('click', function() { menu.hidden = false; add.hidden = true; });
+    byId('te-section-cancel')?.addEventListener('click', function() { menu.hidden = true; add.hidden = false; });
+    byId('te-section-insert')?.addEventListener('click', function() {
+      const select = byId('te-section-template');
+      if (select && select.value) insertSection(select.value);
+    });
+
+    let draggedKey = null;
+    byId('te-tree').querySelectorAll('.te-tree-row[draggable="true"]').forEach(function(row) {
+      row.addEventListener('dragstart', function() {
+        draggedKey = row.dataset.sectionKey;
+        row.classList.add('is-dragging');
+      });
+      row.addEventListener('dragend', function() {
+        draggedKey = null;
+        row.classList.remove('is-dragging');
+        byId('te-tree').querySelectorAll('.is-drop-target').forEach(function(node) { node.classList.remove('is-drop-target'); });
+      });
+      row.addEventListener('dragover', function(event) {
+        if (!draggedKey || draggedKey === row.dataset.sectionKey) return;
+        event.preventDefault();
+        row.classList.add('is-drop-target');
+      });
+      row.addEventListener('dragleave', function() { row.classList.remove('is-drop-target'); });
+      row.addEventListener('drop', function(event) {
+        event.preventDefault();
+        row.classList.remove('is-drop-target');
+        if (!draggedKey || draggedKey === row.dataset.sectionKey) return;
+        const targetIndex = Number(row.dataset.index);
+        moveSection(draggedKey, targetIndex);
+      });
     });
   }
 
