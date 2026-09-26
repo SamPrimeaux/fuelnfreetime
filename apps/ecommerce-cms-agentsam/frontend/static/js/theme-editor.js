@@ -894,7 +894,8 @@
 
         event.preventDefault();
         event.stopImmediatePropagation();
-        selectSection(sectionKey, fieldKey || null, false);
+        if (blockId) selectBlock(sectionKey, blockId, fieldKey || null, false);
+        else selectSection(sectionKey, fieldKey || null, false);
       }, true);
     }
 
