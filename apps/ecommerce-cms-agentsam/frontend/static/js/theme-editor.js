@@ -1,0 +1,720 @@
+(() => {
+  const params = new URLSearchParams(location.search);
+  let slug = params.get('slug') || 'shop';
+  let pageData = null;
+  let pages = [];
+  let activeSectionKey = null;
+  let activeFieldKey = null;
+  let activeTab = 'content';
+  let liveEditor = null;
+  let patchTimer = null;
+  let refreshTimer = null;
+  let mediaLibrary = [];
+  let mediaTarget = null;
+  let dirty = false;
+  let connected = false;
+  let device = localStorage.getItem('fnf-theme-editor-device') || 'desktop';
+  let showOutlines = localStorage.getItem('fnf-theme-editor-outlines') !== '0';
+  let autoPreview = localStorage.getItem('fnf-theme-editor-auto-preview') !== '0';
+
+  const fallbackPages = [
+    { slug: 'home', title: 'Home page', route: '/' },
+    { slug: 'shop', title: 'Shop', route: '/shop' },
+    { slug: 'about', title: 'About', route: '/about.html' },
+    { slug: 'community', title: 'Community', route: '/community.html' }
+  ];
+
+  const icon = {
+    page: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 3h9l3 3v15H6z" stroke="currentColor" stroke-width="1.7"/><path d="M15 3v4h4" stroke="currentColor" stroke-width="1.7"/></svg>',
+    section: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M5 7h14M5 12h14M5 17h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    desktop: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 21h8M12 17v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+    tablet: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="5" y="2.5" width="14" height="19" rx="2.5" stroke="currentColor" stroke-width="1.7"/></svg>',
+    mobile: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="7" y="2.5" width="10" height="19" rx="2.5" stroke="currentColor" stroke-width="1.7"/></svg>',
+    refresh: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M20 6v5h-5M4 18v-5h5" stroke="currentColor" stroke-width="1.7"/><path d="M6 9a7 7 0 0 1 12-2l2 2M4 15l2 2a7 7 0 0 0 12-2" stroke="currentColor" stroke-width="1.7"/></svg>',
+    external: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M14 5h5v5M19 5l-8 8" stroke="currentColor" stroke-width="1.7"/><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" stroke="currentColor" stroke-width="1.7"/></svg>'
+  };
+
+  function shellMarkup() {
+    return [
+      '<div class="theme-studio">',
+        '<header class="theme-studio-toolbar">',
+          '<div class="theme-studio-toolbar__left">',
+            '<div class="te-page-menu">',
+              '<button type="button" class="te-page-trigger" id="te-page-trigger" aria-expanded="false"><span style="display:flex;align-items:center;gap:8px;min-width:0">', icon.page, '<strong id="te-page-title">Loading…</strong></span><span>⌄</span></button>',
+              '<div class="te-page-popover" id="te-page-popover" hidden><input class="te-page-search" id="te-page-search" placeholder="Search online store" autocomplete="off"><div class="te-page-options" id="te-page-options"></div></div>',
+            '</div>',
+            '<span class="te-save-state" id="te-save-state">Loading</span>',
+          '</div>',
+          '<div class="theme-studio-toolbar__center"><div class="te-device-switch" aria-label="Preview device">',
+            '<button type="button" class="te-device-btn" data-device="desktop" title="Desktop">', icon.desktop, '</button>',
+            '<button type="button" class="te-device-btn" data-device="tablet" title="Tablet">', icon.tablet, '</button>',
+            '<button type="button" class="te-device-btn" data-device="mobile" title="Mobile">', icon.mobile, '</button>',
+          '</div></div>',
+          '<div class="theme-studio-toolbar__right"><a class="te-toolbar-btn" id="te-full-editor" href="#">Full editor</a><button type="button" class="te-toolbar-btn is-primary" id="te-publish">Publish</button></div>',
+        '</header>',
+        '<div class="theme-studio-workspace">',
+          '<aside class="theme-studio-tree"><div class="te-panel-title"><h2 id="te-tree-title">Page</h2><p id="te-tree-path">/</p></div><div id="te-tree"></div><div class="te-tree-footer"><a id="te-manage-page" href="#">Open page settings →</a></div></aside>',
+          '<main class="theme-studio-canvas">',
+            '<div class="te-preview-bar"><span id="te-preview-label">Storefront preview</span><div class="te-preview-bar__actions"><button class="te-icon-btn" type="button" id="te-refresh" title="Refresh preview">', icon.refresh, '</button><a class="te-icon-btn" id="te-open-tab" href="#" target="_blank" rel="noopener" title="Open in new tab">', icon.external, '</a></div></div>',
+            '<div class="te-preview-stage"><div class="te-preview-device" id="te-preview-device" data-device="desktop"><iframe id="theme-preview" title="Storefront preview" class="theme-editor-preview"></iframe></div></div>',
+            '<div class="te-preview-status"><span class="te-live-state" id="te-live-state">Connecting live editor…</span><span class="te-selected-path" id="te-selected-path">Select a section in the preview or tree</span></div>',
+          '</main>',
+          '<aside class="theme-editor-panel">',
+            '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><span class="te-badge" id="te-section-status">draft</span></div>',
+            '<div class="te-tabs" id="te-tabs"><button type="button" class="te-tab is-active" data-tab="content">Content</button><button type="button" class="te-tab" data-tab="media">Media</button><button type="button" class="te-tab" data-tab="links">Links</button><button type="button" class="te-tab" data-tab="settings">View</button></div>',
+            '<div class="te-inspector-body" id="te-inspector-body"></div>',
+            '<div class="te-inspector-save"><button type="button" class="te-toolbar-btn is-primary" id="te-save">Save draft</button><p class="te-note" id="te-note"></p></div>',
+          '</aside>',
+        '</div>',
+      '</div>',
+      '<div class="te-media-modal" id="te-media-modal" hidden><div class="te-media-dialog" role="dialog" aria-modal="true" aria-labelledby="te-media-title">',
+        '<div class="te-media-dialog__head"><strong id="te-media-title">Choose media</strong><button type="button" class="te-icon-btn" id="te-media-close" aria-label="Close">×</button></div>',
+        '<div class="te-media-dialog__tools"><input id="te-media-search" placeholder="Search media"><label class="te-upload-target">Upload<input id="te-media-upload" type="file" accept="image/*,video/*,.glb,.gltf,.usdz" multiple></label></div>',
+        '<div class="te-media-grid" id="te-media-grid"></div>',
+      '</div></div>'
+    ].join('');
+  }
+
+  renderShell('/admin/theme-editor', shellMarkup(), { fullBleed: true });
+
+  const byId = function(id) { return document.getElementById(id); };
+
+  function humanize(value) {
+    return String(value || '').replace(/[_-]+/g, ' ').replace(/\b\w/g, function(m) { return m.toUpperCase(); });
+  }
+
+  function pageRoute(pageSlug) {
+    if (window.PAGE_ROUTES && window.PAGE_ROUTES[pageSlug]) return window.PAGE_ROUTES[pageSlug];
+    const found = fallbackPages.find(function(page) { return page.slug === pageSlug; });
+    return found ? found.route : '/';
+  }
+
+  function currentSection() {
+    if (!pageData || !pageData.sections) return null;
+    return pageData.sections.find(function(section) { return section.key === activeSectionKey; }) || null;
+  }
+
+  function currentSchema() {
+    return (window.SECTION_FIELDS && window.SECTION_FIELDS[slug] && window.SECTION_FIELDS[slug][activeSectionKey]) || [];
+  }
+
+  function fieldKind(field) {
+    const hay = (String(field.key || '') + ' ' + String(field.label || '')).toLowerCase();
+    if (field.media || /image|video|glb|gltf|media|logo/.test(hay)) return 'media';
+    if (/href|link|url/.test(hay)) return 'links';
+    return 'content';
+  }
+
+  function setNote(message, kind) {
+    const el = byId('te-note');
+    el.textContent = message || '';
+    el.className = 'te-note' + (kind ? ' is-' + kind : '');
+  }
+
+  function setSaveState(label, state) {
+    const el = byId('te-save-state');
+    el.textContent = label;
+    el.className = 'te-save-state' + (state ? ' is-' + state : '');
+  }
+
+  function setDirty(value) {
+    dirty = Boolean(value);
+    if (dirty) setSaveState('Unpublished changes', 'dirty');
+    else setSaveState(pageData && pageData.status === 'published' ? 'Published' : 'Draft saved', 'saved');
+  }
+
+  function renderPageOptions(query) {
+    const needle = String(query || '').trim().toLowerCase();
+    const source = pages.length ? pages : fallbackPages;
+    const filtered = source.filter(function(page) {
+      const title = page.title || humanize(page.slug);
+      return !needle || title.toLowerCase().includes(needle) || page.slug.toLowerCase().includes(needle);
+    });
+
+    byId('te-page-options').innerHTML = filtered.length ? filtered.map(function(page) {
+      return '<button type="button" class="te-page-option' + (page.slug === slug ? ' is-active' : '') + '" data-page-slug="' + cmsEscapeAttr(page.slug) + '">' +
+        icon.page + '<span><strong style="font-size:12px">' + cmsEscapeHtml(page.title || humanize(page.slug)) + '</strong><span style="display:block;font-size:10px;color:#858580;margin-top:2px">' +
+        cmsEscapeHtml(pageRoute(page.slug)) + '</span></span></button>';
+    }).join('') : '<div class="te-empty">No pages match that search.</div>';
+
+    byId('te-page-options').querySelectorAll('[data-page-slug]').forEach(function(button) {
+      button.addEventListener('click', function() { switchPage(button.dataset.pageSlug); });
+    });
+  }
+
+  function renderTree() {
+    const sections = (pageData && pageData.sections) || [];
+    byId('te-tree-title').textContent = (pageData && pageData.title) || humanize(slug);
+    byId('te-tree-path').textContent = pageRoute(slug);
+
+    byId('te-tree').innerHTML = '<div class="te-tree-group"><div class="te-tree-group__label">Template</div>' + sections.map(function(section) {
+      const fields = (window.SECTION_FIELDS && window.SECTION_FIELDS[slug] && window.SECTION_FIELDS[slug][section.key]) || [];
+      return '<button type="button" class="te-tree-row' + (section.key === activeSectionKey ? ' is-active' : '') + '" data-section-key="' + cmsEscapeAttr(section.key) + '">' +
+        '<span class="te-tree-row__icon">' + icon.section + '</span><span class="te-tree-row__copy"><span class="te-tree-row__name">' + cmsEscapeHtml(humanize(section.key)) +
+        '</span><span class="te-tree-row__meta">' + cmsEscapeHtml(section.status || 'draft') + ' · ' + fields.length + ' fields</span></span></button>';
+    }).join('') + '</div>';
+
+    byId('te-tree').querySelectorAll('[data-section-key]').forEach(function(button) {
+      button.addEventListener('click', function() { selectSection(button.dataset.sectionKey, null, true); });
+    });
+  }
+
+  function renderField(section, field) {
+    const value = cmsGetPath(section.content, field.key) || '';
+    const safeValue = cmsEscapeAttr(String(value));
+    const id = 'te-field-' + section.key + '-' + field.key.replace(/[^a-zA-Z0-9_-]/g, '-');
+
+    if (fieldKind(field) === 'media') {
+      const isImage = /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(String(value)) || String(value).startsWith('/media/');
+      return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label>' + cmsEscapeHtml(field.label) + '<span>Media</span></label>' +
+        '<div class="te-media-drop" data-media-drop="' + cmsEscapeAttr(field.key) + '"><div class="te-media-preview">' +
+        (value && isImage ? '<img src="' + safeValue + '" alt="">' : '<div class="te-media-empty">' + (value ? cmsEscapeHtml(String(value).split('/').pop()) : 'Drop media here or choose from library') + '</div>') +
+        '</div><div class="te-media-actions"><button type="button" class="te-media-button" data-pick-media="' + cmsEscapeAttr(field.key) + '">Choose</button>' +
+        '<label class="te-media-button" style="display:inline-flex;align-items:center">Upload<input type="file" hidden data-upload-media="' + cmsEscapeAttr(field.key) + '" accept="image/*,video/*,.glb,.gltf,.usdz"></label></div></div>' +
+        '<input class="te-media-url" id="' + id + '" data-field-input="' + cmsEscapeAttr(field.key) + '" value="' + safeValue + '" placeholder="Media URL or path"></div>';
+    }
+
+    const input = field.type === 'textarea'
+      ? '<textarea id="' + id + '" rows="4" data-field-input="' + cmsEscapeAttr(field.key) + '">' + cmsEscapeHtml(String(value)) + '</textarea>'
+      : '<input id="' + id + '" type="' + (field.type === 'url' ? 'url' : 'text') + '" data-field-input="' + cmsEscapeAttr(field.key) + '" value="' + safeValue + '">';
+
+    return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label for="' + id + '">' + cmsEscapeHtml(field.label) + '<span>' + cmsEscapeHtml(field.key) + '</span></label>' + input + '</div>';
+  }
+
+  function renderSettings() {
+    byId('te-inspector-body').innerHTML =
+      '<div class="te-setting-card">' +
+        '<div class="te-setting-row"><div><strong>Editable outlines</strong><span>Show CMS boundaries in the live preview.</span></div><button type="button" class="te-switch" id="te-outline-switch" role="switch" aria-checked="' + showOutlines + '"></button></div>' +
+        '<div class="te-setting-row"><div><strong>Auto-refresh preview</strong><span>Refresh after live draft updates.</span></div><button type="button" class="te-switch" id="te-auto-switch" role="switch" aria-checked="' + autoPreview + '"></button></div>' +
+      '</div>' +
+      '<div class="te-setting-card"><div class="te-setting-row"><div><strong>Preview route</strong><span>' + cmsEscapeHtml(pageRoute(slug)) + '</span></div><a class="te-media-button" style="text-decoration:none;display:inline-flex;align-items:center" target="_blank" rel="noopener" href="' + cmsEscapeAttr(pageRoute(slug)) + '?preview=1">Open</a></div></div>';
+
+    byId('te-outline-switch').addEventListener('click', function(event) {
+      showOutlines = event.currentTarget.getAttribute('aria-checked') !== 'true';
+      localStorage.setItem('fnf-theme-editor-outlines', showOutlines ? '1' : '0');
+      event.currentTarget.setAttribute('aria-checked', String(showOutlines));
+      bindPreviewSelection();
+    });
+
+    byId('te-auto-switch').addEventListener('click', function(event) {
+      autoPreview = event.currentTarget.getAttribute('aria-checked') !== 'true';
+      localStorage.setItem('fnf-theme-editor-auto-preview', autoPreview ? '1' : '0');
+      event.currentTarget.setAttribute('aria-checked', String(autoPreview));
+    });
+  }
+
+  function renderInspector() {
+    const section = currentSection();
+    if (!section) {
+      byId('te-inspector-body').innerHTML = '<div class="te-empty">Choose a section to edit it.</div>';
+      return;
+    }
+
+    byId('te-inspector-title').textContent = humanize(section.key);
+    byId('te-inspector-subtitle').textContent = ((pageData && pageData.title) || humanize(slug)) + ' · ' + section.key;
+    byId('te-section-status').textContent = section.status || 'draft';
+    byId('te-section-status').className = 'te-badge' + (section.status === 'published' ? ' is-published' : '');
+
+    byId('te-tabs').querySelectorAll('[data-tab]').forEach(function(tab) {
+      tab.classList.toggle('is-active', tab.dataset.tab === activeTab);
+    });
+
+    if (activeTab === 'settings') {
+      renderSettings();
+      return;
+    }
+
+    const fields = currentSchema().filter(function(field) { return fieldKind(field) === activeTab; });
+    if (!fields.length) {
+      byId('te-inspector-body').innerHTML = '<div class="te-empty">No ' + cmsEscapeHtml(activeTab) + ' controls are registered for this section.</div>';
+      return;
+    }
+
+    byId('te-inspector-body').innerHTML = fields.map(function(field) { return renderField(section, field); }).join('');
+    wireFields();
+
+    if (activeFieldKey) {
+      requestAnimationFrame(function() {
+        const node = document.querySelector('[data-field-key="' + CSS.escape(activeFieldKey) + '"]');
+        if (node) {
+          node.classList.add('is-selected');
+          node.scrollIntoView({ block: 'nearest' });
+        }
+      });
+    }
+  }
+
+  function wireFields() {
+    document.querySelectorAll('[data-field-input]').forEach(function(input) {
+      input.addEventListener('focus', function() {
+        activeFieldKey = input.dataset.fieldInput;
+        highlightPreviewSelection();
+      });
+      input.addEventListener('input', function() {
+        const section = currentSection();
+        if (!section) return;
+        activeFieldKey = input.dataset.fieldInput;
+        cmsSetPath(section.content, activeFieldKey, input.value);
+        syncMediaPreview(activeFieldKey, input.value);
+        setDirty(true);
+        schedulePatch();
+        byId('te-selected-path').textContent = slug + ' / ' + section.key + ' / ' + activeFieldKey;
+      });
+    });
+
+    document.querySelectorAll('[data-pick-media]').forEach(function(button) {
+      button.addEventListener('click', function() { openMediaPicker(button.dataset.pickMedia); });
+    });
+
+    document.querySelectorAll('[data-upload-media]').forEach(function(input) {
+      input.addEventListener('change', async function() {
+        if (!input.files || !input.files.length) return;
+        try {
+          const assets = await uploadFiles(Array.from(input.files));
+          if (assets[0]) setMediaValue(input.dataset.uploadMedia, assets[0].url);
+        } catch (error) {
+          setNote(error.message || String(error), 'error');
+        }
+        input.value = '';
+      });
+    });
+
+    document.querySelectorAll('[data-media-drop]').forEach(function(zone) {
+      const fieldKey = zone.dataset.mediaDrop;
+      ['dragenter', 'dragover'].forEach(function(type) {
+        zone.addEventListener(type, function(event) {
+          event.preventDefault();
+          zone.classList.add('is-over');
+        });
+      });
+      ['dragleave', 'drop'].forEach(function(type) {
+        zone.addEventListener(type, function(event) {
+          event.preventDefault();
+          zone.classList.remove('is-over');
+        });
+      });
+      zone.addEventListener('drop', async function(event) {
+        const files = Array.from((event.dataTransfer && event.dataTransfer.files) || []);
+        if (!files.length) return;
+        try {
+          const assets = await uploadFiles(files.slice(0, 1));
+          if (assets[0]) setMediaValue(fieldKey, assets[0].url);
+        } catch (error) {
+          setNote(error.message || String(error), 'error');
+        }
+      });
+    });
+  }
+
+  function syncMediaPreview(fieldKey, value) {
+    const zone = document.querySelector('[data-media-drop="' + CSS.escape(fieldKey) + '"]');
+    if (!zone) return;
+    const preview = zone.querySelector('.te-media-preview');
+    const isImage = /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(String(value)) || String(value).startsWith('/media/');
+    preview.innerHTML = value && isImage ? '<img src="' + cmsEscapeAttr(value) + '" alt="">' : '<div class="te-media-empty">' + (value ? cmsEscapeHtml(String(value).split('/').pop()) : 'Drop media here or choose from library') + '</div>';
+  }
+
+  function setMediaValue(fieldKey, url) {
+    const section = currentSection();
+    if (!section) return;
+    cmsSetPath(section.content, fieldKey, url);
+    activeFieldKey = fieldKey;
+    setDirty(true);
+    renderInspector();
+    schedulePatch();
+    closeMediaPicker();
+  }
+
+  function schedulePatch() {
+    clearTimeout(patchTimer);
+    patchTimer = setTimeout(function() {
+      const section = currentSection();
+      if (section && liveEditor) liveEditor.patchSection(section.key, section.content);
+    }, 420);
+  }
+
+  function selectSection(sectionKey, fieldKey, scrollPreview) {
+    const section = pageData && pageData.sections && pageData.sections.find(function(item) { return item.key === sectionKey; });
+    if (!section) return;
+    activeSectionKey = sectionKey;
+    activeFieldKey = fieldKey || null;
+
+    if (fieldKey) {
+      const field = currentSchema().find(function(item) { return item.key === fieldKey; });
+      activeTab = field ? fieldKind(field) : 'content';
+    }
+
+    renderTree();
+    renderInspector();
+    byId('te-selected-path').textContent = fieldKey ? slug + ' / ' + sectionKey + ' / ' + fieldKey : slug + ' / ' + sectionKey;
+
+    if (scrollPreview) {
+      try {
+        const doc = byId('theme-preview').contentDocument;
+        const target = doc && doc.querySelector('[data-cms-section="' + CSS.escape(sectionKey) + '"], [data-section-id="' + CSS.escape(sectionKey) + '"]');
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } catch {}
+    }
+    highlightPreviewSelection();
+  }
+
+  function bindPreviewSelection() {
+    const frame = byId('theme-preview');
+    let doc;
+    try { doc = frame.contentDocument; } catch { return; }
+    if (!doc || !doc.documentElement) return;
+
+    let style = doc.getElementById('fnf-theme-editor-preview-style');
+    if (!style) {
+      style = doc.createElement('style');
+      style.id = 'fnf-theme-editor-preview-style';
+      style.textContent =
+        'html.fnf-theme-editor-outlines [data-cms-section]{outline:1px dashed rgba(95,67,213,.24);outline-offset:-1px}' +
+        'html.fnf-theme-editor-outlines [data-cms]{cursor:pointer!important}' +
+        'html.fnf-theme-editor-outlines [data-cms]:hover{outline:2px solid rgba(95,67,213,.52);outline-offset:2px}' +
+        '[data-theme-editor-selected="true"]{outline:2px solid #7656ee!important;outline-offset:2px!important;box-shadow:0 0 0 3px rgba(118,86,238,.12)!important}';
+      if (doc.head) doc.head.appendChild(style);
+    }
+    doc.documentElement.classList.toggle('fnf-theme-editor-outlines', showOutlines);
+
+    if (doc.documentElement.dataset.fnfThemeEditorBound !== '1') {
+      doc.documentElement.dataset.fnfThemeEditorBound = '1';
+      doc.addEventListener('click', function(event) {
+        const target = event.target && event.target.closest && event.target.closest('[data-cms], [data-cms-section], [data-section-id]');
+        if (!target) return;
+
+        const cmsNode = target.closest('[data-cms]');
+        const sectionNode = target.closest('[data-cms-section], [data-section-id]');
+        let sectionKey = sectionNode ? (sectionNode.getAttribute('data-cms-section') || sectionNode.getAttribute('data-section-id') || '') : '';
+        let fieldKey = cmsNode ? (cmsNode.getAttribute('data-cms') || '') : '';
+
+        if (!sectionKey && fieldKey.indexOf('.') > 0) {
+          const first = fieldKey.split('.')[0];
+          if (pageData && pageData.sections && pageData.sections.some(function(section) { return section.key === first; })) sectionKey = first;
+        }
+
+        if (sectionKey && fieldKey.indexOf(sectionKey + '.') === 0) fieldKey = fieldKey.slice(sectionKey.length + 1);
+        if (!sectionKey || !pageData.sections.some(function(section) { return section.key === sectionKey; })) return;
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        selectSection(sectionKey, fieldKey || null, false);
+      }, true);
+    }
+
+    highlightPreviewSelection();
+  }
+
+  function highlightPreviewSelection() {
+    let doc;
+    try { doc = byId('theme-preview').contentDocument; } catch { return; }
+    if (!doc) return;
+
+    doc.querySelectorAll('[data-theme-editor-selected="true"]').forEach(function(node) {
+      node.removeAttribute('data-theme-editor-selected');
+    });
+
+    let selected = null;
+    if (activeFieldKey) {
+      const section = doc.querySelector('[data-cms-section="' + CSS.escape(activeSectionKey || '') + '"], [data-section-id="' + CSS.escape(activeSectionKey || '') + '"]');
+      const candidates = [activeFieldKey, activeSectionKey ? activeSectionKey + '.' + activeFieldKey : activeFieldKey];
+      for (const key of candidates) {
+        selected = (section && section.querySelector('[data-cms="' + CSS.escape(key) + '"]')) || doc.querySelector('[data-cms="' + CSS.escape(key) + '"]');
+        if (selected) break;
+      }
+    }
+    if (!selected && activeSectionKey) {
+      selected = doc.querySelector('[data-cms-section="' + CSS.escape(activeSectionKey) + '"], [data-section-id="' + CSS.escape(activeSectionKey) + '"]');
+    }
+    if (selected) selected.setAttribute('data-theme-editor-selected', 'true');
+  }
+
+  function setDevice(next) {
+    device = next;
+    localStorage.setItem('fnf-theme-editor-device', device);
+    byId('te-preview-device').dataset.device = device;
+    document.querySelectorAll('.te-device-btn').forEach(function(button) {
+      button.classList.toggle('is-active', button.dataset.device === device);
+    });
+  }
+
+  function refreshPreview() {
+    const route = pageRoute(slug);
+    const separator = route.indexOf('?') >= 0 ? '&' : '?';
+    byId('theme-preview').src = route + separator + 'preview=1&_=' + Date.now();
+    byId('te-open-tab').href = route + separator + 'preview=1';
+    byId('te-preview-label').textContent = 'Preview — ' + ((pageData && pageData.title) || humanize(slug));
+  }
+
+  function schedulePreview() {
+    if (!autoPreview) return;
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(refreshPreview, 220);
+  }
+
+  async function loadPage() {
+    setNote('');
+    setSaveState('Loading');
+    try {
+      await loadCmsRegistry();
+      const results = await Promise.all([
+        adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug)),
+        adminFetch('/api/admin/cms/pages').catch(function() { return { pages: [] }; })
+      ]);
+      pageData = results[0].page;
+      pages = (results[1].pages || []).filter(function(page) { return page.slug !== 'site'; });
+
+      if (!pages.some(function(page) { return page.slug === slug; })) pages.unshift({ slug: slug, title: pageData.title || humanize(slug) });
+      if (!activeSectionKey || !pageData.sections.some(function(section) { return section.key === activeSectionKey; })) {
+        activeSectionKey = pageData.sections && pageData.sections[0] ? pageData.sections[0].key : null;
+        activeFieldKey = null;
+      }
+
+      byId('te-page-title').textContent = pageData.title || humanize(slug);
+      byId('te-full-editor').href = '/admin/page-edit?slug=' + encodeURIComponent(slug);
+      byId('te-manage-page').href = '/admin/page-edit?slug=' + encodeURIComponent(slug);
+      renderPageOptions('');
+      renderTree();
+      renderInspector();
+      setDirty(false);
+      refreshPreview();
+    } catch (error) {
+      setNote(error.message || String(error), 'error');
+      setSaveState('Load failed', 'error');
+      byId('te-tree').innerHTML = '<div class="te-empty">' + cmsEscapeHtml(error.message || String(error)) + '</div>';
+    }
+  }
+
+  async function saveDraft() {
+    const section = currentSection();
+    if (!section) return;
+    const button = byId('te-save');
+    button.disabled = true;
+    setNote('Saving…');
+    try {
+      const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(section.key), {
+        method: 'PUT',
+        body: JSON.stringify({ content: section.content })
+      });
+      section.status = 'draft';
+      section.updated_at = result.updated_at || section.updated_at;
+      pageData.status = 'draft';
+      setDirty(false);
+      setNote('Draft saved.', 'success');
+      renderTree();
+      renderInspector();
+      schedulePreview();
+    } catch (error) {
+      setNote(error.message || String(error), 'error');
+      setSaveState('Save failed', 'error');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function publishPage() {
+    const button = byId('te-publish');
+    button.disabled = true;
+    button.textContent = 'Publishing…';
+    try {
+      if (dirty) await saveDraft();
+      const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/publish', { method: 'POST' });
+      pageData.status = 'published';
+      (pageData.sections || []).forEach(function(section) { section.status = 'published'; });
+      setDirty(false);
+      setNote(result.published_at ? 'Published ' + fmtPageDate(result.published_at) + '.' : 'Published to live site.', 'success');
+      renderTree();
+      renderInspector();
+      refreshPreview();
+    } catch (error) {
+      setNote(error.message || String(error), 'error');
+      setSaveState('Publish failed', 'error');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Publish';
+    }
+  }
+
+  function updateLiveState() {
+    const el = byId('te-live-state');
+    el.textContent = connected ? 'Live editing connected' : 'Live editor reconnecting…';
+    el.className = 'te-live-state ' + (connected ? 'is-online' : 'is-offline');
+  }
+
+  function connectLive() {
+    if (liveEditor) liveEditor.close();
+    connected = false;
+    updateLiveState();
+    liveEditor = connectCmsLive(slug, {
+      onConnected: function() { connected = true; updateLiveState(); },
+      onDisconnect: function() { connected = false; updateLiveState(); },
+      onSectionUpdated: function(data) {
+        const section = pageData && pageData.sections && pageData.sections.find(function(item) { return item.key === data.sectionKey; });
+        if (section) section.status = 'draft';
+        if (data.sectionKey === activeSectionKey) {
+          renderTree();
+          schedulePreview();
+        }
+      },
+      onPublished: function() {
+        if (pageData) pageData.status = 'published';
+        (pageData && pageData.sections || []).forEach(function(section) { section.status = 'published'; });
+        setDirty(false);
+        renderTree();
+        renderInspector();
+        schedulePreview();
+      },
+      onError: function(error) { if (error) setNote(String(error), 'error'); }
+    });
+  }
+
+  async function switchPage(nextSlug) {
+    if (!nextSlug || nextSlug === slug) {
+      closePageMenu();
+      return;
+    }
+    if (dirty && !confirm('You have unsaved changes in this section. Switch pages anyway?')) return;
+    slug = nextSlug;
+    activeSectionKey = null;
+    activeFieldKey = null;
+    history.replaceState(null, '', '?slug=' + encodeURIComponent(slug));
+    closePageMenu();
+    connectLive();
+    await loadPage();
+  }
+
+  function openPageMenu() {
+    byId('te-page-popover').hidden = false;
+    byId('te-page-trigger').setAttribute('aria-expanded', 'true');
+    byId('te-page-search').value = '';
+    renderPageOptions('');
+    requestAnimationFrame(function() { byId('te-page-search').focus(); });
+  }
+
+  function closePageMenu() {
+    byId('te-page-popover').hidden = true;
+    byId('te-page-trigger').setAttribute('aria-expanded', 'false');
+  }
+
+  async function loadMedia() {
+    const response = await adminFetch('/api/admin/media?view=all');
+    mediaLibrary = response.assets || response.media || [];
+    return mediaLibrary;
+  }
+
+  function renderMediaGrid(query) {
+    const needle = String(query || '').trim().toLowerCase();
+    const assets = mediaLibrary.filter(function(asset) {
+      return !needle || ((asset.filename || '') + ' ' + (asset.folder || '') + ' ' + (asset.content_type || '')).toLowerCase().includes(needle);
+    });
+
+    byId('te-media-grid').innerHTML = assets.length ? assets.map(function(asset) {
+      const isImage = String(asset.content_type || '').startsWith('image/');
+      return '<button type="button" class="te-media-card" data-media-url="' + cmsEscapeAttr(asset.url || '') + '"><span class="te-media-card__thumb">' +
+        (isImage ? '<img src="' + cmsEscapeAttr(asset.url || '') + '" alt="">' : '<span>' + cmsEscapeHtml((asset.content_type || 'file').split('/').pop()) + '</span>') +
+        '</span><span class="te-media-card__copy"><strong>' + cmsEscapeHtml(asset.filename || asset.r2_key || 'Asset') + '</strong><span>' + cmsEscapeHtml(asset.folder || 'media') + '</span></span></button>';
+    }).join('') : '<div class="te-empty" style="grid-column:1/-1">No media found.</div>';
+
+    byId('te-media-grid').querySelectorAll('[data-media-url]').forEach(function(card) {
+      card.addEventListener('click', function() { if (mediaTarget) setMediaValue(mediaTarget, card.dataset.mediaUrl); });
+    });
+  }
+
+  async function openMediaPicker(fieldKey) {
+    mediaTarget = fieldKey;
+    byId('te-media-modal').hidden = false;
+    byId('te-media-grid').innerHTML = '<div class="te-empty" style="grid-column:1/-1">Loading media…</div>';
+    try {
+      await loadMedia();
+      renderMediaGrid('');
+      byId('te-media-search').focus();
+    } catch (error) {
+      byId('te-media-grid').innerHTML = '<div class="te-empty" style="grid-column:1/-1">' + cmsEscapeHtml(error.message || String(error)) + '</div>';
+    }
+  }
+
+  function closeMediaPicker() {
+    byId('te-media-modal').hidden = true;
+    mediaTarget = null;
+    byId('te-media-search').value = '';
+  }
+
+  async function uploadFiles(files) {
+    if (!files || !files.length) return [];
+    setNote('Uploading ' + files.length + ' file' + (files.length === 1 ? '' : 's') + '…');
+    const form = new FormData();
+    files.forEach(function(file) { form.append('files', file); });
+    form.append('prefix', 'uploads/theme-editor/');
+    form.append('folder', 'images');
+
+    const response = await fetch('/api/admin/media', { method: 'POST', credentials: 'include', body: form });
+    if (response.status === 401) {
+      location.href = '/admin/login';
+      throw new Error('Unauthorized');
+    }
+    const data = await response.json().catch(function() { return {}; });
+    if (!response.ok) throw new Error(data.error || 'Upload failed');
+    const assets = data.assets || [];
+    mediaLibrary = assets.concat(mediaLibrary.filter(function(existing) {
+      return !assets.some(function(asset) { return asset.id === existing.id; });
+    }));
+    setNote('Media uploaded.', 'success');
+    if (!byId('te-media-modal').hidden) renderMediaGrid(byId('te-media-search').value);
+    return assets;
+  }
+
+  document.querySelectorAll('.te-device-btn').forEach(function(button) {
+    button.addEventListener('click', function() { setDevice(button.dataset.device); });
+  });
+
+  byId('te-tabs').querySelectorAll('[data-tab]').forEach(function(button) {
+    button.addEventListener('click', function() {
+      activeTab = button.dataset.tab;
+      renderInspector();
+    });
+  });
+
+  byId('te-page-trigger').addEventListener('click', function() {
+    if (byId('te-page-popover').hidden) openPageMenu();
+    else closePageMenu();
+  });
+
+  byId('te-page-search').addEventListener('input', function(event) { renderPageOptions(event.target.value); });
+  byId('te-refresh').addEventListener('click', refreshPreview);
+  byId('te-save').addEventListener('click', saveDraft);
+  byId('te-publish').addEventListener('click', publishPage);
+  byId('theme-preview').addEventListener('load', bindPreviewSelection);
+  byId('te-media-close').addEventListener('click', closeMediaPicker);
+  byId('te-media-search').addEventListener('input', function(event) { renderMediaGrid(event.target.value); });
+  byId('te-media-upload').addEventListener('change', async function(event) {
+    try { await uploadFiles(Array.from(event.target.files || [])); }
+    catch (error) { setNote(error.message || String(error), 'error'); }
+    event.target.value = '';
+  });
+  byId('te-media-modal').addEventListener('click', function(event) { if (event.target === byId('te-media-modal')) closeMediaPicker(); });
+
+  document.addEventListener('click', function(event) {
+    if (!byId('te-page-popover').hidden && !event.target.closest('.te-page-menu')) closePageMenu();
+  });
+
+  document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+      closePageMenu();
+      closeMediaPicker();
+    }
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+      event.preventDefault();
+      saveDraft();
+    }
+  });
+
+  window.addEventListener('beforeunload', function(event) {
+    if (!dirty) return;
+    event.preventDefault();
+    event.returnValue = '';
+  });
+
+  setDevice(device);
+  connectLive();
+  loadPage();
+})();
