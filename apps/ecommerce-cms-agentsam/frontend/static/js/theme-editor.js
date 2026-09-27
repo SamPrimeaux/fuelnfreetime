@@ -985,7 +985,7 @@
       }
 
       byId('te-page-title').textContent = pageData.title || humanize(slug);
-      byId('te-full-editor').href = '/admin/page-edit?slug=' + encodeURIComponent(slug);
+      byId('te-page-settings').href = '/admin/page-edit?slug=' + encodeURIComponent(slug);
       byId('te-manage-page').href = '/admin/page-edit?slug=' + encodeURIComponent(slug);
       renderPageOptions('');
       renderTree();
