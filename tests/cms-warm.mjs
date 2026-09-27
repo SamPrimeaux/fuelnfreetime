@@ -1,13 +1,11 @@
 import assert from "node:assert/strict";
 import { warmAllCmsPages } from "../apps/ecommerce-cms-agentsam/backend/cms/deploy.js";
+import { PAGE_REGISTRY } from "../apps/ecommerce-cms-agentsam/backend/cms/registry.js";
 
-const statuses = {
-  site: "published",
-  home: "published",
-  shop: "draft",
-  about: "published",
-  community: "published",
-};
+const slugs = Object.keys(PAGE_REGISTRY);
+const statuses = Object.fromEntries(slugs.map((slug) => [slug, "published"]));
+statuses.shop = "draft";
+
 const written = [];
 const result = await warmAllCmsPages({}, {
   readStatus: async (_env, slug) => ({ status: statuses[slug] }),
@@ -18,10 +16,10 @@ const result = await warmAllCmsPages({}, {
 });
 
 assert.equal(result.ok, true);
-assert.equal(result.warmed_count, 4);
+assert.equal(result.warmed_count, slugs.length - 1);
 assert.equal(result.skipped_count, 1);
 assert.equal(result.error_count, 0);
-assert.deepEqual(written.sort(), ["about", "community", "home", "site"]);
+assert.deepEqual(written.sort(), slugs.filter((slug) => slug !== "shop").sort());
 assert.deepEqual(
   result.warmed.find((row) => row.slug === "shop"),
   { slug: "shop", ok: true, skipped: true, reason: "status:draft" }

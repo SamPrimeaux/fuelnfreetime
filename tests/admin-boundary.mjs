@@ -6,7 +6,11 @@ import {registerHooks} from 'node:module';
 const hooks=registerHooks({resolve(spec,context,next){return spec==='cloudflare:workers'?{url:'data:text/javascript,export class DurableObject {}',shortCircuit:true}:next(spec,context);}});
 const {default:worker}=await import('../apps/ecommerce-cms-agentsam/backend/index.js');
 const expectedHash=createHash('sha256').update('boundary-test').digest('hex');
-const env={DB:{prepare(sql){assert.match(sql,/FROM auth_sessions/);return {bind(hash){return {async first(){return hash===expectedHash?{id:'test',status:'active'}:null;}};}};}},ASSETS:{async fetch(){return new Response('asset');}}};
+const env={DB:{prepare(sql){
+ if(/FROM company/.test(sql)) return {async first(){return null;}};
+ assert.match(sql,/FROM auth_sessions/);
+ return {bind(hash){return {async first(){return hash===expectedHash?{id:'test',status:'active'}:null;}};}};
+}},ASSETS:{async fetch(){return new Response('asset');}}};
 const dispatch=(route,options)=>worker.fetch(new Request('http://localhost'+route,options),env,{});
 try{
  for(const route of ['/admin/home','/admin/theme-editor','/admin/agentsam','/admin/analytics/overview','/admin/analytics/finance','/admin/analytics/health','/admin/account','/admin/products/create','/admin/_spa/assets/test.js','/admin/js/agentsam.js','/admin/workbench/index.js','/admin/partials/mail-app.html']){
