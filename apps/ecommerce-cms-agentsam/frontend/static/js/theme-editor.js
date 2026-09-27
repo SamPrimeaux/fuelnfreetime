@@ -23,8 +23,11 @@
   const fallbackPages = [
     { slug: 'home', title: 'Home page', route: '/' },
     { slug: 'shop', title: 'Shop', route: '/shop' },
-    { slug: 'about', title: 'About', route: '/about.html' },
-    { slug: 'community', title: 'Community', route: '/community.html' }
+    { slug: 'about', title: 'About', route: '/about' },
+    { slug: 'community', title: 'Community', route: '/community' },
+    { slug: 'collaborate', title: 'Collaborate', route: '/collaborate' },
+    { slug: 'policies', title: 'Policies', route: '/policies' },
+    { slug: 'terms', title: 'Terms', route: '/terms' }
   ];
 
   const icon = {
