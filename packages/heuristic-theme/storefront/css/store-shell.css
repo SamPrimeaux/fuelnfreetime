@@ -74,6 +74,20 @@ body.fnf-nav-open {
   .fnf-header--adaptive-bar.is-glass .fnf-row,
   .fnf-header--adaptive-bar[data-header-tone="light"] .fnf-row,
   .fnf-header--frost-pill .fnf-row {
+    backdrop-filter: blur(22px) saturate(1.18);
+    -webkit-backdrop-filter: blur(22px) saturate(1.18);
+  }
+}
+
+.fnf-header.is-glass {
+  border-bottom: 1px solid rgba(255, 255, 255, calc(0.04 + var(--fnf-glass-opacity) * 0.1));
+}
+
+.fnf-header.is-hidden {
+  transform: translateY(-100%);
+}
+
+.fnf-row {
   max-width: var(--fnf-maxw);
   margin: 0 auto;
   height: var(--fnf-header);
