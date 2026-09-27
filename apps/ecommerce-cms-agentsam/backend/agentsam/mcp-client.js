@@ -6,14 +6,15 @@
  * Production fails closed when the registry has no MCP endpoint — no baked-in URLs.
  */
 
-import { FNF_ACCOUNT_ID } from "./constants.js";
 import { fetchGithubContextForAgent, githubStatus } from "./github-client.js";
 import { logToolCall } from "./tools-registry.js";
 import { resolveGithubRepo } from "../lib/integration-config.js";
+import { resolveApplicationAccountId } from "../lib/account-context.js";
 
 const IAM_MCP_PLUGIN_KEY = "inneranimalmedia-mcp-server";
 
 let endpointsCache = null;
+let endpointsCacheAccountId = null;
 let endpointsCachedAt = 0;
 const ENDPOINTS_TTL_MS = 60_000;
 
@@ -30,9 +31,32 @@ function stripSlash(url) {
  *   3. LOCAL_DEV_MCP_URL when ALLOW_MCP_DEV_FALLBACK=1
  *   4. fail closed — ok:false, error: mcp_endpoint_not_configured
  */
-export async function resolveIamBridgeEndpoints(env) {
+export async function resolveIamBridgeEndpoints(env, opts = {}) {
+  const explicitAccountId =
+    opts.accountId ||
+    (env?.ALLOW_INTEGRATION_ENV_OVERRIDE === "1" ? env?.AGENTSAM_ACCOUNT_ID : null);
+  const accountId = await resolveApplicationAccountId(env, explicitAccountId);
+  if (!accountId) {
+    return {
+      ok: false,
+      error: "application_account_not_configured",
+      account_id: null,
+      mcp_url: null,
+      authorization_server: null,
+      iam_origin: null,
+      provider_home: null,
+      docs_url: null,
+      source: null,
+      plugin_key: IAM_MCP_PLUGIN_KEY,
+    };
+  }
+
   const now = Date.now();
-  if (endpointsCache && now - endpointsCachedAt < ENDPOINTS_TTL_MS) {
+  if (
+    endpointsCache &&
+    endpointsCacheAccountId === accountId &&
+    now - endpointsCachedAt < ENDPOINTS_TTL_MS
+  ) {
     return endpointsCache;
   }
 
@@ -50,7 +74,7 @@ export async function resolveIamBridgeEndpoints(env) {
          WHERE account_id = ? AND plugin_key = ? AND is_enabled = 1
          LIMIT 1`,
       )
-        .bind(FNF_ACCOUNT_ID, IAM_MCP_PLUGIN_KEY)
+        .bind(accountId, IAM_MCP_PLUGIN_KEY)
         .first();
 
       if (plugin?.endpoint_url) {
@@ -82,7 +106,7 @@ export async function resolveIamBridgeEndpoints(env) {
            WHERE account_id = ? AND server_key = ? AND is_active = 1
            LIMIT 1`,
         )
-          .bind(FNF_ACCOUNT_ID, IAM_MCP_PLUGIN_KEY)
+          .bind(accountId, IAM_MCP_PLUGIN_KEY)
           .first();
         if (server?.url) {
           mcpUrlValue = String(server.url).trim();
@@ -108,6 +132,7 @@ export async function resolveIamBridgeEndpoints(env) {
   if (!mcpUrlValue) {
     endpointsCache = {
       ok: false,
+      account_id: accountId,
       error: "mcp_endpoint_not_configured",
       mcp_url: null,
       authorization_server: null,
@@ -117,6 +142,7 @@ export async function resolveIamBridgeEndpoints(env) {
       source: null,
       plugin_key: IAM_MCP_PLUGIN_KEY,
     };
+    endpointsCacheAccountId = accountId;
     endpointsCachedAt = now;
     return endpointsCache;
   }
@@ -126,6 +152,7 @@ export async function resolveIamBridgeEndpoints(env) {
 
   endpointsCache = {
     ok: true,
+    account_id: accountId,
     error: null,
     mcp_url: mcpUrlValue,
     authorization_server: issuer,
@@ -136,6 +163,7 @@ export async function resolveIamBridgeEndpoints(env) {
     source,
     plugin_key: IAM_MCP_PLUGIN_KEY,
   };
+  endpointsCacheAccountId = accountId;
   endpointsCachedAt = now;
   return endpointsCache;
 }
@@ -163,13 +191,13 @@ function bridgeKey(env) {
   return String(env.AGENTSAM_BRIDGE_KEY || "").trim();
 }
 
-function bridgeHeaders(env, extra = {}) {
+function bridgeHeaders(env, accountId, extra = {}) {
   return {
     Authorization: `Bearer ${bridgeKey(env)}`,
     "Content-Type": "application/json",
     Accept: "application/json",
-    "X-Tenant-Id": FNF_ACCOUNT_ID,
-    "X-Workspace-Id": FNF_ACCOUNT_ID,
+    "X-Tenant-Id": accountId,
+    "X-Workspace-Id": accountId,
     ...extra,
   };
 }
@@ -196,7 +224,7 @@ export async function mcpRpc(env, method, params = {}) {
   try {
     const res = await fetch(endpoints.mcp_url, {
       method: "POST",
-      headers: bridgeHeaders(env),
+      headers: bridgeHeaders(env, endpoints.account_id),
       body: JSON.stringify({
         jsonrpc: "2.0",
         id: crypto.randomUUID(),
@@ -236,7 +264,7 @@ export async function probeBridge(env) {
   const init = await mcpRpc(env, "initialize", {
     protocolVersion: "2024-11-05",
     capabilities: {},
-    clientInfo: { name: "fuelnfreetime-agentsam", version: "1.0.0" },
+    clientInfo: { name: "agentsam-ecommerce-cms", version: "1.0.0" },
   });
   if (!init.ok) return { ok: false, configured: true, error: init.error, endpoint_source: endpoints.source };
 
@@ -398,7 +426,7 @@ export async function mcpConnectUrls(env) {
     return {
       ok: false,
       error: endpoints.error || "mcp_endpoint_not_configured",
-      fnf_github_oauth: "/api/admin/agentsam/github/start",
+      github_oauth: "/api/admin/agentsam/github/start",
     };
   }
 
@@ -411,7 +439,7 @@ export async function mcpConnectUrls(env) {
     iam_github_oauth: issuer
       ? `${issuer}/api/oauth/github/start?return_to=${encodeURIComponent("/dashboard/settings/integrations")}`
       : null,
-    fnf_github_oauth: "/api/admin/agentsam/github/start",
+    github_oauth: "/api/admin/agentsam/github/start",
     iam_integrations: issuer ? `${issuer}/dashboard/settings/integrations` : null,
   };
 }

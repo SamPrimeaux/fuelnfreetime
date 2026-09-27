@@ -69,8 +69,8 @@ function renderMcpBanner(data) {
   } else if (bridgeReady) {
     parts.push("Inner Animal MCP bridge connected.");
   }
-  if (needsGithub && urls.fnf_github_oauth) {
-    parts.push(`<a href="${urls.fnf_github_oauth}">Connect GitHub</a> (fuelnfreetime repo only).`);
+  if (needsGithub && urls.github_oauth) {
+    parts.push(`<a href="${urls.github_oauth}">Connect GitHub</a>.`);
   } else if (needsGithub && urls.iam_github_oauth) {
     parts.push(`<a href="${urls.iam_github_oauth}" target="_blank" rel="noopener">Connect GitHub</a> in IAM for repo tools.`);
   }

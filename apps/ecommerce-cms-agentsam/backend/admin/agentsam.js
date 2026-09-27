@@ -35,7 +35,6 @@ import {
   probeBridge,
   probeGitHubConnection,
 } from "../agentsam/mcp-client.js";
-import { FNF_GITHUB_REPO, FNF_ACCOUNT_ID } from "../agentsam/constants.js";
 import {
   formatSemanticSearchForPrompt,
   maybeRunSemanticSearch,
@@ -44,12 +43,22 @@ import { listMcpServersForUi, mcpRuntimeConfig } from "../agentsam/mcp-servers.j
 import { listDrawerWorkflows, listStudioWorkflows, routeAgentsamRequest } from "../agentsam/router.js";
 import { getAgentSamSkill, listAgentSamSkills, buildSkillHash, recordSkillInvocations } from "../agentsam/skills.js";
 import { getSessionUser } from "../lib/auth.js";
+import { getCompany } from "../lib/company.js";
+import { resolveApplicationAccountId } from "../lib/account-context.js";
 
-const LEGACY_SYSTEM_PROMPT = `You are Agent Sam for Fuel & Free Time (fuelnfreetime.com).
-You handle everything through one conversation: store ops, content writing, creative direction, brand work, email drafts, brainstorming, and repo/code guidance.
-Be concise, practical, and on-brand — rugged, earned freedom, motorsports and garage culture.
-All tools are scoped to this Worker (fuelnfreetime), D1 database fuelnfreetime, R2 bucket fuelnfreetime, and GitHub repo SamPrimeaux/fuelnfreetime only.
-Do not invent inventory, orders, or prices.`;
+async function buildFallbackSystemPrompt(env) {
+  const company = await getCompany(env).catch(() => null);
+  const brandName = company?.name || "this business";
+  const lines = [
+    "You are AgentSam inside a commerce and content-management application for " + brandName + ".",
+    "Help with store operations, content, brand work, email drafts, planning, integrations, and repository guidance.",
+    "Use the provided company, account, content, integration, and live store context as authority.",
+    "Do not invent inventory, orders, prices, connection state, or completed writes. Only claim a change was saved, published, connected, or deployed when a tool or API result confirms it.",
+  ];
+  if (company?.websiteUrl) lines.push("Website: " + company.websiteUrl);
+  if (company?.tagline) lines.push("Brand context: " + company.tagline);
+  return lines.join("\n");
+}
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -145,7 +154,7 @@ async function assembleSystemPrompt(env, routing, context, message, attachments,
       contextHash: "fallback",
     };
     promptPack = {
-      systemPrompt: LEGACY_SYSTEM_PROMPT,
+      systemPrompt: await buildFallbackSystemPrompt(env),
       cache_hit: false,
       cache_key: null,
       fragmentKeys: [],
@@ -156,8 +165,8 @@ async function assembleSystemPrompt(env, routing, context, message, attachments,
   }
 
   const connectUrls = await mcpConnectUrls(env);
-  const oauthBlock = connectUrls.fnf_github_oauth
-    ? `GitHub OAuth (FNF-scoped): ${new URL(connectUrls.fnf_github_oauth, request.url).toString()}`
+  const oauthBlock = connectUrls.github_oauth
+    ? "GitHub OAuth: " + new URL(connectUrls.github_oauth, request.url).toString()
     : "";
 
   const selectionBlock = context.selected_resource
@@ -416,7 +425,7 @@ export async function agentsamChat(request, env, executionCtx = null) {
         event_type: githubMeta.mcp_tool ? "mcp" : "github",
         event_name: githubMeta.mcp_tool ? "mcp_tool_called" : "github_context_loaded",
         status: githubMeta.success ? "success" : "failed",
-        github_repo: githubMeta.github_repo || FNF_GITHUB_REPO,
+        github_repo: githubMeta.github_repo || null,
         github_operation: githubMeta.github_operation,
         mcp_server: githubMeta.mcp_server,
         mcp_tool: githubMeta.mcp_tool,
@@ -892,7 +901,7 @@ export async function agentsamPromptsList(env) {
   return json({ ok: true, prompts, fragments });
 }
 
-export async function agentsamPromptCacheSummary(env) {
+export async function agentsamPromptCacheSummary(env, accountId = null) {
   const [prompt_cache, context_cache] = await Promise.all([
     summarizePromptCache(env),
     summarizeContextCache(env),
@@ -906,7 +915,7 @@ export async function agentsamPromptCacheSummary(env) {
        FROM agentsam_prompt_usage WHERE account_id = ? AND created_at_unix >= ?
        GROUP BY workflow_key ORDER BY n DESC LIMIT 5`
     )
-      .bind(FNF_ACCOUNT_ID, Math.floor(Date.now() / 1000) - 86400)
+      .bind(await resolveApplicationAccountId(env, accountId), Math.floor(Date.now() / 1000) - 86400)
       .all();
     top_workflows = wf.results || [];
 

@@ -2,7 +2,8 @@
  * Team + mailbox provisioning (Resend-only — no Gmail forwarding).
  */
 
-import { hashPassword, newAuthUserId, FNF_ACCOUNT_ID } from "../lib/auth.js";
+import { hashPassword, newAuthUserId } from "../lib/auth.js";
+import { resolveApplicationAccountId } from "../lib/account-context.js";
 import { listMailboxes, getMailboxBySlug } from "../lib/mail-mailboxes.js";
 
 
@@ -31,12 +32,21 @@ export async function listTeamMembers(env, user) {
   const denied = requireAdmin(user);
   if (denied) return denied;
 
+  const accountId = await resolveApplicationAccountId(env, user?.account_id || null);
+  if (!accountId) {
+    return Response.json({ error: "application_account_not_configured" }, { status: 503 });
+  }
+
   const { results: members } = await env.DB.prepare(
-    `SELECT id, email, display_name, name, role, avatar_url, status, created_at, last_login_at
-     FROM auth_users
-     WHERE status = 'active'
-     ORDER BY display_name ASC, email ASC`
-  ).all();
+    `SELECT u.id, u.email, u.display_name, u.name, m.role, u.avatar_url, u.status,
+            u.created_at, u.last_login_at
+     FROM account_memberships m
+     JOIN auth_users u ON u.id = m.user_id
+     WHERE m.account_id = ? AND u.status = 'active'
+     ORDER BY u.display_name ASC, u.email ASC`
+  )
+    .bind(accountId)
+    .all();
 
   const mailboxes = await listMailboxes(env);
 
@@ -60,6 +70,11 @@ export async function listTeamMembers(env, user) {
 export async function inviteTeamMember(request, env, user) {
   const denied = requireAdmin(user);
   if (denied) return denied;
+
+  const accountId = await resolveApplicationAccountId(env, user?.account_id || null);
+  if (!accountId) {
+    return Response.json({ error: "application_account_not_configured" }, { status: 503 });
+  }
 
   const body = await request.json().catch(() => null);
   if (!body?.email || !body?.password) {
@@ -120,7 +135,7 @@ export async function inviteTeamMember(request, env, user) {
       salt,
       role,
       displayName,
-      FNF_ACCOUNT_ID
+      accountId
     )
     .run();
 
@@ -132,7 +147,7 @@ export async function inviteTeamMember(request, env, user) {
      VALUES (?, ?, ?)
      ON CONFLICT(account_id, user_id) DO UPDATE SET role = excluded.role`
   )
-    .bind(FNF_ACCOUNT_ID, userId, role)
+    .bind(accountId, userId, role)
     .run();
 
   const mailboxId = `mb_${localPart}`;

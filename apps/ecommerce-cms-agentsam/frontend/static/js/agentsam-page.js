@@ -691,7 +691,7 @@ function renderMcpList(servers) {
     let trailing = "";
     if (isActive) {
       trailing = `<span class="agentsam-page-mcp-check" aria-hidden="true">✓</span>`;
-    } else if (s.slug === "github" && !s.connected && connectUrls.fnf_github_oauth) {
+    } else if (s.slug === "github" && !s.connected && connectUrls.github_oauth) {
       trailing = `<span class="agentsam-page-mcp-link">Connect</span>`;
     } else if (!s.connected && s.status === "needs_bridge") {
       trailing = `<span class="agentsam-page-mcp-hint">Setup</span>`;
@@ -706,8 +706,8 @@ function renderMcpList(servers) {
     `;
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      if (s.slug === "github" && !s.connected && connectUrls.fnf_github_oauth && !isActive) {
-        window.location.href = connectUrls.fnf_github_oauth;
+      if (s.slug === "github" && !s.connected && connectUrls.github_oauth && !isActive) {
+        window.location.href = connectUrls.github_oauth;
         closeToolMenu();
         return;
       }

@@ -120,7 +120,7 @@ async function login(request, env) {
   const ok = await verifyPassword(body.password, user.password_hash, user.salt);
   if (!ok) return json({ error: "Invalid credentials" }, { status: 401 });
 
-  const cookie = await createSession(env, user.id);
+  const cookie = await createSession(env, user.id, user.default_account_id || null);
   return json(
     { ok: true, email: user.email, role: user.role },
     { headers: { "set-cookie": cookie } }
@@ -672,7 +672,7 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
     return agentsamPromptsList(env);
   }
   if (path === "/api/admin/agentsam/prompts/cache/summary" && method === "GET") {
-    return agentsamPromptCacheSummary(env);
+    return agentsamPromptCacheSummary(env, user?.account_id || null);
   }
   if (path === "/api/admin/agentsam/tools/semantic-search" && method === "POST") {
     return agentsamSemanticSearch(request, env);

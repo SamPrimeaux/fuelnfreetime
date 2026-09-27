@@ -2,7 +2,7 @@
  * Admin auth — auth_users + auth_sessions (PBKDF2, httpOnly cookie).
  */
 
-import { FNF_ACCOUNT_ID } from "../agentsam/constants.js";
+import { resolveApplicationAccountId } from "./account-context.js";
 
 const ITERATIONS = 100000;
 const SESSION_DAYS = 7;
@@ -40,7 +40,7 @@ async function pbkdf2(password, saltBytes) {
 }
 
 export function newAuthUserId() {
-  return `au_fnf_${toHex(crypto.getRandomValues(new Uint8Array(8)))}`;
+  return `au_${toHex(crypto.getRandomValues(new Uint8Array(8)))}`;
 }
 
 export async function hashPassword(password) {
@@ -86,15 +86,17 @@ async function touchLogin(env, userId) {
     .run();
 }
 
-export async function createSession(env, userId) {
+export async function createSession(env, userId, explicitAccountId = null) {
   const token = randomToken();
   const tokenHash = await sha256Hex(token);
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 86400000).toISOString();
+  const accountId = await resolveApplicationAccountId(env, explicitAccountId);
+  if (!accountId) throw new Error("application_account_not_configured");
 
   await env.DB.prepare(
     `INSERT INTO auth_sessions (token_hash, user_id, active_account_id, expires_at) VALUES (?, ?, ?, ?)`
   )
-    .bind(tokenHash, String(userId), FNF_ACCOUNT_ID, expiresAt)
+    .bind(tokenHash, String(userId), accountId, expiresAt)
     .run();
 
   await touchLogin(env, userId);
@@ -136,12 +138,10 @@ export async function destroySession(request, env) {
 
 export async function findAuthUserByEmail(env, email) {
   return env.DB.prepare(
-    `SELECT id, email, password_hash, salt, role, status
+    `SELECT id, email, password_hash, salt, role, status, default_account_id
      FROM auth_users
      WHERE email = ? AND status = 'active'`
   )
     .bind(email.trim().toLowerCase())
     .first();
 }
-
-export { FNF_ACCOUNT_ID };

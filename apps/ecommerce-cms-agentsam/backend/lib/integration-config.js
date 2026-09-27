@@ -3,8 +3,8 @@
  * Wrangler env may supply local/dev overrides only; production values live in D1.
  */
 
-import { FNF_ACCOUNT_ID } from "../agentsam/constants.js";
 import { getCompany, companyDomain } from "./company.js";
+import { resolveApplicationAccountId } from "./account-context.js";
 
 function parseJson(raw, fallback = {}) {
   if (!raw) return fallback;
@@ -20,15 +20,17 @@ function parseJson(raw, fallback = {}) {
  * @param {any} env
  * @param {string} pluginKey
  */
-export async function getPlugin(env, pluginKey) {
+export async function getPlugin(env, pluginKey, opts = {}) {
   if (!env?.DB || !pluginKey) return null;
   try {
+    const accountId = await resolveApplicationAccountId(env, opts.accountId);
+    if (!accountId) return null;
     return await env.DB.prepare(
       `SELECT * FROM agentsam_plugins
        WHERE account_id = ? AND plugin_key = ? AND is_enabled = 1
        LIMIT 1`,
     )
-      .bind(FNF_ACCOUNT_ID, pluginKey)
+      .bind(accountId, pluginKey)
       .first();
   } catch (err) {
     console.error("[integration-config] plugin load failed", pluginKey, err?.message || err);
@@ -36,15 +38,17 @@ export async function getPlugin(env, pluginKey) {
   }
 }
 
-export async function listEnabledPlugins(env) {
+export async function listEnabledPlugins(env, opts = {}) {
   if (!env?.DB) return [];
   try {
+    const accountId = await resolveApplicationAccountId(env, opts.accountId);
+    if (!accountId) return [];
     const { results } = await env.DB.prepare(
       `SELECT * FROM agentsam_plugins
        WHERE account_id = ? AND is_enabled = 1
        ORDER BY display_name ASC, plugin_key ASC`,
     )
-      .bind(FNF_ACCOUNT_ID)
+      .bind(accountId)
       .all();
     return results || [];
   } catch {
@@ -54,15 +58,15 @@ export async function listEnabledPlugins(env) {
 
 /**
  * GitHub repository slug (owner/repo) from agentsam_plugins.
- * Optional env.FNF_GITHUB_REPO is a local-dev override only.
+ * Optional env.AGENTSAM_GITHUB_REPO is a local-dev override only.
  */
-export async function resolveGithubRepo(env) {
-  const override = String(env?.FNF_GITHUB_REPO || "").trim();
+export async function resolveGithubRepo(env, opts = {}) {
+  const override = String(env?.AGENTSAM_GITHUB_REPO || "").trim();
   if (override && env?.ALLOW_INTEGRATION_ENV_OVERRIDE === "1") {
     return { ok: true, repo: override, source: "env_override" };
   }
 
-  const plugin = await getPlugin(env, "github");
+  const plugin = await getPlugin(env, "github", opts);
   if (plugin) {
     const meta = parseJson(plugin.metadata_json);
     const cfg = parseJson(plugin.config_json);
@@ -79,7 +83,7 @@ export async function resolveGithubRepo(env) {
   }
 
   // MCP plugin config may carry scoped github_repo for this install.
-  const mcp = await getPlugin(env, "inneranimalmedia-mcp-server");
+  const mcp = await getPlugin(env, "inneranimalmedia-mcp-server", opts);
   if (mcp) {
     const cfg = parseJson(mcp.config_json);
     const repo = String(cfg.github_repo || "").trim();
