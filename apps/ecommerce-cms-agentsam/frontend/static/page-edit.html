@@ -340,38 +340,99 @@ async function loadPage() {
   }
 }
 
+function mediaIsImage(asset) {
+  const type = String(asset?.content_type || "").toLowerCase();
+  const url = String(asset?.url || "");
+  return type.startsWith("image/") || /\.(png|jpe?g|gif|webp|avif|svg)(\?|$)/i.test(url);
+}
+
+function renderPageMediaGrid(query = "") {
+  const needle = String(query || "").trim().toLowerCase();
+  const assets = mediaLibrary.filter((asset) => {
+    const haystack = [
+      asset.filename,
+      asset.folder,
+      asset.content_type,
+      asset.r2_key,
+    ].filter(Boolean).join(" ").toLowerCase();
+    return !needle || haystack.includes(needle);
+  });
+
+  const grid = document.getElementById("page-media-grid");
+  grid.innerHTML = assets.length
+    ? assets.map((asset, index) => {
+        const preview = mediaIsImage(asset)
+          ? `<img src="${cmsEscapeAttr(asset.url || "")}" alt="">`
+          : `<span class="page-editor-media-type">${cmsEscapeHtml((asset.content_type || "file").split("/").pop())}</span>`;
+        return `
+          <button type="button" class="page-editor-media-card" data-media-index="${index}">
+            <span class="page-editor-media-card__preview">${preview}</span>
+            <span class="page-editor-media-card__copy">
+              <strong>${cmsEscapeHtml(asset.filename || asset.r2_key || "Asset")}</strong>
+              <span>${cmsEscapeHtml(asset.folder || asset.content_type || "media")}</span>
+            </span>
+          </button>`;
+      }).join("")
+    : '<div class="pages-empty">No media matches that search.</div>';
+
+  grid.querySelectorAll("[data-media-index]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const asset = assets[Number(button.dataset.mediaIndex)];
+      if (!asset || !mediaTargetId) return;
+      const input = document.getElementById(mediaTargetId);
+      const thumb = document.getElementById(`${mediaTargetId}-thumb`);
+      if (input) {
+        input.value = asset.url || "";
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      if (thumb && mediaIsImage(asset)) {
+        thumb.src = asset.url || "";
+        thumb.style.opacity = "1";
+      }
+      closeMediaPicker();
+    });
+  });
+}
+
+function closeMediaPicker() {
+  const modal = document.getElementById("page-media-modal");
+  if (modal) modal.hidden = true;
+  mediaTargetId = null;
+  const search = document.getElementById("page-media-search");
+  if (search) search.value = "";
+}
+
 async function openMediaPicker(targetId) {
-  if (!mediaLibrary.length) {
-    try {
+  mediaTargetId = targetId;
+  const modal = document.getElementById("page-media-modal");
+  const grid = document.getElementById("page-media-grid");
+  modal.hidden = false;
+  grid.innerHTML = '<div class="pages-empty">Loading media…</div>';
+
+  try {
+    if (!mediaLibrary.length) {
       const d = await adminFetch("/api/admin/media?view=all");
       mediaLibrary = d.assets || d.media || [];
-    } catch {
-      showNote("Could not load media library.", "error");
-      return;
     }
-  }
-  if (!mediaLibrary.length) {
-    showNote("Media library is empty — upload assets in Content first.", "error");
-    return;
-  }
-
-  const names = mediaLibrary.map((m, i) => `${i + 1}. ${m.filename}`).join("\n");
-  const pick = prompt(`Enter media number (1–${mediaLibrary.length}):\n\n${names}`);
-  const idx = Number(pick) - 1;
-  if (!Number.isInteger(idx) || idx < 0 || idx >= mediaLibrary.length) return;
-
-  const asset = mediaLibrary[idx];
-  const input = document.getElementById(targetId);
-  const thumb = document.getElementById(`${targetId}-thumb`);
-  if (input) {
-    input.value = asset.url;
-    setDirty(true);
-  }
-  if (thumb) {
-    thumb.src = asset.url;
-    thumb.style.opacity = "1";
+    renderPageMediaGrid("");
+    requestAnimationFrame(() => document.getElementById("page-media-search")?.focus());
+  } catch (err) {
+    grid.innerHTML = `<div class="pages-empty">${cmsEscapeHtml(err.message || "Could not load media library.")}</div>`;
   }
 }
+
+document.getElementById("page-media-close")?.addEventListener("click", closeMediaPicker);
+document.getElementById("page-media-search")?.addEventListener("input", (event) => {
+  renderPageMediaGrid(event.target.value);
+});
+document.getElementById("page-media-modal")?.addEventListener("click", (event) => {
+  if (event.target.id === "page-media-modal") closeMediaPicker();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !document.getElementById("page-media-modal")?.hidden) {
+    closeMediaPicker();
+  }
+});
 
 async function savePage() {
   const saveBtn = document.getElementById("save-btn");
