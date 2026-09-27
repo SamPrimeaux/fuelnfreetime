@@ -50,6 +50,21 @@
 .theme-studio-toolbar__center { justify-content: center; }
 .theme-studio-toolbar__right { justify-content: flex-end; }
 
+.te-editor-label {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #ece9ff;
+  color: #4d34b7;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .te-icon-btn,
 .te-device-btn,
 .te-page-trigger,
