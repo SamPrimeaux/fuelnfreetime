@@ -2,6 +2,14 @@
   const CART_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6 5 3H2"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg>`;
 
   let navConfig;
+  let headerPresetContract = {
+    version: 1,
+    defaultPreset: "adaptive-bar",
+    presets: {
+      "adaptive-bar": { label: "Adaptive bar", contrast: "ambient" },
+      "frost-pill": { label: "Frost pill", contrast: "dark-ink" },
+    },
+  };
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -52,8 +60,81 @@
     return best;
   }
 
+  async function loadHeaderPresetContract() {
+    try {
+      const res = await fetch("/theme/contracts/header-presets.json", {
+        headers: { accept: "application/json" },
+      });
+      if (!res.ok) throw new Error(`Header preset contract request failed (${res.status})`);
+      const data = await res.json();
+      if (!data?.defaultPreset || !data?.presets || typeof data.presets !== "object") {
+        throw new Error("Header preset contract is invalid");
+      }
+      headerPresetContract = data;
+    } catch (error) {
+      console.warn("[FNF shell] using built-in header preset contract:", error?.message || error);
+    }
+  }
+
+  function resolveHeaderPreset() {
+    const requested = document.documentElement.dataset.headerPreset || headerPresetContract.defaultPreset;
+    if (headerPresetContract.presets?.[requested]) return requested;
+    return headerPresetContract.defaultPreset || "adaptive-bar";
+  }
+
+  function toneFromHeaderMode(mode) {
+    const normalized = String(mode || "").trim().toLowerCase();
+    if (!normalized) return null;
+    if (["glass-dark", "dark-ink", "surface-light", "light"].includes(normalized)) return "light";
+    if (["ghost-light", "glass-light", "light-ink", "surface-dark", "dark"].includes(normalized)) return "dark";
+    return null;
+  }
+
+  function colorLuminance(color) {
+    const match = String(color || "").match(/rgba?\(([^)]+)\)/i);
+    if (!match) return null;
+    const parts = match[1].split(",").map((part) => Number.parseFloat(part.trim()));
+    if (parts.length < 3 || parts.slice(0, 3).some((value) => !Number.isFinite(value))) return null;
+    if (parts.length > 3 && Number.isFinite(parts[3]) && parts[3] <= 0.08) return null;
+    const channels = parts.slice(0, 3).map((value) => {
+      const c = Math.max(0, Math.min(255, value)) / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+  }
+
+  function sampleBackdropTone(header) {
+    const explicit = toneFromHeaderMode(document.documentElement.dataset.hHeaderMode);
+    if (explicit) return explicit;
+
+    const rect = header.getBoundingClientRect();
+    const x = Math.max(1, Math.min(innerWidth - 2, Math.round(innerWidth / 2)));
+    const y = Math.max(1, Math.min(innerHeight - 2, Math.round(rect.bottom + 8)));
+    let node = document.elementFromPoint(x, y);
+
+    while (node && node !== document.documentElement) {
+      if (node !== header && !node.closest?.(".fnf-header")) {
+        const luminance = colorLuminance(getComputedStyle(node).backgroundColor);
+        if (luminance != null) return luminance >= 0.48 ? "light" : "dark";
+      }
+      node = node.parentElement;
+    }
+
+    const bodyLuminance = colorLuminance(getComputedStyle(document.body).backgroundColor);
+    return bodyLuminance != null && bodyLuminance >= 0.48 ? "light" : "dark";
+  }
+
+  function applyHeaderTone(header) {
+    if (!header) return;
+    const preset = header.dataset.headerPreset || resolveHeaderPreset();
+    const tone = preset === "frost-pill" ? "light" : sampleBackdropTone(header);
+    header.dataset.headerTone = tone;
+  }
+
   function applyTheme() {
     const root = document.documentElement;
+    const preset = resolveHeaderPreset();
+    if (!root.dataset.headerPreset) root.dataset.headerPreset = preset;
     root.style.setProperty("--fnf-accent", navConfig.brandAccent);
     root.style.setProperty("--fnf-accent-light", navConfig.brandAccentLight);
     root.style.setProperty("--fnf-logo-height", `${navConfig.logoHeight}px`);
@@ -65,6 +146,7 @@
 
   function headerBlock(includeSpacer) {
     const visibleItems = navConfig.items.filter((i) => i.visible !== false);
+    const headerPreset = resolveHeaderPreset();
     const navItems = visibleItems
       .map((n) => `<li><a href="${escapeHtml(n.href)}" data-nav-id="${escapeHtml(n.id)}">${escapeHtml(n.label)}</a></li>`)
       .join("");
@@ -85,7 +167,7 @@
       : "";
 
     return `
-      <header class="fnf-header" id="fnfHeader">
+      <header class="fnf-header fnf-header--${escapeHtml(headerPreset)}" id="fnfHeader" data-header-preset="${escapeHtml(headerPreset)}" data-header-tone="${headerPreset === "frost-pill" ? "light" : "dark"}">
         ${announcement}
         <div class="fnf-row">
           <a class="fnf-logo" href="/" aria-label="Fuel & Free Time">
@@ -141,6 +223,7 @@
 
     const updateHeader = () => {
       const y = window.scrollY;
+      applyHeaderTone(header);
       const delta = y - lastY;
       const velocity = Math.abs(delta);
 
@@ -184,6 +267,12 @@
     };
 
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    const toneObserver = new MutationObserver(() => applyHeaderTone(header));
+    toneObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-h-header-mode", "data-header-preset"],
+    });
     updateHeader();
 
     const closeMenu = () => {
@@ -237,6 +326,7 @@
     );
     setActiveNav();
     bindHeader();
+    applyHeaderTone(document.getElementById("fnfHeader"));
     updateCartBadge();
   }
 
@@ -257,7 +347,7 @@
     if (!storeMount && !headerMount) return;
 
     try {
-      await loadNavConfig();
+      await Promise.all([loadNavConfig(), loadHeaderPresetContract()]);
     } catch (error) {
       console.error(error);
       const failedMount = storeMount || headerMount;
@@ -275,6 +365,15 @@
     CART_SVG,
     reload: mount,
     getNavConfig: () => navConfig,
+    getHeaderPresets: () => headerPresetContract,
+    getHeaderPreset: () => resolveHeaderPreset(),
+    setHeaderPreset(preset) {
+      if (!headerPresetContract.presets?.[preset]) {
+        throw new Error(`Unknown header preset: ${preset}`);
+      }
+      document.documentElement.dataset.headerPreset = preset;
+      return mount();
+    },
   };
 
   document.addEventListener("fnf:cart-updated", updateCartBadge);
