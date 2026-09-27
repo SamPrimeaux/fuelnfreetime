@@ -158,7 +158,7 @@ async function assembleSystemPrompt(env, routing, context, message, attachments,
     };
   }
 
-  const connectUrls = mcpConnectUrls(env);
+  const connectUrls = await mcpConnectUrls(env);
   const oauthBlock = connectUrls.fnf_github_oauth
     ? `GitHub OAuth (FNF-scoped): ${new URL(connectUrls.fnf_github_oauth, request.url).toString()}`
     : "";
@@ -433,7 +433,7 @@ export async function agentsamChat(request, env, executionCtx = null) {
     );
   }
 
-  const connectUrls = mcpConnectUrls(env);
+  const connectUrls = await mcpConnectUrls(env);
 
   const assembled = await assembleSystemPrompt(
     env,
@@ -803,7 +803,7 @@ export async function agentsamStatus(env, userId = null) {
     bridge_ready: bridgeProbe?.ok ?? false,
     github,
     mcp_servers: mcpServers,
-    connect_urls: mcpConnectUrls(env),
+    connect_urls: await mcpConnectUrls(env),
     ...aiRegistry,
     analytics: analyticsStatus,
     tools: toolsRegistry,
@@ -818,11 +818,11 @@ export async function agentsamMcpStatus(env, userId = null) {
 
   return json({
     ok: true,
-    ...mcpRuntimeConfig(env),
+    ...(await mcpRuntimeConfig(env)),
     bridge_ready: probe?.ok ?? false,
     tool_count: probe?.tool_count ?? 0,
     github,
-    connect_urls: mcpConnectUrls(env),
+    connect_urls: await mcpConnectUrls(env),
     mcp_servers: await listMcpServersForUi(env, userId),
   });
 }
@@ -842,7 +842,7 @@ export async function agentsamTools(env) {
     drawer_workflows: drawerWorkflows,
     mcp_servers: mcpServers,
     tool_catalog: toolCatalog,
-    connect_urls: mcpConnectUrls(env),
+    connect_urls: await mcpConnectUrls(env),
     quick_actions: uiConfig.quick_actions,
     plus_menu: uiConfig.plus_menu,
     features: getAgentFeatures(),

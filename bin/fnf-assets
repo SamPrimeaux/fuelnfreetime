@@ -45,22 +45,26 @@ CDN:    ${FNF_R2.publicBaseUrl}
 Worker: ${FNF_R2.workerMediaBaseUrl}
 
 Commands:
-  optimize   Batch optimize images under a prefix (intake→promote→delete when classified canonical)
-  promote    Promote a single intake key to canonical optimized asset
-  products   Optimize one or more product folder prefixes
-  plan-product  Worker-safe optimize/tag plan for a single product R2 key (no sharp)
-  plan       Worker-safe ingest plan for any media key (no sharp)
+  optimize      Batch optimize images under a prefix (admin/debug; production uses auto jobs)
+  promote       Promote a single intake key (admin/debug Sharp path)
+  products      Optimize one or more product folder prefixes
+  plan-product  Worker-safe plan for a product R2 key (no transform)
+  plan          Worker-safe ingest plan for any media key
+  jobs:drain    Ask production Worker to drain queued asset jobs (automatic path)
+  jobs:process  Ask production Worker to process one job id
 
 Flags:
   --prefix <path>       R2 prefix (default uploads/)
   --prefixes <a,b>      Comma list for products command
   --key <r2_key>        Single key for plan/promote/plan-product
+  --job-id <id>         Job id for jobs:process
+  --limit <n>           Cap queue size / drain batch
   --min-bytes <n>       Skip smaller objects
-  --limit <n>           Cap queue size
   --max-width <n>       Default ${FNF_R2.defaults.maxWidth}
   --quality <n>         Default ${FNF_R2.defaults.quality}
   --dry-run             Transform locally only; no R2 puts / deletes
 
+Production uploads auto-enqueue; this CLI is the same machinery for debug/batch.
 Auth: run via ./scripts/with-cf-admin-env.sh bin/fnf-assets …
 `);
 }
@@ -89,6 +93,32 @@ async function main() {
       ),
     );
     return;
+  }
+
+  if (command === "jobs:drain" || command === "jobs:process") {
+    const secret =
+      process.env.FNF_ASSET_JOB_SECRET || process.env.AGENTSAM_COMPACTION_SECRET || "";
+    if (!secret) throw new Error("FNF_ASSET_JOB_SECRET or AGENTSAM_COMPACTION_SECRET required");
+    const base = flag("--base", "https://fuelnfreetime.com").replace(/\/$/, "");
+    const url =
+      command === "jobs:process"
+        ? `${base}/api/internal/assets/jobs/${flag("--job-id")}`
+        : `${base}/api/internal/assets/jobs/drain`;
+    if (command === "jobs:process" && !flag("--job-id")) throw new Error("--job-id required");
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "X-Fnf-Asset-Job-Secret": secret,
+        "X-Agentsam-Compaction-Secret": secret,
+      },
+      body: JSON.stringify({
+        limit: Number(flag("--limit", "20")) || 20,
+      }),
+    });
+    const body = await res.json().catch(() => ({}));
+    console.log(JSON.stringify(body, null, 2));
+    process.exit(res.ok ? 0 : 1);
   }
 
   if (command === "promote") {

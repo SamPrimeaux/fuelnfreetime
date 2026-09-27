@@ -4,6 +4,11 @@ compatibility_date = "2026-01-20"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 
+[[rules]]
+type = "CompiledWasm"
+globs = ["**/*.wasm"]
+fallthrough = true
+
 [observability.logs]
 enabled = true
 invocation_logs = true
@@ -12,8 +17,6 @@ invocation_logs = true
 APP_NAME = "Fuel & Free Time"
 APP_DOMAIN = "fuelnfreetime.com"
 ALLOWED_ORIGINS = "https://fuelnfreetime.com,https://www.fuelnfreetime.com,https://fuelnfreetime.meauxbility.workers.dev"
-IAM_MCP_URL = "https://mcp.inneranimalmedia.com/mcp"
-IAM_ORIGIN = "https://inneranimalmedia.com"
 FNF_GITHUB_REPO = "SamPrimeaux/fuelnfreetime"
 FNF_GITHUB_CLIENT_ID = "Ov23li6BZYxjVtGUWibX"
 RESEND_FROM = "Fuel & Free Time <hello@fuelnfreetime.com>"
@@ -51,6 +54,16 @@ id = "bc3b4e3f272e4b46b3c92df6dff85bff"
 binding = "FNF_VECTORIZE"
 index_name = "fnf-agentsam-bge-m3-1024"
 
+[[queues.producers]]
+binding = "ASSET_JOBS"
+queue = "fnf-asset-jobs"
+
+[[queues.consumers]]
+queue = "fnf-asset-jobs"
+max_batch_size = 5
+max_retries = 5
+max_batch_timeout = 10
+
 [[durable_objects.bindings]]
 name = "CMS_EDITOR"
 class_name = "CmsEditorRoom"
@@ -60,7 +73,8 @@ tag = "v1-cms-editor"
 new_sqlite_classes = ["CmsEditorRoom"]
 
 [triggers]
-crons = ["0 4 * * *"]
+# Daily AgentSam compaction + frequent asset-job drain safety net
+crons = ["0 4 * * *", "*/5 * * * *"]
 
 [assets]
 directory = "./dist/assets"

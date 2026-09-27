@@ -1,22 +1,159 @@
 /**
  * Inner Animal MCP client — service dispatch via AGENTSAM_BRIDGE_KEY.
+ *
+ * Service discovery SSOT: agentsam_plugins (D1).
+ * agentsam_mcp_servers is a temporary compatibility projection only.
+ * Production fails closed when the registry has no MCP endpoint — no baked-in URLs.
  */
 
 import { FNF_GITHUB_REPO, FNF_ACCOUNT_ID } from "./constants.js";
 import { fetchGithubContextForAgent, githubStatus } from "./github-client.js";
 import { logToolCall } from "./tools-registry.js";
 
-const DEFAULT_MCP_URL = "https://mcp.inneranimalmedia.com/mcp";
-const DEFAULT_IAM_ORIGIN = "https://inneranimalmedia.com";
+const IAM_MCP_PLUGIN_KEY = "inneranimalmedia-mcp-server";
 
-export function mcpUrl(env) {
-  return String(env.IAM_MCP_URL || DEFAULT_MCP_URL).trim();
+let endpointsCache = null;
+let endpointsCachedAt = 0;
+const ENDPOINTS_TTL_MS = 60_000;
+
+function stripSlash(url) {
+  return String(url || "").trim().replace(/\/$/, "");
 }
 
-export function iamOrigin(env) {
-  return String(env.IAM_ORIGIN || DEFAULT_IAM_ORIGIN).replace(/\/$/, "");
+/**
+ * Resolve MCP resource endpoint + authorization-server origin from plugins.
+ *
+ * Hierarchy:
+ *   1. agentsam_plugins.endpoint_url (+ metadata.authorization_server)
+ *   2. agentsam_mcp_servers.url (legacy projection only)
+ *   3. LOCAL_DEV_MCP_URL when ALLOW_MCP_DEV_FALLBACK=1
+ *   4. fail closed — ok:false, error: mcp_endpoint_not_configured
+ */
+export async function resolveIamBridgeEndpoints(env) {
+  const now = Date.now();
+  if (endpointsCache && now - endpointsCachedAt < ENDPOINTS_TTL_MS) {
+    return endpointsCache;
+  }
+
+  let mcpUrlValue = null;
+  let authorizationServer = null;
+  let providerHome = null;
+  let docsUrl = null;
+  let source = null;
+
+  if (env?.DB) {
+    try {
+      const plugin = await env.DB.prepare(
+        `SELECT endpoint_url, metadata_json, config_json, oauth_connect_url
+         FROM agentsam_plugins
+         WHERE account_id = ? AND plugin_key = ? AND is_enabled = 1
+         LIMIT 1`,
+      )
+        .bind(FNF_ACCOUNT_ID, IAM_MCP_PLUGIN_KEY)
+        .first();
+
+      if (plugin?.endpoint_url) {
+        mcpUrlValue = String(plugin.endpoint_url).trim();
+        source = "agentsam_plugins";
+      }
+
+      if (plugin?.metadata_json) {
+        try {
+          const meta = JSON.parse(plugin.metadata_json);
+          if (meta?.authorization_server) {
+            authorizationServer = stripSlash(meta.authorization_server);
+          }
+          if (meta?.provider_home) {
+            providerHome = stripSlash(meta.provider_home);
+          }
+          if (meta?.docs_url) {
+            docsUrl = stripSlash(meta.docs_url);
+          }
+        } catch {
+          /* ignore malformed meta */
+        }
+      }
+
+      // Compatibility projection only — not a permanent second SSOT.
+      if (!mcpUrlValue) {
+        const server = await env.DB.prepare(
+          `SELECT url FROM agentsam_mcp_servers
+           WHERE account_id = ? AND server_key = ? AND is_active = 1
+           LIMIT 1`,
+        )
+          .bind(FNF_ACCOUNT_ID, IAM_MCP_PLUGIN_KEY)
+          .first();
+        if (server?.url) {
+          mcpUrlValue = String(server.url).trim();
+          source = "agentsam_mcp_servers";
+        }
+      }
+    } catch (err) {
+      console.error("[mcp-client] plugin endpoint resolve failed", err?.message || err);
+    }
+  }
+
+  // Explicit local-dev bootstrap only — never silent production hardcoding.
+  if (!mcpUrlValue && env?.ALLOW_MCP_DEV_FALLBACK === "1") {
+    const devMcp = String(env.LOCAL_DEV_MCP_URL || "").trim();
+    const devIssuer = String(env.LOCAL_DEV_IAM_ORIGIN || "").trim();
+    if (devMcp) {
+      mcpUrlValue = devMcp;
+      authorizationServer = stripSlash(devIssuer) || authorizationServer;
+      source = "local_dev_override";
+    }
+  }
+
+  if (!mcpUrlValue) {
+    endpointsCache = {
+      ok: false,
+      error: "mcp_endpoint_not_configured",
+      mcp_url: null,
+      authorization_server: null,
+      iam_origin: null,
+      provider_home: providerHome,
+      docs_url: docsUrl,
+      source: null,
+      plugin_key: IAM_MCP_PLUGIN_KEY,
+    };
+    endpointsCachedAt = now;
+    return endpointsCache;
+  }
+
+  // authorization_server is the OAuth issuer; provider_home is marketing/home only.
+  const issuer = authorizationServer || providerHome || null;
+
+  endpointsCache = {
+    ok: true,
+    error: null,
+    mcp_url: mcpUrlValue,
+    authorization_server: issuer,
+    /** @deprecated prefer authorization_server */
+    iam_origin: issuer,
+    provider_home: providerHome,
+    docs_url: docsUrl,
+    source,
+    plugin_key: IAM_MCP_PLUGIN_KEY,
+  };
+  endpointsCachedAt = now;
+  return endpointsCache;
 }
 
+export async function mcpUrl(env) {
+  const resolved = await resolveIamBridgeEndpoints(env);
+  return resolved.ok ? resolved.mcp_url : null;
+}
+
+export async function iamOrigin(env) {
+  const resolved = await resolveIamBridgeEndpoints(env);
+  return resolved.ok ? resolved.authorization_server || resolved.iam_origin : null;
+}
+
+/**
+ * Worker-to-Worker / service-trust key for MCP bridge dispatch (account-scoped cloud path).
+ * Not AGENTSAM_API_KEY (account API auth for users/clients).
+ * Not FNF_ASSET_JOB_SECRET / AGENTSAM_COMPACTION_SECRET (internal admin job endpoints).
+ */
 export function bridgeConfigured(env) {
   return Boolean(String(env.AGENTSAM_BRIDGE_KEY || "").trim());
 }
@@ -50,8 +187,13 @@ export async function mcpRpc(env, method, params = {}) {
   const key = bridgeKey(env);
   if (!key) return { ok: false, error: "bridge_not_configured" };
 
+  const endpoints = await resolveIamBridgeEndpoints(env);
+  if (!endpoints.ok || !endpoints.mcp_url) {
+    return { ok: false, error: endpoints.error || "mcp_endpoint_not_configured" };
+  }
+
   try {
-    const res = await fetch(mcpUrl(env), {
+    const res = await fetch(endpoints.mcp_url, {
       method: "POST",
       headers: bridgeHeaders(env),
       body: JSON.stringify({
@@ -80,12 +222,22 @@ export async function probeBridge(env) {
     return { ok: false, configured: false, error: "bridge_not_configured" };
   }
 
+  const endpoints = await resolveIamBridgeEndpoints(env);
+  if (!endpoints.ok) {
+    return {
+      ok: false,
+      configured: true,
+      error: endpoints.error || "mcp_endpoint_not_configured",
+      endpoint_source: endpoints.source,
+    };
+  }
+
   const init = await mcpRpc(env, "initialize", {
     protocolVersion: "2024-11-05",
     capabilities: {},
     clientInfo: { name: "fuelnfreetime-agentsam", version: "1.0.0" },
   });
-  if (!init.ok) return { ok: false, configured: true, error: init.error };
+  if (!init.ok) return { ok: false, configured: true, error: init.error, endpoint_source: endpoints.source };
 
   const tools = await mcpRpc(env, "tools/list", {});
   const toolCount = tools.ok ? (tools.result?.tools?.length ?? 0) : 0;
@@ -94,6 +246,8 @@ export async function probeBridge(env) {
     ok: tools.ok,
     configured: true,
     tool_count: toolCount,
+    endpoint_source: endpoints.source,
+    mcp_url: endpoints.mcp_url,
     error: tools.ok ? null : tools.error,
   };
 }
@@ -109,7 +263,7 @@ export async function callMcpTool(env, toolName, args = {}, logCtx = {}) {
     {
       tool_key: toolName,
       tool_name: toolName,
-      mcp_server_key: "inneranimalmedia-mcp-server",
+      mcp_server_key: IAM_MCP_PLUGIN_KEY,
       handler_type: "mcp",
       tool_category: "mcp",
       status: result.ok ? "success" : "failed",
@@ -120,7 +274,7 @@ export async function callMcpTool(env, toolName, args = {}, logCtx = {}) {
         ? String(body?.raw || JSON.stringify(body || {})).slice(0, 240)
         : result.error,
     },
-    logCtx
+    logCtx,
   );
 
   return { ...result, tool_call_id: logResult.id || null, duration_ms: durationMs, parsed: body };
@@ -177,7 +331,7 @@ export async function fetchGithubContextForChat(env, message, userId = null, log
           source: "bridge",
           github_repo: repo,
           github_operation: "agentsam_github_repo_list",
-          mcp_server: "inneranimalmedia-mcp-server",
+          mcp_server: IAM_MCP_PLUGIN_KEY,
           mcp_tool: "agentsam_github_repo_list",
           mcp_success: false,
           mcp_latency_ms: latency,
@@ -188,7 +342,7 @@ export async function fetchGithubContextForChat(env, message, userId = null, log
 
     if (body?.ok !== false) {
       const hasFnf = (body?.repos || []).some(
-        (r) => String(r.full_name || "").toLowerCase() === repo.toLowerCase()
+        (r) => String(r.full_name || "").toLowerCase() === repo.toLowerCase(),
       );
       return {
         context: `GITHUB MCP (bridge):\nRepo: ${repo}\nAccessible: ${hasFnf ? "yes" : "check token scope"}`,
@@ -197,7 +351,7 @@ export async function fetchGithubContextForChat(env, message, userId = null, log
           source: "bridge",
           github_repo: repo,
           github_operation: "agentsam_github_repo_list",
-          mcp_server: "inneranimalmedia-mcp-server",
+          mcp_server: IAM_MCP_PLUGIN_KEY,
           mcp_tool: "agentsam_github_repo_list",
           mcp_success: true,
           mcp_latency_ms: latency,
@@ -213,7 +367,7 @@ export async function fetchGithubContextForChat(env, message, userId = null, log
         source: "bridge",
         github_repo: repo,
         github_operation: "agentsam_github_repo_list",
-        mcp_server: "inneranimalmedia-mcp-server",
+        mcp_server: IAM_MCP_PLUGIN_KEY,
         mcp_tool: "agentsam_github_repo_list",
         mcp_success: false,
         mcp_latency_ms: latency,
@@ -235,14 +389,26 @@ export async function probeGitHubConnection(env, userId = null) {
   return { ...bridge, path: "bridge" };
 }
 
-export function mcpConnectUrls(env) {
-  const iam = iamOrigin(env);
-  const mcpBase = mcpUrl(env).replace(/\/mcp\/?$/, "");
+export async function mcpConnectUrls(env) {
+  const endpoints = await resolveIamBridgeEndpoints(env);
+  if (!endpoints.ok || !endpoints.mcp_url) {
+    return {
+      ok: false,
+      error: endpoints.error || "mcp_endpoint_not_configured",
+      fnf_github_oauth: "/api/admin/agentsam/github/start",
+    };
+  }
+
+  const issuer = endpoints.authorization_server || endpoints.iam_origin;
+  const mcpBase = endpoints.mcp_url.replace(/\/mcp\/?$/, "");
   return {
+    ok: true,
     iam_mcp_connect: `${mcpBase}/auth/connect`,
     iam_mcp_authorize: `${mcpBase}/auth/authorize`,
-    iam_github_oauth: `${iam}/api/oauth/github/start?return_to=${encodeURIComponent("/dashboard/settings/integrations")}`,
+    iam_github_oauth: issuer
+      ? `${issuer}/api/oauth/github/start?return_to=${encodeURIComponent("/dashboard/settings/integrations")}`
+      : null,
     fnf_github_oauth: "/api/admin/agentsam/github/start",
-    iam_integrations: `${iam}/dashboard/settings/integrations`,
+    iam_integrations: issuer ? `${issuer}/dashboard/settings/integrations` : null,
   };
 }

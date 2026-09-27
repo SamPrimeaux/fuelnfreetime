@@ -12,6 +12,7 @@
 import { handleAdminApi } from "./admin/api.js";
 import { serveCatalogImage } from "./completeful/images.js";
 import { runAgentsamCompaction } from "./agentsam/compaction.js";
+import { drainAssetJobs, processAssetJobById } from "./assets/product-optimize.js";
 import { handleStoreApi } from "./store/api.js";
 import { handleAttributionApi } from "./attribution/api.js";
 import { handlePublicCmsApi } from "./cms/api.js";
@@ -282,6 +283,42 @@ export default {
       return Response.json(result);
     }
 
+    if (path === "/api/internal/assets/jobs/drain" && request.method === "POST") {
+      const secret =
+        request.headers.get("X-Fnf-Asset-Job-Secret") ||
+        request.headers.get("X-Agentsam-Compaction-Secret") ||
+        "";
+      const expected = env.FNF_ASSET_JOB_SECRET || env.AGENTSAM_COMPACTION_SECRET;
+      if (!expected || secret !== expected) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      let body = {};
+      try {
+        body = await request.json();
+      } catch {
+        body = {};
+      }
+      const result = await drainAssetJobs(env, {
+        limit: body.limit || 20,
+        runtime: "worker",
+      });
+      return Response.json({ ok: true, ...result });
+    }
+
+    if (path.startsWith("/api/internal/assets/jobs/") && request.method === "POST") {
+      const secret =
+        request.headers.get("X-Fnf-Asset-Job-Secret") ||
+        request.headers.get("X-Agentsam-Compaction-Secret") ||
+        "";
+      const expected = env.FNF_ASSET_JOB_SECRET || env.AGENTSAM_COMPACTION_SECRET;
+      if (!expected || secret !== expected) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      const jobId = path.split("/").pop();
+      const result = await processAssetJobById(env, jobId, { runtime: "worker" });
+      return Response.json({ ok: true, ...result });
+    }
+
     if (path.startsWith("/api/store/")) {
       return handleStoreApi(request, env, url);
     }
@@ -473,13 +510,38 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
+    if (event.cron === "*/5 * * * *" || String(event.cron || "").includes("*/5")) {
+      ctx.waitUntil(
+        drainAssetJobs(env, { limit: 15, runtime: "worker" }).catch((err) => {
+          console.error("asset job drain failed", err?.message || err);
+        }),
+      );
+      return;
+    }
     ctx.waitUntil(
       runAgentsamCompaction(env, {
         trigger_source: "cron",
         cron: event.cron,
       }).catch((err) => {
         console.error("agentsam scheduled compaction failed", err?.message || err);
-      })
+      }),
     );
+  },
+
+  async queue(batch, env) {
+    for (const message of batch.messages) {
+      const jobId = message.body?.job_id;
+      if (!jobId) {
+        message.ack();
+        continue;
+      }
+      try {
+        await processAssetJobById(env, jobId, { runtime: "worker" });
+        message.ack();
+      } catch (err) {
+        console.error("[asset-queue] job failed", jobId, err?.message || err);
+        message.retry();
+      }
+    }
   },
 };

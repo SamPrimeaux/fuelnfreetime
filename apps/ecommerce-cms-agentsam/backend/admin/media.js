@@ -1,7 +1,7 @@
 /**
  * Media library: R2 storage + D1 metadata (virtual folders).
  * Folder membership and display_order are D1-only — never R2 copy/move.
- * Uploads go through intake → classify → optimize plan (promote via CLI/Node).
+ * Uploads: intake → classify → enqueue job → automatic process/promote → ready.
  */
 
 import {
@@ -12,6 +12,9 @@ import {
   mediaPathForKey,
   publicUrlsForKey,
   FNF_R2,
+  createAssetJob,
+  enqueueAssetJob,
+  processAssetJobById,
 } from "../assets/product-optimize.js";
 
 const MEDIA_FOLDERS = ["images", "videos", "products"];
@@ -183,6 +186,8 @@ function rowToAsset(row) {
   const contentType = resolveContentType(row);
   const urls = publicUrlFields(row.r2_key);
   const meta = parseMeta(row.meta_json);
+  const lifecycle = meta?.lifecycle || (meta?.optimization?.status === "ready" ? "ready" : null) || "ready";
+  const opt = meta?.optimization || null;
   return {
     id: row.id,
     r2_key: row.r2_key,
@@ -199,9 +204,22 @@ function rowToAsset(row) {
     alt_text: row.alt_text || "",
     placement,
     meta,
-    optimization: meta?.optimization || null,
+    /** Operator-facing lifecycle — never expose pipeline jargon. */
+    status: lifecycle === "processing" || lifecycle === "uploading" ? lifecycle : lifecycle === "failed" ? "failed" : "ready",
+    display: opt
+      ? {
+          format: (opt.output_format || contentType || "").replace(/^image\//, "").toUpperCase() || null,
+          width: opt.width || null,
+          height: opt.height || null,
+          bytes: opt.output_bytes || row.size_bytes || null,
+        }
+      : {
+          format: (contentType || "").replace(/^image\//, "").replace(/^video\//, "").replace(/^model\//, "").toUpperCase() || null,
+          width: null,
+          height: null,
+          bytes: row.size_bytes || null,
+        },
     suggestions: meta?.intelligence?.suggestions || meta?.suggestions || null,
-    transform_state: meta?.transform_state || null,
     created_at: row.created_at,
     updated_at: row.updated_at || row.created_at,
   };
@@ -311,14 +329,13 @@ export async function syncMediaFromR2(env) {
   return { ok: true, scanned, inserted, counts: await folderCounts(env) };
 }
 
-export async function uploadMedia(request, env) {
+export async function uploadMedia(request, env, executionCtx = null) {
   const form = await request.formData();
   const files = form.getAll("files").filter((f) => f && typeof f.arrayBuffer === "function");
   if (!files.length) return json({ error: "No files provided" }, { status: 400 });
 
   const category = form.get("category") ? form.get("category").toString() : null;
   const folderHint = form.get("folder") ? normalizeFolder(form.get("folder").toString()) : null;
-  // Optional legacy prefix; default intake so originals are transient until promote.
   let prefix = (form.get("prefix") || "intake/").toString();
   if (!prefix.endsWith("/")) prefix += "/";
   prefix = prefix.replace(/^\/+/, "");
@@ -345,9 +362,15 @@ export async function uploadMedia(request, env) {
     const urls = publicUrlFields(intakeKey);
     const meta = {
       ...plan.meta,
+      lifecycle: "processing",
       intelligence: plan.intelligence,
       tags: plan.tags,
-      workflow_key: plan.workflow_key,
+      // Keep workflow keys in diagnostics only — never operator-facing.
+      _diagnostics: {
+        workflow_key: plan.workflow_key,
+        transform_state: plan.transform_state,
+        canonical_key: plan.canonical_key,
+      },
     };
 
     let result;
@@ -370,7 +393,6 @@ export async function uploadMedia(request, env) {
         )
         .run();
     } catch (err) {
-      // meta_json column may not exist until migrate — fall back without it.
       if (String(err?.message || err).includes("meta_json")) {
         result = await env.DB.prepare(
           `INSERT INTO media_assets
@@ -393,36 +415,60 @@ export async function uploadMedia(request, env) {
       }
     }
 
-    const asset = rowToAsset({
-      id: result.meta.last_row_id,
-      r2_key: intakeKey,
-      url: urls.url,
-      filename,
-      content_type: contentType,
-      size_bytes: buf.byteLength,
-      category,
-      folder,
-      display_order: displayOrder,
-      alt_text: "",
-      meta_json: JSON.stringify(meta),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
+    const mediaId = result.meta.last_row_id;
+    let jobId = null;
+    try {
+      jobId = await createAssetJob(env, {
+        mediaAssetId: mediaId,
+        intakeKey,
+        canonicalKey: plan.canonical_key,
+        pipeline: plan.classification?.pipeline,
+        plan,
+      });
+      await enqueueAssetJob(env, jobId, { media_asset_id: mediaId });
+    } catch (err) {
+      console.error("[media/upload] job create/enqueue failed", err?.message || err);
+    }
 
+    const runJob = jobId
+      ? processAssetJobById(env, jobId, { runtime: "worker" }).catch((err) => {
+          console.error("[media/upload] auto-process failed", jobId, err?.message || err);
+        })
+      : null;
+    if (runJob && typeof executionCtx?.waitUntil === "function") {
+      executionCtx.waitUntil(runJob);
+    } else if (runJob) {
+      // Best-effort inline when no execution context (still automatic).
+      await runJob;
+    }
+
+    // Re-read after possible inline finalize.
+    const fresh =
+      (await env.DB.prepare(`SELECT * FROM media_assets WHERE id = ?`).bind(mediaId).first()) || {
+        id: mediaId,
+        r2_key: intakeKey,
+        url: urls.url,
+        filename,
+        content_type: contentType,
+        size_bytes: buf.byteLength,
+        category,
+        folder,
+        display_order: displayOrder,
+        alt_text: "",
+        meta_json: JSON.stringify(meta),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+    const asset = rowToAsset(fresh);
     created.push({
       ...asset,
-      optimization_plan: {
-        transform_state: plan.transform_state,
-        workflow_key: plan.workflow_key,
-        canonical_key: plan.canonical_key,
-        execution: plan.execution,
-        optimized: false,
-      },
-      intelligence: plan.intelligence,
+      job_id: jobId,
+      suggestions: plan.intelligence?.suggestions || null,
     });
   }
 
-  return json({ ok: true, assets: created, retention_policy: "intake_promote_delete" });
+  return json({ ok: true, assets: created });
 }
 
 export async function listMedia(request, env, url) {

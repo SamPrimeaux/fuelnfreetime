@@ -4,11 +4,10 @@
 
 import {
   bridgeConfigured,
-  iamOrigin,
   mcpConnectUrls,
-  mcpUrl,
   probeBridge,
   probeGitHubConnection,
+  resolveIamBridgeEndpoints,
 } from "./mcp-client.js";
 import { listAgentSamMcpServers } from "./tools-registry.js";
 
@@ -18,7 +17,7 @@ export const MCP_SERVERS = [
     slug: "inneranimalmedia-mcp-server",
     display_name: "Inner Animal MCP",
     description: "Platform tools, D1, Workers, GitHub catalog, and cross-project dispatch.",
-    url: "https://mcp.inneranimalmedia.com/mcp",
+    /** URL resolved at runtime from agentsam_plugins — do not hardcode in wrangler. */
     transport: "remote_jsonrpc",
     auth_type: "bridge",
     tool_lanes: ["database", "terminal", "repo", "memory", "github"],
@@ -29,7 +28,6 @@ export const MCP_SERVERS = [
     slug: "github",
     display_name: "GitHub",
     description: "Repo issues, PRs, file context, and code search for fuelnfreetime.",
-    url: "https://mcp.inneranimalmedia.com/mcp",
     transport: "iam_mcp_catalog",
     auth_type: "oauth_via_iam",
     parent_server: "inneranimalmedia-mcp-server",
@@ -52,7 +50,9 @@ export async function listMcpServersForUi(env, userId = null) {
   const gh = await probeGitHubConnection(env, userId);
   githubReady = gh.connected === true;
 
-  const urls = mcpConnectUrls(env);
+  const urls = await mcpConnectUrls(env);
+  const endpoints = await resolveIamBridgeEndpoints(env);
+  const registryOk = endpoints.ok === true;
   const dbServers = await listAgentSamMcpServers(env);
 
   if (dbServers.length) {
@@ -62,7 +62,9 @@ export async function listMcpServersForUi(env, userId = null) {
       let status = "needs_bridge";
       let connected = false;
 
-      if (!bridge && s.auth_type !== "none") {
+      if (isIam && !registryOk) {
+        status = "mcp_endpoint_not_configured";
+      } else if (!bridge && s.auth_type !== "none") {
         status = "needs_bridge";
       } else if (isIam) {
         status = bridgeReady ? "ready" : "dev";
@@ -79,6 +81,7 @@ export async function listMcpServersForUi(env, userId = null) {
         slug: s.server_key,
         display_name: s.display_name,
         description: s.description,
+        url: s.url || (isIam && registryOk ? endpoints.mcp_url : undefined),
         status,
         tool_lanes: s.tool_lanes,
         connected,
@@ -94,7 +97,9 @@ export async function listMcpServersForUi(env, userId = null) {
     let status = "needs_bridge";
     let connected = false;
 
-    if (!bridge) {
+    if (isIam && !registryOk) {
+      status = "mcp_endpoint_not_configured";
+    } else if (!bridge) {
       status = "needs_bridge";
     } else if (isIam) {
       status = bridgeReady ? "ready" : "dev";
@@ -109,6 +114,7 @@ export async function listMcpServersForUi(env, userId = null) {
       slug: s.slug,
       display_name: s.display_name,
       description: s.description,
+      url: isIam && registryOk ? endpoints.mcp_url : undefined,
       status,
       tool_lanes: s.tool_lanes,
       connected,
@@ -148,11 +154,18 @@ export function formatMcpForPrompt(servers, bridgeReady = false) {
   return `MCP TOOL LANES:\n${lines.join("\n")}`;
 }
 
-export function mcpRuntimeConfig(env) {
+export async function mcpRuntimeConfig(env) {
+  const endpoints = await resolveIamBridgeEndpoints(env);
   return {
-    mcp_url: mcpUrl(env),
-    iam_origin: iamOrigin(env),
+    ok: endpoints.ok,
+    error: endpoints.error,
+    mcp_url: endpoints.mcp_url,
+    authorization_server: endpoints.authorization_server,
+    iam_origin: endpoints.authorization_server || endpoints.iam_origin,
+    provider_home: endpoints.provider_home,
+    docs_url: endpoints.docs_url,
+    mcp_endpoint_source: endpoints.source,
     bridge_configured: bridgeConfigured(env),
-    connect_urls: mcpConnectUrls(env),
+    connect_urls: await mcpConnectUrls(env),
   };
 }

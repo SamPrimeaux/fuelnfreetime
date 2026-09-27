@@ -204,6 +204,23 @@
     });
   }
 
+  function statusLabel(a) {
+    const s = a.status || "ready";
+    if (s === "processing" || s === "uploading") return "Processing…";
+    if (s === "failed") return "Failed";
+    return "Ready";
+  }
+
+  function displayLine(a) {
+    const d = a.display || {};
+    const parts = [];
+    if (d.format) parts.push(d.format);
+    if (d.width && d.height) parts.push(`${d.width}×${d.height}`);
+    if (d.bytes) parts.push(fmtBytes(d.bytes));
+    else if (a.size_bytes) parts.push(fmtBytes(a.size_bytes));
+    return parts.join(" · ");
+  }
+
   function renderGrid() {
     const list = visibleAssets();
     if (!list.length) {
@@ -223,11 +240,17 @@
       list
         .map(
           (a) => `
-      <article class="media-item" draggable="true" data-id="${a.id}">
-        <div class="media-item-thumb">${thumbHtml(a)}</div>
+      <article class="media-item" draggable="true" data-id="${a.id}" data-status="${a.status || "ready"}">
+        <div class="media-item-thumb">${thumbHtml(a)}${
+          (a.status === "processing" || a.status === "uploading")
+            ? '<span class="media-status-badge is-processing">Processing…</span>'
+            : ""
+        }</div>
         <div class="media-item-meta">
           <div class="media-item-name" title="${a.filename}">${a.filename}</div>
-          <div class="media-item-sub">${a.folder || "images"}</div>
+          <div class="media-item-sub">${statusLabel(a)}${
+            a.status === "ready" && displayLine(a) ? " · " + displayLine(a) : ""
+          }</div>
         </div>
       </article>`
         )
@@ -272,6 +295,29 @@
         await reorderDrop(fromId, id);
       });
     });
+
+    maybePollProcessing();
+  }
+
+  let pollTimer = null;
+  function maybePollProcessing() {
+    const busy = assets.some((a) => a.status === "processing" || a.status === "uploading");
+    if (!busy) {
+      if (pollTimer) {
+        clearTimeout(pollTimer);
+        pollTimer = null;
+      }
+      return;
+    }
+    if (pollTimer) return;
+    pollTimer = setTimeout(async () => {
+      pollTimer = null;
+      try {
+        await load();
+      } catch {
+        maybePollProcessing();
+      }
+    }, 2000);
   }
 
   function bindGridAdd() {
@@ -710,13 +756,13 @@
     els.metaDate.textContent = fmtDate(asset.created_at);
     els.metaKey.textContent = asset.r2_key || "—";
 
-    // Surface deterministic suggestions + optimization plan (review-only).
-    const intel = asset.meta?.intelligence || asset.intelligence;
-    const opt = asset.optimization_plan || asset.meta?.optimization || asset.optimization;
-    let extras = "";
-    if (opt?.status || asset.transform_state) {
-      extras += `<p class="media-meta-line"><strong>Optimize:</strong> ${opt?.status || asset.transform_state}</p>`;
+    // Operator lifecycle — never expose pipeline jargon.
+    const status = asset.status || "ready";
+    let extras = `<p class="media-meta-line"><strong>Status:</strong> ${statusLabel(asset)}</p>`;
+    if (status === "ready" && displayLine(asset)) {
+      extras += `<p class="media-meta-line">${displayLine(asset)}</p>`;
     }
+    const intel = asset.meta?.intelligence || asset.intelligence;
     if (intel?.suggestions) {
       const s = intel.suggestions;
       extras += `<div class="media-suggestions" data-suggestions>
@@ -750,8 +796,8 @@
           filename: asset.filename,
           content_type: asset.content_type,
           folder: asset.folder,
+          status: asset.status,
           media_role: asset.meta?.media_role || intel?.suggestions?.media_role,
-          transform_state: asset.transform_state || opt?.status,
           delivery_url: asset.delivery_url || asset.url,
         },
       });
@@ -824,7 +870,7 @@
   async function uploadFiles(fileList) {
     const form = new FormData();
     for (const f of fileList) form.append("files", f);
-    form.append("prefix", "uploads/");
+    form.append("prefix", "intake/");
     if (activeFolder) form.append("folder", activeFolder);
 
     els.dropLabel.textContent = "Uploading " + fileList.length + " file(s)…";
@@ -837,10 +883,15 @@
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Upload failed");
-      els.note.textContent = "Uploaded " + (data.assets?.length || 0) + " file(s).";
+      const n = data.assets?.length || 0;
+      const processing = (data.assets || []).some((a) => a.status === "processing");
+      els.note.textContent = processing
+        ? `Uploaded ${n} file(s). Processing…`
+        : `Uploaded ${n} file(s).`;
       els.note.className = "admin-note success";
       els.note.style.display = "block";
       await load();
+      maybePollProcessing();
     } catch (err) {
       els.note.textContent = err.message;
       els.note.className = "admin-note error";

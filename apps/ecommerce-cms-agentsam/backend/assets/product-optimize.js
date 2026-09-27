@@ -1,6 +1,6 @@
 /**
- * Re-export Worker-safe asset planning into the ecommerce Worker tree.
- * Heavy optimize/promote runs via bin/fnf-assets (sharp).
+ * Re-export Worker-safe asset planning + job runner into the ecommerce Worker tree.
+ * Raster transforms run in-Worker via @jsquash; CLI can also drain with Sharp.
  */
 export {
   planProductAssetOptimization,
@@ -26,3 +26,14 @@ export {
   buildDeterministicSuggestions,
   applyAcceptedSuggestions,
 } from "../../../../lib/assets/suggestions.js";
+export {
+  createAssetJob,
+  enqueueAssetJob,
+  newJobId,
+  getAssetJob,
+} from "../../../../lib/assets/jobs.js";
+export {
+  processAssetJobById,
+  drainAssetJobs,
+  finalizeMediaAsset,
+} from "../../../../lib/assets/process-job.js";

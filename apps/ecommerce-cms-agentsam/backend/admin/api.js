@@ -555,7 +555,7 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   if (orderMatch && method === "GET") return getOrder(request, env, orderMatch[1]);
   if (path === "/api/admin/subscribers" && method === "GET") return listSubscribers(request, env);
 
-  if (path === "/api/admin/media" && method === "POST") return uploadMedia(request, env);
+  if (path === "/api/admin/media" && method === "POST") return uploadMedia(request, env, executionCtx);
   if (path === "/api/admin/media" && method === "GET") return listMedia(request, env, url);
   if (path === "/api/admin/media/sync" && method === "POST") {
     return json(await syncMediaFromR2(env));
