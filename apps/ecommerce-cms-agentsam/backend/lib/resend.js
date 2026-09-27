@@ -14,7 +14,7 @@ function stripHtml(html) {
     .trim();
 }
 
-function parseFromAddress(from, fallbackName = "Fuel & Free Time") {
+function parseFromAddress(from, fallbackName = "Store") {
   const raw = (from || "").trim();
   const match = raw.match(/^(.+?)\s*<([^>]+)>$/);
   if (match) return { name: match[1].trim(), email: match[2].trim() };
@@ -32,7 +32,15 @@ export async function sendResendEmail(env, { from, to, subject, html, text, repl
     return { ok: false, error: "RESEND_API_KEY not configured" };
   }
 
-  const fromParsed = parseFromAddress(from || env.RESEND_FROM || "hello@fuelnfreetime.com");
+  const fromParsed = parseFromAddress(from || null);
+  if (!fromParsed.email) {
+    const { resolveResendFrom } = await import("./integration-config.js");
+    const resolved = await resolveResendFrom(env);
+    if (!resolved.ok || !resolved.from) {
+      return { ok: false, error: resolved.error || "resend_from_not_configured" };
+    }
+    Object.assign(fromParsed, parseFromAddress(resolved.from, "Store"));
+  }
   const recipients = Array.isArray(to) ? to : [to];
   const body = {
     from: fromParsed.name ? `${fromParsed.name} <${fromParsed.email}>` : fromParsed.email,
@@ -157,7 +165,7 @@ export async function fetchReceivedEmail(env, emailId) {
   };
 }
 
-export async function getResendDomainStatus(env, domain = "fuelnfreetime.com") {
+export async function getResendDomainStatus(env, domain = "") {
   const apiKey = env.RESEND_API_KEY;
   if (!apiKey) return { ok: false, error: "RESEND_API_KEY not configured" };
 

@@ -11,7 +11,7 @@
 
 import { adminLoginPath } from "../lib/admin-routes.js";
 import { getSessionUser } from "../lib/auth.js";
-import { FNF_GITHUB_REPO } from "../agentsam/constants.js";
+import { resolveGithubRepo } from "../lib/integration-config.js";
 import { githubStatus } from "../agentsam/github-client.js";
 
 const OAUTH_STATE_COOKIE = "fnf_github_oauth_state";
@@ -51,8 +51,12 @@ function agentsamUrl(request, params = "") {
   return u.toString();
 }
 
-async function verifyRepoAccess(token) {
-  const [owner, repo] = FNF_GITHUB_REPO.split("/");
+async function verifyRepoAccess(env, token) {
+  const resolved = await resolveGithubRepo(env);
+  if (!resolved.ok || !resolved.repo) {
+    throw new Error(resolved.error || "github_repo_not_configured");
+  }
+  const [owner, repo] = resolved.repo.split("/");
   const res = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -63,7 +67,7 @@ async function verifyRepoAccess(token) {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body?.message || `Cannot access ${FNF_GITHUB_REPO}`);
+    throw new Error(body?.message || `Cannot access ${resolved.repo}`);
   }
   return res.json();
 }
@@ -143,8 +147,11 @@ export async function agentsamGithubOAuthCallback(request, env) {
   if (!accessToken) return redirect(agentsamUrl(request, "github=token_failed"));
 
   let repoMeta;
+  let scopedRepo;
   try {
-    repoMeta = await verifyRepoAccess(accessToken);
+    const resolved = await resolveGithubRepo(env);
+    scopedRepo = resolved.repo;
+    repoMeta = await verifyRepoAccess(env, accessToken);
   } catch (e) {
     return redirect(agentsamUrl(request, `github=no_repo_access`));
   }
@@ -178,7 +185,7 @@ export async function agentsamGithubOAuthCallback(request, env) {
       accessToken,
       ghUser.login || null,
       SCOPES,
-      FNF_GITHUB_REPO,
+      scopedRepo || repoMeta?.full_name || null,
       expiresAt
     )
     .run();
@@ -196,13 +203,14 @@ export async function agentsamGithubOAuthStatus(request, env) {
   if (!user) return json({ error: "Unauthorized" }, { status: 401 });
 
   const status = await githubStatus(env, user.id);
+  const resolved = await resolveGithubRepo(env);
   const oauthConfigured = Boolean(
     String(env.FNF_GITHUB_CLIENT_ID || "").trim() && String(env.FNF_GITHUB_CLIENT_SECRET || "").trim()
   );
 
   return json({
     ok: true,
-    scoped_repo: FNF_GITHUB_REPO,
+    scoped_repo: status.scoped_repo || resolved.repo,
     oauth_app_configured: oauthConfigured,
     connect_url: oauthConfigured ? "/api/admin/agentsam/github/start" : null,
     service_token: Boolean(String(env.FNF_GITHUB_TOKEN || "").trim()),

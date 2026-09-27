@@ -23,6 +23,7 @@ import {
   slugForStorefrontPath,
 } from "./cms/html-rewriter.js";
 import { getSessionUser } from "./lib/auth.js";
+import { getCompany, handleCompanyApi } from "./lib/company.js";
 import {
   adminCleanUrl,
   adminHtmlFile,
@@ -31,6 +32,7 @@ import {
   redirectToAdminLogin,
 } from "./lib/admin-routes.js";
 import { redirectWww, resolveStorefrontPath, serveStaticAlias, STORE_HTML_REDIRECTS, PAGES_CLEAN_REDIRECTS } from "./lib/routes.js";
+import { ADMIN_REDIRECTS } from "./lib/route-manifest.js";
 
 import {
   handleResendOutboundWebhook,
@@ -172,23 +174,6 @@ function noStore(response) {
 
 const ADMIN_LOGIN = adminLoginPath();
 
-const ADMIN_REDIRECTS = {
-  "/admin/dashboard/overview.html": "/admin/analytics/overview",
-  "/admin/dashboard/finance.html": "/admin/analytics/finance",
-  "/admin/dashboard/analytics.html": "/admin/analytics/health",
-  "/admin/analytics/overview.html": "/admin/analytics/overview",
-  "/admin/analytics/finance.html": "/admin/analytics/finance",
-  "/admin/analytics/health.html": "/admin/analytics/health",
-  "/admin-app": "/admin/analytics/overview",
-  "/admin-app/": "/admin/analytics/overview",
-  "/admin-app/analytics/overview": "/admin/analytics/overview",
-  "/admin-app/analytics/finance": "/admin/analytics/finance",
-  "/admin-app/analytics/health": "/admin/analytics/health",
-  "/admin-app/admin-app/analytics/overview": "/admin/analytics/overview",
-  "/admin-app/admin-app/analytics/finance": "/admin/analytics/finance",
-  "/admin-app/admin-app/analytics/health": "/admin/analytics/health",
-};
-
 const ADMIN_SPA_INDEX = "/admin/_spa/index.html";
 const ADMIN_ANALYTICS_PREFIX = "/admin/analytics";
 
@@ -215,11 +200,22 @@ export default {
     if (path === "/catalog-image") return serveCatalogImage(request, env, ctx);
 
     if (path === "/api/health") {
+      const company = await getCompany(env);
+      let domain = null;
+      try {
+        domain = company?.websiteUrl
+          ? new URL(company.websiteUrl.includes("://") ? company.websiteUrl : `https://${company.websiteUrl}`)
+              .hostname
+          : null;
+      } catch {
+        domain = null;
+      }
       return Response.json({
         ok: true,
-        app: env.APP_NAME,
-        domain: env.APP_DOMAIN,
+        app: company?.name || null,
+        domain,
         host: url.hostname,
+        company_id: company?.id || null,
         bindings: {
           db: !!env.DB,
           r2: !!env.WEBSITE_ASSETS,
@@ -227,8 +223,19 @@ export default {
           kv: !!env.CMS_CACHE,
           cmsEditor: !!env.CMS_EDITOR,
           assets: !!env.ASSETS,
+          assetJobs: !!env.ASSET_JOBS,
         },
       });
+    }
+
+    if (path === "/api/company") {
+      if (request.method === "PATCH") {
+        const user = await getSessionUser(request, env);
+        if (!user) {
+          return Response.json({ ok: false, error: "unauthorized" }, { status: 401 });
+        }
+      }
+      return handleCompanyApi(request, env);
     }
 
     if (path === "/api/newsletter" && request.method === "POST") {
@@ -263,61 +270,9 @@ export default {
       return handleCmsWarmInternal(request, env);
     }
 
-    if (path === "/api/internal/agentsam/compaction/run" && request.method === "POST") {
-      const secret = request.headers.get("X-Agentsam-Compaction-Secret") || "";
-      if (!env.AGENTSAM_COMPACTION_SECRET || secret !== env.AGENTSAM_COMPACTION_SECRET) {
-        return Response.json({ error: "Unauthorized" }, { status: 401 });
-      }
-      let body = {};
-      try {
-        body = await request.json();
-      } catch {
-        body = {};
-      }
-      const result = await runAgentsamCompaction(env, {
-        date_key: body.date_key,
-        force: body.force === true,
-        skip_trim: body.skip_trim === true,
-        trigger_source: body.trigger_source || "script",
-      });
-      return Response.json(result);
-    }
-
-    if (path === "/api/internal/assets/jobs/drain" && request.method === "POST") {
-      const secret =
-        request.headers.get("X-Fnf-Asset-Job-Secret") ||
-        request.headers.get("X-Agentsam-Compaction-Secret") ||
-        "";
-      const expected = env.FNF_ASSET_JOB_SECRET || env.AGENTSAM_COMPACTION_SECRET;
-      if (!expected || secret !== expected) {
-        return Response.json({ error: "Unauthorized" }, { status: 401 });
-      }
-      let body = {};
-      try {
-        body = await request.json();
-      } catch {
-        body = {};
-      }
-      const result = await drainAssetJobs(env, {
-        limit: body.limit || 20,
-        runtime: "worker",
-      });
-      return Response.json({ ok: true, ...result });
-    }
-
-    if (path.startsWith("/api/internal/assets/jobs/") && request.method === "POST") {
-      const secret =
-        request.headers.get("X-Fnf-Asset-Job-Secret") ||
-        request.headers.get("X-Agentsam-Compaction-Secret") ||
-        "";
-      const expected = env.FNF_ASSET_JOB_SECRET || env.AGENTSAM_COMPACTION_SECRET;
-      if (!expected || secret !== expected) {
-        return Response.json({ error: "Unauthorized" }, { status: 401 });
-      }
-      const jobId = path.split("/").pop();
-      const result = await processAssetJobById(env, jobId, { runtime: "worker" });
-      return Response.json({ ok: true, ...result });
-    }
+    // Asset jobs: Queue consumer + hourly stale recovery only.
+    // Compaction: scheduled() only.
+    // Manual ops: authenticated /api/admin/* (no secret-header endpoints).
 
     if (path.startsWith("/api/store/")) {
       return handleStoreApi(request, env, url);
@@ -355,7 +310,7 @@ export default {
 
     // Legacy /admin-app/* → clean analytics URLs
     if (path === "/admin-app" || path.startsWith("/admin-app/")) {
-      const dest = ADMIN_REDIRECTS[path] || "/admin/analytics/overview";
+      const dest = ADMIN_REDIRECTS.get(path) || "/admin/analytics/overview";
       return noStore(Response.redirect(new URL(dest, request.url), 301));
     }
 
@@ -404,7 +359,7 @@ export default {
 
     // Legacy /admin/*.html → canonical clean URLs (301)
     if (path.startsWith("/admin/") && path.endsWith(".html")) {
-      const redirect = ADMIN_REDIRECTS[path];
+      const redirect = ADMIN_REDIRECTS.get(path);
       if (redirect) {
         return noStore(Response.redirect(new URL(redirect, request.url), 301));
       }
@@ -510,10 +465,16 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
-    if (event.cron === "*/5 * * * *" || String(event.cron || "").includes("*/5")) {
+    // Hourly stale-job recovery — Queue is the primary asset processor.
+    if (event.cron === "0 * * * *" || String(event.cron || "").startsWith("0 *")) {
       ctx.waitUntil(
-        drainAssetJobs(env, { limit: 15, runtime: "worker" }).catch((err) => {
-          console.error("asset job drain failed", err?.message || err);
+        drainAssetJobs(env, {
+          limit: 10,
+          runtime: "worker",
+          staleOnly: true,
+          staleAfterSec: 3600,
+        }).catch((err) => {
+          console.error("asset stale recovery failed", err?.message || err);
         }),
       );
       return;

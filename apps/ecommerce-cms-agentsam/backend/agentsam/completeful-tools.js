@@ -45,7 +45,7 @@ async function status(env) {
     ok: true,
     provider: "completeful",
     configured: mode !== "missing",
-    api_base: completefulApiBase(env),
+    api_base: await completefulApiBase(env),
     key_mode: mode,
     allow_live_writes: completefulLiveWritesAllowed(env),
     primary_shop: primaryShop,

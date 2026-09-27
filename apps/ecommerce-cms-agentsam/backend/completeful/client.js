@@ -14,9 +14,21 @@ function trimSlashes(value) {
   return String(value || "").replace(/\/+$/, "");
 }
 
-export function completefulApiBase(env) {
-  const configured = trimSlashes(env.CAPP_API_URL || DEFAULT_API_ORIGIN);
-  return configured.endsWith("/v1") ? configured : `${configured}/v1`;
+/**
+ * Resolve Completeful API /v1 base.
+ * Authority: agentsam_plugins.completeful.endpoint_url → canonical default.
+ * env.CAPP_API_URL only when ALLOW_INTEGRATION_ENV_OVERRIDE=1.
+ */
+export async function completefulApiBase(env) {
+  try {
+    const { resolveCompletefulApiOrigin } = await import("../lib/integration-config.js");
+    const resolved = await resolveCompletefulApiOrigin(env);
+    const configured = trimSlashes(resolved.origin || DEFAULT_API_ORIGIN);
+    return configured.endsWith("/v1") ? configured : `${configured}/v1`;
+  } catch {
+    const configured = trimSlashes(DEFAULT_API_ORIGIN);
+    return `${configured}/v1`;
+  }
 }
 
 export function completefulKeyMode(env) {
@@ -57,8 +69,8 @@ export class CompletefulApiError extends Error {
   }
 }
 
-function buildUrl(env, path, query) {
-  const base = completefulApiBase(env);
+async function buildUrl(env, path, query) {
+  const base = await completefulApiBase(env);
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const url = new URL(`${base}${normalizedPath}`);
 
@@ -97,7 +109,7 @@ export async function completefulRequest(
     });
   }
 
-  const url = buildUrl(env, path, query);
+  const url = await buildUrl(env, path, query);
   const requestHeaders = new Headers(headers || {});
   requestHeaders.set("Accept", "application/json");
   requestHeaders.set("Authorization", `Bearer ${env.CAPP_KEY}`);

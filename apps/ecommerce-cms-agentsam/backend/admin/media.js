@@ -417,6 +417,7 @@ export async function uploadMedia(request, env, executionCtx = null) {
 
     const mediaId = result.meta.last_row_id;
     let jobId = null;
+    let queued = false;
     try {
       jobId = await createAssetJob(env, {
         mediaAssetId: mediaId,
@@ -425,21 +426,22 @@ export async function uploadMedia(request, env, executionCtx = null) {
         pipeline: plan.classification?.pipeline,
         plan,
       });
-      await enqueueAssetJob(env, jobId, { media_asset_id: mediaId });
+      const enq = await enqueueAssetJob(env, jobId, { media_asset_id: mediaId });
+      queued = !!enq?.queued;
     } catch (err) {
       console.error("[media/upload] job create/enqueue failed", err?.message || err);
     }
 
-    const runJob = jobId
-      ? processAssetJobById(env, jobId, { runtime: "worker" }).catch((err) => {
-          console.error("[media/upload] auto-process failed", jobId, err?.message || err);
-        })
-      : null;
-    if (runJob && typeof executionCtx?.waitUntil === "function") {
-      executionCtx.waitUntil(runJob);
-    } else if (runJob) {
-      // Best-effort inline when no execution context (still automatic).
-      await runJob;
+    // Queue is primary. Inline/waitUntil only when ASSET_JOBS binding is absent.
+    if (jobId && !queued) {
+      const runJob = processAssetJobById(env, jobId, { runtime: "worker" }).catch((err) => {
+        console.error("[media/upload] fallback auto-process failed", jobId, err?.message || err);
+      });
+      if (typeof executionCtx?.waitUntil === "function") {
+        executionCtx.waitUntil(runJob);
+      } else {
+        await runJob;
+      }
     }
 
     // Re-read after possible inline finalize.

@@ -1,5 +1,7 @@
 /** Clean admin URLs — /admin/login instead of /admin/login.html */
 
+import { ADMIN_REDIRECTS } from "./route-manifest.js";
+
 export const ADMIN_CLEAN_PAGES = new Set([
   "login",
   "home",
@@ -29,12 +31,8 @@ export const ADMIN_CLEAN_ALIASES = {
   "/admin/email": "/admin/dashboard/email.html",
 };
 
-/** Legacy .html paths → clean canonical URL (301) */
-export const ADMIN_HTML_TO_CLEAN = {
-  "/admin/dashboard.html": "/admin/home",
-  "/admin/media.html": "/admin/content",
-  "/admin/dashboard/email.html": "/admin/email",
-};
+/** Legacy .html paths → clean canonical URL (301) — from route-manifest */
+export const ADMIN_HTML_TO_CLEAN = Object.fromEntries(ADMIN_REDIRECTS);
 
 export function adminLoginPath() {
   return "/admin/login";

@@ -62,6 +62,7 @@ function mapServerRow(row) {
     is_active: !!row.is_active,
     health_status: row.health_status,
     metadata: parseJson(row.metadata_json, {}),
+    source: row.source || null,
   };
 }
 
@@ -177,18 +178,53 @@ export async function getAgentSamTool(env, toolKey) {
   }
 }
 
+/**
+ * MCP install list — prefer agentsam_plugins (plugin_kind=mcp).
+ * agentsam_mcp_servers remains a temporary compatibility projection only.
+ */
 export async function listAgentSamMcpServers(env) {
   if (!env?.DB) return [];
   try {
+    const { results: plugins } = await env.DB.prepare(
+      `SELECT id, plugin_key, display_name, description, endpoint_url,
+              transport, auth_type, is_enabled, health_status, metadata_json, config_json
+       FROM agentsam_plugins
+       WHERE account_id = ? AND is_enabled = 1
+         AND (plugin_kind = 'mcp' OR plugin_key LIKE '%mcp%')
+       ORDER BY display_name ASC`,
+    )
+      .bind(FNF_ACCOUNT_ID)
+      .all();
+
+    if (plugins?.length) {
+      return plugins.map((p) =>
+        mapServerRow({
+          id: p.id,
+          server_key: p.plugin_key,
+          display_name: p.display_name || p.plugin_key,
+          description: p.description,
+          url: p.endpoint_url,
+          transport: p.transport,
+          auth_type: p.auth_type,
+          is_active: p.is_enabled,
+          health_status: p.health_status,
+          metadata_json: p.metadata_json,
+          config_json: p.config_json,
+          source: "agentsam_plugins",
+        }),
+      );
+    }
+
+    // Compatibility projection — do not add new writers here.
     const { results } = await env.DB.prepare(
       `SELECT *
        FROM agentsam_mcp_servers
        WHERE account_id = ? AND is_active = 1
-       ORDER BY display_name ASC`
+       ORDER BY display_name ASC`,
     )
       .bind(FNF_ACCOUNT_ID)
       .all();
-    return (results || []).map(mapServerRow);
+    return (results || []).map((row) => mapServerRow({ ...row, source: "agentsam_mcp_servers" }));
   } catch (err) {
     console.error("agentsam mcp servers list failed", err?.message || err);
     return [];

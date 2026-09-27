@@ -285,7 +285,7 @@ async function generateCampaignPack(env, user, id) {
 
   const channels = parseJson(row.channels_json, []);
   const prompt = [
-    "You are AgentSam creating a marketing campaign pack for Fuel & Free Time (fuelnfreetime.com).",
+    "You are AgentSam creating a marketing campaign pack for this store.",
     "Return ONLY valid JSON with keys: homepage_banner, email_subject, email_preview, email_body_text, utm_campaign, utm_notes, social_captions (array).",
     `Campaign: ${row.name}`,
     `Goal: ${row.goal || "Drive product sales"}`,
@@ -298,11 +298,11 @@ async function generateCampaignPack(env, user, id) {
   let pack = {
     homepage_banner: "Time is the horsepower.",
     email_subject: "Built for the ones who move first.",
-    email_preview: "A clean drop campaign for the next Fuel & Free Time push.",
-    email_body_text: "The drop is live. Shop the latest from Fuel & Free Time.",
+    email_preview: "A clean drop campaign for the next store push.",
+    email_body_text: "The drop is live. Shop the latest.",
     utm_campaign: row.slug,
     utm_notes: "Add utm_source per channel when publishing.",
-    social_captions: ["Built different. Move first.", "Fuel & Free Time — the drop is live."],
+    social_captions: ["Built different. Move first.", "The drop is live."],
     generated_at: new Date().toISOString(),
     generator: "stub",
   };
@@ -337,7 +337,12 @@ async function generateCampaignPack(env, user, id) {
     .bind(JSON.stringify(pack), user.id, id)
     .run();
 
-  const origin = env.APP_DOMAIN ? `https://${env.APP_DOMAIN}` : "https://fuelnfreetime.com";
+  const { getCompanyDomain } = await import("../lib/company.js");
+  const domain = await getCompanyDomain(env);
+  if (!domain) {
+    return json({ error: "company_domain_not_configured" }, { status: 503 });
+  }
+  const origin = `https://${domain}`;
   const utmLinks = buildUtmLinks(origin, id, row.slug);
   pack = {
     ...pack,
@@ -365,7 +370,7 @@ async function loadMailSettings(env) {
 
 async function saveCampaignEmailDraft(env, campaign, pack, user) {
   const messageId = `mail_draft_${campaign.id}_${Date.now()}`;
-  const shopLink = pack.utm_links?.email || `https://fuelnfreetime.com/shop?utm_campaign=${campaign.slug}`;
+  const shopLink = pack.utm_links?.email || `${origin}/shop?utm_campaign=${campaign.slug}`;
   const html = `<p>${(pack.email_body_text || "").replace(/\n/g, "<br>")}</p><p><a href="${shopLink}">Shop now</a></p>`;
 
   await env.DB.prepare(
@@ -376,7 +381,7 @@ async function saveCampaignEmailDraft(env, campaign, pack, user) {
   )
     .bind(
       messageId,
-      env.RESEND_FROM || "hello@fuelnfreetime.com",
+      (await (await import("../lib/integration-config.js")).resolveResendFrom(env)).from || null,
       "(subscribers)",
       pack.email_subject || campaign.name,
       pack.email_preview || "",
@@ -400,10 +405,10 @@ async function saveCampaignEmailDraft(env, campaign, pack, user) {
 
 async function sendCampaignEmail(env, campaign, pack, { mode, testEmail, user }) {
   const settings = await loadMailSettings(env);
-  const shopLink = pack.utm_links?.email || `https://fuelnfreetime.com/go?c=${campaign.id}&ch=email&to=/shop&utm_campaign=${campaign.slug}`;
+  const shopLink = pack.utm_links?.email || `${origin}/go?c=${campaign.id}&ch=email&to=/shop&utm_campaign=${campaign.slug}`;
   const html = `<p>${(pack.email_body_text || "").replace(/\n/g, "<br>")}</p><p><a href="${shopLink}">Shop the drop</a></p>`;
   const subject = pack.email_subject || campaign.name;
-  const from = settings.resendFrom || env.RESEND_FROM || "hello@fuelnfreetime.com";
+  const from = settings.resendFrom || (await (await import("../lib/integration-config.js")).resolveResendFrom(env)).from || null;
 
   if (mode === "draft") {
     return { mode: "draft", sent: 0, draft: true };
@@ -488,7 +493,12 @@ async function publishCampaign(request, env, user, id) {
     );
   }
 
-  const origin = env.APP_DOMAIN ? `https://${env.APP_DOMAIN}` : "https://fuelnfreetime.com";
+  const { getCompanyDomain } = await import("../lib/company.js");
+  const domain = await getCompanyDomain(env);
+  if (!domain) {
+    return json({ error: "company_domain_not_configured" }, { status: 503 });
+  }
+  const origin = `https://${domain}`;
   if (!pack.utm_links) {
     pack.utm_links = buildUtmLinks(origin, id, row.slug);
   }

@@ -1,18 +1,17 @@
 #!/usr/bin/env node
 /**
- * Trigger AgentSam compaction on production.
+ * Trigger AgentSam compaction via authenticated admin API.
  *
- * Requires AGENTSAM_COMPACTION_SECRET on the Worker (wrangler secret put AGENTSAM_COMPACTION_SECRET).
+ * Production authority: Worker scheduled() cron.
+ * Manual: POST /api/admin/agentsam/maintenance/compact with admin session cookie.
  *
  * Usage:
- *   npm run agentsam:compact
+ *   FNF_ADMIN_SESSION_COOKIE='fnf_admin_session=...' npm run agentsam:compact
  *   npm run agentsam:compact -- --force
- *   npm run agentsam:compact -- --date=2026-06-19
- *   npm run agentsam:compact -- --skip-trim
  */
 
 const WORKER_URL = process.env.FNF_WORKER_URL || "https://fuelnfreetime.com";
-const SECRET = process.env.AGENTSAM_COMPACTION_SECRET || "";
+const COOKIE = process.env.FNF_ADMIN_SESSION_COOKIE || "";
 
 const args = process.argv.slice(2);
 const force = args.includes("--force");
@@ -21,20 +20,19 @@ const dateArg = args.find((a) => a.startsWith("--date="));
 const dateKey = dateArg ? dateArg.split("=")[1] : undefined;
 
 async function main() {
-  if (!SECRET) {
-    console.error("Missing AGENTSAM_COMPACTION_SECRET.");
-    console.error("Set it in the shell or ~/inneranimalmedia/.env.cloudflare, then:");
-    console.error("  wrangler secret put AGENTSAM_COMPACTION_SECRET");
-    console.error("");
-    console.error("Alternatively POST /api/admin/agentsam/compaction/run while logged into admin.");
+  if (!COOKIE) {
+    console.error("Missing FNF_ADMIN_SESSION_COOKIE.");
+    console.error("Compaction no longer uses AGENTSAM_COMPACTION_SECRET.");
+    console.error("Normal runs are scheduled(); manual runs need an admin session:");
+    console.error("  POST /api/admin/agentsam/maintenance/compact");
     process.exit(1);
   }
 
-  const res = await fetch(`${WORKER_URL}/api/internal/agentsam/compaction/run`, {
+  const res = await fetch(`${WORKER_URL}/api/admin/agentsam/maintenance/compact`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Agentsam-Compaction-Secret": SECRET,
+      Cookie: COOKIE,
     },
     body: JSON.stringify({
       force,

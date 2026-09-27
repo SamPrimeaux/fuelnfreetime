@@ -438,7 +438,8 @@ export async function handleStoreApi(request, env, url) {
 
   if (path === "/api/store/meta" && method === "GET") {
     const { loadStorePreferences } = await import("../admin/store.js");
-    const prefs = await loadStorePreferences(env);
+    const loadedPrefs = await loadStorePreferences(env);
+    const prefs = loadedPrefs?.ok ? loadedPrefs.settings : {};
     return json({
       ok: true,
       meta: {

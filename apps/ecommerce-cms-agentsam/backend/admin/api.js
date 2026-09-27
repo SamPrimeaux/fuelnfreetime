@@ -80,6 +80,7 @@ import {
   agentsamGithubOAuthStatus,
 } from "./agentsam-github.js";
 import { onlineStoreOverview, getStorePreferences, postStorePreferences } from "./store.js";
+import { retryAssetJob, runAdminCompaction } from "./ops.js";
 import { handleGrowthApi } from "./growth.js";
 import { handleDiscountsApi } from "./discounts.js";
 import { handleCompletefulAdminApi } from "./completeful.js";
@@ -531,10 +532,19 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
     return postStorePreferences(request, env);
   }
 
+  if (path === "/api/admin/agentsam/maintenance/compact" && method === "POST") {
+    return runAdminCompaction(request, env);
+  }
+
+  let m = path.match(/^\/api\/admin\/assets\/jobs\/([^/]+)\/retry$/);
+  if (m && method === "POST") {
+    return retryAssetJob(request, env, m[1], url);
+  }
+
   if (path === "/api/admin/products" && method === "GET") return listProducts(request, env);
   if (path === "/api/admin/products" && method === "POST") return createProduct(request, env);
 
-  let m = path.match(/^\/api\/admin\/products\/(\d+)$/);
+  m = path.match(/^\/api\/admin\/products\/(\d+)$/);
   if (m && method === "GET") return getProduct(request, env, m[1]);
   if (m && method === "PUT") return updateProduct(request, env, m[1]);
   if (m && method === "DELETE") return deleteProduct(request, env, m[1]);

@@ -5,7 +5,6 @@
 import { hashPassword, newAuthUserId, FNF_ACCOUNT_ID } from "../lib/auth.js";
 import { listMailboxes, getMailboxBySlug } from "../lib/mail-mailboxes.js";
 
-const DOMAIN = "fuelnfreetime.com";
 
 function requireAdmin(user) {
   if (!user || !["owner", "admin"].includes(user.role)) {
@@ -85,7 +84,12 @@ export async function inviteTeamMember(request, env, user) {
 
   const { hash, salt } = await hashPassword(body.password);
   const id = newAuthUserId();
-  const address = `${localPart}@${DOMAIN}`;
+  const { getCompanyDomain } = await import("../lib/company.js");
+  const domain = await getCompanyDomain(env);
+  if (!domain) {
+    return Response.json({ error: "company_domain_not_configured" }, { status: 503 });
+  }
+  const address = `${localPart}@${domain}`;
 
   const existingBox = await env.DB.prepare(`SELECT id FROM mail_mailboxes WHERE address = ?`)
     .bind(address)
@@ -181,7 +185,12 @@ export async function createMailbox(request, env, user) {
     return Response.json({ error: "local_part required" }, { status: 400 });
   }
 
-  const address = `${localPart}@${DOMAIN}`;
+  const { getCompanyDomain } = await import("../lib/company.js");
+  const domain = await getCompanyDomain(env);
+  if (!domain) {
+    return Response.json({ error: "company_domain_not_configured" }, { status: 503 });
+  }
+  const address = `${localPart}@${domain}`;
   const existing = await getMailboxBySlug(env, localPart);
   if (existing) {
     return Response.json({ error: `${address} already exists` }, { status: 409 });
@@ -214,7 +223,7 @@ export async function createMailbox(request, env, user) {
       ownerName,
       ownerEmail,
       ownerUserId,
-      `${label} · Fuel & Free Time`,
+      `${label}`,
       JSON.stringify(access)
     )
     .run();

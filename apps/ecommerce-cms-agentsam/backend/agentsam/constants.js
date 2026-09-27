@@ -1,32 +1,32 @@
 /**
- * Fuel & Free Time — canonical application and Cloudflare resource identity.
+ * Fuel & Free Time — account / Cloudflare resource identity (not brand SSOT).
+ * Branding → D1 company. Integrations → D1 agentsam_plugins.
  */
 export const FNF_ACCOUNT_ID = "ede6590ac0d2fb7daf155b35653457b2";
 export const FNF_CLOUDFLARE_ACCOUNT_ID = FNF_ACCOUNT_ID;
-export const FNF_CLOUDFLARE_ZONE_ID = "816a5d2284103e4481987ceeb16c2ca9";
 export const FNF_SYSTEM_USER_ID = "au_fnf_system";
-export const FNF_GITHUB_REPO = "SamPrimeaux/fuelnfreetime";
 
 export const FNF_WORKER_NAME = "fuelnfreetime";
 export const FNF_D1_BINDING = "DB";
 export const FNF_D1_DATABASE = "fuelnfreetime";
 export const FNF_R2_BINDING = "WEBSITE_ASSETS";
 export const FNF_R2_BUCKET = "fuelnfreetime";
-export const FNF_APP_DOMAIN = "fuelnfreetime.com";
 export const FNF_VECTORIZE_INDEX = "fnf-agentsam-bge-m3-1024";
 export const FNF_EMBED_MODEL = "@cf/baai/bge-m3";
+
+/** @deprecated Prefer resolveGithubRepo(env) from lib/integration-config.js */
+export const FNF_GITHUB_REPO = "SamPrimeaux/fuelnfreetime";
+/** @deprecated Prefer getCompanyDomain(env) from lib/company.js */
+export const FNF_APP_DOMAIN = "fuelnfreetime.com";
 
 export const FNF_PLATFORM_SCOPE = {
   account_id: FNF_ACCOUNT_ID,
   cloudflare_account_id: FNF_CLOUDFLARE_ACCOUNT_ID,
-  cloudflare_zone_id: FNF_CLOUDFLARE_ZONE_ID,
   worker: FNF_WORKER_NAME,
   d1_binding: FNF_D1_BINDING,
   d1_database: FNF_D1_DATABASE,
   r2_binding: FNF_R2_BINDING,
   r2_bucket: FNF_R2_BUCKET,
-  github_repo: FNF_GITHUB_REPO,
-  domain: FNF_APP_DOMAIN,
 };
 
 export const FNF_TOOL_SCOPE_NOTE =

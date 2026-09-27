@@ -6,9 +6,10 @@
  * Production fails closed when the registry has no MCP endpoint — no baked-in URLs.
  */
 
-import { FNF_GITHUB_REPO, FNF_ACCOUNT_ID } from "./constants.js";
+import { FNF_ACCOUNT_ID } from "./constants.js";
 import { fetchGithubContextForAgent, githubStatus } from "./github-client.js";
 import { logToolCall } from "./tools-registry.js";
+import { resolveGithubRepo } from "../lib/integration-config.js";
 
 const IAM_MCP_PLUGIN_KEY = "inneranimalmedia-mcp-server";
 
@@ -152,7 +153,7 @@ export async function iamOrigin(env) {
 /**
  * Worker-to-Worker / service-trust key for MCP bridge dispatch (account-scoped cloud path).
  * Not AGENTSAM_API_KEY (account API auth for users/clients).
- * Not FNF_ASSET_JOB_SECRET / AGENTSAM_COMPACTION_SECRET (internal admin job endpoints).
+ * Manual asset/compaction ops use authenticated admin session — not secret-header endpoints.
  */
 export function bridgeConfigured(env) {
   return Boolean(String(env.AGENTSAM_BRIDGE_KEY || "").trim());
@@ -298,12 +299,13 @@ export async function fetchGithubContextForChat(env, message, userId = null, log
   const started = Date.now();
   const direct = await fetchGithubContextForAgent(env, message, userId);
   if (direct) {
+    const repoResolved = await resolveGithubRepo(env);
     return {
       context: direct,
       meta: {
         success: !direct.startsWith("GITHUB:"),
         source: "direct",
-        github_repo: FNF_GITHUB_REPO,
+        github_repo: repoResolved.repo,
         github_operation: "recent_commits",
         mcp_latency_ms: Date.now() - started,
       },
@@ -315,7 +317,8 @@ export async function fetchGithubContextForChat(env, message, userId = null, log
   }
 
   const hay = message.toLowerCase();
-  const repo = String(env.FNF_GITHUB_REPO || FNF_GITHUB_REPO);
+  const repoResolved = await resolveGithubRepo(env);
+  const repo = repoResolved.repo;
 
   if (/github|repo|commit|branch|pr|pull request|code|deploy|worker|migration/.test(hay)) {
     const listed = await callMcpTool(env, "agentsam_github_repo_list", {}, logCtx);

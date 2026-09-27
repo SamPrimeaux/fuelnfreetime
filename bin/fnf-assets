@@ -96,29 +96,40 @@ async function main() {
   }
 
   if (command === "jobs:drain" || command === "jobs:process") {
-    const secret =
-      process.env.FNF_ASSET_JOB_SECRET || process.env.AGENTSAM_COMPACTION_SECRET || "";
-    if (!secret) throw new Error("FNF_ASSET_JOB_SECRET or AGENTSAM_COMPACTION_SECRET required");
+    // Secret-header /api/internal asset routes were removed.
+    // Queue + scheduled stale recovery are production authority.
+    // Operator retry: authenticated POST /api/admin/assets/jobs/:id/retry
+    const cookie = process.env.FNF_ADMIN_SESSION_COOKIE || "";
     const base = flag("--base", "https://fuelnfreetime.com").replace(/\/$/, "");
-    const url =
-      command === "jobs:process"
-        ? `${base}/api/internal/assets/jobs/${flag("--job-id")}`
-        : `${base}/api/internal/assets/jobs/drain`;
-    if (command === "jobs:process" && !flag("--job-id")) throw new Error("--job-id required");
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "X-Fnf-Asset-Job-Secret": secret,
-        "X-Agentsam-Compaction-Secret": secret,
-      },
-      body: JSON.stringify({
-        limit: Number(flag("--limit", "20")) || 20,
-      }),
-    });
-    const body = await res.json().catch(() => ({}));
-    console.log(JSON.stringify(body, null, 2));
-    process.exit(res.ok ? 0 : 1);
+    if (!cookie) {
+      console.error(JSON.stringify({
+        ok: false,
+        error: "admin_session_required",
+        message:
+          "Asset jobs no longer use FNF_ASSET_JOB_SECRET. Set FNF_ADMIN_SESSION_COOKIE for operator retry, or rely on Queue/cron. Batch transforms: use optimize/promote.",
+      }, null, 2));
+      process.exit(1);
+    }
+    if (command === "jobs:process") {
+      const jobId = flag("--job-id");
+      if (!jobId) throw new Error("--job-id required");
+      const res = await fetch(`${base}/api/admin/assets/jobs/${jobId}/retry`, {
+        method: "POST",
+        headers: {
+          cookie,
+          "content-type": "application/json",
+        },
+      });
+      const body = await res.json().catch(() => ({}));
+      console.log(JSON.stringify(body, null, 2));
+      process.exit(res.ok ? 0 : 1);
+    }
+    console.error(JSON.stringify({
+      ok: false,
+      error: "use_queue_or_per_job_retry",
+      message: "Bulk HTTP drain removed. Production Queue drains automatically; use jobs:process --job-id for one-off admin retry.",
+    }, null, 2));
+    process.exit(1);
   }
 
   if (command === "promote") {

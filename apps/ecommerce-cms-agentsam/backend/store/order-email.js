@@ -30,7 +30,7 @@ export async function sendOrderConfirmationEmail(env, orderId) {
     const lineItems = items || [];
     const money = (c) => `$${(Number(c || 0) / 100).toFixed(2)}`;
 
-    const subject = `Order #${order.id} confirmed — Fuel & Free Time`;
+    const subject = `Order #${order.id} confirmed`;
 
     const textLines = lineItems.map(
       (it) => `${it.title} × ${it.qty} — ${money(it.price_cents)}`
@@ -44,7 +44,7 @@ export async function sendOrderConfirmationEmail(env, orderId) {
       ``,
       `Total: ${money(order.total_cents)}`,
       ``,
-      `We appreciate you supporting Fuel & Free Time.`,
+      `Thank you for your order.`,
     ].join("\n");
 
     const htmlRows = lineItems
@@ -74,12 +74,12 @@ export async function sendOrderConfirmationEmail(env, orderId) {
     </div>`;
 
     const result = await sendResendEmail(env, {
-      from: "Fuel & Free Time <payments@fuelnfreetime.com>",
+      from: undefined,
       to: order.customer_email,
       subject,
       html,
       text,
-      replyTo: "support@fuelnfreetime.com",
+      replyTo: undefined,
       tags: ["order-confirmation"],
     });
 

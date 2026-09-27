@@ -9,10 +9,10 @@ import {
 } from "../lib/mail-mailboxes.js";
 
 const DEFAULT_SETTINGS = {
-  resendFrom: "hello@fuelnfreetime.com",
-  resendPaymentsFrom: "payments@fuelnfreetime.com",
-  resendDomain: "fuelnfreetime.com",
-  resendReplyTo: "support@fuelnfreetime.com",
+  resendFrom: "",
+  resendPaymentsFrom: "",
+  resendDomain: "",
+  resendReplyTo: "",
   resendApiKey: "",
   resendTransactional: true,
   resendCampaign: false,
@@ -141,7 +141,7 @@ function rowToMessage(row, mailboxes = []) {
     unread: row.status === "received" || row.status === "sent",
     starred: false,
     needs: row.direction === "inbound",
-    brand: row.direction === "inbound" ? "Inbound" : "Fuel & Free Time",
+    brand: row.direction === "inbound" ? "Inbound" : "Outbound",
     tag: row.direction === "inbound" ? "Inbound" : "Sent",
     headline: row.subject || "(no subject)",
     cta: row.direction === "inbound" ? "Reply" : "View status",
@@ -197,9 +197,9 @@ async function resolveSendFrom(env, settings, body) {
   }
   if (body.fromProvider === "payments") {
     const mailbox = await getMailboxBySlug(env, "payments");
-    const addr = settings.resendPaymentsFrom || mailbox?.address || "payments@fuelnfreetime.com";
+    const addr = settings.resendPaymentsFrom || mailbox?.address || "";
     return {
-      from: `${mailbox?.resend_from_name || "Fuel & Free Time Payments"} <${addr}>`,
+      from: `${mailbox?.resend_from_name || "Payments"} <${addr}>`,
       mailbox,
     };
   }
@@ -455,9 +455,10 @@ export async function sendMailPreview(request, env) {
 
 export async function getResendStatus(env) {
   const settings = await loadSettings(env);
-  const domain = settings.resendDomain || "fuelnfreetime.com";
+  const domain = settings.resendDomain || "";
   const status = await getResendDomainStatus(env, domain);
-  const appDomain = env.APP_DOMAIN || "fuelnfreetime.com";
+  const { getCompanyDomain } = await import("../lib/company.js");
+  const appDomain = (await getCompanyDomain(env)) || domain || "fuelnfreetime.com";
   return Response.json({
     ok: true,
     configured: resendConfigured(env),

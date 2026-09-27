@@ -1,12 +1,10 @@
 /**
- * Fuel & Free Time GitHub client — repo-scoped, reliable path for AgentSam.
- * Uses FNF_GITHUB_TOKEN (fine-grained PAT or classic token) when set,
- * else per-admin OAuth token from admin_github_tokens.
+ * Fuel & Free Time GitHub client — repo-scoped path for AgentSam.
+ * Repository slug authority: agentsam_plugins (github / MCP config).
+ * Token: FNF_GITHUB_TOKEN or per-admin OAuth (admin_github_tokens).
  */
 
-import { FNF_GITHUB_REPO } from "./constants.js";
-
-const ALLOWED_REPOS = new Set([FNF_GITHUB_REPO.toLowerCase()]);
+import { resolveGithubRepo } from "../lib/integration-config.js";
 
 function trim(v) {
   return v == null ? "" : String(v).trim();
@@ -16,20 +14,32 @@ export function githubTokenConfigured(env) {
   return Boolean(trim(env.FNF_GITHUB_TOKEN));
 }
 
-export function normalizeRepo(raw) {
+export function normalizeRepo(raw, fallback = "") {
   let s = trim(raw);
-  if (!s) return FNF_GITHUB_REPO;
+  if (!s) return fallback;
   s = s.replace(/^https?:\/\/(www\.)?github\.com\//i, "");
   s = s.replace(/\.git$/i, "").replace(/\/+$/, "");
   return s;
 }
 
-export function assertRepoAllowed(repo) {
-  const slug = normalizeRepo(repo).toLowerCase();
-  if (!ALLOWED_REPOS.has(slug)) {
-    throw new Error(`Repo ${repo} is not allowed — AgentSam is scoped to ${FNF_GITHUB_REPO} only.`);
+export async function scopedGithubRepo(env) {
+  const resolved = await resolveGithubRepo(env);
+  if (!resolved.ok || !resolved.repo) {
+    throw new Error(resolved.error || "github_repo_not_configured");
   }
-  return slug === FNF_GITHUB_REPO ? FNF_GITHUB_REPO : repo;
+  return normalizeRepo(resolved.repo);
+}
+
+export function assertRepoAllowed(repo, scopedRepo) {
+  const scoped = normalizeRepo(scopedRepo).toLowerCase();
+  const slug = normalizeRepo(repo, scopedRepo).toLowerCase();
+  if (!scoped) {
+    throw new Error("github_repo_not_configured");
+  }
+  if (slug !== scoped) {
+    throw new Error(`Repo ${repo} is not allowed — AgentSam is scoped to ${scopedRepo} only.`);
+  }
+  return normalizeRepo(repo, scopedRepo);
 }
 
 async function resolveToken(env, userId = null) {
@@ -42,7 +52,7 @@ async function resolveToken(env, userId = null) {
         `SELECT access_token, account_login, expires_at
          FROM admin_github_tokens
          WHERE user_id = ? AND provider = 'github'
-         LIMIT 1`
+         LIMIT 1`,
       )
         .bind(userId)
         .first();
@@ -80,18 +90,34 @@ async function ghFetch(token, path, opts = {}) {
 }
 
 export async function githubStatus(env, userId = null) {
+  let scopedRepo = null;
+  try {
+    scopedRepo = await scopedGithubRepo(env);
+  } catch {
+    scopedRepo = null;
+  }
+
   const auth = await resolveToken(env, userId);
   if (!auth) {
     return {
       connected: false,
-      scoped_repo: FNF_GITHUB_REPO,
+      scoped_repo: scopedRepo,
       source: null,
       needs: githubTokenConfigured(env) ? null : "oauth_or_service_token",
     };
   }
 
+  if (!scopedRepo) {
+    return {
+      connected: false,
+      scoped_repo: null,
+      source: auth.source,
+      error: "github_repo_not_configured",
+    };
+  }
+
   try {
-    const repo = assertRepoAllowed(FNF_GITHUB_REPO);
+    const repo = assertRepoAllowed(scopedRepo, scopedRepo);
     const [owner, name] = repo.split("/");
     const meta = await ghFetch(auth.token, `/repos/${owner}/${name}`);
     return {
@@ -105,7 +131,7 @@ export async function githubStatus(env, userId = null) {
   } catch (err) {
     return {
       connected: false,
-      scoped_repo: FNF_GITHUB_REPO,
+      scoped_repo: scopedRepo,
       source: auth.source,
       error: err?.message || String(err),
     };
@@ -116,7 +142,14 @@ export async function fetchGithubContextForAgent(env, message, userId = null) {
   const auth = await resolveToken(env, userId);
   if (!auth) return null;
 
-  const repo = assertRepoAllowed(FNF_GITHUB_REPO);
+  let scopedRepo;
+  try {
+    scopedRepo = await scopedGithubRepo(env);
+  } catch (err) {
+    return `GITHUB: ${err?.message || "github_repo_not_configured"}`;
+  }
+
+  const repo = assertRepoAllowed(scopedRepo, scopedRepo);
   const [owner, name] = repo.split("/");
   const hay = message.toLowerCase();
 
@@ -126,7 +159,7 @@ export async function fetchGithubContextForAgent(env, message, userId = null) {
       const branch = meta.default_branch || "main";
       const commits = await ghFetch(
         auth.token,
-        `/repos/${owner}/${name}/commits?sha=${encodeURIComponent(branch)}&per_page=5`
+        `/repos/${owner}/${name}/commits?sha=${encodeURIComponent(branch)}&per_page=5`,
       );
       const lines = (Array.isArray(commits) ? commits : [])
         .map((c) => `- ${c.sha?.slice(0, 7)} ${c.commit?.message?.split("\n")[0] || ""}`)
@@ -146,7 +179,8 @@ ${lines || "(none)"}`;
 export async function listRepoBranches(env, userId = null) {
   const auth = await resolveToken(env, userId);
   if (!auth) return null;
-  const repo = assertRepoAllowed(FNF_GITHUB_REPO);
+  const scopedRepo = await scopedGithubRepo(env);
+  const repo = assertRepoAllowed(scopedRepo, scopedRepo);
   const [owner, name] = repo.split("/");
   const data = await ghFetch(auth.token, `/repos/${owner}/${name}/branches?per_page=20`);
   return Array.isArray(data) ? data.map((b) => b.name) : [];

@@ -1,6 +1,13 @@
 /**
- * Storefront URL aliases — keeps old Shopify paths working after cutover.
+ * Storefront URL aliases — compiled from route-manifest + static asset map.
  */
+
+import {
+  STORE_HTML_REDIRECTS,
+  PAGES_CLEAN_REDIRECTS,
+} from "./route-manifest.js";
+
+export { STORE_HTML_REDIRECTS, PAGES_CLEAN_REDIRECTS };
 
 const PAGE_ALIASES = new Map([
   ["/shop", "/shop.html"],
@@ -33,44 +40,16 @@ const PAGE_ALIASES = new Map([
   ["/cart/", "/cart.html"],
 ]);
 
-/** /pages/* → canonical clean paths (301) */
-export const PAGES_CLEAN_REDIRECTS = new Map([
-  ["/pages/shop", "/shop"],
-  ["/pages/shop/", "/shop"],
-  ["/pages/about", "/about"],
-  ["/pages/about/", "/about"],
-  ["/pages/community", "/community"],
-  ["/pages/community/", "/community"],
-  ["/pages/collaborate", "/collaborate"],
-  ["/pages/collaborate/", "/collaborate"],
-  ["/pages/policies", "/policies"],
-  ["/pages/policies/", "/policies"],
-  ["/pages/terms", "/terms"],
-  ["/pages/terms/", "/terms"],
-  ["/pages/cart", "/cart"],
-  ["/pages/cart/", "/cart"],
-]);
-
-/** Legacy .html URLs → clean paths (301) */
-export const STORE_HTML_REDIRECTS = new Map([
-  ["/index.html", "/"],
-  ["/shop.html", "/shop"],
-  ["/about.html", "/about"],
-  ["/community.html", "/community"],
-  ["/collaborate.html", "/collaborate"],
-  ["/policies.html", "/policies"],
-  ["/terms.html", "/terms"],
-  ["/cart.html", "/cart"],
-]);
-
-export function canonicalHost(hostname) {
-  if (hostname === "www.fuelnfreetime.com") return "fuelnfreetime.com";
+/** Apex host for www redirect — from company at runtime when possible; apex map for DNS. */
+export function canonicalHost(hostname, apexHost = null) {
+  if (apexHost && hostname === `www.${apexHost}`) return apexHost;
+  if (hostname.startsWith("www.")) return hostname.slice(4);
   return hostname;
 }
 
-export function redirectWww(request) {
+export function redirectWww(request, apexHost = null) {
   const url = new URL(request.url);
-  const nextHost = canonicalHost(url.hostname);
+  const nextHost = canonicalHost(url.hostname, apexHost);
   if (nextHost === url.hostname) return null;
   url.hostname = nextHost;
   return Response.redirect(url.toString(), 301);

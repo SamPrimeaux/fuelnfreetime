@@ -54,7 +54,8 @@ export function isMarketingHtmlRequest(pathname, assetPath) {
 
 async function buildHeadContext(env, slug) {
   const { loadStorePreferences } = await import("../admin/store.js");
-  const prefs = await loadStorePreferences(env);
+  const loadedPrefs = await loadStorePreferences(env);
+  const prefs = loadedPrefs?.ok ? loadedPrefs.settings : {};
 
   let pageTitle = null;
   if (slug && slug !== "site") {
@@ -67,15 +68,13 @@ async function buildHeadContext(env, slug) {
     }
   }
 
-  const siteTitle = prefs.homeTitle || "Fuel & Free Time";
+  const siteTitle = prefs.homeTitle || "";
   const title =
     pageTitle && slug !== "home" ? `${pageTitle} — ${siteTitle}` : siteTitle;
 
   return {
     title,
-    description:
-      prefs.metaDescription ||
-      "Earned-not-given lifestyle apparel — built in Lafayette, Louisiana.",
+    description: prefs.metaDescription || "",
     socialImageUrl: prefs.socialImageUrl || "",
   };
 }

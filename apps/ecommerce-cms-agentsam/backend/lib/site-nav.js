@@ -1,9 +1,7 @@
 /**
- * Sitewide navigation — defaults + matching (store_settings JSON).
+ * Neutral sitewide navigation defaults for the portable ecommerce package.
+ * Customer brand (logo/colors) comes from company + store_settings overlays.
  */
-
-export const DEFAULT_LOGO_URL =
-  "https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ad23b2d9-e2e4-4ad6-eb81-9e4c983df000/thumbnail";
 
 export const DEFAULT_NAV_ITEMS = [
   { id: "home", label: "Home", href: "/", matchPrefixes: ["/", "/index.html"] },
@@ -22,11 +20,14 @@ export const DEFAULT_NAV_ITEMS = [
   },
 ];
 
+/** @deprecated No package logo — resolve from company / store_settings */
+export const DEFAULT_LOGO_URL = "";
+
 export const DEFAULT_NAV_CONFIG = {
-  logoUrl: DEFAULT_LOGO_URL,
+  logoUrl: "",
   logoHeight: 58,
-  brandAccent: "#ff4500",
-  brandAccentLight: "#E5A558",
+  brandAccent: "",
+  brandAccentLight: "",
   items: DEFAULT_NAV_ITEMS,
 };
 
@@ -79,18 +80,15 @@ export function sanitizeNavItems(items) {
     .map((item, idx) => {
       const label = String(item?.label || "").trim().slice(0, 40);
       const href = String(item?.href || "").trim().slice(0, 512);
-      if (!label || !href || !href.startsWith("/")) return null;
+      if (!label || !href) return null;
       const matchPrefixes = Array.isArray(item.matchPrefixes)
-        ? item.matchPrefixes
-            .map((p) => String(p).trim().slice(0, 512))
-            .filter((p) => p.startsWith("/"))
+        ? item.matchPrefixes.map((p) => String(p).slice(0, 128)).filter(Boolean)
         : [href];
       return {
-        id: String(item.id || `nav-${idx}`).slice(0, 40),
+        id: String(item?.id || `nav_${idx}`).slice(0, 64),
         label,
         href,
-        matchPrefixes: matchPrefixes.length ? matchPrefixes : [href],
-        visible: item.visible !== false,
+        matchPrefixes,
       };
     })
     .filter(Boolean);
@@ -99,30 +97,12 @@ export function sanitizeNavItems(items) {
 
 export function resolveNavConfig(settings = {}) {
   return {
-    logoUrl: String(settings.navLogoUrl || DEFAULT_NAV_CONFIG.logoUrl).slice(0, 2048),
-    logoHeight: Math.min(120, Math.max(40, Number(settings.navLogoHeight) || DEFAULT_NAV_CONFIG.logoHeight)),
-    brandAccent: String(settings.navBrandAccent || DEFAULT_NAV_CONFIG.brandAccent).slice(0, 32),
-    brandAccentLight: String(settings.navBrandAccentLight || DEFAULT_NAV_CONFIG.brandAccentLight).slice(0, 32),
-    items: sanitizeNavItems(settings.navItems),
-    announcement: {
-      enabled: settings.announcementEnabled === true,
-      text: String(settings.announcementText ?? "").trim().slice(0, 160),
-      href: String(settings.announcementHref ?? "").trim().slice(0, 512),
-    },
+    logoUrl: settings.navLogoUrl || DEFAULT_NAV_CONFIG.logoUrl,
+    logoHeight: settings.navLogoHeight || DEFAULT_NAV_CONFIG.logoHeight,
+    brandAccent: settings.navBrandAccent || DEFAULT_NAV_CONFIG.brandAccent,
+    brandAccentLight: settings.navBrandAccentLight || DEFAULT_NAV_CONFIG.brandAccentLight,
+    items: Array.isArray(settings.navItems) && settings.navItems.length
+      ? sanitizeNavItems(settings.navItems)
+      : DEFAULT_NAV_ITEMS,
   };
-}
-
-export function mergeNavIntoSettings(settings, navPatch) {
-  const next = { ...settings };
-  if (navPatch.logoUrl != null) next.navLogoUrl = navPatch.logoUrl;
-  if (navPatch.logoHeight != null) next.navLogoHeight = navPatch.logoHeight;
-  if (navPatch.brandAccent != null) next.navBrandAccent = navPatch.brandAccent;
-  if (navPatch.brandAccentLight != null) next.navBrandAccentLight = navPatch.brandAccentLight;
-  if (navPatch.items != null) next.navItems = sanitizeNavItems(navPatch.items);
-  if (navPatch.announcement != null) {
-    next.announcementEnabled = navPatch.announcement.enabled === true;
-    next.announcementText = String(navPatch.announcement.text ?? "").trim().slice(0, 160);
-    next.announcementHref = String(navPatch.announcement.href ?? "").trim().slice(0, 512);
-  }
-  return next;
 }
