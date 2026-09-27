@@ -1239,8 +1239,9 @@
     grid-template-columns: 210px minmax(360px, 1fr) 292px;
   }
   .theme-studio-toolbar {
-    grid-template-columns: 1fr auto 1fr;
+    grid-template-columns: minmax(230px, 1fr) auto minmax(220px, 1fr);
   }
+  .te-editor-label,
   .te-save-state { display: none; }
 }
 
