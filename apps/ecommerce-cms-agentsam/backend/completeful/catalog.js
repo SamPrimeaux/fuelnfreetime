@@ -671,9 +671,9 @@ export async function getCompletefulCatalogProduct(env, productId) {
        FROM completeful_catalog_products p
        LEFT JOIN completeful_catalog_curation c
          ON c.completeful_product_id = p.completeful_product_id
-      WHERE p.completeful_product_id = ?`,
+      WHERE p.completeful_product_id = ? OR p.catalog_product_id = ?`,
   )
-    .bind(productId)
+    .bind(productId, productId)
     .first();
 
   if (!product) return null;

@@ -104,17 +104,21 @@ export default function ProductStudioPage() {
       .then((d) => {
         if (!controller.signal.aborted) {
           const normalized: ProductDetail = {
-            ...d,
             product: normalizeCatalogProduct(
-              d.product as CatalogProduct & Record<string, unknown>,
+              (d.product || {}) as CatalogProduct & Record<string, unknown>,
             ),
             variants: (d.variants || []).map((v) =>
               normalizeVariant(v as Record<string, unknown>),
             ),
+            print_locations: Array.isArray(d.print_locations) ? d.print_locations : [],
+            images: Array.isArray(d.images) ? d.images : [],
+            mockups: Array.isArray(d.mockups) ? d.mockups : [],
           };
           setDetail(normalized);
           setGallery(
-            productImage(normalized.product) || d.images[0]?.url || "",
+            productImage(normalized.product) ||
+              normalized.images[0]?.url ||
+              "",
           );
         }
       })
@@ -492,7 +496,7 @@ export default function ProductStudioPage() {
                       <div>
                         <strong>
                           {
-                            detail.print_locations.filter((l) => l.enabled)
+                            (detail.print_locations || []).filter((l) => l.enabled)
                               .length
                           }
                         </strong>
@@ -500,7 +504,7 @@ export default function ProductStudioPage() {
                       </div>
                       <div>
                         <strong>
-                          {detail.mockups.filter((m) => m.active).length}
+                          {(detail.mockups || []).filter((m) => m.active).length}
                         </strong>
                         <span>Mockup views</span>
                       </div>
@@ -532,13 +536,13 @@ export default function ProductStudioPage() {
                         Product options &amp; print requirements
                       </summary>
                       <div className="ps-option-tags">
-                        {detail.variants.map((v) => (
+                        {(detail.variants || []).map((v) => (
                           <span key={catalogVariantId(v)}>
                             {v.variant_title || v.name || "Default"}
                           </span>
                         ))}
                       </div>
-                      {detail.print_locations
+                      {(detail.print_locations || [])
                         .filter((l) => l.enabled)
                         .map((l) => (
                           <p key={l.print_location_id}>

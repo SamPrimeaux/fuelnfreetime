@@ -1,7 +1,18 @@
 /**
  * Media library: R2 storage + D1 metadata (virtual folders).
  * Folder membership and display_order are D1-only — never R2 copy/move.
+ * Uploads go through intake → classify → optimize plan (promote via CLI/Node).
  */
+
+import {
+  planAssetIngest,
+  applyAcceptedSuggestions,
+  guessMimeFromKey,
+  deliveryUrlForKey,
+  mediaPathForKey,
+  publicUrlsForKey,
+  FNF_R2,
+} from "../assets/product-optimize.js";
 
 const MEDIA_FOLDERS = ["images", "videos", "products"];
 
@@ -54,21 +65,35 @@ function extensionOf(key) {
 }
 
 function guessContentType(key) {
-  const ext = extensionOf(key);
-  const map = {
-    jpg: "image/jpeg",
-    jpeg: "image/jpeg",
-    png: "image/png",
-    gif: "image/gif",
-    webp: "image/webp",
-    svg: "image/svg+xml",
-    mp4: "video/mp4",
-    mov: "video/quicktime",
-    webm: "video/webm",
-    glb: "model/gltf-binary",
-    usdz: "model/vnd.usdz+zip",
+  return guessMimeFromKey(key);
+}
+
+function parseMeta(raw) {
+  if (!raw) return null;
+  if (typeof raw === "object") return raw;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function resolveContentType(row) {
+  const key = row?.r2_key || row?.filename || "";
+  const ct = String(row?.content_type || "").toLowerCase();
+  if (ct && ct !== "application/octet-stream") return row.content_type;
+  return guessContentType(key);
+}
+
+function publicUrlFields(r2Key) {
+  const key = String(r2Key || "").replace(/^\/+/, "");
+  const urls = publicUrlsForKey(key);
+  return {
+    url: mediaPathForKey(key),
+    delivery_url: deliveryUrlForKey(key, { preferWorker: true }),
+    cdn_url: urls.cdn,
+    public_base_url: FNF_R2.publicBaseUrl,
   };
-  return map[ext] || "application/octet-stream";
 }
 
 function inferFolder(r2Key, contentType = "") {
@@ -155,18 +180,28 @@ function rowToAsset(row) {
       placement = null;
     }
   }
+  const contentType = resolveContentType(row);
+  const urls = publicUrlFields(row.r2_key);
+  const meta = parseMeta(row.meta_json);
   return {
     id: row.id,
     r2_key: row.r2_key,
-    url: row.url,
+    url: urls.url,
+    delivery_url: urls.delivery_url,
+    cdn_url: urls.cdn_url,
+    public_base_url: urls.public_base_url,
     filename: row.filename,
-    content_type: row.content_type,
+    content_type: contentType,
     size_bytes: row.size_bytes,
     category: row.category,
-    folder: row.folder || inferFolder(row.r2_key, row.content_type),
+    folder: row.folder || inferFolder(row.r2_key, contentType),
     display_order: row.display_order ?? 0,
     alt_text: row.alt_text || "",
     placement,
+    meta,
+    optimization: meta?.optimization || null,
+    suggestions: meta?.intelligence?.suggestions || meta?.suggestions || null,
+    transform_state: meta?.transform_state || null,
     created_at: row.created_at,
     updated_at: row.updated_at || row.created_at,
   };
@@ -213,7 +248,7 @@ export async function syncMediaFromR2(env) {
       )
         .bind(
           obj.key,
-          "/media/" + obj.key,
+          mediaPathForKey(obj.key),
           filename,
           contentType,
           obj.size,
@@ -242,6 +277,37 @@ export async function syncMediaFromR2(env) {
        AND folder != 'videos'`
   ).run();
 
+  // Fix stale application/octet-stream for known media extensions (black-thumb root cause).
+  const mimeFixes = [
+    ["%.jpg", "image/jpeg"],
+    ["%.jpeg", "image/jpeg"],
+    ["%.png", "image/png"],
+    ["%.gif", "image/gif"],
+    ["%.webp", "image/webp"],
+    ["%.svg", "image/svg+xml"],
+    ["%.mp4", "video/mp4"],
+    ["%.webm", "video/webm"],
+    ["%.mov", "video/quicktime"],
+    ["%.glb", "model/gltf-binary"],
+    ["%.usdz", "model/vnd.usdz+zip"],
+  ];
+  for (const [like, mime] of mimeFixes) {
+    await env.DB.prepare(
+      `UPDATE media_assets
+       SET content_type = ?, updated_at = datetime('now')
+       WHERE lower(r2_key) LIKE ? AND (content_type IS NULL OR content_type = '' OR content_type = 'application/octet-stream')`
+    )
+      .bind(mime, like)
+      .run();
+  }
+
+  // Prefer /media/ compatibility paths in D1; delivery_url is derived at read time.
+  await env.DB.prepare(
+    `UPDATE media_assets
+     SET url = '/media/' || r2_key
+     WHERE url IS NULL OR url = '' OR url LIKE 'https://assets.fuelnfreetime.com/%'`
+  ).run();
+
   return { ok: true, scanned, inserted, counts: await folderCounts(env) };
 }
 
@@ -250,51 +316,113 @@ export async function uploadMedia(request, env) {
   const files = form.getAll("files").filter((f) => f && typeof f.arrayBuffer === "function");
   if (!files.length) return json({ error: "No files provided" }, { status: 400 });
 
-  let prefix = (form.get("prefix") || "uploads/").toString();
-  if (!prefix.endsWith("/")) prefix += "/";
-  prefix = prefix.replace(/^\/+/, "");
   const category = form.get("category") ? form.get("category").toString() : null;
   const folderHint = form.get("folder") ? normalizeFolder(form.get("folder").toString()) : null;
+  // Optional legacy prefix; default intake so originals are transient until promote.
+  let prefix = (form.get("prefix") || "intake/").toString();
+  if (!prefix.endsWith("/")) prefix += "/";
+  prefix = prefix.replace(/^\/+/, "");
 
   const created = [];
   for (const file of files) {
     const filename = sanitizeFilename(file.name || "upload");
-    const key = await uniqueKey(env, prefix, filename);
+    const intakeKey = await uniqueKey(env, prefix, filename);
     const buf = await file.arrayBuffer();
-    const contentType = file.type || guessContentType(key);
-    const folder = folderHint || inferFolder(key, contentType);
+    const contentType = file.type || guessContentType(intakeKey);
+    const folder = folderHint || inferFolder(intakeKey, contentType);
     const displayOrder = await nextDisplayOrder(env, folder);
 
-    await env.WEBSITE_ASSETS.put(key, buf, { httpMetadata: { contentType } });
+    await env.WEBSITE_ASSETS.put(intakeKey, buf, { httpMetadata: { contentType } });
 
-    const url = "/media/" + key;
-    const result = await env.DB.prepare(
-      `INSERT INTO media_assets
-         (r2_key, url, filename, content_type, size_bytes, category, folder, display_order, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
-    )
-      .bind(key, url, filename, contentType, buf.byteLength, category, folder, displayOrder)
-      .run();
+    const plan = planAssetIngest({
+      r2Key: intakeKey,
+      contentType,
+      bytes: buf.byteLength,
+      filename,
+      folder,
+    });
 
-    created.push(
-      rowToAsset({
-        id: result.meta.last_row_id,
-        r2_key: key,
-        url,
-        filename,
-        content_type: contentType,
-        size_bytes: buf.byteLength,
-        category,
-        folder,
-        display_order: displayOrder,
-        alt_text: "",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-    );
+    const urls = publicUrlFields(intakeKey);
+    const meta = {
+      ...plan.meta,
+      intelligence: plan.intelligence,
+      tags: plan.tags,
+      workflow_key: plan.workflow_key,
+    };
+
+    let result;
+    try {
+      result = await env.DB.prepare(
+        `INSERT INTO media_assets
+           (r2_key, url, filename, content_type, size_bytes, category, folder, display_order, meta_json, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+      )
+        .bind(
+          intakeKey,
+          urls.url,
+          filename,
+          contentType,
+          buf.byteLength,
+          category,
+          folder,
+          displayOrder,
+          JSON.stringify(meta),
+        )
+        .run();
+    } catch (err) {
+      // meta_json column may not exist until migrate — fall back without it.
+      if (String(err?.message || err).includes("meta_json")) {
+        result = await env.DB.prepare(
+          `INSERT INTO media_assets
+             (r2_key, url, filename, content_type, size_bytes, category, folder, display_order, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+        )
+          .bind(
+            intakeKey,
+            urls.url,
+            filename,
+            contentType,
+            buf.byteLength,
+            category,
+            folder,
+            displayOrder,
+          )
+          .run();
+      } else {
+        throw err;
+      }
+    }
+
+    const asset = rowToAsset({
+      id: result.meta.last_row_id,
+      r2_key: intakeKey,
+      url: urls.url,
+      filename,
+      content_type: contentType,
+      size_bytes: buf.byteLength,
+      category,
+      folder,
+      display_order: displayOrder,
+      alt_text: "",
+      meta_json: JSON.stringify(meta),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    created.push({
+      ...asset,
+      optimization_plan: {
+        transform_state: plan.transform_state,
+        workflow_key: plan.workflow_key,
+        canonical_key: plan.canonical_key,
+        execution: plan.execution,
+        optimized: false,
+      },
+      intelligence: plan.intelligence,
+    });
   }
 
-  return json({ ok: true, assets: created });
+  return json({ ok: true, assets: created, retention_policy: "intake_promote_delete" });
 }
 
 export async function listMedia(request, env, url) {
@@ -377,13 +505,60 @@ export async function updateMedia(request, env, id) {
     }
   }
 
-  await env.DB.prepare(
-    `UPDATE media_assets
-     SET filename = ?, alt_text = ?, folder = ?, display_order = ?, placement_json = ?, updated_at = datetime('now')
-     WHERE id = ?`
-  )
-    .bind(filename, altText, folder, displayOrder, placementJson, id)
-    .run();
+  let meta = parseMeta(asset.meta_json) || {};
+  if (Array.isArray(body.accept_suggestions) && body.accept_suggestions.length) {
+    const applied = applyAcceptedSuggestions(
+      {
+        title: meta.title || filename,
+        alt_text: altText,
+        tags: meta.tags || [],
+      },
+      meta.intelligence || { suggestions: meta.suggestions, protected_fields: {} },
+      body.accept_suggestions,
+    );
+    meta = {
+      ...meta,
+      accepted_suggestions: applied.accepted,
+      skipped_suggestions: applied.skipped,
+      title: applied.metadata.title,
+      tags: applied.metadata.tags,
+    };
+    if (applied.accepted.includes("alt_text") && applied.metadata.alt_text != null) {
+      // Only write alt when explicitly accepted and not protected.
+    }
+  }
+  // Never silently overwrite human alt_text from suggestions unless accepted.
+  let nextAlt = altText;
+  if (
+    Array.isArray(body.accept_suggestions) &&
+    body.accept_suggestions.includes("alt_text") &&
+    !(meta.intelligence?.protected_fields?.alt_text) &&
+    meta.intelligence?.suggestions?.alt_text
+  ) {
+    nextAlt = String(meta.intelligence.suggestions.alt_text).slice(0, 500);
+  }
+
+  try {
+    await env.DB.prepare(
+      `UPDATE media_assets
+       SET filename = ?, alt_text = ?, folder = ?, display_order = ?, placement_json = ?, meta_json = ?, updated_at = datetime('now')
+       WHERE id = ?`
+    )
+      .bind(filename, nextAlt, folder, displayOrder, placementJson, JSON.stringify(meta), id)
+      .run();
+  } catch (err) {
+    if (String(err?.message || err).includes("meta_json")) {
+      await env.DB.prepare(
+        `UPDATE media_assets
+         SET filename = ?, alt_text = ?, folder = ?, display_order = ?, placement_json = ?, updated_at = datetime('now')
+         WHERE id = ?`
+      )
+        .bind(filename, nextAlt, folder, displayOrder, placementJson, id)
+        .run();
+    } else {
+      throw err;
+    }
+  }
 
   const updated = await env.DB.prepare(`SELECT * FROM media_assets WHERE id = ?`).bind(id).first();
   return json({ ok: true, asset: rowToAsset(updated) });

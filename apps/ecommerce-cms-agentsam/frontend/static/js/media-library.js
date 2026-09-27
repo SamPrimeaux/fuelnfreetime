@@ -88,21 +88,19 @@
     return ct.includes("model") || ext === "glb" || ext === "usdz" || ext === "gltf";
   }
 
-  function mediaUrl(a) {
-    return new URL(a.url, location.origin).href;
-  }
-
   function thumbHtml(a) {
     const ct = (a.content_type || "").toLowerCase();
+    const src = mediaUrl(a);
     if (isModel3d(a)) {
-      const src = mediaUrl(a);
-      return `<model-viewer src="${src}" camera-orbit="45deg 70deg 110%" disable-zoom disable-pan interaction-prompt="none" loading="lazy" reveal="auto"></model-viewer>`;
+      // Grid thumbs: avoid black model-viewer canvases — badge until drawer preview.
+      const ext = (a.filename || a.r2_key || "").split(".").pop() || "3d";
+      return `<span class="media-file-icon" title="3D model">${String(ext).slice(0, 4)}</span>`;
     }
-    if (ct.startsWith("image/")) {
-      return `<img src="${a.url}" alt="" loading="lazy">`;
+    if (ct.startsWith("image/") || /\.(jpe?g|png|gif|webp|svg|avif)$/i.test(a.r2_key || a.filename || "")) {
+      return `<img src="${src}" alt="" loading="lazy" decoding="async" onerror="this.classList.add('is-broken')">`;
     }
-    if (ct.startsWith("video/")) {
-      return `<video src="${a.url}" muted preload="metadata"></video>`;
+    if (ct.startsWith("video/") || /\.(mp4|mov|webm|m4v)$/i.test(a.r2_key || a.filename || "")) {
+      return `<video src="${src}" muted preload="metadata"></video>`;
     }
     const ext = (a.filename || "").split(".").pop() || "file";
     return `<span class="media-file-icon">${ext.slice(0, 4)}</span>`;
@@ -110,8 +108,8 @@
 
   function previewHtml(a) {
     const ct = (a.content_type || "").toLowerCase();
+    const src = mediaUrl(a);
     if (isModel3d(a)) {
-      const src = mediaUrl(a);
       const ext = (a.filename || "").split(".").pop()?.toLowerCase() || "";
       const inner =
         ext === "usdz"
@@ -119,13 +117,22 @@
           : `<model-viewer id="media-glb-viewer" src="${src}" camera-controls touch-action="pan-y" interaction-prompt="none" shadow-intensity="0" exposure="1.05" environment-image="neutral" alt="${a.alt_text || a.filename}"></model-viewer>`;
       return `<div class="media-glb-stage" id="media-glb-stage"><div class="media-glb-transform" id="media-glb-transform">${inner}</div><p class="media-glb-drag-hint">Drag to orbit · scroll to zoom · Shift+drag to pan frame</p></div>`;
     }
-    if (ct.startsWith("image/")) {
-      return `<img src="${a.url}" alt="">`;
+    if (ct.startsWith("image/") || /\.(jpe?g|png|gif|webp|svg|avif)$/i.test(a.r2_key || a.filename || "")) {
+      return `<img src="${src}" alt="">`;
     }
-    if (ct.startsWith("video/")) {
-      return `<video src="${a.url}" controls></video>`;
+    if (ct.startsWith("video/") || /\.(mp4|mov|webm|m4v)$/i.test(a.r2_key || a.filename || "")) {
+      return `<video src="${src}" controls></video>`;
     }
     return `<div style="padding:40px;text-align:center;color:#888;">Preview not available</div>`;
+  }
+
+  function mediaUrl(a) {
+    const raw = a.delivery_url || a.url || "";
+    try {
+      return new URL(raw, location.origin).href;
+    } catch {
+      return raw;
+    }
   }
 
   function queryUrl() {
@@ -702,6 +709,53 @@
     els.metaSize.textContent = fmtBytes(asset.size_bytes);
     els.metaDate.textContent = fmtDate(asset.created_at);
     els.metaKey.textContent = asset.r2_key || "—";
+
+    // Surface deterministic suggestions + optimization plan (review-only).
+    const intel = asset.meta?.intelligence || asset.intelligence;
+    const opt = asset.optimization_plan || asset.meta?.optimization || asset.optimization;
+    let extras = "";
+    if (opt?.status || asset.transform_state) {
+      extras += `<p class="media-meta-line"><strong>Optimize:</strong> ${opt?.status || asset.transform_state}</p>`;
+    }
+    if (intel?.suggestions) {
+      const s = intel.suggestions;
+      extras += `<div class="media-suggestions" data-suggestions>
+        <p><strong>Suggestions</strong> (review before apply)</p>
+        <ul>
+          <li>slug: ${s.slug || "—"}</li>
+          <li>title: ${s.title || "—"}</li>
+          <li>alt: ${s.alt_text || "—"}</li>
+          <li>role: ${s.media_role || "—"}</li>
+        </ul>
+      </div>`;
+    }
+    if (els.metaKey && extras) {
+      const host = els.metaKey.parentElement;
+      let box = host?.querySelector("[data-media-intel]");
+      if (!box && host) {
+        box = document.createElement("div");
+        box.dataset.mediaIntel = "1";
+        host.appendChild(box);
+      }
+      if (box) box.innerHTML = extras;
+    }
+
+    if (typeof window.setAgentsamPageContext === "function") {
+      window.setAgentsamPageContext({
+        page: "/admin/content",
+        selected_resource: {
+          type: "media_asset",
+          id: asset.id,
+          r2_key: asset.r2_key,
+          filename: asset.filename,
+          content_type: asset.content_type,
+          folder: asset.folder,
+          media_role: asset.meta?.media_role || intel?.suggestions?.media_role,
+          transform_state: asset.transform_state || opt?.status,
+          delivery_url: asset.delivery_url || asset.url,
+        },
+      });
+    }
 
     const is3d = isModel3d(asset);
     els.glbPlacement.hidden = !is3d;

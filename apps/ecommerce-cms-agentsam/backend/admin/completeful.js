@@ -14,6 +14,7 @@ import {
   selectPrimaryCompletefulShop,
   syncCompletefulCatalog,
 } from "../completeful/catalog.js";
+import { planProductAssetOptimization } from "../assets/product-optimize.js";
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -149,6 +150,29 @@ export async function handleCompletefulAdminApi(request, env, url) {
         return json({ ok: false, error: "Completeful catalog product not found" }, { status: 404 });
       }
       return json({ ok: true, ...result });
+    }
+
+    // Plan SEO/CF tags + staging keys for a product R2 image (optimize via bin/fnf-assets).
+    if (path === "/api/admin/completeful/assets/optimize-plan" && method === "POST") {
+      const body = await readJson(request);
+      const r2Key = String(body.r2_key || body.key || "").replace(/^\/+/, "");
+      if (!r2Key) {
+        return json({ ok: false, error: "r2_key required" }, { status: 400 });
+      }
+      const plan = planProductAssetOptimization({
+        r2Key,
+        productSlug: body.product_slug || body.productSlug || null,
+        collection: body.collection || null,
+        alt: body.alt || null,
+        bytes: body.bytes != null ? Number(body.bytes) : null,
+      });
+      return json({
+        ...plan,
+        next: {
+          cli: plan.execute_cli,
+          note: "Worker plans tags/staging; run bin/fnf-assets to execute sharp optimize against R2.",
+        },
+      });
     }
 
     return json({ error: "Not found" }, { status: 404 });

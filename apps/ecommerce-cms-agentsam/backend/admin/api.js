@@ -42,6 +42,7 @@ import {
   detachProductImage,
   setPrimaryProductImage,
 } from "./media.js";
+import { planProductAssetOptimization } from "../assets/product-optimize.js";
 import { handleAdminCmsApi } from "../cms/api.js";
 import { getFinanceAnalytics } from "./analytics-finance.js";
 import {
@@ -278,11 +279,40 @@ async function createProduct(request, env) {
       console.error("[products/create/default-variant]", variantErr?.message || variantErr);
     }
 
-    return json({ ok: true, id: productId });
+    let asset_plan = null;
+    const r2Key =
+      (body.r2_key && String(body.r2_key).replace(/^\/+/, "")) ||
+      extractR2KeyFromMediaUrl(body.image_url);
+    if (r2Key) {
+      asset_plan = planProductAssetOptimization({
+        r2Key,
+        productSlug: slug,
+        collection: body.collection || null,
+        alt: body.title ? String(body.title) : null,
+        bytes: body.image_bytes != null ? Number(body.image_bytes) : null,
+        completeful: body.completeful_production
+          ? { requiresProductionMaster: true }
+          : null,
+      });
+    }
+
+    return json({ ok: true, id: productId, asset_plan });
   } catch (err) {
     console.error("[products/create]", err?.message || err);
     return json({ error: productDbError(err, "Could not create product") }, { status: 400 });
   }
+}
+
+function extractR2KeyFromMediaUrl(url) {
+  if (!url || typeof url !== "string") return null;
+  const s = url.trim();
+  if (!s) return null;
+  const mediaIdx = s.indexOf("/media/");
+  if (mediaIdx !== -1) return s.slice(mediaIdx + "/media/".length).replace(/^\/+/, "");
+  const cdn = "https://assets.fuelnfreetime.com/";
+  if (s.startsWith(cdn)) return s.slice(cdn.length);
+  if (!s.includes("://") && !s.startsWith("/")) return s;
+  return null;
 }
 
 function parsePriceCents(value, fallback = 0) {

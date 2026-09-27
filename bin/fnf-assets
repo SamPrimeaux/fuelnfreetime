@@ -1,0 +1,180 @@
+#!/usr/bin/env node
+/**
+ * FNF asset pipeline CLI
+ *
+ *   bin/fnf-assets optimize --prefix uploads/
+ *   bin/fnf-assets optimize --prefix products/shirts/
+ *   bin/fnf-assets optimize --prefix products/fuel-n-freetime-hat/
+ *   bin/fnf-assets optimize --prefix products/ --min-bytes 200000
+ *   bin/fnf-assets plan-product --key products/shirts/fft-tee-frontside.webp
+ *   bin/fnf-assets products --prefixes products/shirts/,products/fuel-n-freetime-hat/
+ */
+
+import { spawnSync } from "node:child_process";
+import { mkdirSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+  runImageOptimizePipeline,
+  optimizeProductPrefixes,
+  planProductAssetOptimization,
+  planAssetIngest,
+  optimizeImageObject,
+  isImageKey,
+  FNF_R2,
+} from "../lib/assets/index.js";
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const [command = "help", ...rest] = process.argv.slice(2);
+
+function flag(name, fallback = null) {
+  const i = rest.indexOf(name);
+  if (i === -1) return fallback;
+  return rest[i + 1] ?? fallback;
+}
+function has(name) {
+  return rest.includes(name);
+}
+
+function help() {
+  console.log(`fnf-assets — Fuel & Free Time R2 asset pipeline
+
+Bucket: ${FNF_R2.bucket}  binding: ${FNF_R2.binding}
+CDN:    ${FNF_R2.publicBaseUrl}
+Worker: ${FNF_R2.workerMediaBaseUrl}
+
+Commands:
+  optimize   Batch optimize images under a prefix (intake→promote→delete when classified canonical)
+  promote    Promote a single intake key to canonical optimized asset
+  products   Optimize one or more product folder prefixes
+  plan-product  Worker-safe optimize/tag plan for a single product R2 key (no sharp)
+  plan       Worker-safe ingest plan for any media key (no sharp)
+
+Flags:
+  --prefix <path>       R2 prefix (default uploads/)
+  --prefixes <a,b>      Comma list for products command
+  --key <r2_key>        Single key for plan/promote/plan-product
+  --min-bytes <n>       Skip smaller objects
+  --limit <n>           Cap queue size
+  --max-width <n>       Default ${FNF_R2.defaults.maxWidth}
+  --quality <n>         Default ${FNF_R2.defaults.quality}
+  --dry-run             Transform locally only; no R2 puts / deletes
+
+Auth: run via ./scripts/with-cf-admin-env.sh bin/fnf-assets …
+`);
+}
+
+async function main() {
+  if (command === "help" || command === "-h" || command === "--help") {
+    help();
+    return;
+  }
+
+  if (command === "plan-product" || command === "plan") {
+    const key = flag("--key");
+    if (!key) throw new Error("--key required");
+    const planner = command === "plan" ? planAssetIngest : planProductAssetOptimization;
+    console.log(
+      JSON.stringify(
+        planner({
+          r2Key: key,
+          productSlug: flag("--product-slug"),
+          collection: flag("--collection"),
+          alt: flag("--alt"),
+          folder: flag("--folder"),
+        }),
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+
+  if (command === "promote") {
+    const key = flag("--key");
+    if (!key) throw new Error("--key required");
+    if (!isImageKey(key)) {
+      console.log(
+        JSON.stringify(
+          planAssetIngest({ r2Key: key, folder: flag("--folder") }),
+          null,
+          2,
+        ),
+      );
+      return;
+    }
+    const workDir = join(tmpdir(), `fnf-promote-${Date.now()}`);
+    mkdirSync(workDir, { recursive: true });
+    const row = await optimizeImageObject(
+      { key, size: Number(flag("--bytes", "0")) || 0 },
+      {
+        workDir,
+        cwd: ROOT,
+        dryRun: has("--dry-run"),
+        maxWidth: Number(flag("--max-width", "0")) || undefined,
+        quality: Number(flag("--quality", "0")) || undefined,
+        productSlug: flag("--product-slug"),
+        collection: flag("--collection"),
+        folder: flag("--folder"),
+        source: "bin/fnf-assets promote",
+        deleteIntake: !has("--keep-intake"),
+      },
+    );
+    console.log(JSON.stringify(row, null, 2));
+    process.exit(row.ok ? 0 : 1);
+  }
+
+  const common = {
+    cwd: ROOT,
+    dryRun: has("--dry-run"),
+    limit: Number(flag("--limit", "0")) || 0,
+    minBytes: Number(flag("--min-bytes", "0")) || 0,
+    maxWidth: Number(flag("--max-width", "0")) || undefined,
+    quality: Number(flag("--quality", "0")) || undefined,
+  };
+
+  if (command === "optimize") {
+    const report = await runImageOptimizePipeline({
+      ...common,
+      prefix: flag("--prefix", "uploads/"),
+      source: "bin/fnf-assets optimize",
+    });
+    console.log(
+      JSON.stringify(
+        {
+          ok: report.counts.failed === 0,
+          ...report.counts,
+          savings_pct: report.totals.savings_pct,
+          local_report: report.local_report,
+          r2_report_key: report.r2_report_key,
+        },
+        null,
+        2,
+      ),
+    );
+    process.exit(report.counts.failed ? 1 : 0);
+  }
+
+  if (command === "products") {
+    const raw =
+      flag("--prefixes") ||
+      "products/shirts/,products/fuel-n-freetime-hat/";
+    const prefixes = raw.split(",").map((s) => s.trim()).filter(Boolean);
+    const reports = await optimizeProductPrefixes(prefixes, runImageOptimizePipeline, {
+      ...common,
+      source: "bin/fnf-assets products",
+    });
+    const failed = reports.reduce((s, r) => s + (r.counts?.failed || 0), 0);
+    const ok = reports.reduce((s, r) => s + (r.counts?.ok || 0), 0);
+    console.log(JSON.stringify({ ok: failed === 0, prefixes, optimized: ok, failed }, null, 2));
+    process.exit(failed ? 1 : 0);
+  }
+
+  throw new Error(`Unknown command: ${command}`);
+}
+
+main().catch((e) => {
+  console.error(e?.message || e);
+  process.exit(1);
+});
