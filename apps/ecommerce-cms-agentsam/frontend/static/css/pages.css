@@ -176,7 +176,47 @@
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
+}
+
+.page-editor-role {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid #dedee7;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fbfaff, #f7f7f5);
+}
+
+.page-editor-role > div {
+  min-width: 0;
+}
+
+.page-editor-role__eyebrow {
+  display: block;
+  margin-bottom: 2px;
+  color: #5f43d5;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.page-editor-role strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.page-editor-role p {
+  max-width: 520px;
+  margin: 0;
+  color: #6b6b6b;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .page-editor-crumb {
