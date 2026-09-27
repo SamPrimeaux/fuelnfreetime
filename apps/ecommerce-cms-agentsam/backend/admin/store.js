@@ -51,7 +51,7 @@ const DEFAULT_STORE_PREFERENCES = {
   hcaptchaContact: true,
   hcaptchaAccount: true,
   navLogoUrl: DEFAULT_LOGO_URL,
-  navLogoHeight: 68,
+  navLogoHeight: 58,
   navBrandAccent: "#ff4500",
   navBrandAccentLight: "#E5A558",
   navItems: DEFAULT_NAV_ITEMS,
