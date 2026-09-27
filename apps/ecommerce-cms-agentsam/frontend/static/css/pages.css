@@ -431,6 +431,24 @@
   background: #f1f1f1;
 }
 
+.page-editor-section-block {
+  padding: 18px 0 6px;
+  border-top: 1px solid #ececec;
+}
+
+.page-editor-section-block:first-child {
+  padding-top: 4px;
+  border-top: 0;
+}
+
+.page-editor-section-title {
+  margin: 0 0 14px;
+  color: #262626;
+  font-size: 14px;
+  font-weight: 650;
+  text-transform: capitalize;
+}
+
 .page-editor-field {
   margin-bottom: 14px;
 }
