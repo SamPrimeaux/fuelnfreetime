@@ -127,6 +127,23 @@ renderShell("/admin/pages", `
   <footer class="page-editor-savebar">
     <button type="button" class="btn primary" id="save-btn" disabled>Save</button>
   </footer>
+
+  <div class="page-editor-media-modal" id="page-media-modal" hidden>
+    <div class="page-editor-media-dialog" role="dialog" aria-modal="true" aria-labelledby="page-media-title">
+      <div class="page-editor-media-dialog__head">
+        <div>
+          <span class="page-editor-role__eyebrow">Media library</span>
+          <strong id="page-media-title">Choose an asset</strong>
+        </div>
+        <button type="button" class="btn ghost small" id="page-media-close">Close</button>
+      </div>
+      <div class="page-editor-media-dialog__tools">
+        <input type="search" id="page-media-search" placeholder="Search media" autocomplete="off">
+        <a class="btn ghost small" href="/admin/content">Open media manager</a>
+      </div>
+      <div class="page-editor-media-grid" id="page-media-grid"></div>
+    </div>
+  </div>
 `);
 
 function setDirty(next = true) {
