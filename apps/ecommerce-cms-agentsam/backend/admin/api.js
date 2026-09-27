@@ -84,6 +84,7 @@ import { retryAssetJob, runAdminCompaction } from "./ops.js";
 import { handleGrowthApi } from "./growth.js";
 import { handleDiscountsApi } from "./discounts.js";
 import { handleCompletefulAdminApi } from "./completeful.js";
+import { getBrandWorkspace, patchBrandWorkspace } from "./brand.js";
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -564,6 +565,9 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   let orderMatch = path.match(/^\/api\/admin\/orders\/(\d+)$/);
   if (orderMatch && method === "GET") return getOrder(request, env, orderMatch[1]);
   if (path === "/api/admin/subscribers" && method === "GET") return listSubscribers(request, env);
+
+  if (path === "/api/admin/brand" && method === "GET") return getBrandWorkspace(env);
+  if (path === "/api/admin/brand" && method === "PATCH") return patchBrandWorkspace(request, env);
 
   if (path === "/api/admin/media" && method === "POST") return uploadMedia(request, env, executionCtx);
   if (path === "/api/admin/media" && method === "GET") return listMedia(request, env, url);

@@ -7,13 +7,21 @@
 <link rel="stylesheet" href="/admin/css/admin.css">
 <link rel="stylesheet" href="/admin/css/console.css">
 <link rel="stylesheet" href="/admin/css/media-library.css">
+<link rel="stylesheet" href="/admin/css/brand-workspace.css">
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
 </head>
 <body>
 <script src="/admin/js/shell.js"></script>
 <script src="/admin/js/media-library.js"></script>
+<script src="/admin/js/brand-workspace.js"></script>
 <script>
 renderShell("/admin/content", `
+  <div class="content-product-tabs" role="tablist" aria-label="Content views">
+    <button type="button" class="content-product-tab is-active" id="content-tab-library" data-content-view="library" role="tab" aria-selected="true">Library</button>
+    <button type="button" class="content-product-tab" id="content-tab-brand" data-content-view="brand" role="tab" aria-selected="false">Brand</button>
+  </div>
+
+  <section id="content-view-library" data-content-panel="library">
   <div class="media-lib">
     <div class="media-lib-toolbar">
       <nav class="media-lib-crumb" id="media-crumb" aria-label="Media location"></nav>
@@ -48,6 +56,59 @@ renderShell("/admin/content", `
 
     <div class="media-lib-grid" id="media-grid"><div class="admin-empty">Loading…</div></div>
   </div>
+  </section>
+
+  <section class="brand-workspace" id="content-view-brand" data-content-panel="brand" hidden>
+    <div class="brand-workspace-head">
+      <div>
+        <p class="brand-eyebrow">Brand system</p>
+        <h1>Identity & assets</h1>
+        <p>Manage the identity and reusable assets used across storefront, auth, social previews, and content.</p>
+      </div>
+      <button type="button" class="btn primary" id="brand-save">Save brand</button>
+    </div>
+
+    <div class="brand-overview">
+      <div class="brand-preview-card">
+        <div class="brand-preview-mark" id="brand-preview-mark"></div>
+        <div>
+          <strong id="brand-preview-name">Brand</strong>
+          <p id="brand-preview-tagline">Loading…</p>
+        </div>
+      </div>
+
+      <div class="brand-fields">
+        <label>Brand name<input type="text" id="brand-name" autocomplete="organization"></label>
+        <label>Tagline<input type="text" id="brand-tagline"></label>
+        <label>Website<input type="url" id="brand-website" autocomplete="url"></label>
+        <label>Support email<input type="email" id="brand-support-email" autocomplete="email"></label>
+        <label>Primary color<div class="brand-color-row"><input type="color" id="brand-primary-color-picker"><input type="text" id="brand-primary-color" placeholder="#000000"></div></label>
+        <label>Auth background<div class="brand-color-row"><input type="color" id="brand-auth-bg-picker"><input type="text" id="brand-auth-bg" placeholder="#ffffff"></div></label>
+      </div>
+    </div>
+
+    <div class="brand-section-head">
+      <div>
+        <h2>Brand assets</h2>
+        <p>Each role points to an asset already managed in the Content library.</p>
+      </div>
+    </div>
+    <div class="brand-role-grid" id="brand-role-grid"><div class="admin-empty">Loading brand assets…</div></div>
+    <div class="admin-note" id="brand-note" style="display:none;"></div>
+  </section>
+
+  <div class="brand-picker-backdrop" id="brand-picker-backdrop"></div>
+  <section class="brand-picker" id="brand-picker" aria-modal="true" role="dialog" aria-label="Choose brand asset" hidden>
+    <div class="brand-picker-head">
+      <div>
+        <strong id="brand-picker-title">Choose asset</strong>
+        <span id="brand-picker-count"></span>
+      </div>
+      <button type="button" class="btn ghost small" id="brand-picker-close">Close</button>
+    </div>
+    <div class="brand-picker-search"><input type="search" id="brand-picker-query" placeholder="Search image assets"></div>
+    <div class="brand-picker-grid" id="brand-picker-grid"></div>
+  </section>
 
   <div class="media-drawer-backdrop" id="media-drawer-backdrop"></div>
   <aside class="media-drawer" id="media-drawer" aria-label="Asset details">
@@ -118,7 +179,7 @@ renderShell("/admin/content", `
       <button type="button" class="btn primary small" id="media-drawer-save">Save</button>
     </div>
   </aside>
-`, { onReady: initMediaLibrary });
+`, { onReady: () => { initMediaLibrary(); initBrandWorkspace(); } });
 </script>
 </body>
 </html>

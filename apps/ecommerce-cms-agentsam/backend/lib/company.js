@@ -3,8 +3,6 @@
  * for issuer/auth/company branding. Matches agentsam-sdk identity contract.
  */
 
-const COMPANY_SLUG_CANDIDATES = ["fuelnfreetime", "default"];
-
 function parseMeta(raw) {
   if (!raw) return {};
   if (typeof raw === "object") return raw;
@@ -48,14 +46,12 @@ export async function getCompany(env, opts = {}) {
         .first();
       if (bySlug) return rowToCompany(bySlug);
     }
-    for (const candidate of COMPANY_SLUG_CANDIDATES) {
-      const row = await env.DB.prepare(`SELECT * FROM company WHERE slug = ? LIMIT 1`)
-        .bind(candidate)
-        .first();
-      if (row) return rowToCompany(row);
-    }
-    const any = await env.DB.prepare(`SELECT * FROM company ORDER BY updated_at DESC LIMIT 1`).first();
-    return rowToCompany(any);
+    const preferred = await env.DB.prepare(
+      `SELECT * FROM company
+       ORDER BY CASE WHEN slug = 'default' THEN 1 ELSE 0 END, updated_at DESC
+       LIMIT 1`,
+    ).first();
+    return rowToCompany(preferred);
   } catch (err) {
     console.error("[company] load failed", err?.message || err);
     return null;

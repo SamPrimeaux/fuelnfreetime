@@ -186,7 +186,9 @@ function rowToAsset(row) {
   const contentType = resolveContentType(row);
   const urls = publicUrlFields(row.r2_key);
   const meta = parseMeta(row.meta_json);
-  const lifecycle = meta?.lifecycle || (meta?.optimization?.status === "ready" ? "ready" : null) || "ready";
+  const jobStatus = String(row.processing_status || "").toLowerCase();
+  const lifecycle =
+    jobStatus || meta?.lifecycle || (meta?.optimization?.status === "ready" ? "ready" : null) || "ready";
   const opt = meta?.optimization || null;
   return {
     id: row.id,
@@ -205,7 +207,13 @@ function rowToAsset(row) {
     placement,
     meta,
     /** Operator-facing lifecycle — never expose pipeline jargon. */
-    status: lifecycle === "processing" || lifecycle === "uploading" ? lifecycle : lifecycle === "failed" ? "failed" : "ready",
+    status:
+      lifecycle === "processing" || lifecycle === "uploading" || lifecycle === "queued" || lifecycle === "running"
+        ? "processing"
+        : lifecycle === "failed" || lifecycle === "error"
+          ? "failed"
+          : "ready",
+    processing_error: row.processing_error || null,
     display: opt
       ? {
           format: (opt.output_format || contentType || "").replace(/^image\//, "").toUpperCase() || null,
@@ -224,6 +232,11 @@ function rowToAsset(row) {
     updated_at: row.updated_at || row.created_at,
   };
 }
+
+const MEDIA_SELECT = `SELECT m.*,
+  (SELECT j.status FROM media_asset_jobs j WHERE j.media_asset_id = m.id ORDER BY j.updated_at DESC LIMIT 1) AS processing_status,
+  (SELECT j.last_error FROM media_asset_jobs j WHERE j.media_asset_id = m.id ORDER BY j.updated_at DESC LIMIT 1) AS processing_error
+  FROM media_assets m`;
 
 async function folderCounts(env) {
   const { results } = await env.DB.prepare(
@@ -494,26 +507,26 @@ export async function listMedia(request, env, url) {
   if (prefix) {
     const like = `${prefix.replace(/[%_]/g, "")}%`;
     const { results } = await env.DB.prepare(
-      `SELECT * FROM media_assets WHERE r2_key LIKE ? ORDER BY display_order ASC, id ASC`
+      `${MEDIA_SELECT} WHERE m.r2_key LIKE ? ORDER BY m.display_order ASC, m.id ASC`
     )
       .bind(like)
       .all();
     assets = results.map(rowToAsset);
   } else if (folderParam && MEDIA_FOLDERS.includes(folderParam)) {
     const { results } = await env.DB.prepare(
-      `SELECT * FROM media_assets WHERE folder = ? ORDER BY display_order ASC, id ASC`
+      `${MEDIA_SELECT} WHERE m.folder = ? ORDER BY m.display_order ASC, m.id ASC`
     )
       .bind(folderParam)
       .all();
     assets = results.map(rowToAsset);
   } else if (view === "all") {
     const { results } = await env.DB.prepare(
-      `SELECT * FROM media_assets ORDER BY folder ASC, display_order ASC, id ASC`
+      `${MEDIA_SELECT} ORDER BY m.folder ASC, m.display_order ASC, m.id ASC`
     ).all();
     assets = results.map(rowToAsset);
   } else {
     const { results } = await env.DB.prepare(
-      `SELECT * FROM media_assets WHERE folder = 'images' ORDER BY display_order ASC, id ASC`
+      `${MEDIA_SELECT} WHERE m.folder = 'images' ORDER BY m.display_order ASC, m.id ASC`
     ).all();
     assets = results.map(rowToAsset);
   }
