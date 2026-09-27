@@ -24,7 +24,7 @@ export const DEFAULT_NAV_ITEMS = [
 
 export const DEFAULT_NAV_CONFIG = {
   logoUrl: DEFAULT_LOGO_URL,
-  logoHeight: 68,
+  logoHeight: 58,
   brandAccent: "#ff4500",
   brandAccentLight: "#E5A558",
   items: DEFAULT_NAV_ITEMS,
