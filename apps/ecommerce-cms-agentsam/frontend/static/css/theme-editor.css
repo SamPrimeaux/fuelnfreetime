@@ -27,13 +27,14 @@
 
 .theme-studio-toolbar {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr);
+  grid-template-columns: minmax(300px, 1fr) auto minmax(240px, 1fr);
   align-items: center;
   gap: 12px;
   padding: 8px 14px;
   border-bottom: 1px solid var(--te-border);
-  background: rgba(255,255,255,.96);
-  backdrop-filter: blur(18px);
+  background: rgba(255,255,255,.9);
+  backdrop-filter: blur(22px) saturate(1.12);
+  -webkit-backdrop-filter: blur(22px) saturate(1.12);
   z-index: 8;
 }
 
