@@ -45,6 +45,7 @@
       '<div class="theme-studio">',
         '<header class="theme-studio-toolbar">',
           '<div class="theme-studio-toolbar__left">',
+            '<span class="te-editor-label">Theme editor</span>',
             '<div class="te-page-menu">',
               '<button type="button" class="te-page-trigger" id="te-page-trigger" aria-expanded="false"><span style="display:flex;align-items:center;gap:8px;min-width:0">', icon.page, '<strong id="te-page-title">Loading…</strong></span><span>⌄</span></button>',
               '<div class="te-page-popover" id="te-page-popover" hidden><input class="te-page-search" id="te-page-search" placeholder="Search online store" autocomplete="off"><div class="te-page-options" id="te-page-options"></div></div>',
