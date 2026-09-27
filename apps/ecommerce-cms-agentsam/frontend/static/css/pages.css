@@ -457,14 +457,40 @@
   margin-bottom: 0;
 }
 
-.page-editor-field label {
-  display: block;
+.page-editor-field > label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   font-size: 12px;
   font-weight: 600;
   color: #6b6b6b;
   text-transform: uppercase;
   letter-spacing: 0.4px;
   margin-bottom: 6px;
+}
+
+.page-editor-field > label span {
+  color: #9a9a9a;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+
+.page-editor-check {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #444;
+  font-size: 13px;
+  text-transform: none;
+}
+
+.page-editor-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: #1a1a1a;
 }
 
 .page-editor-media {
