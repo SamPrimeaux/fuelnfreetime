@@ -11,6 +11,10 @@
   --fnf-header-md: 70px;
   --fnf-announcement-h: 0px;
   --fnf-maxw: 1440px;
+  --fnf-header-light-ink: #f8f7f4;
+  --fnf-header-dark-ink: #191816;
+  --fnf-header-dark-surface: rgba(10, 10, 10, 0.88);
+  --fnf-header-frost-surface: rgba(248, 246, 241, 0.72);
 }
 
 body.fnf-nav-open {
@@ -67,23 +71,9 @@ body.fnf-nav-open {
 }
 
 @supports (backdrop-filter: blur(1px)) {
-  .fnf-row {
-    backdrop-filter: blur(calc(var(--fnf-glass-opacity) * 22px))
-      saturate(calc(1.05 + var(--fnf-glass-opacity) * 0.2));
-    -webkit-backdrop-filter: blur(calc(var(--fnf-glass-opacity) * 22px))
-      saturate(calc(1.05 + var(--fnf-glass-opacity) * 0.2));
-  }
-}
-
-.fnf-header.is-glass {
-  border-bottom: 1px solid rgba(255, 255, 255, calc(0.04 + var(--fnf-glass-opacity) * 0.1));
-}
-
-.fnf-header.is-hidden {
-  transform: translateY(-100%);
-}
-
-.fnf-row {
+  .fnf-header--adaptive-bar.is-glass .fnf-row,
+  .fnf-header--adaptive-bar[data-header-tone="light"] .fnf-row,
+  .fnf-header--frost-pill .fnf-row {
   max-width: var(--fnf-maxw);
   margin: 0 auto;
   height: var(--fnf-header);
@@ -92,30 +82,78 @@ body.fnf-nav-open {
   align-items: center;
   gap: 1rem;
   padding: 0 clamp(1rem, 4vw, 3.5rem);
-  border: 1px solid rgba(255,255,255, calc(var(--fnf-glass-opacity) * .16));
-  background: rgba(10,10,10, calc(var(--fnf-glass-opacity) * .88));
-  box-shadow: 0 14px 42px rgba(0,0,0, calc(var(--fnf-glass-opacity) * .3));
-  transition: max-width .28s var(--fnf-ease), height .28s var(--fnf-ease), border-radius .28s var(--fnf-ease), background .28s var(--fnf-ease), color .28s var(--fnf-ease);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--fnf-header-light-ink);
+  transition:
+    max-width .28s var(--fnf-ease),
+    height .28s var(--fnf-ease),
+    margin .28s var(--fnf-ease),
+    border-radius .28s var(--fnf-ease),
+    border-color .22s var(--fnf-ease),
+    background .22s var(--fnf-ease),
+    color .18s var(--fnf-ease),
+    box-shadow .22s var(--fnf-ease);
 }
 
-.fnf-header.is-glass .fnf-row {
+/* Reusable preset: adaptive full-width bar.
+ * The runtime assigns data-header-tone by explicit section metadata first,
+ * then samples the visible surface behind the header.
+ */
+.fnf-header--adaptive-bar .fnf-row {
+  background: var(--fnf-header-dark-surface);
+  border-color: rgba(255,255,255,.055);
+  box-shadow: 0 10px 34px rgba(0,0,0,.18);
+  color: var(--fnf-header-light-ink);
+}
+
+.fnf-header--adaptive-bar[data-header-tone="light"] .fnf-row {
+  background: rgba(248,246,241,.66);
+  border-color: rgba(255,255,255,.58);
+  box-shadow: 0 12px 38px rgba(44,39,31,.12);
+  color: var(--fnf-header-dark-ink);
+}
+
+.fnf-header--adaptive-bar[data-header-tone="dark"] .fnf-row {
+  background: rgba(10,10,10,.84);
+  border-color: rgba(255,255,255,.07);
+  color: var(--fnf-header-light-ink);
+}
+
+.fnf-header--adaptive-bar.is-glass .fnf-row {
   max-width: min(calc(var(--fnf-maxw) - 6rem), calc(100% - 2rem));
   height: calc(100% - 16px);
   margin-top: 8px;
   border-radius: 999px;
 }
 
-html[data-h-header-mode="glass-dark"] .fnf-header.is-glass .fnf-row {
-  background: rgba(247,245,239,.9);
-  color: #111;
+/* Reusable preset: floating frost-white pill.
+ * It deliberately keeps dark ink because the surface itself owns contrast.
+ */
+.fnf-header--frost-pill .fnf-row {
+  max-width: min(calc(var(--fnf-maxw) - 2rem), calc(100% - 2rem));
+  height: calc(100% - 16px);
+  margin-top: 8px;
+  border-radius: 999px;
+  border-color: rgba(255,255,255,.62);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.04)),
+    var(--fnf-header-frost-surface);
+  box-shadow:
+    0 14px 40px rgba(35,31,25,.12),
+    inset 0 1px 0 rgba(255,255,255,.58);
+  color: var(--fnf-header-dark-ink);
 }
 
-html[data-h-header-mode="glass-dark"] .fnf-header.is-glass .fnf-nav a { color: #272522; }
-html[data-h-header-mode="glass-dark"] .fnf-header.is-glass .fnf-cart-btn,
-html[data-h-header-mode="glass-dark"] .fnf-header.is-glass .fnf-burger { color: #111; }
+.fnf-header--frost-pill .fnf-nav a,
+.fnf-header--frost-pill .fnf-cart-btn,
+.fnf-header--frost-pill .fnf-burger {
+  color: var(--fnf-header-dark-ink);
+}
 
 .fnf-logo {
-  height: var(--fnf-logo-height, 68px);
+  height: min(var(--fnf-logo-height, 58px), 54px);
+  max-height: calc(var(--fnf-header) - 20px);
   display: flex;
   align-items: center;
   text-decoration: none;
@@ -147,7 +185,8 @@ html[data-h-header-mode="glass-dark"] .fnf-header.is-glass .fnf-burger { color: 
 }
 
 .fnf-nav a {
-  color: var(--fnf-muted);
+  color: currentColor;
+  opacity: .72;
   text-decoration: none;
   font-size: 0.92rem;
   letter-spacing: 0.08em;
@@ -173,7 +212,8 @@ html[data-h-header-mode="glass-dark"] .fnf-header.is-glass .fnf-burger { color: 
 .fnf-nav a:hover,
 .fnf-nav a.is-active,
 .fnf-nav a:focus-visible {
-  color: var(--fnf-ink);
+  color: currentColor;
+  opacity: 1;
 }
 
 .fnf-nav a:hover::before,
@@ -401,7 +441,15 @@ html[data-h-header-mode="glass-dark"] .fnf-header.is-glass .fnf-burger { color: 
   }
 
   .fnf-logo {
-    height: min(var(--fnf-logo-height, 68px), 56px);
+    height: min(var(--fnf-logo-height, 58px), 48px);
+    max-height: calc(var(--fnf-header) - 16px);
+  }
+
+  .fnf-header--frost-pill .fnf-row,
+  .fnf-header--adaptive-bar.is-glass .fnf-row {
+    max-width: calc(100% - 1rem);
+    height: calc(100% - 10px);
+    margin-top: 5px;
   }
 }
 
