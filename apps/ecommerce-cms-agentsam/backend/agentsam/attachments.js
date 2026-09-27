@@ -84,25 +84,6 @@ export function normalizeAttachments(raw) {
   return out;
 }
 
-export function defaultMessageForAttachments(attachments) {
-  const images = attachments.filter((a) => a.kind === "image" || a.image_base64 || a.url);
-  const textFiles = attachments.filter((a) => a.text_content);
-
-  if (images.length && textFiles.length) {
-    return "Review the attached photos and files for Fuel & Free Time brand fit and suggest edits.";
-  }
-  if (images.length === 1) {
-    return "Review this image for Fuel & Free Time brand fit and suggest edits.";
-  }
-  if (images.length > 1) {
-    return "Review these images for Fuel & Free Time brand fit and suggest edits.";
-  }
-  if (textFiles.length === 1) {
-    return `Review the attached file "${textFiles[0].name}" and summarize key points for Fuel & Free Time.`;
-  }
-  return "Review the attached files and summarize what matters for Fuel & Free Time.";
-}
-
 export function formatAttachmentsForPrompt(attachments) {
   const textFiles = attachments.filter((a) => a.text_content);
   if (!textFiles.length) return "";

@@ -30,6 +30,9 @@
   let selected = null;
   let dragId = null;
   let syncedOnce = false;
+  let searchQuery = "";
+  let kindFilter = "all";
+  let statusFilter = "all";
 
   const els = {};
 
@@ -78,8 +81,36 @@
     return ["jpg", "jpeg", "png", "gif", "webp", "svg", "avif", "mp4", "mov", "webm", "glb", "usdz"].includes(ext);
   }
 
+  function assetKind(a) {
+    const ct = String(a.content_type || "").toLowerCase();
+    const ext = String(a.filename || a.r2_key || "").split(".").pop()?.toLowerCase() || "";
+    if (ct.startsWith("image/") || ["jpg", "jpeg", "png", "gif", "webp", "svg", "avif"].includes(ext)) return "image";
+    if (ct.startsWith("video/") || ["mp4", "mov", "webm", "m4v"].includes(ext)) return "video";
+    if (ct.startsWith("model/") || ["glb", "gltf", "usdz"].includes(ext)) return "model";
+    return "other";
+  }
+
   function visibleAssets() {
-    return assets.filter(isBrowsable);
+    const q = searchQuery.trim().toLowerCase();
+    return assets
+      .filter(isBrowsable)
+      .filter((a) => kindFilter === "all" || assetKind(a) === kindFilter)
+      .filter((a) => statusFilter === "all" || (a.status || "ready") === statusFilter)
+      .filter((a) => {
+        if (!q) return true;
+        const hay = [
+          a.filename,
+          a.alt_text,
+          a.folder,
+          a.category,
+          a.r2_key,
+          ...(Array.isArray(a.meta?.tags) ? a.meta.tags : []),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return hay.includes(q);
+      });
   }
 
   function isModel3d(a) {
@@ -930,6 +961,9 @@
     els.crumb = document.getElementById("media-crumb");
     els.folders = document.getElementById("media-folders");
     els.grid = document.getElementById("media-grid");
+    els.search = document.getElementById("media-search");
+    els.kindFilter = document.getElementById("media-kind-filter");
+    els.statusFilter = document.getElementById("media-status-filter");
     els.dropZone = document.getElementById("media-drop");
     els.dropLabel = document.getElementById("media-drop-label");
     els.fileInput = document.getElementById("media-file-input");
@@ -963,6 +997,19 @@
     els.glbReset = document.getElementById("media-glb-reset");
 
     bindPlacementControls();
+
+    els.search?.addEventListener("input", (event) => {
+      searchQuery = event.target.value || "";
+      renderGrid();
+    });
+    els.kindFilter?.addEventListener("change", (event) => {
+      kindFilter = event.target.value || "all";
+      renderGrid();
+    });
+    els.statusFilter?.addEventListener("change", (event) => {
+      statusFilter = event.target.value || "all";
+      renderGrid();
+    });
 
     document.getElementById("media-drawer-close")?.addEventListener("click", closeDrawer);
     document.getElementById("media-drawer-save")?.addEventListener("click", saveDrawer);

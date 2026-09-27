@@ -11,7 +11,7 @@ import {
   deliveryUrlForKey,
   mediaPathForKey,
   publicUrlsForKey,
-  FNF_R2,
+  ASSET_STORAGE,
   createAssetJob,
   enqueueAssetJob,
   processAssetJobById,
@@ -95,7 +95,7 @@ function publicUrlFields(r2Key) {
     url: mediaPathForKey(key),
     delivery_url: deliveryUrlForKey(key, { preferWorker: true }),
     cdn_url: urls.cdn,
-    public_base_url: FNF_R2.publicBaseUrl,
+    public_base_url: ASSET_STORAGE.publicBaseUrl,
   };
 }
 

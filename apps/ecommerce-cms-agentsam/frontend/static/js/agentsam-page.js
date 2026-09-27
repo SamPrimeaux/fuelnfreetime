@@ -564,7 +564,7 @@ async function sendMessage(text, actionContext = null) {
   if (!message && !outgoing.length) return;
 
   const displayAttachments = pendingAttachments.slice();
-  appendBubble("user", message || "Review attached file(s).", { attachments: displayAttachments });
+  appendBubble("user", message, { attachments: displayAttachments });
   setBusy(true);
 
   const runningTools = [];
@@ -760,7 +760,20 @@ function renderChips(actions) {
         $("agentsam-page-input")?.focus();
         return;
       }
-      sendMessage(action.prompt || "", action);
+      composeContext = {
+        mode: action.mode || "chat",
+        label: action.label || "AgentSam",
+        workflow_key: action.workflow_key,
+        task_type: action.task_type,
+        lane: action.lane,
+      };
+      renderComposeModes();
+      const input = $("agentsam-page-input");
+      if (input) {
+        if (!input.value.trim() && action.prompt) input.value = action.prompt;
+        autoResize(input);
+        input.focus();
+      }
     });
     box.appendChild(btn);
   });

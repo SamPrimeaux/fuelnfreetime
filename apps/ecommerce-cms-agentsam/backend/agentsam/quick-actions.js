@@ -20,7 +20,7 @@ const DEFAULT_ACTIONS = [
     workflow_key: "fnf_content_studio",
     task_type: "text_generation",
     lane: "general",
-    prompt: "Draft product copy for our latest tee — rugged, earned freedom tone.",
+    prompt: "Draft or improve product copy for the selected item.",
     enabled: true,
   },
   {
@@ -29,7 +29,7 @@ const DEFAULT_ACTIONS = [
     workflow_key: "fnf_content_studio",
     task_type: "code_generation",
     lane: "code",
-    prompt: "Summarize recent commits on fuelnfreetime and what to verify before deploy.",
+    prompt: "Summarize recent repository changes and what should be verified before deploy.",
     enabled: true,
   },
 ];
@@ -65,7 +65,7 @@ export async function buildQuickActions(env) {
       workflow_key: "fnf_creative_studio",
       task_type: "image_generation",
       lane: "image",
-      prompt: creative?.suggested_prompts?.[0] || "Describe the image you want for Fuel n Freetime.",
+      prompt: creative?.suggested_prompts?.[0] || "Describe the image you want to create.",
       mode: "image",
       enabled: true,
     });
@@ -90,7 +90,7 @@ export async function buildQuickActions(env) {
         workflow_key: "fnf_content_studio",
         task_type: "text_generation",
         lane: "general",
-        prompt: content.suggested_prompts[0] || "Improve this product description for Fuel n Freetime.",
+        prompt: content.suggested_prompts[0] || "Improve this product description.",
         enabled: true,
       });
     }
@@ -103,7 +103,7 @@ export async function buildQuickActions(env) {
       workflow_key: "fnf_creative_studio",
       task_type: "image_to_text",
       lane: "vision",
-      prompt: "Review the attached image for Fuel n Freetime brand fit and suggest edits.",
+      prompt: "Review the attached image and suggest useful edits.",
       enabled: true,
     });
   }
@@ -115,7 +115,7 @@ export async function buildQuickActions(env) {
       workflow_key: "fnf_content_studio",
       task_type: "code_generation",
       lane: "code",
-      prompt: "Summarize recent commits on fuelnfreetime and what to verify before deploy.",
+      prompt: "Summarize recent repository changes and what should be verified before deploy.",
       enabled: true,
     });
   }

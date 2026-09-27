@@ -1,9 +1,6 @@
 import { ensureConversation } from "../agentsam/conversations.js";
 import { resolveSelectedResource } from "../agentsam/selected-resource.js";
-import {
-  defaultMessageForAttachments,
-  formatAttachmentsForPrompt,
-} from "../agentsam/attachments.js";
+import { formatAttachmentsForPrompt } from "../agentsam/attachments.js";
 import { hydrateAttachmentsForChat } from "../agentsam/files.js";
 import { buildAgentsamUiConfig } from "../agentsam/quick-actions.js";
 import {
@@ -226,10 +223,8 @@ export async function agentsamChat(request, env, executionCtx = null) {
     attachments: hydrated.attachments,
   };
 
-  const message =
-    (body?.message || "").trim() ||
-    (attachments.length ? defaultMessageForAttachments(attachments) : "");
-  if (!message) {
+  const message = (body?.message || "").trim();
+  if (!message && !attachments.length) {
     return json({ error: "message or attachment required" }, { status: 400 });
   }
 

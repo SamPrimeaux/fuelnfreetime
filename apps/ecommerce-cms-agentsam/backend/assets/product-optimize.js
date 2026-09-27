@@ -11,7 +11,7 @@ export {
   inferProductContextFromKey,
 } from "../../../../lib/assets/tags.js";
 export {
-  FNF_R2,
+  ASSET_STORAGE,
   publicUrlsForKey,
   deliveryUrlForKey,
   mediaPathForKey,
