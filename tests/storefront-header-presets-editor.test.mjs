@@ -74,6 +74,9 @@ test("theme editor is the visual editor and page edit is presented as page setti
   assert.match(pageEditor, />Page settings</);
   assert.match(pageEditor, /structuredClone\(current\?\.content \|\| \{\}\)/);
   assert.match(pageEditor, /\/api\/admin\/media\?view=all/);
+  assert.match(pageEditor, /page-media-modal/);
+  assert.match(pageEditor, /page-editor-media-card/);
+  assert.doesNotMatch(pageEditor, /prompt\(/);
   assert.doesNotMatch(pageEditor, /duplicate-btn/);
   assert.doesNotMatch(pageEditor, /seo-edit-btn/);
   assert.doesNotMatch(pageEditor, /id="page-template"/);
