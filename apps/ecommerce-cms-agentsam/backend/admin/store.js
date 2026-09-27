@@ -96,7 +96,7 @@ async function saveStorePreferences(env, incoming) {
     next.navLogoUrl = String(incoming.navLogoUrl).slice(0, 2048);
   }
   if (incoming.navLogoHeight != null) {
-    next.navLogoHeight = Math.min(120, Math.max(40, Number(incoming.navLogoHeight) || 68));
+    next.navLogoHeight = Math.min(120, Math.max(40, Number(incoming.navLogoHeight) || 58));
   }
   if (incoming.navBrandAccent != null) {
     next.navBrandAccent = String(incoming.navBrandAccent).slice(0, 32);
