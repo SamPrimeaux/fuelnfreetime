@@ -32,14 +32,13 @@ renderShell("/admin/pages", `
         <h1 id="page-crumb-title">…</h1>
       </div>
       <div class="page-editor-top-actions">
-        <button type="button" class="btn ghost small" id="duplicate-btn">Duplicate</button>
-        <a href="#" class="btn ghost small" id="view-btn" target="_blank" rel="noopener">View</a>
+        <a href="/admin/theme-editor?slug=${slug}" class="btn primary small" id="visual-edit-btn">Edit visually</a>
+        <a href="#" class="btn ghost small" id="view-btn" target="_blank" rel="noopener">View live</a>
         <div class="page-editor-more">
           <button type="button" class="btn ghost small" id="more-btn">More actions</button>
           <div class="page-editor-menu" id="more-menu">
             <a href="#" id="menu-preview" target="_blank" rel="noopener">Preview draft</a>
             <button type="button" id="menu-publish">Publish live</button>
-            <a href="/admin/theme-editor?slug=${slug}">Open theme editor</a>
           </div>
         </div>
         <div class="page-editor-nav-arrows">
@@ -48,6 +47,14 @@ renderShell("/admin/pages", `
         </div>
       </div>
     </header>
+
+    <div class="page-editor-role">
+      <div>
+        <span class="page-editor-role__eyebrow">Page settings</span>
+        <strong>Content, visibility, and search metadata</strong>
+      </div>
+      <p>Use Theme editor for visual layout, sections, blocks, media placement, and responsive preview.</p>
+    </div>
 
     <div class="page-editor-grid">
       <div class="page-editor-main">
@@ -63,23 +70,22 @@ renderShell("/admin/pages", `
 
         <div class="page-editor-card" id="content-card">
           <div class="page-editor-card-head">
-            <label>Content</label>
+            <div>
+              <label>Structured page content</label>
+              <p class="page-editor-card-help">These fields feed the same CMS document used by Theme editor and the live storefront.</p>
+            </div>
             <button type="button" class="page-editor-ai" id="content-ai-btn" aria-label="Ask Agent Sam to draft content" title="Agent Sam" style="position:static;transform:none">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
             </button>
           </div>
-          <div class="page-editor-toolbar" aria-hidden="true">
-            <button type="button" title="Bold" disabled><strong>B</strong></button>
-            <button type="button" title="Italic" disabled><em>I</em></button>
-            <button type="button" title="Link" disabled>🔗</button>
-          </div>
           <div id="sections-root"></div>
         </div>
-
         <div class="page-editor-card">
           <div class="page-editor-card-head">
-            <label>Search engine listing</label>
-            <button type="button" class="btn ghost small" id="seo-edit-btn" disabled>Edit</button>
+            <div>
+              <label>Search preview</label>
+              <p class="page-editor-card-help">Derived from the page title and leading content. Dedicated SEO overrides belong in the page metadata contract, not a fake button.</p>
+            </div>
           </div>
           <div class="page-editor-seo-preview">
             <div class="page-editor-seo-title" id="seo-title">Fuel &amp; Free Time</div>
@@ -104,13 +110,12 @@ renderShell("/admin/pages", `
         </div>
 
         <div class="page-editor-card">
-          <label class="page-editor-template-label" for="page-template">
+          <label class="page-editor-template-label">
             Template
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/></svg>
           </label>
-          <select id="page-template" disabled>
-            <option value="default">Default page</option>
-          </select>
+          <div class="page-editor-readonly" id="page-template-name">Loading…</div>
+          <p class="page-editor-card-help">Visual structure is managed in Theme editor.</p>
         </div>
       </aside>
     </div>
@@ -186,11 +191,14 @@ function renderSectionFields(section) {
       const id = cmsFieldId(section.key, field.key);
       const val = cmsGetPath(section.content, field.key) ?? "";
       const input =
-        field.type === "textarea"
-          ? `<textarea id="${id}" rows="4" data-track-dirty>${cmsEscapeHtml(String(val))}</textarea>`
-          : `<input id="${id}" type="${field.type === "url" ? "url" : "text"}" value="${cmsEscapeAttr(String(val))}" data-track-dirty>`;
+        field.type === "boolean"
+          ? `<label class="page-editor-check"><input id="${id}" type="checkbox" ${val ? "checked" : ""} data-track-dirty><span>Enabled</span></label>`
+          : field.type === "textarea" || field.type === "rich_text"
+            ? `<textarea id="${id}" rows="4" data-track-dirty>${cmsEscapeHtml(String(val))}</textarea>`
+            : `<input id="${id}" type="${field.type === "url" || field.type === "link" || field.type === "media" || field.type === "video" ? "url" : field.type === "number" || field.type === "range" ? "number" : "text"}" value="${cmsEscapeAttr(String(val))}" data-track-dirty>`;
 
-      const mediaRow = field.media
+      const isMedia = field.media || field.type === "media" || field.type === "video";
+      const mediaRow = isMedia
         ? `<div class="page-editor-media">
              <img id="${id}-thumb" src="${cmsEscapeAttr(String(val || ""))}" alt="" onerror="this.style.opacity='0.2'">
              <button type="button" class="btn ghost small" data-media-target="${id}">Pick from library</button>
@@ -199,7 +207,7 @@ function renderSectionFields(section) {
 
       return `
         <div class="page-editor-field">
-          <label for="${id}">${field.label}</label>
+          <label for="${id}">${cmsEscapeHtml(field.label)}<span>${cmsEscapeHtml(field.type || "text")}</span></label>
           ${input}
           ${mediaRow}
         </div>`;
@@ -209,11 +217,21 @@ function renderSectionFields(section) {
 
 function collectSectionContent(sectionKey) {
   const schema = SECTION_FIELDS[slug]?.[sectionKey] || [];
-  const content = {};
+  const current = pageData?.sections?.find((section) => section.key === sectionKey);
+  const content = structuredClone(current?.content || {});
   schema.forEach((field) => {
     const el = document.getElementById(cmsFieldId(sectionKey, field.key));
     if (!el) return;
-    cmsSetPath(content, field.key, el.value.trim());
+    let value;
+    if (field.type === "boolean") {
+      value = !!el.checked;
+    } else if (field.type === "number" || field.type === "range") {
+      const parsed = Number(el.value);
+      value = Number.isFinite(parsed) ? parsed : 0;
+    } else {
+      value = el.value.trim();
+    }
+    cmsSetPath(content, field.key, value);
   });
   return content;
 }
@@ -284,8 +302,8 @@ async function loadPage() {
     document.getElementById("next-page").disabled = idx < 0 || idx >= slugs.length - 1;
 
     document.getElementById("page-title-input").value = pageData.title || "";
-    document.getElementById("page-template").innerHTML =
-      `<option value="${slug}">${slug}</option>`;
+    document.getElementById("page-template-name").textContent = slug;
+    document.getElementById("visual-edit-btn").href = `/admin/theme-editor?slug=${encodeURIComponent(slug)}`;
 
     document.getElementById("sections-root").innerHTML = renderAllSections(pageData.sections);
 
@@ -307,8 +325,8 @@ async function loadPage() {
 async function openMediaPicker(targetId) {
   if (!mediaLibrary.length) {
     try {
-      const d = await adminFetch("/api/admin/media");
-      mediaLibrary = d.media || [];
+      const d = await adminFetch("/api/admin/media?view=all");
+      mediaLibrary = d.assets || d.media || [];
     } catch {
       showNote("Could not load media library.", "error");
       return;
@@ -389,10 +407,6 @@ document.getElementById("save-btn").addEventListener("click", savePage);
 document.getElementById("menu-publish").addEventListener("click", publishPage);
 document.getElementById("prev-page").addEventListener("click", () => navigateSibling(-1));
 document.getElementById("next-page").addEventListener("click", () => navigateSibling(1));
-
-document.getElementById("duplicate-btn").addEventListener("click", () => {
-  alert("Duplicate page is coming soon.");
-});
 
 document.getElementById("more-btn").addEventListener("click", (e) => {
   e.stopPropagation();
