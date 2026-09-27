@@ -92,6 +92,7 @@
   gap: 7px;
   padding: 0 11px;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .te-icon-btn {
