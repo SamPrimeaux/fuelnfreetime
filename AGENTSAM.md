@@ -4,6 +4,10 @@
 > Runtime rules and context for Agent Sam on **Fuel & Free Time**.
 > Human-readable source of truth. If this file conflicts with any database row — **this file wins** for agent behavior.
 > IAM copy: `docs/clients/fuelnfreetime/AGENTSAM.md` · Client repo: `fuelnfreetime/AGENTSAM.md`
+>
+> **Productization north-star / next-wave handoff (2026-09-27):**  
+> [`docs/FNF-AGENTSAM-PRODUCTIZATION-NORTHSTAR-HANDOFF-2026-09-27.md`](./docs/FNF-AGENTSAM-PRODUCTIZATION-NORTHSTAR-HANDOFF-2026-09-27.md)  
+> Wins on naming/portability, **zero local deps after handoff** (nuke laptop = 0 risk), **serve model** (`WEBSITE_ASSETS` = customer content; `STATIC_ASSETS` = **deployed** CF runtime — local theme is build-only), headless CMS bar, CMS DO removal, Vault webhooks, package graduate-then-install, lanes A–H, and Local Studio/Tauri honesty. Do not invent `Fuel*` hosts.
 
 ---
 

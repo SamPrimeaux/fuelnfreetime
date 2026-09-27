@@ -1,5 +1,7 @@
 # Fuel & Free Time → apps/ecommerce-cms-agentsam — rescaffold plan
 
+> **Naming / portability (2026-09-27):** Hosts and adapters must be generic (`CommerceSettingsHost`, `CmsHost`, `CommerceAnalyticsHost`, …) — not `Fuel*`. Canonical invariants + **zero local deps after handoff** + serve model + lanes A–H: [`FNF-AGENTSAM-PRODUCTIZATION-NORTHSTAR-HANDOFF-2026-09-27.md`](./FNF-AGENTSAM-PRODUCTIZATION-NORTHSTAR-HANDOFF-2026-09-27.md). Customer content/globals live in R2/D1 after publish; `STATIC_ASSETS` is the **deployed** CF runtime; local theme/disk is disposable build input only.
+
 This is the reference doc for the in-progress restructure: stop patching
 `fuelnfreetime` in place forever, and instead land new/touched work at the
 path it should live at once this becomes a dual-purpose product — the live

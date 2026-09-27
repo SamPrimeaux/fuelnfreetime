@@ -1,5 +1,7 @@
 # Fuel N Free Time infrastructure audit — 2026-09-25
 
+> **Supersession note (2026-09-27):** Productization north-star, **zero local dependencies after handoff**, **R2/D1/KV content vs deployed Static Assets runtime**, headless CMS acceptance criterion, DO removal sequence, binding rename (`ASSETS` → `STATIC_ASSETS`), Vault webhook rules, and lane sequencing live in [`FNF-AGENTSAM-PRODUCTIZATION-NORTHSTAR-HANDOFF-2026-09-27.md`](./FNF-AGENTSAM-PRODUCTIZATION-NORTHSTAR-HANDOFF-2026-09-27.md). This audit remains factual for the 2026-09-25 inspect; treat the `CMS_EDITOR` “ephemeral coordination” row as historical — removal is now required. Binding rows here are inventory; local theme / `dist/` are not operational SSOT.
+
 This report records the production state inspected during the Heuristic storefront/CMS release. It distinguishes current authority from historical migrations and proposes cleanup without reintroducing fallbacks.
 
 ## Release and migration record
