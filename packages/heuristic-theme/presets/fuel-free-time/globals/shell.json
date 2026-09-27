@@ -7,6 +7,8 @@
   },
   "header": {
     "logoAsset": "brand/logo",
+    "defaultPreset": "adaptive-bar",
+    "availablePresets": ["adaptive-bar", "frost-pill"],
     "mobileMenuStyle": "orange-two-line",
     "navigation": [
       { "id": "home", "label": "Home", "href": "/", "visible": true },
