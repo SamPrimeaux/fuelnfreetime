@@ -57,7 +57,7 @@
             '<button type="button" class="te-device-btn" data-device="tablet" title="Tablet">', icon.tablet, '</button>',
             '<button type="button" class="te-device-btn" data-device="mobile" title="Mobile">', icon.mobile, '</button>',
           '</div></div>',
-          '<div class="theme-studio-toolbar__right"><a class="te-toolbar-btn" id="te-full-editor" href="#">Full editor</a><button type="button" class="te-toolbar-btn is-primary" id="te-publish">Publish</button></div>',
+          '<div class="theme-studio-toolbar__right"><a class="te-toolbar-btn" id="te-page-settings" href="#">Page settings</a><button type="button" class="te-toolbar-btn is-primary" id="te-publish">Publish</button></div>',
         '</header>',
         '<div class="theme-studio-workspace">',
           '<aside class="theme-studio-tree"><div class="te-panel-title"><h2 id="te-tree-title">Page</h2><p id="te-tree-path">/</p></div><div id="te-tree"></div><div class="te-tree-footer"><a id="te-manage-page" href="#">Open page settings →</a></div></aside>',
