@@ -6,6 +6,7 @@ const MAX_PAGE_LIMIT = 3;
 const DEFAULT_MAX_PAGES = 1;
 const MAX_SYNC_PAGES = 1;
 const BATCH_SIZE = 75;
+const DETAIL_IMAGE_LIMIT = 24;
 
 function jsonText(value) {
   if (value === undefined || value === null) return null;
@@ -678,42 +679,63 @@ export async function getCompletefulCatalogProduct(env, productId) {
 
   if (!product) return null;
 
-  const [variants, locations, images, mockups] = await Promise.all([
+  // Always resolve relations through the provider/product id stored on the row.
+  // The public catalog id is allowed to diverge from Completeful's id over time.
+  const resolvedProductId = product.completeful_product_id;
+
+  const [variants, locations, images, mockups, imageCount] = await Promise.all([
     env.DB.prepare(
       `SELECT * FROM completeful_catalog_variants
         WHERE completeful_product_id = ?
-        ORDER BY is_lead DESC, variant_title ASC, sku ASC`,
+        ORDER BY is_lead DESC, is_primary DESC, variant_title ASC, sku ASC`,
     )
-      .bind(productId)
+      .bind(resolvedProductId)
       .all(),
     env.DB.prepare(
       `SELECT * FROM completeful_catalog_print_locations
         WHERE completeful_product_id = ?
         ORDER BY enabled DESC, name ASC`,
     )
-      .bind(productId)
+      .bind(resolvedProductId)
       .all(),
     env.DB.prepare(
       `SELECT * FROM completeful_catalog_images
         WHERE completeful_product_id = ?
-        ORDER BY is_primary DESC, sort_order ASC, image_id ASC`,
+        ORDER BY is_primary DESC, sort_order ASC, image_id ASC
+        LIMIT ?`,
     )
-      .bind(productId)
+      .bind(resolvedProductId, DETAIL_IMAGE_LIMIT)
       .all(),
     env.DB.prepare(
       `SELECT * FROM completeful_catalog_mockups
         WHERE completeful_product_id = ?
         ORDER BY active DESC, sort_order ASC, mockup_id ASC`,
     )
-      .bind(productId)
+      .bind(resolvedProductId)
       .all(),
+    env.DB.prepare(
+      `SELECT COUNT(*) AS n
+         FROM completeful_catalog_images
+        WHERE completeful_product_id = ?`,
+    )
+      .bind(resolvedProductId)
+      .first(),
   ]);
+
+  const imageTotal = Number(imageCount?.n || 0);
+  const imageRows = images.results || [];
 
   return {
     product: omitRaw(product),
     variants: (variants.results || []).map(omitRaw),
     print_locations: (locations.results || []).map(omitRaw),
-    images: (images.results || []).map(omitRaw),
+    images: imageRows.map(omitRaw),
+    image_pagination: {
+      limit: DETAIL_IMAGE_LIMIT,
+      count: imageRows.length,
+      total: imageTotal,
+      has_more: imageRows.length < imageTotal,
+    },
     mockups: (mockups.results || []).map(omitRaw),
   };
 }

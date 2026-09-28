@@ -1,12 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { adminFetch } from "../../lib/api";
 import StudioIcon from "./StudioIcon";
+import ProductImage from "./ProductImage";
 import {
   catalogProductId,
   catalogVariantId,
   printPixelSize,
   printSizeLabel,
   productImage,
+  selectVariantForAxis,
+  variantAttributes,
+  variantAxes,
+  variantAxisValues,
+  variantImage,
   type MediaAsset,
   type ProductDetail,
 } from "./studio-model";
@@ -21,9 +27,11 @@ const tabs = [
 ];
 export default function StudioWorkspace({
   detail,
+  initialVariantId = "",
   onBack,
 }: {
   detail: ProductDetail;
+  initialVariantId?: string;
   onBack: () => void;
 }) {
   const [tab, setTab] = useState("options");
@@ -35,8 +43,12 @@ export default function StudioWorkspace({
   const [locationId, setLocationId] = useState(
     detail.print_locations.find((l) => l.enabled)?.print_location_id || "",
   );
+  const initialVariant =
+    detail.variants.find(
+      (candidate) => catalogVariantId(candidate) === initialVariantId,
+    ) || detail.variants[0];
   const [variantId, setVariantId] = useState(
-    catalogVariantId(detail.variants[0]) || "",
+    catalogVariantId(initialVariant) || "",
   );
   const [scale, setScale] = useState(80);
   const [x, setX] = useState(50);
@@ -53,7 +65,7 @@ export default function StudioWorkspace({
   const [conversationId, setConversationId] = useState<string>();
   const [notes, setNotes] = useState("");
   const [view, setView] = useState<"artwork" | "product" | "mockups">(
-    "artwork",
+    "product",
   );
   const fileInput = useRef<HTMLInputElement>(null);
   const layoutInput = useRef<HTMLInputElement>(null);
@@ -69,13 +81,22 @@ export default function StudioWorkspace({
   const location = detail.print_locations.find(
     (l) => l.print_location_id === locationId,
   );
-  const variant = detail.variants.find(
-    (v) => catalogVariantId(v) === variantId,
-  );
+  const variant =
+    detail.variants.find((v) => catalogVariantId(v) === variantId) ||
+    detail.variants[0];
+  const selectedAttributes = variantAttributes(variant);
+  const optionAxes = variantAxes(detail.variants);
   const baseImage =
-    variant?.realistic_image_url ||
-    variant?.cover_image_url ||
-    productImage(detail.product);
+    variantImage(variant) ||
+    productImage(detail.product) ||
+    detail.images[0]?.url ||
+    detail.mockups.find((mockup) => mockup.active && mockup.preview_url)
+      ?.preview_url;
+
+  function chooseVariantOption(axis: string, value: string) {
+    const next = selectVariantForAxis(detail.variants, variant, axis, value);
+    if (next) setVariantId(catalogVariantId(next));
+  }
   const printPixels = printPixelSize(location);
   const ratio =
     location?.file_width && location.file_height
@@ -400,40 +421,94 @@ export default function StudioWorkspace({
           </div>
           {tab === "options" && (
             <>
-              <label className="ps-field">
-                Product option
-                <select
-                  value={variantId}
-                  onChange={(e) => setVariantId(e.target.value)}
-                >
-                  {detail.variants.map((v) => (
-                    <option
-                      key={catalogVariantId(v)}
-                      value={catalogVariantId(v)}
-                    >
-                      {v.variant_title || v.name || "Default"}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="ps-field">
-                Print area
-                <select
-                  value={locationId}
-                  onChange={(e) => setLocationId(e.target.value)}
-                >
-                  {detail.print_locations
-                    .filter((l) => l.enabled)
-                    .map((l) => (
+              <div className="ps-field">
+                <strong>Product option</strong>
+                {optionAxes.length ? (
+                  <div className="ps-option-groups ps-workspace-options">
+                    {optionAxes.map((axis) => (
+                      <div className="ps-option-group" key={axis}>
+                        <span>{axis}</span>
+                        <div className="ps-option-choices">
+                          {variantAxisValues(detail.variants, axis).map((value) => {
+                            const previewVariant = detail.variants.find(
+                              (candidate) =>
+                                variantAttributes(candidate)[axis] === value,
+                            );
+                            const showPreview =
+                              /color|finish|material|style|tone/i.test(axis);
+                            return (
+                              <button
+                                type="button"
+                                key={value}
+                                className={
+                                  selectedAttributes[axis] === value
+                                    ? "is-active"
+                                    : ""
+                                }
+                                onClick={() => chooseVariantOption(axis, value)}
+                                aria-pressed={selectedAttributes[axis] === value}
+                              >
+                                {showPreview && variantImage(previewVariant) && (
+                                  <ProductImage
+                                    sources={[variantImage(previewVariant)]}
+                                    alt=""
+                                  />
+                                )}
+                                <span>{value}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <select
+                    value={variantId}
+                    onChange={(e) => setVariantId(e.target.value)}
+                    aria-label="Product option"
+                  >
+                    {detail.variants.map((candidate) => (
                       <option
-                        key={l.print_location_id}
-                        value={l.print_location_id}
+                        key={catalogVariantId(candidate)}
+                        value={catalogVariantId(candidate)}
                       >
-                        {l.name}
+                        {candidate.variant_title || candidate.name || "Default"}
                       </option>
                     ))}
-                </select>
-              </label>
+                  </select>
+                )}
+              </div>
+              {detail.variants.length > 0 && (
+                <p className="ps-selected-option">
+                  <strong>{variant?.variant_title || variant?.name || "Default option"}</strong>
+                  {variant?.sku ? ` · ${variant.sku}` : ""}
+                </p>
+              )}
+              <div className="ps-field">
+                <strong>Print area</strong>
+                <div className="ps-option-choices ps-option-choices--compact">
+                  {detail.print_locations
+                    .filter((candidate) => candidate.enabled)
+                    .map((candidate) => (
+                      <button
+                        type="button"
+                        key={candidate.print_location_id}
+                        className={
+                          locationId === candidate.print_location_id
+                            ? "is-active"
+                            : ""
+                        }
+                        onClick={() => setLocationId(candidate.print_location_id)}
+                        aria-pressed={
+                          locationId === candidate.print_location_id
+                        }
+                      >
+                        <span>{candidate.name}</span>
+                      </button>
+                    ))}
+                </div>
+              </div>
               <div className="ps-paper-note">
                 <StudioIcon name="tools" />
                 <strong>Designed for the details.</strong>
@@ -747,11 +822,26 @@ export default function StudioWorkspace({
             ) : view === "product" ? (
               <div className="ps-base-preview">
                 {baseImage ? (
-                  <img src={baseImage} alt={detail.product.name} />
+                  <ProductImage
+                    sources={[
+                      baseImage,
+                      variant?.cover_image_url,
+                      detail.product.realistic_image_url,
+                      detail.product.cover_image_url,
+                      detail.images[0]?.url,
+                    ]}
+                    alt={detail.product.name}
+                    lazy={false}
+                  />
                 ) : (
                   <p>No product image supplied.</p>
                 )}
-                <span>Original product · artwork is not applied</span>
+                <strong>
+                  {variant?.variant_title || variant?.name || detail.product.name}
+                </strong>
+                <span>
+                  Selected product · {location?.name || "choose a print area"} · artwork is not applied
+                </span>
               </div>
             ) : (
               <div className="ps-mockup-grid">
@@ -759,7 +849,7 @@ export default function StudioWorkspace({
                   .filter((m) => m.active && m.preview_url)
                   .map((m) => (
                     <figure key={m.mockup_id}>
-                      <img src={m.preview_url} alt={m.name} loading="lazy" />
+                      <ProductImage sources={[m.preview_url]} alt={m.name} />
                       <figcaption>{m.name}</figcaption>
                     </figure>
                   ))}

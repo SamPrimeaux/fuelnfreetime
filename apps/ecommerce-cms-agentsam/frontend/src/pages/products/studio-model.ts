@@ -30,8 +30,19 @@ export type Variant = {
   catalog_variant_id: string;
   variant_title?: string;
   name?: string;
+  title?: string;
+  sku?: string;
+  is_primary?: number;
+  is_lead?: number;
+  pricing_currency?: string;
+  fulfillment_cost_free_cents?: number | null;
   cover_image_url?: string;
+  main_icon_url?: string;
   realistic_image_url?: string;
+  attributes?: Record<string, string>;
+  variant_attributes?: Record<string, string>;
+  attributes_json?: string | Record<string, unknown> | null;
+  variant_attributes_json?: string | Record<string, unknown> | null;
   provider_variant_id?: string;
   /** @deprecated adapter alias — prefer catalog_variant_id */
   completeful_variant_id?: string;
@@ -41,10 +52,17 @@ export type PrintLocation = {
   print_location_id: string;
   name: string;
   enabled: number;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  artboard_width?: number;
+  artboard_height?: number;
   file_width?: number;
   file_height?: number;
   dpi?: number;
   unit?: string;
+  shape_type?: string;
   artboard_image_url?: string;
 };
 
@@ -52,7 +70,13 @@ export type ProductDetail = {
   product: CatalogProduct;
   variants: Variant[];
   print_locations: PrintLocation[];
-  images: { url: string; thumbnail_url?: string }[];
+  images: { url: string; thumbnail_url?: string; is_primary?: number; variant_title?: string }[];
+  image_pagination?: {
+    limit: number;
+    count: number;
+    total: number;
+    has_more: boolean;
+  };
   mockups: {
     mockup_id: string;
     name: string;
@@ -123,6 +147,24 @@ export function normalizeCatalogProduct(
   };
 }
 
+function normalizeAttributes(value: unknown): Record<string, string> {
+  let source = value;
+  if (typeof source === "string") {
+    try {
+      source = JSON.parse(source);
+    } catch {
+      return {};
+    }
+  }
+  if (!source || typeof source !== "object" || Array.isArray(source)) return {};
+
+  return Object.fromEntries(
+    Object.entries(source as Record<string, unknown>)
+      .filter(([, entry]) => entry != null && ["string", "number", "boolean"].includes(typeof entry))
+      .map(([key, entry]) => [key, String(entry)]),
+  );
+}
+
 export function normalizeVariant(
   raw: Partial<Variant> & Record<string, unknown>,
 ): Variant {
@@ -135,15 +177,109 @@ export function normalizeVariant(
     (typeof raw.provider_variant_id === "string" && raw.provider_variant_id) ||
     completefulId ||
     "";
+  const attributes = {
+    ...normalizeAttributes(raw.attributes_json),
+    ...normalizeAttributes(raw.attributes),
+    ...normalizeAttributes(raw.variant_attributes_json),
+    ...normalizeAttributes(raw.variant_attributes),
+  };
   return {
     ...raw,
     catalog_variant_id: catalogId,
+    attributes,
     provider_variant_id:
       (typeof raw.provider_variant_id === "string" && raw.provider_variant_id) ||
       completefulId,
     completeful_variant_id: completefulId || catalogId || undefined,
   };
 }
+
+export function variantAttributes(v: Variant | null | undefined): Record<string, string> {
+  if (!v) return {};
+  if (v.attributes && Object.keys(v.attributes).length) return v.attributes;
+  return {
+    ...normalizeAttributes(v.attributes_json),
+    ...normalizeAttributes(v.variant_attributes_json),
+    ...normalizeAttributes(v.variant_attributes),
+  };
+}
+
+export function variantAxes(variants: Variant[]): string[] {
+  const axes: string[] = [];
+  for (const variant of variants) {
+    for (const key of Object.keys(variantAttributes(variant))) {
+      if (!axes.includes(key)) axes.push(key);
+    }
+  }
+  return axes;
+}
+
+export function variantAxisValues(variants: Variant[], axis: string): string[] {
+  const values: string[] = [];
+  for (const variant of variants) {
+    const value = variantAttributes(variant)[axis];
+    if (value && !values.includes(value)) values.push(value);
+  }
+
+  if (/size/i.test(axis)) {
+    const sizeOrder = [
+      "XXS",
+      "XS",
+      "S",
+      "M",
+      "L",
+      "XL",
+      "2XL",
+      "3XL",
+      "4XL",
+      "5XL",
+      "6XL",
+    ];
+    return [...values].sort((a, b) => {
+      const ai = sizeOrder.indexOf(a.toUpperCase());
+      const bi = sizeOrder.indexOf(b.toUpperCase());
+      if (ai === -1 && bi === -1) return a.localeCompare(b, undefined, { numeric: true });
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+  }
+
+  return values;
+}
+
+export function selectVariantForAxis(
+  variants: Variant[],
+  current: Variant | null | undefined,
+  axis: string,
+  value: string,
+): Variant | undefined {
+  const currentAttributes = variantAttributes(current);
+  const candidates = variants.filter(
+    (variant) => variantAttributes(variant)[axis] === value,
+  );
+  if (!candidates.length) return undefined;
+
+  return candidates
+    .map((variant) => {
+      const attributes = variantAttributes(variant);
+      const score = Object.entries(currentAttributes).reduce(
+        (total, [key, currentValue]) =>
+          key === axis || attributes[key] !== currentValue ? total : total + 1,
+        0,
+      );
+      return { variant, score };
+    })
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        Number(b.variant.is_lead || 0) - Number(a.variant.is_lead || 0) ||
+        Number(b.variant.is_primary || 0) - Number(a.variant.is_primary || 0),
+    )[0]?.variant;
+}
+
+export const variantImage = (v: Variant | null | undefined) =>
+  v?.realistic_image_url || v?.cover_image_url || v?.main_icon_url;
 
 export const productImage = (p: CatalogProduct) =>
   p.realistic_image_url || p.cover_image_url || p.main_icon_url;
@@ -183,7 +319,7 @@ export function printSizeLabel(location?: PrintLocation) {
   return `${location.file_width} × ${location.file_height} ${location.unit || "(unit not supplied)"}${pixels && location.unit?.toLowerCase() !== "px" ? ` · ${pixels.width} × ${pixels.height} px` : ""}`;
 }
 
-export function costLabel(p: CatalogProduct) {
+export function costLabel(p: CatalogProduct | Variant) {
   if (p.fulfillment_cost_free_cents == null) return "Cost on request";
   try {
     return new Intl.NumberFormat(undefined, {
