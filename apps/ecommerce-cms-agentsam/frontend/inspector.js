@@ -94,11 +94,36 @@
     else instance?.stopSelecting();
   }
 
+  function isEligiblePreviewFrame(frame) {
+    try {
+      const url = new URL(frame?.src || '', location.href);
+      return Boolean(
+        frame &&
+        url.origin === location.origin &&
+        !url.pathname.startsWith('/admin') &&
+        frame.contentDocument
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  function refreshAvailability() {
+    if (!button) return;
+    const available = Array.from(document.querySelectorAll('iframe')).some(isEligiblePreviewFrame);
+    button.disabled = !available;
+    button.title = available
+      ? 'Inspect & annotate storefront preview'
+      : 'Open a customer-facing storefront preview to annotate';
+    button.setAttribute('aria-label', button.title);
+    if (!available && active) deactivate({ close: true });
+  }
+
   function activate() {
-    if (!instance || !button) return;
+    if (!instance || !button || button.disabled) return;
     active = true;
     button.setAttribute('aria-pressed', 'true');
-    instance.startSelecting('Click an element to annotate · Esc to exit');
+    instance.startSelecting('Click a storefront preview element to annotate · Esc to exit');
   }
 
   function watch(doc, frame) {
@@ -141,8 +166,7 @@
 
       const attach = () => {
         try {
-          const url = new URL(frame.src, location.href);
-          if (url.origin !== location.origin || url.pathname.startsWith('/admin')) return;
+          if (!isEligiblePreviewFrame(frame)) return;
           watch(frame.contentDocument, frame);
         } catch {
           /* Cross-origin previews are intentionally not inspectable. */
@@ -155,6 +179,7 @@
       });
       attach();
     }
+    refreshAvailability();
   }
 
   async function init() {
@@ -175,8 +200,9 @@
     button.className = 'console-icon-btn';
     button.dataset.inspectToggle = 'true';
     button.textContent = '⌖';
-    button.title = 'Inspect & annotate';
-    button.setAttribute('aria-label', 'Inspect & annotate');
+    button.title = 'Open a customer-facing storefront preview to annotate';
+    button.setAttribute('aria-label', button.title);
+    button.disabled = true;
     button.setAttribute('aria-pressed', 'false');
 
     const attachments = createAttachmentController({
@@ -251,7 +277,8 @@
     };
     bar.prepend(button);
 
-    watch(document);
+    // Never bind annotation selection to the admin shell itself.
+    // Only same-origin, non-/admin storefront preview iframes are inspectable.
     watchFrames();
     new MutationObserver(watchFrames).observe(document.body, {
       childList: true,

@@ -22,7 +22,6 @@ const tabs = [
   { id: "upload", label: "Upload", icon: "upload" },
   { id: "designs", label: "Designs", icon: "image" },
   { id: "layers", label: "Layers", icon: "layers" },
-  { id: "annotate", label: "Annotate", icon: "pen" },
   { id: "tools", label: "Tools", icon: "tools" },
 ];
 export default function StudioWorkspace({
@@ -64,9 +63,6 @@ export default function StudioWorkspace({
   const [reply, setReply] = useState("");
   const [conversationId, setConversationId] = useState<string>();
   const [notes, setNotes] = useState("");
-  const [view, setView] = useState<"artwork" | "product" | "mockups">(
-    "product",
-  );
   const fileInput = useRef<HTMLInputElement>(null);
   const layoutInput = useRef<HTMLInputElement>(null);
   const panel = useRef<HTMLElement>(null);
@@ -148,8 +144,7 @@ export default function StudioWorkspace({
     setDimensions(null);
     setAsset(a);
     setShowArtwork(true);
-    setView("artwork");
-    setNotice("Artwork added. Check the print area before exporting.");
+    setNotice("Artwork added. Review its placement on the selected product and print area.");
     if (window.matchMedia("(max-width: 760px)").matches)
       requestAnimationFrame(() =>
         stage.current?.scrollIntoView({ block: "start" }),
@@ -684,36 +679,20 @@ export default function StudioWorkspace({
               )}
             </>
           )}
-          {tab === "annotate" && (
+          {tab === "tools" && (
             <>
-              <button
-                className="ps-button ps-wide"
-                type="button"
-                onClick={() => window.startEcommerceInspector?.()}
-              >
-                Inspect & annotate with AgentSam
-              </button>
-              <p className="ps-panel-intro">
-                Pick any visible part of the studio to attach contextual instructions to it.
-                Storefront CMS sections are verified server-side before they can become editable resources.
-              </p>
               <label className="ps-field">
                 Design notes
                 <textarea
-                  rows={8}
+                  rows={6}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Placement notes, color direction, changes for the next version…"
                 />
               </label>
               <p className="ps-panel-intro">
-                Notes stay with your downloaded layout. They are never printed
-                on the artwork.
+                These notes belong to this product design. Storefront annotation is available only inside customer-facing previews.
               </p>
-            </>
-          )}
-          {tab === "tools" && (
-            <>
               <label className="ps-check">
                 <input
                   type="checkbox"
@@ -760,67 +739,17 @@ export default function StudioWorkspace({
         </aside>
         <div className="ps-stage-column" ref={stage}>
           <div className="ps-stage-toolbar">
-            <div className="ps-view-tabs">
-              {(["artwork", "product", "mockups"] as const).map((v) => (
-                <button
-                  key={v}
-                  className={view === v ? "is-active" : ""}
-                  onClick={() => setView(v)}
-                  aria-pressed={view === v}
-                >
-                  {v === "artwork"
-                    ? "Artwork"
-                    : v === "product"
-                      ? "Base product"
-                      : "Mockup references"}
-                </button>
-              ))}
+            <div>
+              <strong>Product design</strong>
+              <span className="ps-stage-subtitle">
+                {location?.name || "Choose a print area"}
+              </span>
             </div>
-            <span>{location?.name || "Design space"}</span>
+            <span>Placement preview · provider render comes next</span>
           </div>
           <div className="ps-stage" data-agentsam-resource="product-design-stage">
-            {view === "artwork" ? (
-              <div
-                className="ps-artboard"
-                style={{
-                  aspectRatio: ratio,
-                  maxWidth: `${Math.min(560, 440 * ratio)}px`,
-                }}
-              >
-                {guides && (
-                  <div className="ps-safe-area">
-                    <span>SAFE AREA · GUIDE ONLY</span>
-                  </div>
-                )}
-                {asset && showArtwork ? (
-                  <img
-                    className="ps-artwork-layer"
-                    src={asset.url}
-                    alt="Your artwork placement"
-                    draggable={false}
-                    style={{
-                      width: `${scale}%`,
-                      left: `${x}%`,
-                      top: `${y}%`,
-                      transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
-                    }}
-                  />
-                ) : (
-                  <div className="ps-canvas-empty">
-                    <StudioIcon name="spark" size={40} />
-                    <h3>It starts with your idea.</h3>
-                    <p>Add artwork or explore a new direction below.</p>
-                    <button
-                      className="ps-button"
-                      onClick={() => openTab("designs")}
-                    >
-                      Choose a design
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : view === "product" ? (
-              <div className="ps-base-preview">
+            <div className="ps-product-design-preview">
+              <div className="ps-product-design-image">
                 {baseImage ? (
                   <ProductImage
                     sources={[
@@ -834,35 +763,76 @@ export default function StudioWorkspace({
                     lazy={false}
                   />
                 ) : (
-                  <p>No product image supplied.</p>
+                  <div className="ps-canvas-empty">
+                    <StudioIcon name="box" size={40} />
+                    <p>No product image supplied.</p>
+                  </div>
                 )}
-                <strong>
-                  {variant?.variant_title || variant?.name || detail.product.name}
-                </strong>
+                <div
+                  className="ps-placement-window"
+                  style={{ aspectRatio: ratio }}
+                  aria-label={`${location?.name || "Print area"} placement preview`}
+                >
+                  {guides && (
+                    <div className="ps-safe-area">
+                      <span>{location?.name || "PRINT AREA"}</span>
+                    </div>
+                  )}
+                  {asset && showArtwork ? (
+                    <img
+                      className="ps-artwork-layer"
+                      src={asset.url}
+                      alt="Your artwork placement"
+                      draggable={false}
+                      style={{
+                        width: `${scale}%`,
+                        left: `${x}%`,
+                        top: `${y}%`,
+                        transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+                      }}
+                    />
+                  ) : (
+                    <button
+                      className="ps-placement-empty"
+                      type="button"
+                      onClick={() => openTab("upload")}
+                    >
+                      <StudioIcon name="upload" />
+                      Add artwork
+                    </button>
+                  )}
+                </div>
+                <span className="ps-preview-badge">PLACEMENT PREVIEW</span>
+              </div>
+              <div className="ps-product-design-caption">
+                <strong>{variant?.variant_title || variant?.name || detail.product.name}</strong>
                 <span>
-                  Selected product · {location?.name || "choose a print area"} · artwork is not applied
+                  {asset
+                    ? `${asset.filename} · ${location?.name || "choose a print area"}`
+                    : `No artwork selected · ${location?.name || "choose a print area"}`}
                 </span>
               </div>
-            ) : (
-              <div className="ps-mockup-grid">
-                {detail.mockups
-                  .filter((m) => m.active && m.preview_url)
-                  .map((m) => (
-                    <figure key={m.mockup_id}>
-                      <ProductImage sources={[m.preview_url]} alt={m.name} />
-                      <figcaption>{m.name}</figcaption>
-                    </figure>
-                  ))}
-                {!detail.mockups.some((m) => m.active && m.preview_url) && (
-                  <p>No preview images are supplied for this product.</p>
-                )}
-                <p className="ps-reference-note">
-                  Provider references show available views. They are not
-                  rendered previews of your artwork.
-                </p>
-              </div>
-            )}
+            </div>
           </div>
+          <details className="ps-reference-drawer">
+            <summary>Provider references ({detail.mockups.filter((m) => m.active && m.preview_url).length})</summary>
+            <div className="ps-mockup-grid">
+              {detail.mockups
+                .filter((m) => m.active && m.preview_url)
+                .map((m) => (
+                  <figure key={m.mockup_id}>
+                    <ProductImage sources={[m.preview_url]} alt={m.name} />
+                    <figcaption>{m.name}</figcaption>
+                  </figure>
+                ))}
+              {!detail.mockups.some((m) => m.active && m.preview_url) && (
+                <p>No provider reference images are supplied for this product.</p>
+              )}
+              <p className="ps-reference-note">
+                References show provider-supplied product views only. They are not rendered previews of your artwork.
+              </p>
+            </div>
+          </details>
           <div className="ps-quality" aria-live="polite">
             <span>
               {dimensions
