@@ -84,6 +84,7 @@ import { retryAssetJob, runAdminCompaction } from "./ops.js";
 import { handleGrowthApi } from "./growth.js";
 import { handleDiscountsApi } from "./discounts.js";
 import { handleCompletefulAdminApi } from "./completeful.js";
+import { handleProductStudioAdminApi } from "./product-studio.js";
 import { getBrandWorkspace, patchBrandWorkspace } from "./brand.js";
 
 function json(data, init = {}) {
@@ -625,6 +626,10 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
 
   if (path.startsWith("/api/admin/discounts/") || path === "/api/admin/discounts") {
     return handleDiscountsApi(request, env, url, user);
+  }
+
+  if (path.startsWith("/api/admin/product-studio")) {
+    return handleProductStudioAdminApi(request, env, url);
   }
 
   if (path.startsWith("/api/admin/completeful")) {

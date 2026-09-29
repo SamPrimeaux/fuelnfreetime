@@ -11,6 +11,8 @@ export type CatalogProduct = {
   print_type?: string;
   material?: string;
   sku?: string;
+  default_title?: string;
+  default_description?: string;
   available?: number;
   pricing_currency?: string;
   fulfillment_cost_free_cents?: number | null;

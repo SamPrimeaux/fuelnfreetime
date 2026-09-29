@@ -146,3 +146,59 @@ test("product detail returns null when the catalog product does not exist", asyn
   const { DB } = createDb({ product: null });
   assert.equal(await getCompletefulCatalogProduct({ DB }, "missing"), null);
 });
+
+test("Product Studio persistence and Completeful mutations are server-side contracts", async () => {
+  const [backend, workspace, migration] = await Promise.all([
+    readFile(
+      new URL("../apps/ecommerce-cms-agentsam/backend/admin/product-studio.js", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../db/migrate-product-studio-drafts-20260929.sql", import.meta.url),
+      "utf8",
+    ),
+  ]);
+
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS product_studio_drafts/);
+  assert.match(migration, /original_media_asset_id/);
+  assert.match(migration, /prepared_media_asset_id/);
+  assert.match(migration, /preview_media_asset_id/);
+  assert.match(migration, /completeful_design_id/);
+  assert.match(migration, /completeful_render_id/);
+  assert.match(migration, /retail_price_cents/);
+
+  assert.match(backend, /completefulRequest\(env, "POST", "\/designs"/);
+  assert.match(backend, /completefulRequest\(env, "POST", "\/mockups\/renders"/);
+  assert.match(backend, /`\/shops\/\$\{encodeURIComponent\(shopId\)\}\/products`/);
+  assert.match(backend, /completeful_operations/);
+  assert.match(backend, /completeful_product_links/);
+  assert.match(backend, /completeful_variant_links/);
+  assert.match(backend, /mode: "placement_preview"/);
+  assert.match(backend, /reason: "no_provider_mockups"/);
+
+  assert.match(workspace, /\/api\/admin\/product-studio\/drafts/);
+  assert.match(workspace, /Prepare for print/);
+  assert.match(workspace, /Render Completeful mockup/);
+  assert.match(workspace, /Create Completeful \+ store product/);
+  assert.doesNotMatch(workspace, /product-design\.json/);
+  assert.doesNotMatch(workspace, /Download design layout/);
+});
+
+test("artwork preparation is opt-in and preserves the original asset", async () => {
+  const workspace = await readFile(
+    new URL("../apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(workspace, /Remove connected flat background/);
+  assert.match(workspace, /checked=\{removeFlatBackground\}/);
+  assert.match(workspace, /Trim transparent edges/);
+  assert.match(workspace, /Original artwork is unchanged/);
+  assert.match(workspace, /Original and prepared artwork comparison/);
+  assert.match(workspace, /studio\/prepared/);
+  assert.match(workspace, /removeConnectedFlatBackground/);
+  assert.match(workspace, /alphaBounds/);
+});
