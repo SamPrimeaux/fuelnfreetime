@@ -27,7 +27,7 @@ Fuel & Free Time remains authoritative for:
 
 Completeful becomes the external fulfillment/catalog provider.
 
-The provider contract is pinned under `docs/providers/completeful/`.
+The provider contract is pinned under `docs/providers/completeful/`. The product-artwork transformation and mockup rules are documented in `docs/providers/completeful/ARTWORK-MOCKUP-PIPELINE.md`.
 
 ## Provider rules we must preserve
 
