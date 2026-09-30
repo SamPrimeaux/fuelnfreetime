@@ -7,6 +7,7 @@ import FinancePage from "./pages/analytics/FinancePage";
 import HealthPage from "./pages/analytics/HealthPage";
 import AccountPage from "./pages/account/AccountPage";
 import ProductStudioPage from "./pages/products/ProductStudioPage";
+import ArtworkHelpPage from "./pages/products/ArtworkHelpPage";
 import type { RangeKey } from "./lib/types";
 
 export type AnalyticsOutletContext = { range: RangeKey; setRange: (r: RangeKey) => void };
