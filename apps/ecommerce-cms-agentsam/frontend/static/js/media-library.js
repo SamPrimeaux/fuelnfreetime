@@ -539,31 +539,38 @@
   }
 
   function renderPagination() {
-    if (!els.pagination) return;
+    const targets = [els.paginationTop, els.pagination].filter(Boolean);
+    if (!targets.length) return;
     if (!pagination.total) {
-      els.pagination.innerHTML = "";
+      targets.forEach((target) => { target.innerHTML = ""; });
       return;
     }
     const start = (pagination.page - 1) * pagination.page_size + 1;
     const end = Math.min(pagination.total, pagination.page * pagination.page_size);
-    els.pagination.innerHTML = `
+    const markup = `
       <div class="media-pagination-summary">${start}–${end} of ${pagination.total}</div>
       <div class="media-pagination-controls">
         <button type="button" class="btn small" data-media-page="prev" ${pagination.has_prev ? "" : "disabled"}>Previous</button>
         <span>Page ${pagination.page} of ${pagination.pages}</span>
         <button type="button" class="btn small" data-media-page="next" ${pagination.has_next ? "" : "disabled"}>Next</button>
       </div>`;
-    els.pagination.querySelector('[data-media-page="prev"]')?.addEventListener("click", () => {
-      if (!pagination.has_prev) return;
-      page = Math.max(1, pagination.page - 1);
-      els.resultsScroll?.scrollTo({ top: 0, behavior: "smooth" });
-      void load();
-    });
-    els.pagination.querySelector('[data-media-page="next"]')?.addEventListener("click", () => {
-      if (!pagination.has_next) return;
-      page = pagination.page + 1;
-      els.resultsScroll?.scrollTo({ top: 0, behavior: "smooth" });
-      void load();
+
+    async function goToPage(nextPage) {
+      page = nextPage;
+      await load();
+      els.paginationTop?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    targets.forEach((target) => {
+      target.innerHTML = markup;
+      target.querySelector('[data-media-page="prev"]')?.addEventListener("click", () => {
+        if (!pagination.has_prev) return;
+        void goToPage(Math.max(1, pagination.page - 1));
+      });
+      target.querySelector('[data-media-page="next"]')?.addEventListener("click", () => {
+        if (!pagination.has_next) return;
+        void goToPage(pagination.page + 1);
+      });
     });
   }
 
@@ -1325,8 +1332,8 @@
     els.uploadBtn = document.getElementById("media-upload-btn");
     els.note = document.getElementById("media-note");
     els.batchBar = document.getElementById("media-batch-bar");
+    els.paginationTop = document.getElementById("media-pagination-top");
     els.pagination = document.getElementById("media-pagination");
-    els.resultsScroll = document.getElementById("media-results-scroll");
     els.backdrop = document.getElementById("media-drawer-backdrop");
     els.drawer = document.getElementById("media-drawer");
     els.drawerPreview = document.getElementById("media-drawer-preview");
