@@ -7,6 +7,7 @@ Snapshot captured from the Completeful provider materials supplied for the Fuel 
 - `openapi.json` — machine-readable Completeful Partner API OpenAPI 3.0.3 contract, extracted from the supplied snapshot and JSON-validated before commit.
 - `openapi.snapshot.md` — exact Markdown snapshot supplied in the integration conversation, retained verbatim for provenance.
 - `reference.snapshot.md` — exact rendered/reference Markdown supplied in the integration conversation.
+- `ARTWORK-MOCKUP-PIPELINE.md` — Fuel & Free Time artwork normalization, Completeful design/export/mockup flow, and provider-information checklist for reliable product production.
 
 ## Source authority
 
