@@ -61,7 +61,7 @@ function ExternalLink({
   className = "",
 }: {
   href: string;
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }) {
   return (
