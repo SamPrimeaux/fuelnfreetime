@@ -7,7 +7,6 @@
   let activeBlockId = null;
   let activeFieldKey = null;
   let activeTab = 'content';
-  let liveEditor = null;
   let patchTimer = null;
   let refreshTimer = null;
   let mediaLibrary = [];
@@ -15,7 +14,6 @@
   const resourceCache = Object.create(null);
   let dirty = false;
   const dirtySections = new Set();
-  let connected = false;
   let device = localStorage.getItem('fnf-theme-editor-device') || 'desktop';
   let showOutlines = localStorage.getItem('fnf-theme-editor-outlines') !== '0';
   let autoPreview = localStorage.getItem('fnf-theme-editor-auto-preview') !== '0';
@@ -64,7 +62,7 @@
           '<main class="theme-studio-canvas">',
             '<div class="te-preview-bar"><span id="te-preview-label">Storefront preview</span><div class="te-preview-bar__actions"><button class="te-icon-btn" type="button" id="te-refresh" title="Refresh preview">', icon.refresh, '</button><a class="te-icon-btn" id="te-open-tab" href="#" target="_blank" rel="noopener" title="Open in new tab">', icon.external, '</a></div></div>',
             '<div class="te-preview-stage"><div class="te-preview-device" id="te-preview-device" data-device="desktop"><iframe id="theme-preview" title="Storefront preview" class="theme-editor-preview"></iframe></div></div>',
-            '<div class="te-preview-status"><span class="te-live-state" id="te-live-state">Connecting live editor…</span><span class="te-selected-path" id="te-selected-path">Select a section in the preview or tree</span></div>',
+            '<div class="te-preview-status"><span class="te-preview-mode">Local draft preview</span><span class="te-selected-path" id="te-selected-path">Select a section in the preview or tree</span></div>',
           '</main>',
           '<aside class="theme-editor-panel">',
             '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><span class="te-badge" id="te-section-status">draft</span></div>',
@@ -183,7 +181,7 @@
     cmsSetPath(section.content, field.key, next);
     dirtySections.add(section.key);
     setDirty(true);
-    schedulePatch();
+    scheduleLocalPreview();
     byId('te-selected-path').textContent = slug + ' / ' + section.key + ' / ' + field.key;
   }
 
@@ -780,16 +778,30 @@
     setDirty(true);
     dirtySections.add(section.key);
     renderInspector();
-    schedulePatch();
+    scheduleLocalPreview();
     closeMediaPicker();
   }
 
-  function schedulePatch() {
+  function pushLocalPreview() {
+    const iframe = byId('theme-preview');
+    if (!iframe?.contentWindow || !pageData) return;
+    iframe.contentWindow.postMessage({
+      type: 'fnf-cms-preview',
+      slug: slug,
+      sections: (pageData.sections || []).map(function(section) {
+        return {
+          key: section.key,
+          sort_order: section.sort_order,
+          status: section.status,
+          content: section.content || {}
+        };
+      })
+    }, location.origin);
+  }
+
+  function scheduleLocalPreview() {
     clearTimeout(patchTimer);
-    patchTimer = setTimeout(function() {
-      const section = currentSection();
-      if (section && liveEditor) liveEditor.patchSection(section.key, section.content);
-    }, 420);
+    patchTimer = setTimeout(pushLocalPreview, 80);
   }
 
   function selectSection(sectionKey, fieldKey, scrollPreview) {
@@ -1012,9 +1024,13 @@
         if (!section) continue;
         const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(section.key), {
           method: 'PUT',
-          body: JSON.stringify({ content: section.content })
+          body: JSON.stringify({
+            content: section.content,
+            expected_version: Number(section.version || 0)
+          })
         });
         section.status = 'draft';
+        section.version = result.version ?? section.version;
         section.updated_at = result.updated_at || section.updated_at;
       }
       pageData.status = 'draft';
@@ -1026,8 +1042,14 @@
       schedulePreview();
       return true;
     } catch (error) {
-      setNote(error.message || String(error), 'error');
-      setSaveState('Save failed', 'error');
+      const conflict = error?.status === 409;
+      setNote(
+        conflict
+          ? 'This page changed in another tab. Reload before saving.'
+          : (error.message || String(error)),
+        'error'
+      );
+      setSaveState(conflict ? 'Reload required' : 'Save failed', 'error');
       return false;
     } finally {
       button.disabled = false;
@@ -1055,40 +1077,6 @@
       button.disabled = false;
       button.textContent = 'Publish';
     }
-  }
-
-  function updateLiveState() {
-    const el = byId('te-live-state');
-    el.textContent = connected ? 'Live editing connected' : 'Live editor reconnecting…';
-    el.className = 'te-live-state ' + (connected ? 'is-online' : 'is-offline');
-  }
-
-  function connectLive() {
-    if (liveEditor) liveEditor.close();
-    connected = false;
-    updateLiveState();
-    liveEditor = connectCmsLive(slug, {
-      onConnected: function() { connected = true; updateLiveState(); },
-      onDisconnect: function() { connected = false; updateLiveState(); },
-      onSectionUpdated: function(data) {
-        const section = pageData && pageData.sections && pageData.sections.find(function(item) { return item.key === data.sectionKey; });
-        if (section) section.status = 'draft';
-        if (data.sectionKey === activeSectionKey) {
-          renderTree();
-          schedulePreview();
-        }
-      },
-      onPublished: function() {
-        if (pageData) pageData.status = 'published';
-        (pageData && pageData.sections || []).forEach(function(section) { section.status = 'published'; });
-        dirtySections.clear();
-        setDirty(false);
-        renderTree();
-        renderInspector();
-        schedulePreview();
-      },
-      onError: function(error) { if (error) setNote(String(error), 'error'); }
-    });
   }
 
   async function insertSection(templateKey) {
@@ -1265,7 +1253,6 @@
     activeFieldKey = null;
     history.replaceState(null, '', '?slug=' + encodeURIComponent(slug));
     closePageMenu();
-    connectLive();
     await loadPage();
   }
 
@@ -1368,7 +1355,10 @@
   byId('te-refresh').addEventListener('click', refreshPreview);
   byId('te-save').addEventListener('click', saveDraft);
   byId('te-publish').addEventListener('click', publishPage);
-  byId('theme-preview').addEventListener('load', bindPreviewSelection);
+  byId('theme-preview').addEventListener('load', function() {
+    bindPreviewSelection();
+    pushLocalPreview();
+  });
   byId('te-media-close').addEventListener('click', closeMediaPicker);
   byId('te-media-search').addEventListener('input', function(event) { renderMediaGrid(event.target.value); });
   byId('te-media-upload').addEventListener('change', async function(event) {
@@ -1400,6 +1390,5 @@
   });
 
   setDevice(device);
-  connectLive();
   loadPage();
 })();

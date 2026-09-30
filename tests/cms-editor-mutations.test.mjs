@@ -12,6 +12,7 @@ import {
   removeBlock,
   removeSection,
   setSectionVisibility,
+  updateSection,
 } from "../apps/ecommerce-cms-agentsam/backend/cms/api.js";
 import { PAGE_REGISTRY } from "../apps/ecommerce-cms-agentsam/backend/cms/registry.js";
 
@@ -134,7 +135,13 @@ function fixture() {
     env,
     objects,
     readDraft(sectionKey) {
-      const raw = objects.get(`cms/pages/shop/draft/${sectionKey}.json`);
+      const row = db
+        .prepare(
+          `SELECT content_r2_key FROM page_sections WHERE page_id = 1 AND section_key = ?`
+        )
+        .get(sectionKey);
+      const key = row?.content_r2_key || `cms/pages/shop/draft/${sectionKey}.json`;
+      const raw = objects.get(key);
       return raw ? JSON.parse(raw) : null;
     },
   };
@@ -260,6 +267,52 @@ test("block mutations use one section document for insert, duplicate, reorder, a
       false
     );
     assert.equal(content[duplicated.block_id], undefined);
+  } finally {
+    fx.db.close();
+  }
+});
+
+test("explicit draft save uses immutable R2 revision pointers and rejects stale versions", async () => {
+  const fx = fixture();
+  try {
+    const current = structuredClone(fx.readDraft("hero").content);
+    current.headline = "Fresh edit";
+
+    const saved = await updateSection(fx.env, "shop", "hero", {
+      content: current,
+      expected_version: 1,
+    });
+    assert.equal(saved.ok, true);
+    assert.equal(saved.version, 2);
+
+    const row = fx.db
+      .prepare(
+        "SELECT content_version, content_r2_key FROM page_sections WHERE page_id = 1 AND section_key = 'hero'"
+      )
+      .get();
+    assert.equal(row.content_version, 2);
+    assert.match(
+      row.content_r2_key,
+      /^cms\/pages\/shop\/history\/hero\.v2\.[a-f0-9]{16}\.json$/
+    );
+    assert.equal(fx.readDraft("hero").content.headline, "Fresh edit");
+
+    const stale = await updateSection(fx.env, "shop", "hero", {
+      content: { ...current, headline: "Stale overwrite" },
+      expected_version: 1,
+    });
+    assert.equal(stale.status, 409);
+    assert.equal(stale.code, "cms_version_conflict");
+    assert.equal(stale.current_version, 2);
+
+    const after = fx.db
+      .prepare(
+        "SELECT content_version, content_r2_key FROM page_sections WHERE page_id = 1 AND section_key = 'hero'"
+      )
+      .get();
+    assert.equal(after.content_version, 2);
+    assert.equal(after.content_r2_key, row.content_r2_key);
+    assert.equal(fx.readDraft("hero").content.headline, "Fresh edit");
   } finally {
     fx.db.close();
   }

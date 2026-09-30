@@ -70,14 +70,6 @@ max_batch_size = 5
 max_retries = 5
 max_batch_timeout = 10
 
-[[durable_objects.bindings]]
-name = "CMS_EDITOR"
-class_name = "CmsEditorRoom"
-
-[[migrations]]
-tag = "v1-cms-editor"
-new_sqlite_classes = ["CmsEditorRoom"]
-
 [triggers]
 crons = ["0 4 * * *", "0 * * * *"]
 

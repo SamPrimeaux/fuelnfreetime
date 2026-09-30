@@ -11,7 +11,6 @@
 <body>
 <script src="/admin/js/shell.js"></script>
 <script src="/admin/js/pages-shared.js"></script>
-<script src="/admin/js/cms-live.js"></script>
 <script>
 const params = new URLSearchParams(location.search);
 const slug = params.get("slug") || "shop";
@@ -21,7 +20,6 @@ let mediaLibrary = [];
 let mediaTargetId = null;
 let dirty = false;
 let allPages = [];
-let liveEditor = null;
 
 renderShell("/admin/pages", `
   <div class="page-editor">
@@ -257,7 +255,11 @@ function collectSectionContent(sectionKey) {
 function collectAllSectionContent() {
   const out = [];
   for (const section of pageData?.sections || []) {
-    out.push({ key: section.key, content: collectSectionContent(section.key) });
+    out.push({
+      key: section.key,
+      content: collectSectionContent(section.key),
+      expectedVersion: Number(section.version || 0),
+    });
   }
   return out;
 }
@@ -447,10 +449,10 @@ async function savePage() {
       body: JSON.stringify({ title }),
     });
 
-    for (const { key, content } of collectAllSectionContent()) {
+    for (const { key, content, expectedVersion } of collectAllSectionContent()) {
       await adminFetch(`/api/admin/cms/pages/${slug}/sections/${encodeURIComponent(key)}`, {
         method: "PUT",
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, expected_version: expectedVersion }),
       });
     }
 
@@ -467,7 +469,12 @@ async function savePage() {
 
     await loadPage();
   } catch (err) {
-    showNote(err.message, "error");
+    showNote(
+      err?.status === 409
+        ? "This page changed in another tab. Reload before saving."
+        : err.message,
+      "error"
+    );
     setDirty(true);
   }
 }
@@ -510,25 +517,6 @@ async function initPageEditor() {
     await loadCmsRegistry();
   } catch (err) {
     showNote(`Could not load editor schema: ${err.message}`, "error");
-  }
-
-  if (typeof connectCmsLive === "function") {
-    try {
-      liveEditor = connectCmsLive(slug, {
-        onSectionUpdated() {
-          if (!dirty) loadPage();
-        },
-        onPublished() {
-          showNote("Published to live site.", "success");
-          loadPage();
-        },
-        onError(message) {
-          console.warn("[cms-live]", message);
-        },
-      });
-    } catch (err) {
-      console.warn("[cms-live] unavailable", err);
-    }
   }
 
   loadPage();

@@ -41,8 +41,6 @@ import {
 } from "./webhooks/resend.js";
 import { handleCompletefulWebhook } from "./webhooks/completeful.js";
 
-export { CmsEditorRoom } from "./do/CmsEditorRoom.js";
-
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 async function handleNewsletter(request, env) {
@@ -221,7 +219,7 @@ export default {
           r2: !!env.WEBSITE_ASSETS,
           ai: !!env.AGENTSAM_WAI,
           kv: !!env.CMS_CACHE,
-          cmsEditor: !!env.CMS_EDITOR,
+          cms: !!env.DB && !!env.WEBSITE_ASSETS,
           assets: !!env.ASSETS,
           assetJobs: !!env.ASSET_JOBS,
         },

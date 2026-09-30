@@ -48,17 +48,20 @@ export async function writeR2Json(env, key, payload) {
 export async function writeSectionDraft(env, slug, sectionKey, content, meta = {}) {
   const version = (meta.version ?? 0) + 1;
   const updated_at = new Date().toISOString().replace("T", " ").slice(0, 19);
+  const content_hash = await sha256Hex(JSON.stringify(content));
   const payload = {
     section_key: sectionKey,
     content,
     status: "draft",
     version,
+    content_hash,
     updated_at,
   };
-  const key = draftKey(slug, sectionKey);
+
+  // Each candidate revision gets its own content-addressed key. D1 is the commit pointer.
+  // Concurrent writers can race the D1 compare-and-swap without overwriting each other.
+  const key = `cms/pages/${slug}/history/${sectionKey}.v${version}.${content_hash.slice(0, 16)}.json`;
   await writeR2Json(env, key, payload);
-  await writeR2Json(env, historyKey(slug, sectionKey, version), payload);
-  const content_hash = await sha256Hex(JSON.stringify(content));
   return { key, version, updated_at, content_hash };
 }
 
@@ -76,9 +79,38 @@ export async function publishSectionToR2(env, slug, sectionKey, draftPayload) {
   return { key, ...payload };
 }
 
-export async function readSectionContent(env, slug, sectionKey, { layer = "draft" } = {}) {
-  const key = layer === "published" ? publishedKey(slug, sectionKey) : draftKey(slug, sectionKey);
-  let doc = await readR2Json(env, key);
+async function resolveDraftPointer(env, slug, sectionKey) {
+  if (!env.DB) return null;
+  try {
+    const row = await env.DB.prepare(
+      `SELECT ps.content_r2_key
+       FROM page_sections ps
+       JOIN pages p ON p.id = ps.page_id
+       WHERE p.slug = ? AND ps.section_key = ?
+       LIMIT 1`
+    )
+      .bind(slug, sectionKey)
+      .first();
+    return row?.content_r2_key || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function readSectionContent(env, slug, sectionKey, { layer = "draft", key = null } = {}) {
+  let r2Key = key;
+  if (!r2Key) {
+    r2Key =
+      layer === "published"
+        ? publishedKey(slug, sectionKey)
+        : await resolveDraftPointer(env, slug, sectionKey);
+  }
+  if (!r2Key && layer === "draft") r2Key = draftKey(slug, sectionKey);
+
+  let doc = r2Key ? await readR2Json(env, r2Key) : null;
+  if (!doc && layer === "draft" && r2Key !== draftKey(slug, sectionKey)) {
+    doc = await readR2Json(env, draftKey(slug, sectionKey));
+  }
   if (!doc && layer === "draft") {
     doc = await readR2Json(env, publishedKey(slug, sectionKey));
   }
@@ -89,39 +121,40 @@ export async function readSectionContent(env, slug, sectionKey, { layer = "draft
     status: doc.status || "draft",
     version: doc.version || 0,
     updated_at: doc.updated_at || null,
+    r2_key: r2Key,
   };
 }
 
 export async function loadSectionsFromR2(env, slug, sectionRows, { publishedOnly = false } = {}) {
-  const layer = publishedOnly ? "published" : "draft";
-  const sections = [];
+  const sections = await Promise.all(
+    sectionRows.map(async (row) => {
+      const r2Key = publishedOnly
+        ? publishedKey(slug, row.section_key)
+        : row.content_r2_key || draftKey(slug, row.section_key);
 
-  for (const row of sectionRows) {
-    // content_r2_key is the editable draft pointer. Published reads must never
-    // follow it, otherwise an unpublished edit can leak into the public KV snapshot.
-    const r2Key = publishedOnly
-      ? publishedKey(slug, row.section_key)
-      : row.content_r2_key || draftKey(slug, row.section_key);
-    let doc = await readR2Json(env, r2Key);
-    if (!doc && !publishedOnly && r2Key !== draftKey(slug, row.section_key)) {
-      doc = await readR2Json(env, draftKey(slug, row.section_key));
-    }
-    if (!doc) continue;
+      let doc = await readR2Json(env, r2Key);
+      if (!doc && !publishedOnly && r2Key !== draftKey(slug, row.section_key)) {
+        doc = await readR2Json(env, draftKey(slug, row.section_key));
+      }
+      if (!doc && !publishedOnly) {
+        doc = await readR2Json(env, publishedKey(slug, row.section_key));
+      }
+      if (!doc) return null;
 
-    const content = doc.content && typeof doc.content === "object" ? doc.content : {};
+      const content = doc.content && typeof doc.content === "object" ? doc.content : {};
+      return {
+        key: row.section_key,
+        sort_order: row.sort_order,
+        status: publishedOnly ? "published" : row.status || doc?.status || "draft",
+        content,
+        updated_at: row.updated_at || doc?.updated_at || null,
+        version: row.content_version ?? doc?.version ?? 0,
+        source: "r2",
+      };
+    })
+  );
 
-    sections.push({
-      key: row.section_key,
-      sort_order: row.sort_order,
-      status: publishedOnly ? "published" : row.status || doc?.status || "draft",
-      content,
-      updated_at: row.updated_at || doc?.updated_at || null,
-      version: row.content_version ?? doc?.version ?? 0,
-      source: "r2",
-    });
-  }
-
-  return sections.sort((a, b) => a.sort_order - b.sort_order);
+  return sections.filter(Boolean).sort((a, b) => a.sort_order - b.sort_order);
 }
 
 /** Phase C — D1 no longer stores body copy */
