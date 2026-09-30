@@ -717,7 +717,8 @@ export default function StudioWorkspace({
         </div>
         <div className="ps-workspace-actions">
           <a className="ps-text-button" href="/admin/products/help/artwork">
-            Artwork help
+            <StudioIcon name="tools" size={15} />
+            <span>Artwork help</span>
           </a>
           <button className="ps-button" disabled={Boolean(busy)} onClick={() => void saveDraft()}>
             {busy === "save" ? "Saving…" : "Save draft"}
