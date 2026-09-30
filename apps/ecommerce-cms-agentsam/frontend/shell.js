@@ -34,6 +34,7 @@ const NAV = {
       icon: "products",
       children: [
         { href: "/admin/products/create", label: "Create product" },
+        { href: "/admin/products/help/artwork", label: "Artwork help" },
         { href: "/admin/products", label: "All products" },
         { href: "/admin/products", label: "Collections" },
         { href: "/admin/inventory", label: "Inventory" },
