@@ -33,6 +33,7 @@
   let searchQuery = "";
   let kindFilter = "all";
   let statusFilter = "all";
+  let sortMode = "newest";
   let albums = [];
   let activeAlbumId = null;
   let page = 1;
@@ -189,11 +190,12 @@
     if (searchQuery.trim()) params.set("q", searchQuery.trim());
     if (kindFilter !== "all") params.set("kind", kindFilter);
     if (statusFilter !== "all") { params.set("status", statusFilter); }
+    params.set("sort", sortMode);
     if (activeAlbumId) {
       params.set("album_id", String(activeAlbumId));
       params.set("view", "all");
     } else if (activeFolder) params.set("folder", activeFolder);
-    else params.set("view", "images");
+    else params.set("view", "all");
     return `/api/admin/media?${params}`;
   }
 
@@ -220,16 +222,24 @@
 
   function renderCrumb() {
     const parts = [];
-    parts.push(`<button type="button" data-crumb="home"${activeFolder ? "" : ' class="is-current"'}>All images</button>`);
+    const hasScopedView = Boolean(activeFolder || activeAlbumId);
+    parts.push(`<button type="button" data-crumb="home"${hasScopedView ? "" : ' class="is-current"'}>All media</button>`);
     if (activeFolder) {
       const label = FOLDERS.find((f) => f.id === activeFolder)?.label || activeFolder;
       parts.push('<span aria-hidden="true">/</span>');
-      parts.push(`<button type="button" class="is-current">${label}</button>`);
+      parts.push(`<button type="button" class="is-current">${escapeHtml(label)}</button>`);
+    } else if (activeAlbumId) {
+      const album = albums.find((item) => Number(item.id) === Number(activeAlbumId));
+      const label = album?.name || "Album";
+      parts.push('<span aria-hidden="true">/</span>');
+      parts.push(`<button type="button" class="is-current">${escapeHtml(label)}</button>`);
     }
     els.crumb.innerHTML = parts.join(" ");
     els.crumb.querySelector('[data-crumb="home"]')?.addEventListener("click", () => {
       activeFolder = null;
       activeAlbumId = null;
+      sortMode = "newest";
+      if (els.sortFilter) els.sortFilter.value = sortMode;
       page = 1;
       load();
     });
@@ -238,7 +248,7 @@
   function renderFolders() {
     els.folders.innerHTML = FOLDERS.map(
       (f) => `
-      <button type="button" class="media-folder-tile" data-folder="${f.id}" draggable="false">
+      <button type="button" class="media-folder-tile${activeFolder === f.id ? " is-active" : ""}" data-folder="${f.id}" draggable="false">
         ${FOLDER_ICON}
         <div><strong>${f.label}</strong><span>Open folder</span></div>
         <span class="media-folder-badge">${counts[f.id] || 0}</span>
@@ -249,6 +259,8 @@
       tile.addEventListener("click", () => {
         activeFolder = tile.dataset.folder;
         activeAlbumId = null;
+        sortMode = "newest";
+        if (els.sortFilter) els.sortFilter.value = sortMode;
         page = 1;
         load();
       });
@@ -279,7 +291,7 @@
     if (!els.albums) return;
     const buttons = [
       '<button type="button" class="media-album-chip' +
-        (activeAlbumId ? '' : ' is-active') +
+        (!activeAlbumId && !activeFolder ? ' is-active' : '') +
         '" data-media-album=""><span>All media</span><small>Library</small></button>',
       ...albums.map((album) =>
         '<button type="button" class="media-album-chip' +
@@ -298,6 +310,8 @@
         const id = Number(button.dataset.mediaAlbum || 0);
         activeAlbumId = id || null;
         activeFolder = null;
+        sortMode = id ? "manual" : "newest";
+        if (els.sortFilter) els.sortFilter.value = sortMode;
         page = 1;
         void load();
       });
@@ -338,6 +352,8 @@
       }
       activeAlbumId = albumId || null;
       activeFolder = null;
+      sortMode = albumId ? "manual" : "newest";
+      if (els.sortFilter) els.sortFilter.value = sortMode;
       page = 1;
       closeAlbumDialog();
       await load();
@@ -540,13 +556,13 @@
     els.pagination.querySelector('[data-media-page="prev"]')?.addEventListener("click", () => {
       if (!pagination.has_prev) return;
       page = Math.max(1, pagination.page - 1);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      els.resultsScroll?.scrollTo({ top: 0, behavior: "smooth" });
       void load();
     });
     els.pagination.querySelector('[data-media-page="next"]')?.addEventListener("click", () => {
       if (!pagination.has_next) return;
       page = pagination.page + 1;
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      els.resultsScroll?.scrollTo({ top: 0, behavior: "smooth" });
       void load();
     });
   }
@@ -572,7 +588,7 @@
       list
         .map(
           (a) => `
-      <article class="media-item${selectedIds.has(Number(a.id)) ? " is-selected" : ""}" draggable="true" data-id="${a.id}" data-status="${a.status || "ready"}">
+      <article class="media-item${selectedIds.has(Number(a.id)) ? " is-selected" : ""}" draggable="${sortMode === "manual" ? "true" : "false"}" data-id="${a.id}" data-status="${a.status || "ready"}">
         <div class="media-item-thumb">
           <button type="button" class="media-select-toggle${selectedIds.has(Number(a.id)) ? " is-selected" : ""}" data-media-select="${a.id}" aria-label="${selectedIds.has(Number(a.id)) ? "Deselect" : "Select"} ${a.filename}" aria-pressed="${selectedIds.has(Number(a.id)) ? "true" : "false"}">
             ${selectedIds.has(Number(a.id)) ? "✓" : ""}
@@ -678,17 +694,19 @@
     list.splice(toIdx, 0, moved);
 
     const folder = activeFolder || moved.folder || "images";
-    const items = list.map((a, i) => ({
-      id: a.id,
-      folder,
-      display_order: i + 1,
-    }));
+    const items = activeAlbumId
+      ? list.map((a, i) => ({ id: a.id, position: i + 1 }))
+      : list.map((a, i) => ({
+          id: a.id,
+          folder,
+          display_order: i + 1,
+        }));
 
     try {
       await adminFetch("/api/admin/media/reorder", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items }),
+        body: JSON.stringify({ items, album_id: activeAlbumId || undefined }),
       });
       await load();
     } catch (err) {
@@ -1300,6 +1318,7 @@
     els.search = document.getElementById("media-search");
     els.kindFilter = document.getElementById("media-kind-filter");
     els.statusFilter = document.getElementById("media-status-filter");
+    els.sortFilter = document.getElementById("media-sort-filter");
     els.dropZone = document.getElementById("media-drop");
     els.dropLabel = document.getElementById("media-drop-label");
     els.fileInput = document.getElementById("media-file-input");
@@ -1307,6 +1326,7 @@
     els.note = document.getElementById("media-note");
     els.batchBar = document.getElementById("media-batch-bar");
     els.pagination = document.getElementById("media-pagination");
+    els.resultsScroll = document.getElementById("media-results-scroll");
     els.backdrop = document.getElementById("media-drawer-backdrop");
     els.drawer = document.getElementById("media-drawer");
     els.drawerPreview = document.getElementById("media-drawer-preview");
@@ -1357,6 +1377,11 @@
     });
     els.statusFilter?.addEventListener("change", (event) => {
       statusFilter = event.target.value || "all";
+      page = 1;
+      void load();
+    });
+    els.sortFilter?.addEventListener("change", (event) => {
+      sortMode = event.target.value || "newest";
       page = 1;
       void load();
     });

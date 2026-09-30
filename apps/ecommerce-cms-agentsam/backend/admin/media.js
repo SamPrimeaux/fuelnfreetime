@@ -604,6 +604,7 @@ export async function listMedia(request, env, url) {
   const q = String(url.searchParams.get("q") || "").trim().toLowerCase();
   const kind = String(url.searchParams.get("kind") || "all").trim().toLowerCase();
   const status = String(url.searchParams.get("status") || "all").trim().toLowerCase();
+  const sort = String(url.searchParams.get("sort") || "newest").trim().toLowerCase();
   const albumId = Math.max(0, Math.round(Number(url.searchParams.get("album_id") || 0)));
 
   if (doSync) {
@@ -679,12 +680,18 @@ export async function listMedia(request, env, url) {
   }
 
   const where = clauses.length ? `WHERE ${clauses.join(" AND")}` : "";
-  const orderBy = albumId
+  const manualOrder = albumId
     ? "ORDER BY COALESCE((SELECT maa.position FROM media_album_assets maa WHERE maa.album_id = " +
         albumId + " AND maa.media_asset_id = m.id), m.display_order) ASC, m.id ASC"
     : view === "all" && !folderParam && !prefix
       ? "ORDER BY m.folder ASC, m.display_order ASC, m.id ASC"
       : "ORDER BY m.display_order ASC, m.id ASC";
+  const orderBy =
+    sort === "manual" ? manualOrder :
+    sort === "oldest" ? "ORDER BY COALESCE(m.updated_at, m.created_at) ASC, m.id ASC" :
+    sort === "name" ? "ORDER BY lower(m.filename) ASC, m.id ASC" :
+    sort === "largest" ? "ORDER BY COALESCE(m.size_bytes, 0) DESC, m.id DESC" :
+    "ORDER BY COALESCE(m.updated_at, m.created_at) DESC, m.id DESC";
 
   const countRow = await env.DB.prepare(
     `SELECT COUNT(*) AS n FROM media_assets m ${where}`,
@@ -946,6 +953,24 @@ export async function reorderMedia(request, env) {
   const body = await readJson(request);
   if (!body || !Array.isArray(body.items)) {
     return json({ error: "items array required" }, { status: 400 });
+  }
+
+  const albumId = Number(body.album_id || 0);
+  if (albumId) {
+    if (!Number.isInteger(albumId) || albumId <= 0) {
+      return json({ error: "invalid album_id" }, { status: 400 });
+    }
+    const album = await env.DB.prepare("SELECT id FROM media_albums WHERE id = ?").bind(albumId).first();
+    if (!album) return json({ error: "album not found" }, { status: 404 });
+    for (const item of body.items) {
+      if (!item?.id || item.position == null) continue;
+      await env.DB.prepare(
+        "UPDATE media_album_assets SET position = ? WHERE album_id = ? AND media_asset_id = ?"
+      ).bind(Math.max(0, Math.round(Number(item.position))), albumId, item.id).run();
+    }
+    await env.DB.prepare("UPDATE media_albums SET updated_at = datetime('now') WHERE id = ?")
+      .bind(albumId).run();
+    return json({ ok: true, album_id: albumId, reordered: body.items.length });
   }
 
   for (const item of body.items) {

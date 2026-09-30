@@ -42,6 +42,13 @@ renderShell("/admin/content", `
           <option value="processing">Processing</option>
           <option value="failed">Failed</option>
         </select>
+        <select id="media-sort-filter" class="media-lib-filter" aria-label="Sort media">
+          <option value="newest">Newest</option>
+          <option value="oldest">Oldest</option>
+          <option value="name">Name A–Z</option>
+          <option value="largest">Largest</option>
+          <option value="manual">Manual order</option>
+        </select>
         <input type="file" id="media-file-input" multiple accept="image/*,video/*,.glb,.usdz">
         <button type="button" class="btn primary small" id="media-upload-btn">Upload</button>
       </div>
@@ -85,9 +92,13 @@ renderShell("/admin/content", `
     </div>
     <div class="admin-note" id="media-note" style="display:none;"></div>
 
-    <div class="media-batch-bar" id="media-batch-bar" hidden></div>
-    <div class="media-lib-grid" id="media-grid"><div class="admin-empty">Loading…</div></div>
-    <div class="media-pagination" id="media-pagination" aria-label="Media pagination"></div>
+    <div class="media-results-shell">
+      <div class="media-batch-bar" id="media-batch-bar" hidden></div>
+      <div class="media-results-scroll" id="media-results-scroll">
+        <div class="media-lib-grid" id="media-grid"><div class="admin-empty">Loading…</div></div>
+      </div>
+      <div class="media-pagination" id="media-pagination" aria-label="Media pagination"></div>
+    </div>
   </div>
   </section>
 

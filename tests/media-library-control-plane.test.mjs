@@ -7,6 +7,7 @@ import {
   createMediaAlbum,
   listMedia,
   listMediaAlbums,
+  reorderMedia,
 } from "../apps/ecommerce-cms-agentsam/backend/admin/media.js";
 import { resolveSelectedResource } from "../apps/ecommerce-cms-agentsam/backend/agentsam/selected-resource.js";
 
@@ -177,6 +178,31 @@ test("media list is server-paged and search-filtered before rendering", async ()
   assert.ok(search.assets.every((asset) => asset.filename.startsWith("dirtbike-")));
 });
 
+test("media sorting is explicit and deterministic", async () => {
+  const { env } = fixture(6);
+
+  const newest = await responseJson(
+    await listMedia(
+      new Request("https://example.test/api/admin/media"),
+      env,
+      new URL("https://example.test/api/admin/media?view=all&sort=newest&page=1&page_size=48&sync=0")
+    )
+  );
+  assert.deepEqual(newest.assets.map((asset) => Number(asset.id)).slice(0, 3), [6, 5, 4]);
+
+  const name = await responseJson(
+    await listMedia(
+      new Request("https://example.test/api/admin/media"),
+      env,
+      new URL("https://example.test/api/admin/media?view=all&sort=name&page=1&page_size=48&sync=0")
+    )
+  );
+  assert.deepEqual(
+    name.assets.map((asset) => asset.filename),
+    [...name.assets.map((asset) => asset.filename)].sort((a, b) => a.localeCompare(b))
+  );
+});
+
 test("media batch actions reuse deterministic job machinery and virtual folders", async () => {
   const { env, db, sent } = fixture(5);
 
@@ -276,7 +302,7 @@ test("media albums curate selected assets without moving the originals", async (
       new URL(
         "https://example.test/api/admin/media?view=all&album_id=" +
           albumId +
-          "&page=1&page_size=48&sync=0"
+          "&page=1&page_size=48&sort=manual&sync=0"
       )
     )
   );
@@ -311,6 +337,44 @@ test("media albums curate selected assets without moving the originals", async (
   assert.equal(
     db.prepare("SELECT folder FROM media_assets WHERE id=1").get().folder,
     "images"
+  );
+});
+
+test("album reorder updates membership positions without touching base media order", async () => {
+  const { env, db } = fixture(5);
+  db.prepare("INSERT INTO media_albums (slug,name) VALUES (?,?)").run("launch", "Launch");
+  const albumId = Number(db.prepare("SELECT id FROM media_albums WHERE slug='launch'").get().id);
+  for (const [position, id] of [1, 2, 3].entries()) {
+    db.prepare("INSERT INTO media_album_assets (album_id,media_asset_id,position) VALUES (?,?,?)")
+      .run(albumId, id, position + 1);
+  }
+  const before = db.prepare("SELECT id,display_order FROM media_assets WHERE id IN (1,2,3) ORDER BY id").all();
+
+  const response = await responseJson(
+    await reorderMedia(
+      new Request("https://example.test/api/admin/media/reorder", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          album_id: albumId,
+          items: [
+            { id: 3, position: 1 },
+            { id: 1, position: 2 },
+            { id: 2, position: 3 },
+          ],
+        }),
+      }),
+      env
+    )
+  );
+  assert.equal(response.ok, true);
+  assert.deepEqual(
+    db.prepare("SELECT media_asset_id FROM media_album_assets WHERE album_id=? ORDER BY position").all(albumId).map((r) => Number(r.media_asset_id)),
+    [3, 1, 2]
+  );
+  assert.deepEqual(
+    db.prepare("SELECT id,display_order FROM media_assets WHERE id IN (1,2,3) ORDER BY id").all(),
+    before
   );
 });
 
