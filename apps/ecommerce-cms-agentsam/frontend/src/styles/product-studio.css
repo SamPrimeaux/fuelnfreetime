@@ -1175,7 +1175,14 @@
     padding: 20px 16px 40px;
   }
   .ps-topline {
+    align-items: flex-start;
+    flex-wrap: wrap;
     margin-bottom: 18px;
+  }
+  .ps-topline-links {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px 12px;
   }
   .ps-topline a {
     font-size: 10px;
