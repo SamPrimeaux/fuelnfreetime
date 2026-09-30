@@ -26,6 +26,7 @@ export default function App() {
         <Route path="account" element={<AccountRoute />} />
         <Route path="products/create" element={<ProductStudioRoute />} />
         <Route path="products/create/:productId" element={<ProductStudioRoute />} />
+        <Route path="products/help/artwork" element={<ArtworkHelpPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/analytics/overview" replace />} />
     </Routes>
