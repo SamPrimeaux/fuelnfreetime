@@ -11,7 +11,6 @@
 <body>
 <script src="/admin/js/shell.js"></script>
 <script src="/admin/js/pages-shared.js"></script>
-<script src="/admin/js/cms-live.js"></script>
 <script>
 const params = new URLSearchParams(location.search);
 const slug = params.get("slug") || "shop";
@@ -21,7 +20,6 @@ let mediaLibrary = [];
 let mediaTargetId = null;
 let dirty = false;
 let allPages = [];
-let liveEditor = null;
 
 renderShell("/admin/pages", `
   <div class="page-editor">
@@ -510,25 +508,6 @@ async function initPageEditor() {
     await loadCmsRegistry();
   } catch (err) {
     showNote(`Could not load editor schema: ${err.message}`, "error");
-  }
-
-  if (typeof connectCmsLive === "function") {
-    try {
-      liveEditor = connectCmsLive(slug, {
-        onSectionUpdated() {
-          if (!dirty) loadPage();
-        },
-        onPublished() {
-          showNote("Published to live site.", "success");
-          loadPage();
-        },
-        onError(message) {
-          console.warn("[cms-live]", message);
-        },
-      });
-    } catch (err) {
-      console.warn("[cms-live] unavailable", err);
-    }
   }
 
   loadPage();

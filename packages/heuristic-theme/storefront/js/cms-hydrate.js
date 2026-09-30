@@ -292,6 +292,14 @@
     }
   }
 
+  window.addEventListener("message", (event) => {
+    if (event.origin !== location.origin) return;
+    const data = event.data;
+    if (!data || data.type !== "fnf-cms-preview" || data.slug !== pageSlug) return;
+    if (!Array.isArray(data.sections)) return;
+    applySections(data.sections);
+  });
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot);
   } else {

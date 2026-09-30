@@ -61,13 +61,13 @@ max_batch_size = 5
 max_retries = 5
 max_batch_timeout = 10
 
-[[durable_objects.bindings]]
-name = "CMS_EDITOR"
-class_name = "CmsEditorRoom"
-
 [[migrations]]
 tag = "v1-cms-editor"
 new_sqlite_classes = ["CmsEditorRoom"]
+
+[[migrations]]
+tag = "v2-remove-cms-editor"
+deleted_classes = ["CmsEditorRoom"]
 
 [triggers]
 # Daily AgentSam compaction + hourly stale asset-job recovery (Queue is primary)

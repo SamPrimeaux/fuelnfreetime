@@ -736,20 +736,6 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
     return agentsamSkillGet(env, skillMatch[1], url);
   }
 
-  const liveMatch = path.match(/^\/api\/admin\/cms\/live\/([a-z0-9-]+)$/);
-  if (liveMatch) {
-    const user = await getSessionUser(request, env);
-    if (!user) return json({ error: "Unauthorized" }, { status: 401 });
-    if (!env.CMS_EDITOR) return json({ error: "Live editor not configured" }, { status: 503 });
-
-    const pageSlug = liveMatch[1];
-    const id = env.CMS_EDITOR.idFromName(pageSlug);
-    const stub = env.CMS_EDITOR.get(id);
-    const doUrl = new URL(request.url);
-    doUrl.searchParams.set("slug", pageSlug);
-    return stub.fetch(new Request(doUrl.toString(), request));
-  }
-
   const cmsResponse = await handleAdminCmsApi(request, env, url);
   if (cmsResponse) return cmsResponse;
 
