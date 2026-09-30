@@ -255,7 +255,11 @@ function collectSectionContent(sectionKey) {
 function collectAllSectionContent() {
   const out = [];
   for (const section of pageData?.sections || []) {
-    out.push({ key: section.key, content: collectSectionContent(section.key) });
+    out.push({
+      key: section.key,
+      content: collectSectionContent(section.key),
+      expectedVersion: Number(section.version || 0),
+    });
   }
   return out;
 }
@@ -445,10 +449,10 @@ async function savePage() {
       body: JSON.stringify({ title }),
     });
 
-    for (const { key, content } of collectAllSectionContent()) {
+    for (const { key, content, expectedVersion } of collectAllSectionContent()) {
       await adminFetch(`/api/admin/cms/pages/${slug}/sections/${encodeURIComponent(key)}`, {
         method: "PUT",
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, expected_version: expectedVersion }),
       });
     }
 
@@ -465,7 +469,12 @@ async function savePage() {
 
     await loadPage();
   } catch (err) {
-    showNote(err.message, "error");
+    showNote(
+      err?.status === 409
+        ? "This page changed in another tab. Reload before saving."
+        : err.message,
+      "error"
+    );
     setDirty(true);
   }
 }

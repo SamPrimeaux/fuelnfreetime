@@ -76,13 +76,15 @@ async function previewForPage(env, slug, pageId, previewJson) {
   if (fromD1) return fromD1;
 
   const first = await env.DB.prepare(
-    `SELECT section_key FROM page_sections WHERE page_id = ? ORDER BY sort_order ASC, id ASC LIMIT 1`
+    `SELECT section_key, content_r2_key FROM page_sections WHERE page_id = ? ORDER BY sort_order ASC, id ASC LIMIT 1`
   )
     .bind(pageId)
     .first();
 
   if (first) {
-    const doc = await readSectionContent(env, slug, first.section_key);
+    const doc = await readSectionContent(env, slug, first.section_key, {
+      key: first.content_r2_key,
+    });
     if (doc?.content) return extractPreview(doc.content);
   }
 
@@ -95,40 +97,121 @@ async function loadPageRow(env, slug) {
     .first();
 }
 
-async function persistSectionDraft(env, slug, pageId, sectionKey, content, sortOrder = 0) {
-  const existing = await env.DB.prepare(
-    `SELECT id, content_version FROM page_sections WHERE page_id = ? AND section_key = ?`
+function d1Changes(result) {
+  return Number(result?.meta?.changes ?? result?.changes ?? 0);
+}
+
+async function currentSectionVersion(env, pageId, sectionKey) {
+  const row = await env.DB.prepare(
+    `SELECT content_version FROM page_sections WHERE page_id = ? AND section_key = ?`
   )
     .bind(pageId, sectionKey)
     .first();
+  return Number(row?.content_version ?? 0);
+}
 
-  const r2Meta = await writeSectionDraft(env, slug, sectionKey, content, {
-    version: existing?.content_version ?? 0,
-  });
-
-  const r2_key = draftKey(slug, sectionKey);
-  const d1Json = WRITE_D1_CONTENT_JSON ? JSON.stringify(content) : D1_CONTENT_PLACEHOLDER;
-
-  if (existing) {
-    await env.DB.prepare(
-      `UPDATE page_sections
-       SET content_json = ?, content_r2_key = ?, content_version = ?, content_hash = ?,
-           status = 'draft', updated_at = datetime('now')
-       WHERE id = ?`
-    )
-      .bind(d1Json, r2_key, r2Meta.version, r2Meta.content_hash, existing.id)
-      .run();
-  } else {
-    await env.DB.prepare(
-      `INSERT INTO page_sections
-       (page_id, section_key, sort_order, content_json, content_r2_key, content_version, content_hash, status, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', datetime('now'))`
-    )
-      .bind(pageId, sectionKey, sortOrder, d1Json, r2_key, r2Meta.version, r2Meta.content_hash)
-      .run();
+async function persistSectionDraft(
+  env,
+  slug,
+  pageId,
+  sectionKey,
+  content,
+  sortOrder = 0,
+  { expectedVersion = null } = {}
+) {
+  const hasExpected =
+    expectedVersion !== null && expectedVersion !== undefined && expectedVersion !== "";
+  const parsedExpected = hasExpected ? Number(expectedVersion) : null;
+  if (hasExpected && !Number.isInteger(parsedExpected)) {
+    return { error: "expected_version must be an integer", status: 400 };
   }
 
-  return r2Meta;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const existing = await env.DB.prepare(
+      `SELECT id, content_version FROM page_sections WHERE page_id = ? AND section_key = ?`
+    )
+      .bind(pageId, sectionKey)
+      .first();
+
+    const currentVersion = Number(existing?.content_version ?? 0);
+    if (hasExpected && parsedExpected !== currentVersion) {
+      return {
+        error: "This section changed in another tab. Reload before saving.",
+        code: "cms_version_conflict",
+        status: 409,
+        expected_version: parsedExpected,
+        current_version: currentVersion,
+      };
+    }
+
+    const r2Meta = await writeSectionDraft(env, slug, sectionKey, content, {
+      version: currentVersion,
+    });
+    const d1Json = WRITE_D1_CONTENT_JSON
+      ? JSON.stringify(content)
+      : D1_CONTENT_PLACEHOLDER;
+
+    if (existing) {
+      const result = await env.DB.prepare(
+        `UPDATE page_sections
+         SET content_json = ?, content_r2_key = ?, content_version = ?, content_hash = ?,
+             status = 'draft', updated_at = datetime('now')
+         WHERE id = ? AND content_version = ?`
+      )
+        .bind(
+          d1Json,
+          r2Meta.key,
+          r2Meta.version,
+          r2Meta.content_hash,
+          existing.id,
+          currentVersion
+        )
+        .run();
+
+      if (d1Changes(result) === 1) return r2Meta;
+
+      if (hasExpected) {
+        const latest = await currentSectionVersion(env, pageId, sectionKey);
+        return {
+          error: "This section changed in another tab. Reload before saving.",
+          code: "cms_version_conflict",
+          status: 409,
+          expected_version: parsedExpected,
+          current_version: latest,
+        };
+      }
+      continue;
+    }
+
+    try {
+      await env.DB.prepare(
+        `INSERT INTO page_sections
+         (page_id, section_key, sort_order, content_json, content_r2_key, content_version, content_hash, status, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', datetime('now'))`
+      )
+        .bind(
+          pageId,
+          sectionKey,
+          sortOrder,
+          d1Json,
+          r2Meta.key,
+          r2Meta.version,
+          r2Meta.content_hash
+        )
+        .run();
+      return r2Meta;
+    } catch (error) {
+      if (attempt >= 2) throw error;
+    }
+  }
+
+  const latest = await currentSectionVersion(env, pageId, sectionKey);
+  return {
+    error: "This section changed while it was being saved. Reload and try again.",
+    code: "cms_version_conflict",
+    status: 409,
+    current_version: latest,
+  };
 }
 
 async function publishSectionsToR2(env, slug, pageId) {
@@ -328,10 +411,12 @@ export async function updatePageMeta(env, slug, body) {
 
 export async function updateSection(env, slug, sectionKey, body) {
   let page = await loadPageRow(env, slug);
+  let seededNow = false;
   if (!page) {
     const seeded = await seedPageFromRegistry(env, slug);
     if (seeded.error) return seeded;
     page = await loadPageRow(env, slug);
+    seededNow = true;
   }
 
   const content = body?.content;
@@ -339,7 +424,12 @@ export async function updateSection(env, slug, sectionKey, body) {
     return { error: "content object required", status: 400 };
   }
 
-  const meta = await persistSectionDraft(env, slug, page.id, sectionKey, content);
+  const meta = await persistSectionDraft(env, slug, page.id, sectionKey, content, 0, {
+    // A registry-only page reports version 0 to the browser. Seeding creates v1 inside
+    // this request, so the first real user save must not conflict with that initialization.
+    expectedVersion: seededNow ? null : body?.expected_version,
+  });
+  if (meta.error) return meta;
 
   await env.DB.prepare(`UPDATE pages SET status = 'draft', updated_at = datetime('now') WHERE id = ?`)
     .bind(page.id)
@@ -397,7 +487,9 @@ async function rewriteSectionOrder(env, pageId, orderedKeys) {
 }
 
 async function sectionContentForRow(env, slug, row) {
-  const doc = await readSectionContent(env, slug, row.section_key);
+  const doc = await readSectionContent(env, slug, row.section_key, {
+    key: row.content_r2_key,
+  });
   return doc?.content || {};
 }
 
@@ -787,7 +879,7 @@ export async function seedPageFromRegistry(env, slug) {
       version: r2Meta.version,
     });
 
-    const r2_key = draftKey(slug, section.key);
+    const r2_key = r2Meta.key;
     const d1Json = WRITE_D1_CONTENT_JSON ? JSON.stringify(section.content) : D1_CONTENT_PLACEHOLDER;
 
     await env.DB.prepare(
@@ -853,7 +945,7 @@ export async function backfillSectionsToR2(env) {
        SET content_json = ?, content_r2_key = ?, content_version = ?, content_hash = ?, updated_at = datetime('now')
        WHERE id = ?`
     )
-      .bind(D1_CONTENT_PLACEHOLDER, draftKey(row.slug, row.section_key), r2Meta.version, r2Meta.content_hash, row.id)
+      .bind(D1_CONTENT_PLACEHOLDER, r2Meta.key, r2Meta.version, r2Meta.content_hash, row.id)
       .run();
 
     migrated++;
@@ -1069,7 +1161,7 @@ export async function handleAdminCmsApi(request, env, url) {
       return json({ error: "Invalid JSON" }, { status: 400 });
     }
     const result = await updateSection(env, m[1], m[2], body);
-    if (result.error) return json({ error: result.error }, { status: result.status });
+    if (result.error) return json(result, { status: result.status });
     return json(result);
   }
   if (m && method === "DELETE") {

@@ -1024,9 +1024,13 @@
         if (!section) continue;
         const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(section.key), {
           method: 'PUT',
-          body: JSON.stringify({ content: section.content })
+          body: JSON.stringify({
+            content: section.content,
+            expected_version: Number(section.version || 0)
+          })
         });
         section.status = 'draft';
+        section.version = result.version ?? section.version;
         section.updated_at = result.updated_at || section.updated_at;
       }
       pageData.status = 'draft';
@@ -1038,8 +1042,14 @@
       schedulePreview();
       return true;
     } catch (error) {
-      setNote(error.message || String(error), 'error');
-      setSaveState('Save failed', 'error');
+      const conflict = error?.status === 409;
+      setNote(
+        conflict
+          ? 'This page changed in another tab. Reload before saving.'
+          : (error.message || String(error)),
+        'error'
+      );
+      setSaveState(conflict ? 'Reload required' : 'Save failed', 'error');
       return false;
     } finally {
       button.disabled = false;

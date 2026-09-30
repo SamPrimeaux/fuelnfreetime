@@ -2,7 +2,7 @@
 
 Branch: `feat/cms-editor-do-removal-r2-hardening-20260929`
 Created: 2026-09-29 from `main` @ e9e7932
-Status: PLAN ONLY - no code changed yet
+Status: IMPLEMENTATION IN PROGRESS — Phase 1 complete; Phase 2 core safe-save path complete; Phase 3 parallel reads complete. Atomic publish, restore, and remaining rollout work are still pending.
 
 ## Goal
 Customers (non-technical) get a seamless in-app logged-in editor to create/update pages,
@@ -42,7 +42,7 @@ content, and products. It must scale and stay stable, and customization must be 
 
 ## Phases
 
-### Phase 1 - Remove the DO, switch editor to REST (low risk, do first)
+### Phase 1 - Remove the DO, switch editor to REST — COMPLETE
 Touch points:
 - `wrangler.toml`: remove `[[durable_objects.bindings]] CMS_EDITOR`; KEEP the v1 migration
   entry and ADD:
@@ -65,7 +65,7 @@ Plugin work (see "agentsam_plugins" section): add `audience` column defaulting t
 mark existing rows, filter composer plugin list server-side, capture the table DDL into a
 repo migration.
 
-### Phase 2 - Safe saves (backend only)
+### Phase 2 - Safe saves (backend only) — CORE COMPLETE
 - Client sends `expected_version`; server returns 409 on mismatch; UI shows
   "someone else edited this - reload".
 - Write immutable versioned R2 object FIRST, then commit via D1 compare-and-swap:
@@ -74,7 +74,7 @@ repo migration.
 - Point `content_r2_key` at the immutable versioned key; retire in-place `draft/` overwrite.
 - Backfill script for existing rows. Add R2 lifecycle rule to prune old history.
 
-### Phase 3 - Atomic publish + fast reads (backend only)
+### Phase 3 - Atomic publish + fast reads (backend only) — PARTIAL (parallel reads complete; atomic publish pending)
 - Publish writes ONE immutable page manifest (e.g. `published/{slug}/v{n}.json`) and flips
   a single pointer (D1 `pages` column + KV). KV written ONLY on publish, never on autosave.
 - Reads: read the manifest (one GET); at minimum `Promise.all` section reads.
