@@ -715,9 +715,14 @@ export default function StudioWorkspace({
           <small>YOUR WORKSPACE</small>
           <h1>{detail.product.name}</h1>
         </div>
-        <button className="ps-button" disabled={Boolean(busy)} onClick={() => void saveDraft()}>
-          {busy === "save" ? "Saving…" : "Save draft"}
-        </button>
+        <div className="ps-workspace-actions">
+          <a className="ps-text-button" href="/admin/products/help/artwork">
+            Artwork help
+          </a>
+          <button className="ps-button" disabled={Boolean(busy)} onClick={() => void saveDraft()}>
+            {busy === "save" ? "Saving…" : "Save draft"}
+          </button>
+        </div>
       </header>
       <div className="ps-workspace-body">
         <nav className="ps-toolrail" aria-label="Design tools">
