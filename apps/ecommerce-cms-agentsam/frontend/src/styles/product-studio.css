@@ -1011,6 +1011,15 @@
   font-size: 13px;
   color: var(--ps-ink);
 }
+.ps-upload-help-link {
+  display: inline-flex;
+  margin: 2px 0 8px;
+  color: #596c45 !important;
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: underline !important;
+  text-underline-offset: 3px;
+}
 .ps-panel-intro {
   font-size: 12px;
   line-height: 1.6;
