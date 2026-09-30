@@ -234,9 +234,14 @@ export default function ProductStudioPage() {
           <div className="ps-topline">
             <span className="ps-eyebrow">THE CREATIVE STUDIO</span>
             {syncing && <button className="ps-button" onClick={() => { stopSync.current = true; }}>Pause refresh</button>}
-            <a href="/admin/content">
-              Your media library <StudioIcon name="arrow" size={15} />
-            </a>
+            <div className="ps-topline-links">
+              <a href="/admin/products/help/artwork">
+                Artwork help <StudioIcon name="arrow" size={15} />
+              </a>
+              <a href="/admin/content">
+                Your media library <StudioIcon name="arrow" size={15} />
+              </a>
+            </div>
           </div>
           {!productId ? (
             <>
