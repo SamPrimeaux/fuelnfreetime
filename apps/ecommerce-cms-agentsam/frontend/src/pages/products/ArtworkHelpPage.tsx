@@ -248,9 +248,70 @@ export default function ArtworkHelpPage() {
           </article>
         </section>
 
-        <section className="provider-help__section" aria-labelledby="provider-resources">
+        <section className="provider-help__section" aria-labelledby="product-specs">
           <div className="provider-help__section-heading">
             <span>03</span>
+            <div>
+              <small>PRODUCT SIZE & SPECIFICATIONS</small>
+              <h2 id="product-specs">Carry the provider’s real product details into the listing.</h2>
+            </div>
+          </div>
+          <div className="provider-help__checklist">
+            <article>
+              <strong>Size & dimensions</strong>
+              <p>
+                Use the provider’s product measurements as the source for customer-facing
+                dimensions. For apparel, include the relevant size-chart measurements so
+                buyers can compare before ordering.
+              </p>
+            </article>
+            <article>
+              <strong>Material & finish</strong>
+              <p>
+                Preserve the actual fabric blend, substrate, coating, finish, or construction
+                details. These can affect both the product description and how artwork renders.
+              </p>
+            </article>
+            <article>
+              <strong>Care instructions</strong>
+              <p>
+                Bring important care notes into the storefront description, such as washing,
+                drying, dishwasher, or handling guidance supplied for the selected product.
+              </p>
+            </article>
+            <article>
+              <strong>Print / engraving area</strong>
+              <p>
+                Treat Completeful’s maximum printable or engravable area as the production
+                boundary. Keep the design inside it and use the selected placement preview.
+              </p>
+            </article>
+            <article>
+              <strong>Wraps & complex placements</strong>
+              <p>
+                Pay extra attention to seams, edges, curves, wraps, and multi-view placements.
+                A flat artwork file alone does not prove the final physical alignment.
+              </p>
+            </article>
+            <article>
+              <strong>Storefront-ready specs</strong>
+              <p>
+                Add useful dimensions, size tables, material details, and care notes directly
+                to the product listing in concise, scannable language.
+              </p>
+            </article>
+          </div>
+          <p className="provider-help__fineprint">
+            The catalog/product record should remain the product-specific authority. This help
+            page explains the workflow; it should not replace Completeful’s live specifications
+            for the selected product and variant.
+          </p>
+          <ExternalLink href={COMPLETEFUL.specs}>Open Completeful’s product size & specifications guide</ExternalLink>
+        </section>
+
+        <section className="provider-help__section" aria-labelledby="provider-resources">
+          <div className="provider-help__section-heading">
+            <span>04</span>
             <div>
               <small>OFFICIAL COMPLETEFUL RESOURCES</small>
               <h2 id="provider-resources">Go straight to the provider when you need it.</h2>
