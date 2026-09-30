@@ -124,7 +124,7 @@
     "db:migrate:webhook-hook-final": "npm run db:migrate:webhook-hook-final:prepare && npm run db:migrate:webhook-hook-final:drop-view && npm run db:migrate:webhook-hook-final:swap && npm run db:migrate:webhook-hook-final:post"
   },
   "devDependencies": {
-    "wrangler": "^4.135.0"
+    "wrangler": "4.145.0"
   },
   "dependencies": {
     "@jsquash/jpeg": "^1.6.0",
