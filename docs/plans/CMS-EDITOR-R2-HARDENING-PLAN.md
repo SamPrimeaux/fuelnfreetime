@@ -20,6 +20,11 @@ content, and products. It must scale and stay stable, and customization must be 
 - AgentSam edits must go through the same REST endpoints (same validation/versioning),
   land as drafts only, and never auto-publish.
 
+- miniAgentSam composer is scoped to the editor surfaces ONLY (CMS page/section/block
+  editing, content creation, product creation). It never touches the shell, backend, or
+  source code, and customers never get repo/db/r2/shell/deploy tools. Enforced server-side,
+  fail-closed. See "miniAgentSam composer scope" below.
+
 ## Verified gaps (from reading backend/cms/api.js + cms/r2-store.js)
 1. Save race: `persistSectionDraft` reads `content_version`, writes R2, then updates D1
    unconditionally. Concurrent saves both compute vN+1, collide on the same
@@ -52,6 +57,11 @@ Touch points:
 Acceptance: no `CMS_EDITOR`/`CmsEditorRoom` references remain; both editors save+publish
 via REST; deploy applies the deleted_classes migration cleanly; storefront unaffected.
 
+### Phase 1b - Composer scope lock-down (MUST land before any customer install)
+See "miniAgentSam composer scope" below. Split feature gates into `customer` vs `operator`
+profiles, make tool access fail-closed, add per-surface tool allowlist, extend selected
+resource scoping, add contract tests.
+
 ### Phase 2 - Safe saves (backend only)
 - Client sends `expected_version`; server returns 409 on mismatch; UI shows
   "someone else edited this - reload".
@@ -77,6 +87,72 @@ via REST; deploy applies the deleted_classes migration cleanly; storefront unaff
 - One resource contract (list/get/create/update/delete/publish/revisions) with
   schema-driven forms so pages, products, discounts share it. New content type = config row.
 
+(Phase 5 addendum) miniAgentSam composer becomes a client of the same resource contract:
+  propose patch -> diff preview -> user Apply -> revision written -> Undo via restore.
+
+## miniAgentSam composer scope
+
+### Boundary
+The composer helps end users edit and build content in realtime, but ONLY inside:
+- CMS editor (pages, sections, blocks)
+- content creation areas
+- product creation / product editor interfaces
+It must never rewrite the outer shell, backend, config, or source code. Customers must
+not be able to break their own site through it, and a hallucinating composer must not be
+able to reach anything outside editable content.
+
+### Two profiles (never mixed)
+- `customer_composer` - what installed customers get. Content tools only.
+- `operator` - Sam only (GitHub, D1 query, R2, MCP bridge, deploy hooks, terminal). Not
+  present in customer builds; gated by role check AND a build/deploy flag.
+
+### Current state (verified 2026-09-29, backend/agentsam/feature-gates.js)
+- `FNF_AGENT_FEATURES` is one global flat object with `github_repo`, `mcp_bridge`,
+  `d1_tools`, `r2_tools`, `store_tools`, `cms_tools` ALL true.
+- `isToolKeyAllowed()` is fail-OPEN: returns true by default, denies only by name regex
+  (web/research/pdf), and always allows anything matching /github|repo_list/.
+- `fnf_d1_query` and GitHub repo tools are on the explicit allowlist. Admin GitHub OAuth
+  routes exist (`backend/admin/agentsam-github.js`).
+- Good primitives already exist: `agentsam_tools` has `risk_level`, `requires_approval`,
+  `requires_confirmation`, `modes_json`, `max_calls_per_session`, `token_budget_per_call`,
+  per-tool `input_schema`; `selected-resource.js` verifies a selected section belongs to
+  the store (currently only `section` on `theme-studio`); tool traces exist.
+- Not inspected: actual rows in prod `agentsam_tools` and which are reachable today.
+
+### Enforcement (server-side; prompts are not a security boundary)
+1. Fail-closed tool access: no allowlist row = not callable. Replace regex denylist.
+   Add per-surface allowlist (`surface_scope` column or `agentsam_surface_tools`
+   table: surface + tool_key). Surfaces: `cms-editor`, `product-editor`.
+2. Surface and resource come from the authenticated route + server-side resolution,
+   never from client-claimed strings. Extend `resolveSelectedResource` to page, section,
+   block, product, each with store-ownership checks.
+3. Composer toolset (customer): read page/section/product, propose section patch,
+   insert/reorder block, propose product field update, list own media, (gated) image gen.
+   No: github, d1, r2 raw, mcp_bridge, shell, deploy, config, code, arbitrary fetch.
+4. Draft-only writes through the SAME service functions/REST as the UI
+   (`updateSection` etc. with `expected_version`). Composer can never publish; publish is
+   a human-only button. Price/inventory edits: read-only or confirm-required (open question).
+5. Structured output only: patches validated against registry block/field schemas;
+   content sanitized (no script tags, no arbitrary HTML/JS, image URLs limited to own
+   media). Invalid output is rejected, not repaired silently.
+6. Anti-hallucination: composer must read the resource first and its patch carries the
+   version it read; stale patches fail with 409 instead of clobbering newer edits.
+7. Propose -> diff preview -> user Apply -> revision written -> one-click Undo (needs
+   Phase 4 restore).
+8. Limits: default `max_calls_per_session`, token budget per call, per-store daily budget,
+   per-store kill switch and read-only mode.
+9. Audit: every proposal/apply traced (user, resource, version, revision id) via
+   existing tool traces.
+10. Remove/disable in customer builds: GitHub OAuth routes, `github_repo`, `mcp_bridge`,
+    `d1_tools`, `r2_tools`, post-deploy/mail tools.
+
+### Tests (contract tests, add to tests/)
+- customer profile exposes ONLY allowlisted tools; unknown tool = denied
+- forged surface / resource id from another store = rejected
+- no composer tool can write published content or anything outside draft content/product fields
+- no code/config/repo/db tool reachable under customer profile
+- invalid/unsafe content patch rejected
+
 ## Rules for this work
 - Any D1 schema change: ship a migration file AND apply it to prod D1 BEFORE merging to
   main (main push auto-deploys; the product_studio_drafts table was missed this way).
@@ -89,6 +165,8 @@ via REST; deploy applies the deleted_classes migration cleanly; storefront unaff
 2. Any customer relying on live multi-tab sync?
 3. R2 history retention period?
 4. KV vs Cache API for the published pointer.
+5. What rows are in prod `agentsam_tools` and which are reachable by the composer today?
+6. Should composer be allowed to change price/inventory, or read-only/confirm-required?
 
 ## Start here tomorrow
 1. Trace question 1 (grep readSectionContent / draftKey / content_r2_key usage).
