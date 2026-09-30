@@ -27,6 +27,58 @@ test("canonical custom-domain URL generation", () => {
   );
 });
 
+test("Product Studio production lanes bypass generic storefront optimization", () => {
+  const prepared = classifyMediaAsset({
+    r2Key: "studio/prepared/design-123.png",
+    contentType: "image/png",
+    filename: "design-123.png",
+    bytes: 11_000_000,
+    width: 4200,
+    height: 4800,
+    folder: "products",
+  });
+  assert.equal(prepared.asset_role, "master");
+  assert.equal(prepared.pipeline, "no_transform");
+  assert.equal(prepared.needs_optimize, false);
+  assert.equal(prepared.promote_deletes_intake, false);
+  assert.equal(prepared.output_format, "image/png");
+
+  const original = classifyMediaAsset({
+    r2Key: "studio/originals/logo.png",
+    contentType: "image/png",
+    filename: "logo.png",
+    bytes: 4_000_000,
+    folder: "products",
+  });
+  assert.equal(original.asset_role, "master");
+  assert.equal(original.pipeline, "no_transform");
+  assert.equal(original.needs_optimize, false);
+
+  const mockupInput = classifyMediaAsset({
+    r2Key: "studio/mockup-inputs/logo-front.png",
+    contentType: "image/png",
+    filename: "logo-front.png",
+    bytes: 1_500_000,
+    folder: "products",
+  });
+  assert.equal(mockupInput.asset_role, "preview");
+  assert.equal(mockupInput.pipeline, "no_transform");
+  assert.equal(mockupInput.needs_optimize, false);
+
+  const campaign = classifyMediaAsset({
+    r2Key: "images/dirtbike-launch-001.jpg",
+    contentType: "image/jpeg",
+    filename: "dirtbike-launch-001.jpg",
+    bytes: 6_000_000,
+    width: 4032,
+    height: 3024,
+    folder: "images",
+  });
+  assert.equal(campaign.asset_role, "canonical");
+  assert.equal(campaign.pipeline, "image");
+  assert.equal(campaign.needs_optimize, true);
+});
+
 test("image/icon/video/GLB routing", () => {
   const image = classifyMediaAsset({
     r2Key: "intake/abc/shirt-front.png",

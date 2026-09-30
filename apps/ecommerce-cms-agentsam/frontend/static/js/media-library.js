@@ -33,6 +33,21 @@
   let searchQuery = "";
   let kindFilter = "all";
   let statusFilter = "all";
+  let albums = [];
+  let activeAlbumId = null;
+  let page = 1;
+  const pageSize = 48;
+  let pagination = {
+    page: 1,
+    page_size: pageSize,
+    total: 0,
+    pages: 1,
+    has_prev: false,
+    has_next: false,
+  };
+  const selectedIds = new Set();
+  let lastSelectedId = null;
+  let searchTimer = null;
 
   const els = {};
 
@@ -169,7 +184,15 @@
   function queryUrl() {
     const params = new URLSearchParams();
     params.set("sync", syncedOnce ? "0" : "1");
-    if (activeFolder) params.set("folder", activeFolder);
+    params.set("page", String(page));
+    params.set("page_size", String(pageSize));
+    if (searchQuery.trim()) params.set("q", searchQuery.trim());
+    if (kindFilter !== "all") params.set("kind", kindFilter);
+    if (statusFilter !== "all") { params.set("status", statusFilter); }
+    if (activeAlbumId) {
+      params.set("album_id", String(activeAlbumId));
+      params.set("view", "all");
+    } else if (activeFolder) params.set("folder", activeFolder);
     else params.set("view", "images");
     return `/api/admin/media?${params}`;
   }
@@ -181,9 +204,15 @@
       syncedOnce = true;
       assets = data.assets || [];
       counts = data.counts || counts;
+      albums = data.albums || albums;
+      pagination = data.pagination || pagination;
+      page = pagination.page || page;
       renderFolders();
+      renderAlbums();
       renderCrumb();
       renderGrid();
+      renderBatchBar();
+      renderPagination();
     } catch (err) {
       els.grid.innerHTML = `<div class="admin-empty">${err.message}</div>`;
     }
@@ -200,6 +229,8 @@
     els.crumb.innerHTML = parts.join(" ");
     els.crumb.querySelector('[data-crumb="home"]')?.addEventListener("click", () => {
       activeFolder = null;
+      activeAlbumId = null;
+      page = 1;
       load();
     });
   }
@@ -217,6 +248,8 @@
     els.folders.querySelectorAll(".media-folder-tile").forEach((tile) => {
       tile.addEventListener("click", () => {
         activeFolder = tile.dataset.folder;
+        activeAlbumId = null;
+        page = 1;
         load();
       });
       tile.addEventListener("dragover", (e) => {
@@ -235,6 +268,89 @@
     });
   }
 
+  function escapeHtml(value) {
+    return String(value == null ? "" : value).replace(/[&<>"']/g, (char) => {
+      const map = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+      return map[char] || char;
+    });
+  }
+
+  function renderAlbums() {
+    if (!els.albums) return;
+    const buttons = [
+      '<button type="button" class="media-album-chip' +
+        (activeAlbumId ? '' : ' is-active') +
+        '" data-media-album=""><span>All media</span><small>Library</small></button>',
+      ...albums.map((album) =>
+        '<button type="button" class="media-album-chip' +
+        (Number(activeAlbumId) === Number(album.id) ? ' is-active' : '') +
+        '" data-media-album="' + Number(album.id) + '">' +
+        '<span>' + escapeHtml(album.name) + '</span>' +
+        '<small>' + Number(album.asset_count || 0) + ' asset' +
+        (Number(album.asset_count || 0) === 1 ? '' : 's') +
+        '</small></button>'
+      ),
+    ];
+    els.albums.innerHTML = buttons.join("");
+
+    els.albums.querySelectorAll("[data-media-album]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const id = Number(button.dataset.mediaAlbum || 0);
+        activeAlbumId = id || null;
+        activeFolder = null;
+        page = 1;
+        void load();
+      });
+    });
+  }
+
+  function openAlbumDialog() {
+    if (!els.albumDialog) return;
+    if (els.albumName) els.albumName.value = "";
+    if (els.albumDescription) els.albumDescription.value = "";
+    if (typeof els.albumDialog.showModal === "function") els.albumDialog.showModal();
+    else els.albumDialog.setAttribute("open", "");
+    setTimeout(() => els.albumName?.focus(), 0);
+  }
+
+  function closeAlbumDialog() {
+    if (!els.albumDialog) return;
+    if (typeof els.albumDialog.close === "function") els.albumDialog.close();
+    else els.albumDialog.removeAttribute("open");
+  }
+
+  async function createAlbumFromDialog() {
+    const name = String(els.albumName?.value || "").trim();
+    const description = String(els.albumDescription?.value || "").trim();
+    if (!name) {
+      els.albumName?.focus();
+      return;
+    }
+    if (els.albumCreate) els.albumCreate.disabled = true;
+    try {
+      const result = await adminFetch("/api/admin/media/albums", {
+        method: "POST",
+        body: JSON.stringify({ name, description }),
+      });
+      const albumId = Number(result.album?.id || 0);
+      if (albumId && selectedIds.size) {
+        await runBatchAction("album_add", { album_id: albumId }, { reload: false });
+      }
+      activeAlbumId = albumId || null;
+      activeFolder = null;
+      page = 1;
+      closeAlbumDialog();
+      await load();
+    } catch (err) {
+      if (els.note) {
+        els.note.style.display = "block";
+        els.note.textContent = err.message || "Could not create album.";
+      }
+    } finally {
+      if (els.albumCreate) els.albumCreate.disabled = false;
+    }
+  }
+
   function statusLabel(a) {
     const s = a.status || "ready";
     if (s === "processing" || s === "uploading") return "Processing…";
@@ -251,6 +367,191 @@
     else if (a.size_bytes) parts.push(fmtBytes(a.size_bytes));
     return parts.join(" · ");
   }
+
+  function emitSelection() {
+    const detail = {
+      type: "media_selection",
+      ids: [...selectedIds],
+      count: selectedIds.size,
+      folder: activeFolder,
+      album_id: activeAlbumId,
+    };
+    window.dispatchEvent(new CustomEvent("agentsam:media-selection", { detail }));
+  }
+
+  function toggleSelection(id, range = false) {
+    const numericId = Number(id);
+    if (!Number.isInteger(numericId)) return;
+
+    if (range && lastSelectedId != null) {
+      const ordered = assets.map((asset) => Number(asset.id));
+      const from = ordered.indexOf(Number(lastSelectedId));
+      const to = ordered.indexOf(numericId);
+      if (from !== -1 && to !== -1) {
+        const start = Math.min(from, to);
+        const end = Math.max(from, to);
+        for (const selectedId of ordered.slice(start, end + 1)) selectedIds.add(selectedId);
+      } else {
+        selectedIds.add(numericId);
+      }
+    } else if (selectedIds.has(numericId)) {
+      selectedIds.delete(numericId);
+    } else {
+      selectedIds.add(numericId);
+    }
+
+    lastSelectedId = numericId;
+    renderGrid();
+    renderBatchBar();
+    emitSelection();
+  }
+
+  function clearSelection() {
+    selectedIds.clear();
+    renderGrid();
+    renderBatchBar();
+    emitSelection();
+  }
+
+  function selectCurrentPage() {
+    assets.forEach((asset) => selectedIds.add(Number(asset.id)));
+    renderGrid();
+    renderBatchBar();
+    emitSelection();
+  }
+
+  async function runBatchAction(action, extra = {}, options = {}) {
+    const ids = [...selectedIds];
+    if (!ids.length) return null;
+    els.batchBar?.classList.add("is-busy");
+    try {
+      const result = await adminFetch("/api/admin/media/batch", {
+        method: "POST",
+        body: JSON.stringify({ ids, action, ...extra }),
+      });
+      if (els.note) {
+        els.note.style.display = "block";
+        const count = result.updated ?? result.added ?? result.jobs?.length ?? ids.length;
+        if (action === "optimize") {
+          els.note.textContent =
+            "Queued " + count + " asset" + (count === 1 ? "" : "s") + " for background optimization.";
+        } else if (action === "accept_suggestions") {
+          els.note.textContent =
+            "Applied safe metadata suggestions to " + count + " asset" + (count === 1 ? "" : "s") + ".";
+        } else if (action === "album_add") {
+          els.note.textContent =
+            "Added " + count + " asset" + (count === 1 ? "" : "s") + " to the album.";
+        } else if (action === "album_remove") {
+          els.note.textContent =
+            "Removed " + count + " asset" + (count === 1 ? "" : "s") + " from the album.";
+        } else {
+          els.note.textContent =
+            "Moved " + count + " asset" + (count === 1 ? "" : "s") + ".";
+        }
+      }
+      if (options.reload !== false) await load();
+      return result;
+    } catch (err) {
+      if (els.note) {
+        els.note.style.display = "block";
+        els.note.textContent = err.message || "Batch action failed.";
+      }
+      return null;
+    } finally {
+      els.batchBar?.classList.remove("is-busy");
+    }
+  }
+
+  function renderBatchBar() {
+    if (!els.batchBar) return;
+    const count = selectedIds.size;
+    if (!count) {
+      els.batchBar.hidden = true;
+      els.batchBar.innerHTML = "";
+      return;
+    }
+
+    const albumOptions = albums.map((album) =>
+      '<option value="' + Number(album.id) + '">' +
+      escapeHtml(album.name) + ' (' + Number(album.asset_count || 0) + ')</option>'
+    ).join("");
+
+    const parts = [
+      '<div class="media-batch-summary"><strong>' + count + '</strong> selected</div>',
+      '<div class="media-batch-actions">',
+      '<button type="button" class="btn small" data-media-batch="page">Select this page</button>',
+      '<button type="button" class="btn small" data-media-batch="clear">Clear</button>',
+      '<button type="button" class="btn small" data-media-batch="optimize">Optimize</button>',
+      '<button type="button" class="btn small" data-media-batch="seo">Apply suggested SEO</button>',
+      '<label class="media-batch-move"><span class="sr-only">Add selected assets to album</span>',
+      '<select class="media-lib-filter" data-media-batch-album>',
+      '<option value="">Add to album...</option>',
+      albumOptions,
+      '</select></label>',
+      '<button type="button" class="btn small" data-media-batch="new-album">+ Album</button>',
+      activeAlbumId
+        ? '<button type="button" class="btn small" data-media-batch="remove-album">Remove from this album</button>'
+        : '',
+      '<label class="media-batch-move"><span class="sr-only">Move selected assets</span>',
+      '<select class="media-lib-filter" data-media-batch-move>',
+      '<option value="">Move folder...</option>',
+      '<option value="images">Images</option>',
+      '<option value="videos">Videos</option>',
+      '<option value="products">Products</option>',
+      '</select></label>',
+      '</div>',
+    ];
+
+    els.batchBar.hidden = false;
+    els.batchBar.innerHTML = parts.join("");
+    els.batchBar.querySelector('[data-media-batch="page"]')?.addEventListener("click", selectCurrentPage);
+    els.batchBar.querySelector('[data-media-batch="clear"]')?.addEventListener("click", clearSelection);
+    els.batchBar.querySelector('[data-media-batch="optimize"]')?.addEventListener("click", () => void runBatchAction("optimize"));
+    els.batchBar.querySelector('[data-media-batch="seo"]')?.addEventListener("click", () => void runBatchAction("accept_suggestions"));
+    els.batchBar.querySelector('[data-media-batch="new-album"]')?.addEventListener("click", openAlbumDialog);
+    els.batchBar.querySelector('[data-media-batch="remove-album"]')?.addEventListener("click", () => {
+      if (activeAlbumId) void runBatchAction("album_remove", { album_id: activeAlbumId });
+    });
+    els.batchBar.querySelector("[data-media-batch-album]")?.addEventListener("change", (event) => {
+      const albumId = Number(event.target.value || 0);
+      if (albumId) void runBatchAction("album_add", { album_id: albumId });
+    });
+    els.batchBar.querySelector("[data-media-batch-move]")?.addEventListener("change", (event) => {
+      const folder = event.target.value;
+      if (folder) void runBatchAction("move", { folder });
+    });
+  }
+
+  function renderPagination() {
+    if (!els.pagination) return;
+    if (!pagination.total) {
+      els.pagination.innerHTML = "";
+      return;
+    }
+    const start = (pagination.page - 1) * pagination.page_size + 1;
+    const end = Math.min(pagination.total, pagination.page * pagination.page_size);
+    els.pagination.innerHTML = `
+      <div class="media-pagination-summary">${start}–${end} of ${pagination.total}</div>
+      <div class="media-pagination-controls">
+        <button type="button" class="btn small" data-media-page="prev" ${pagination.has_prev ? "" : "disabled"}>Previous</button>
+        <span>Page ${pagination.page} of ${pagination.pages}</span>
+        <button type="button" class="btn small" data-media-page="next" ${pagination.has_next ? "" : "disabled"}>Next</button>
+      </div>`;
+    els.pagination.querySelector('[data-media-page="prev"]')?.addEventListener("click", () => {
+      if (!pagination.has_prev) return;
+      page = Math.max(1, pagination.page - 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      void load();
+    });
+    els.pagination.querySelector('[data-media-page="next"]')?.addEventListener("click", () => {
+      if (!pagination.has_next) return;
+      page = pagination.page + 1;
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      void load();
+    });
+  }
+
+  window.getSelectedMediaAssetIds = () => [...selectedIds];
 
   function renderGrid() {
     const list = visibleAssets();
@@ -271,8 +572,12 @@
       list
         .map(
           (a) => `
-      <article class="media-item" draggable="true" data-id="${a.id}" data-status="${a.status || "ready"}">
-        <div class="media-item-thumb">${thumbHtml(a)}${
+      <article class="media-item${selectedIds.has(Number(a.id)) ? " is-selected" : ""}" draggable="true" data-id="${a.id}" data-status="${a.status || "ready"}">
+        <div class="media-item-thumb">
+          <button type="button" class="media-select-toggle${selectedIds.has(Number(a.id)) ? " is-selected" : ""}" data-media-select="${a.id}" aria-label="${selectedIds.has(Number(a.id)) ? "Deselect" : "Select"} ${a.filename}" aria-pressed="${selectedIds.has(Number(a.id)) ? "true" : "false"}">
+            ${selectedIds.has(Number(a.id)) ? "✓" : ""}
+          </button>
+          ${thumbHtml(a)}${
           (a.status === "processing" || a.status === "uploading")
             ? '<span class="media-status-badge is-processing">Processing…</span>'
             : ""
@@ -302,6 +607,12 @@
       const id = item.dataset.id;
       item.addEventListener("click", (e) => {
         if (item.classList.contains("is-dragging")) return;
+        if (e.target.closest("[data-media-select]") || e.metaKey || e.ctrlKey || e.shiftKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleSelection(id, e.shiftKey);
+          return;
+        }
         openDrawer(assets.find((a) => String(a.id) === id));
       });
       item.addEventListener("dragstart", (e) => {
@@ -886,6 +1197,23 @@
     }
   }
 
+  function openSelectedOriginal(download = false) {
+    if (!selected) return;
+    const url = mediaUrl(selected);
+    if (!url) return;
+    if (!download) {
+      window.open(url, "_blank", "noopener,noreferrer");
+      return;
+    }
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = selected.filename || "download";
+    link.rel = "noopener";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
   async function deleteSelected() {
     if (!selected) return;
     if (!confirm("Delete this asset permanently? Removes the D1 row and R2 object.")) return;
@@ -960,6 +1288,14 @@
   window.initMediaLibrary = function initMediaLibrary() {
     els.crumb = document.getElementById("media-crumb");
     els.folders = document.getElementById("media-folders");
+    els.albums = document.getElementById("media-albums");
+    els.albumNew = document.getElementById("media-album-new");
+    els.albumDialog = document.getElementById("media-album-dialog");
+    els.albumForm = document.getElementById("media-album-form");
+    els.albumName = document.getElementById("media-album-name");
+    els.albumDescription = document.getElementById("media-album-description");
+    els.albumCancel = document.getElementById("media-album-cancel");
+    els.albumCreate = document.getElementById("media-album-create");
     els.grid = document.getElementById("media-grid");
     els.search = document.getElementById("media-search");
     els.kindFilter = document.getElementById("media-kind-filter");
@@ -969,6 +1305,8 @@
     els.fileInput = document.getElementById("media-file-input");
     els.uploadBtn = document.getElementById("media-upload-btn");
     els.note = document.getElementById("media-note");
+    els.batchBar = document.getElementById("media-batch-bar");
+    els.pagination = document.getElementById("media-pagination");
     els.backdrop = document.getElementById("media-drawer-backdrop");
     els.drawer = document.getElementById("media-drawer");
     els.drawerPreview = document.getElementById("media-drawer-preview");
@@ -998,20 +1336,34 @@
 
     bindPlacementControls();
 
+    els.albumNew?.addEventListener("click", openAlbumDialog);
+    els.albumCancel?.addEventListener("click", closeAlbumDialog);
+    els.albumCreate?.addEventListener("click", () => void createAlbumFromDialog());
+    els.albumForm?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      void createAlbumFromDialog();
+    });
+
     els.search?.addEventListener("input", (event) => {
       searchQuery = event.target.value || "";
-      renderGrid();
+      page = 1;
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => void load(), 250);
     });
     els.kindFilter?.addEventListener("change", (event) => {
       kindFilter = event.target.value || "all";
-      renderGrid();
+      page = 1;
+      void load();
     });
     els.statusFilter?.addEventListener("change", (event) => {
       statusFilter = event.target.value || "all";
-      renderGrid();
+      page = 1;
+      void load();
     });
 
     document.getElementById("media-drawer-close")?.addEventListener("click", closeDrawer);
+    document.getElementById("media-drawer-open")?.addEventListener("click", () => openSelectedOriginal(false));
+    document.getElementById("media-drawer-download")?.addEventListener("click", () => openSelectedOriginal(true));
     document.getElementById("media-drawer-save")?.addEventListener("click", saveDrawer);
     document.getElementById("media-drawer-delete")?.addEventListener("click", deleteSelected);
     els.backdrop?.addEventListener("click", closeDrawer);

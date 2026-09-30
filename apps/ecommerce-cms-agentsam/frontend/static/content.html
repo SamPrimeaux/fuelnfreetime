@@ -49,12 +49,45 @@ renderShell("/admin/content", `
 
     <div class="media-lib-folders" id="media-folders"></div>
 
+    <div class="media-albums-head">
+      <div>
+        <strong>Albums</strong>
+        <span>Curate campaign, product, gallery, and page-ready groups without moving the original files.</span>
+      </div>
+      <button type="button" class="btn small" id="media-album-new">+ New album</button>
+    </div>
+    <div class="media-albums" id="media-albums" aria-label="Media albums"></div>
+
+    <dialog class="media-album-dialog" id="media-album-dialog">
+      <form method="dialog" class="media-album-form" id="media-album-form">
+        <div>
+          <p class="media-album-kicker">Content organization</p>
+          <h2>Create album</h2>
+          <p>Albums group existing media without copying or moving the R2 object.</p>
+        </div>
+        <label>
+          Album name
+          <input type="text" id="media-album-name" maxlength="120" required placeholder="Dirt Bike Launch">
+        </label>
+        <label>
+          Description
+          <textarea id="media-album-description" rows="3" maxlength="1000" placeholder="Launch campaign selects, hero candidates, gallery images..."></textarea>
+        </label>
+        <div class="media-album-form-actions">
+          <button type="button" class="btn small" id="media-album-cancel">Cancel</button>
+          <button type="button" class="btn primary small" id="media-album-create">Create album</button>
+        </div>
+      </form>
+    </dialog>
+
     <div class="media-lib-drop" id="media-drop">
       <div id="media-drop-label">Drag and drop files here, or click to choose</div>
     </div>
     <div class="admin-note" id="media-note" style="display:none;"></div>
 
+    <div class="media-batch-bar" id="media-batch-bar" hidden></div>
     <div class="media-lib-grid" id="media-grid"><div class="admin-empty">Loading…</div></div>
+    <div class="media-pagination" id="media-pagination" aria-label="Media pagination"></div>
   </div>
   </section>
 
@@ -175,8 +208,14 @@ renderShell("/admin/content", `
       </div>
     </div>
     <div class="media-drawer-foot">
-      <button type="button" class="btn danger small" id="media-drawer-delete">Delete</button>
-      <button type="button" class="btn primary small" id="media-drawer-save">Save</button>
+      <div class="media-drawer-foot-links">
+        <button type="button" class="btn small" id="media-drawer-open">Open original</button>
+        <button type="button" class="btn small" id="media-drawer-download">Download</button>
+      </div>
+      <div class="media-drawer-foot-actions">
+        <button type="button" class="btn danger small" id="media-drawer-delete">Delete</button>
+        <button type="button" class="btn primary small" id="media-drawer-save">Save</button>
+      </div>
     </div>
   </aside>
 `, { onReady: () => { initMediaLibrary(); initBrandWorkspace(); } });

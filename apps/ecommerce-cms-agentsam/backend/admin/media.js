@@ -486,11 +486,125 @@ export async function uploadMedia(request, env, executionCtx = null) {
   return json({ ok: true, assets: created });
 }
 
+function albumSlug(value) {
+  return String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "album";
+}
+
+async function availableAlbumSlug(env, name, excludeId = null) {
+  const base = albumSlug(name);
+  let candidate = base;
+  for (let index = 2; index < 1000; index += 1) {
+    const row = excludeId
+      ? await env.DB.prepare("SELECT id FROM media_albums WHERE slug = ? AND id <> ?").bind(candidate, excludeId).first()
+      : await env.DB.prepare("SELECT id FROM media_albums WHERE slug = ?").bind(candidate).first();
+    if (!row) return candidate;
+    candidate = (base + "-" + index).slice(0, 80);
+  }
+  return base + "-" + Date.now();
+}
+
+async function listMediaAlbumRows(env) {
+  const sql =
+    "SELECT a.id,a.slug,a.name,a.description,a.cover_media_asset_id,a.meta_json,a.created_at,a.updated_at," +
+    " COUNT(maa.media_asset_id) AS asset_count," +
+    " COALESCE(a.cover_media_asset_id, MIN(maa.media_asset_id)) AS resolved_cover_media_asset_id" +
+    " FROM media_albums a" +
+    " LEFT JOIN media_album_assets maa ON maa.album_id = a.id" +
+    " GROUP BY a.id" +
+    " ORDER BY lower(a.name), a.id";
+  const { results } = await env.DB.prepare(sql).all();
+  return (results || []).map((row) => ({
+    ...row,
+    id: Number(row.id),
+    asset_count: Number(row.asset_count || 0),
+    cover_media_asset_id: row.cover_media_asset_id == null ? null : Number(row.cover_media_asset_id),
+    resolved_cover_media_asset_id:
+      row.resolved_cover_media_asset_id == null ? null : Number(row.resolved_cover_media_asset_id),
+  }));
+}
+
+export async function listMediaAlbums(request, env) {
+  return json({ ok: true, albums: await listMediaAlbumRows(env) });
+}
+
+export async function createMediaAlbum(request, env) {
+  const body = await readJson(request);
+  const name = String(body?.name || "").trim().slice(0, 120);
+  const description = String(body?.description || "").trim().slice(0, 1000);
+  if (!name) return json({ error: "name required" }, { status: 400 });
+
+  const slug = await availableAlbumSlug(env, name);
+  const sql =
+    "INSERT INTO media_albums (slug,name,description,meta_json,created_at,updated_at)" +
+    " VALUES (?,?,?,NULL,datetime('now'),datetime('now'))";
+  const result = await env.DB.prepare(sql).bind(slug, name, description || null).run();
+  const id = Number(result?.meta?.last_row_id || 0);
+  const album = id
+    ? await env.DB.prepare("SELECT * FROM media_albums WHERE id = ?").bind(id).first()
+    : await env.DB.prepare("SELECT * FROM media_albums WHERE slug = ?").bind(slug).first();
+  return json({ ok: true, album: { ...album, id: Number(album.id), asset_count: 0 } }, { status: 201 });
+}
+
+export async function updateMediaAlbum(request, env, id) {
+  const albumId = Number(id);
+  if (!Number.isInteger(albumId) || albumId <= 0) return json({ error: "invalid album id" }, { status: 400 });
+  const existing = await env.DB.prepare("SELECT * FROM media_albums WHERE id = ?").bind(albumId).first();
+  if (!existing) return json({ error: "album not found" }, { status: 404 });
+
+  const body = await readJson(request);
+  const name = body?.name == null ? existing.name : String(body.name).trim().slice(0, 120);
+  const description = body?.description == null
+    ? existing.description
+    : String(body.description).trim().slice(0, 1000);
+  if (!name) return json({ error: "name required" }, { status: 400 });
+
+  const slug = name === existing.name ? existing.slug : await availableAlbumSlug(env, name, albumId);
+  const cover = body?.cover_media_asset_id === undefined
+    ? existing.cover_media_asset_id
+    : body.cover_media_asset_id == null
+      ? null
+      : Number(body.cover_media_asset_id);
+
+  if (cover != null) {
+    const membership = await env.DB.prepare(
+      "SELECT 1 AS ok FROM media_album_assets WHERE album_id = ? AND media_asset_id = ?"
+    ).bind(albumId, cover).first();
+    if (!membership) return json({ error: "cover asset must belong to album" }, { status: 400 });
+  }
+
+  const sql =
+    "UPDATE media_albums SET slug=?,name=?,description=?,cover_media_asset_id=?," +
+    " updated_at=datetime('now') WHERE id=?";
+  await env.DB.prepare(sql).bind(slug, name, description || null, cover, albumId).run();
+  return json({
+    ok: true,
+    album: (await listMediaAlbumRows(env)).find((row) => row.id === albumId) || null,
+  });
+}
+
+export async function deleteMediaAlbum(request, env, id) {
+  const albumId = Number(id);
+  if (!Number.isInteger(albumId) || albumId <= 0) return json({ error: "invalid album id" }, { status: 400 });
+  await env.DB.prepare("DELETE FROM media_albums WHERE id = ?").bind(albumId).run();
+  return json({ ok: true, id: albumId });
+}
+
 export async function listMedia(request, env, url) {
   const folderParam = url.searchParams.get("folder");
   const view = url.searchParams.get("view") || "images";
   const prefix = (url.searchParams.get("prefix") || "").trim().replace(/^\/+/, "");
   const doSync = url.searchParams.get("sync") === "1";
+  const page = Math.max(1, Math.round(Number(url.searchParams.get("page") || 1)));
+  const pageSize = Math.max(12, Math.min(100, Math.round(Number(url.searchParams.get("page_size") || 48))));
+  const q = String(url.searchParams.get("q") || "").trim().toLowerCase();
+  const kind = String(url.searchParams.get("kind") || "all").trim().toLowerCase();
+  const status = String(url.searchParams.get("status") || "all").trim().toLowerCase();
+  const albumId = Math.max(0, Math.round(Number(url.searchParams.get("album_id") || 0)));
 
   if (doSync) {
     try {
@@ -501,46 +615,249 @@ export async function listMedia(request, env, url) {
   }
 
   const counts = await folderCounts(env);
-
-  let assets;
+  const albums = await listMediaAlbumRows(env);
+  const clauses = [];
+  const binds = [];
 
   if (prefix) {
-    const like = `${prefix.replace(/[%_]/g, "")}%`;
-    const { results } = await env.DB.prepare(
-      `${MEDIA_SELECT} WHERE m.r2_key LIKE ? ORDER BY m.display_order ASC, m.id ASC`
-    )
-      .bind(like)
-      .all();
-    assets = results.map(rowToAsset);
+    clauses.push("m.r2_key LIKE ?");
+    binds.push(`${prefix.replace(/[%_]/g, "")}%`);
   } else if (folderParam && MEDIA_FOLDERS.includes(folderParam)) {
-    const { results } = await env.DB.prepare(
-      `${MEDIA_SELECT} WHERE m.folder = ? ORDER BY m.display_order ASC, m.id ASC`
-    )
-      .bind(folderParam)
-      .all();
-    assets = results.map(rowToAsset);
-  } else if (view === "all") {
-    const { results } = await env.DB.prepare(
-      `${MEDIA_SELECT} ORDER BY m.folder ASC, m.display_order ASC, m.id ASC`
-    ).all();
-    assets = results.map(rowToAsset);
-  } else {
-    const { results } = await env.DB.prepare(
-      `${MEDIA_SELECT} WHERE m.folder = 'images' ORDER BY m.display_order ASC, m.id ASC`
-    ).all();
-    assets = results.map(rowToAsset);
+    clauses.push("m.folder = ?");
+    binds.push(folderParam);
+  } else if (view !== "all") {
+    clauses.push("m.folder = 'images'");
   }
 
-  assets = assets.filter(isBrowsableMedia);
+  if (albumId) {
+    clauses.push("EXISTS (SELECT 1 FROM media_album_assets maa WHERE maa.media_asset_id = m.id AND maa.album_id = ?)");
+    binds.push(albumId);
+  }
+
+  if (q) {
+    const needle = `%${q.replace(/[%_]/g, "")}%`;
+    clauses.push(`(
+      lower(COALESCE(m.filename,'')) LIKE ? OR
+      lower(COALESCE(m.alt_text,'')) LIKE ? OR
+      lower(COALESCE(m.category,'')) LIKE ? OR
+      lower(COALESCE(m.r2_key,'')) LIKE ? OR
+      lower(COALESCE(m.meta_json,'')) LIKE ?
+    )`);
+    binds.push(needle, needle, needle, needle, needle);
+  }
+
+  if (kind === "image") {
+    clauses.push(`(
+      lower(COALESCE(m.content_type,'')) LIKE 'image/%' OR
+      lower(m.r2_key) GLOB '*.jpg' OR lower(m.r2_key) GLOB '*.jpeg' OR
+      lower(m.r2_key) GLOB '*.png' OR lower(m.r2_key) GLOB '*.gif' OR
+      lower(m.r2_key) GLOB '*.webp' OR lower(m.r2_key) GLOB '*.svg' OR
+      lower(m.r2_key) GLOB '*.avif'
+    )`);
+  } else if (kind === "video") {
+    clauses.push(`(
+      lower(COALESCE(m.content_type,'')) LIKE 'video/%' OR
+      lower(m.r2_key) GLOB '*.mp4' OR lower(m.r2_key) GLOB '*.mov' OR
+      lower(m.r2_key) GLOB '*.webm' OR lower(m.r2_key) GLOB '*.m4v'
+    )`);
+  } else if (kind === "model") {
+    clauses.push(`(
+      lower(COALESCE(m.content_type,'')) LIKE 'model/%' OR
+      lower(m.r2_key) GLOB '*.glb' OR lower(m.r2_key) GLOB '*.gltf' OR
+      lower(m.r2_key) GLOB '*.usdz'
+    )`);
+  }
+
+  const latestStatus = `(SELECT j.status FROM media_asset_jobs j
+    WHERE j.media_asset_id = m.id ORDER BY j.updated_at DESC LIMIT 1)`;
+  if (status === "processing") {
+    clauses.push(`${latestStatus} IN ('queued','processing','running','uploading')`);
+  } else if (status === "failed") {
+    clauses.push(`${latestStatus} IN ('failed','error')`);
+  } else if (status === "ready") {
+    clauses.push(`COALESCE(${latestStatus}, 'ready') NOT IN ('queued','processing','running','uploading','failed','error')`);
+  }
+
+  const where = clauses.length ? `WHERE ${clauses.join(" AND")}` : "";
+  const orderBy = albumId
+    ? "ORDER BY COALESCE((SELECT maa.position FROM media_album_assets maa WHERE maa.album_id = " +
+        albumId + " AND maa.media_asset_id = m.id), m.display_order) ASC, m.id ASC"
+    : view === "all" && !folderParam && !prefix
+      ? "ORDER BY m.folder ASC, m.display_order ASC, m.id ASC"
+      : "ORDER BY m.display_order ASC, m.id ASC";
+
+  const countRow = await env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM media_assets m ${where}`,
+  ).bind(...binds).first();
+  const total = Number(countRow?.n || 0);
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, pages);
+  const safeOffset = (safePage - 1) * pageSize;
+
+  const { results } = await env.DB.prepare(
+    `${MEDIA_SELECT} ${where} ${orderBy} LIMIT ? OFFSET ?`,
+  ).bind(...binds, pageSize, safeOffset).all();
+
+  const assets = (results || []).map(rowToAsset).filter(isBrowsableMedia);
 
   return json({
     ok: true,
     assets,
     counts,
     folders: MEDIA_FOLDERS,
+    albums,
+    active_album_id: albumId || null,
     view: folderParam || view,
     prefix: prefix || null,
+    pagination: {
+      page: safePage,
+      page_size: pageSize,
+      total,
+      pages,
+      has_prev: safePage > 1,
+      has_next: safePage < pages,
+    },
+    filters: { q, kind, status },
   });
+}
+
+export async function batchMedia(request, env) {
+  const body = await readJson(request);
+  const ids = Array.isArray(body?.ids)
+    ? [...new Set(body.ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0))].slice(0, 200)
+    : [];
+  const action = String(body?.action || "").trim();
+
+  if (!ids.length) return json({ error: "ids required" }, { status: 400 });
+  if (!["optimize", "move", "accept_suggestions", "album_add", "album_remove"].includes(action)) {
+    return json({ error: "unsupported batch action" }, { status: 400 });
+  }
+
+  const placeholders = ids.map(() => "?").join(",");
+  const { results } = await env.DB.prepare(
+    `SELECT * FROM media_assets WHERE id IN (${placeholders})`,
+  ).bind(...ids).all();
+  const rows = results || [];
+
+  if (action === "album_add" || action === "album_remove") {
+    const albumId = Number(body?.album_id);
+    if (!Number.isInteger(albumId) || albumId <= 0) {
+      return json({ error: "album_id required" }, { status: 400 });
+    }
+    const album = await env.DB.prepare("SELECT id,name FROM media_albums WHERE id = ?").bind(albumId).first();
+    if (!album) return json({ error: "album not found" }, { status: 404 });
+
+    if (action === "album_remove") {
+      for (const row of rows) {
+        await env.DB.prepare("DELETE FROM media_album_assets WHERE album_id = ? AND media_asset_id = ?")
+          .bind(albumId, row.id).run();
+      }
+      if (ids.length) {
+        const coverPlaceholders = ids.map(() => "?").join(",");
+        const sql = "UPDATE media_albums SET cover_media_asset_id = CASE WHEN cover_media_asset_id IN (" +
+          coverPlaceholders + ") THEN NULL ELSE cover_media_asset_id END, updated_at = datetime('now') WHERE id = ?";
+        await env.DB.prepare(sql).bind(...ids, albumId).run();
+      }
+      return json({ ok: true, action, album_id: albumId, updated: rows.length });
+    }
+
+    const maxRow = await env.DB.prepare(
+      "SELECT COALESCE(MAX(position), -1) AS max_position FROM media_album_assets WHERE album_id = ?"
+    ).bind(albumId).first();
+    let position = Number(maxRow?.max_position ?? -1) + 1;
+    let added = 0;
+    for (const row of rows) {
+      const result = await env.DB.prepare(
+        "INSERT OR IGNORE INTO media_album_assets (album_id,media_asset_id,position,added_at) " +
+        "VALUES (?,?,?,datetime('now'))"
+      ).bind(albumId, row.id, position).run();
+      const changes = Number(result?.meta?.changes || 0);
+      if (changes) {
+        added += 1;
+        position += 1;
+      }
+    }
+    await env.DB.prepare("UPDATE media_albums SET updated_at = datetime('now') WHERE id = ?")
+      .bind(albumId).run();
+    return json({ ok: true, action, album_id: albumId, added, requested: rows.length });
+  }
+
+  if (action === "move") {
+    const folder = normalizeFolder(body?.folder);
+    for (const row of rows) {
+      await env.DB.prepare(
+        `UPDATE media_assets SET folder = ?, updated_at = datetime('now') WHERE id = ?`,
+      ).bind(folder, row.id).run();
+    }
+    return json({ ok: true, action, updated: rows.length, folder, counts: await folderCounts(env) });
+  }
+
+  if (action === "accept_suggestions") {
+    const fields = Array.isArray(body?.fields) && body.fields.length
+      ? body.fields.map(String)
+      : ["alt_text", "title", "tags"];
+    let updated = 0;
+    for (const row of rows) {
+      const meta = parseMeta(row.meta_json) || {};
+      const suggestions = meta.intelligence?.suggestions || meta.suggestions;
+      if (!suggestions) continue;
+      const applied = applyAcceptedSuggestions(
+        {
+          title: meta.title || row.filename,
+          alt_text: row.alt_text || "",
+          tags: meta.tags || [],
+        },
+        meta.intelligence || { suggestions, protected_fields: {} },
+        fields,
+      );
+      const nextMeta = {
+        ...meta,
+        accepted_suggestions: applied.accepted,
+        skipped_suggestions: applied.skipped,
+        title: applied.metadata.title,
+        tags: applied.metadata.tags,
+      };
+      const nextAlt = applied.metadata.alt_text != null
+        ? String(applied.metadata.alt_text).slice(0, 500)
+        : row.alt_text || "";
+      await env.DB.prepare(
+        `UPDATE media_assets
+         SET alt_text = ?, meta_json = ?, updated_at = datetime('now')
+         WHERE id = ?`,
+      ).bind(nextAlt, JSON.stringify(nextMeta), row.id).run();
+      updated += 1;
+    }
+    return json({ ok: true, action, updated, requested: ids.length });
+  }
+
+  const jobs = [];
+  for (const row of rows) {
+    if (!isBrowsableMedia(row)) continue;
+    const meta = parseMeta(row.meta_json) || {};
+    const plan = planAssetIngest({
+      r2Key: row.r2_key,
+      filename: row.filename,
+      contentType: resolveContentType(row),
+      bytes: row.size_bytes,
+      folder: row.folder || inferFolder(row.r2_key, row.content_type),
+      alt: row.alt_text || "",
+      existingMeta: meta,
+    });
+    const jobId = await createAssetJob(env, {
+      mediaAssetId: row.id,
+      intakeKey: row.r2_key,
+      canonicalKey: plan.canonical_key,
+      pipeline: plan.classification?.pipeline,
+      plan,
+    });
+    const queued = await enqueueAssetJob(env, jobId, {
+      media_asset_id: row.id,
+      source: "admin_media_batch",
+    });
+    jobs.push({ media_asset_id: row.id, job_id: jobId, queued: !!queued?.queued });
+  }
+
+  return json({ ok: true, action, requested: ids.length, jobs });
 }
 
 export async function updateMedia(request, env, id) {

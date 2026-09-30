@@ -117,6 +117,19 @@ function buildAgentsamContext(extra = {}) {
     ...window.__agentsamPageContext,
     ...extra,
   };
+  if (
+    location.pathname === "/admin/content" &&
+    typeof window.getSelectedMediaAssetIds === "function"
+  ) {
+    const ids = window.getSelectedMediaAssetIds();
+    if (Array.isArray(ids) && ids.length) {
+      ctx.selected_resource = {
+        type: "media_selection",
+        surface: "content-library",
+        ids: ids.slice(0, 100),
+      };
+    }
+  }
   return ctx;
 }
 

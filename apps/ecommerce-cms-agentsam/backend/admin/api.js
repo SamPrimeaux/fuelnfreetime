@@ -32,6 +32,11 @@ import {
 import {
   uploadMedia,
   listMedia,
+  listMediaAlbums,
+  createMediaAlbum,
+  updateMediaAlbum,
+  deleteMediaAlbum,
+  batchMedia,
   updateMedia,
   reorderMedia,
   syncMediaFromR2,
@@ -572,11 +577,18 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
 
   if (path === "/api/admin/media" && method === "POST") return uploadMedia(request, env, executionCtx);
   if (path === "/api/admin/media" && method === "GET") return listMedia(request, env, url);
+  if (path === "/api/admin/media/batch" && method === "POST") return batchMedia(request, env);
+  if (path === "/api/admin/media/albums" && method === "GET") return listMediaAlbums(request, env);
+  if (path === "/api/admin/media/albums" && method === "POST") return createMediaAlbum(request, env);
   if (path === "/api/admin/media/sync" && method === "POST") {
     return json(await syncMediaFromR2(env));
   }
   if (path === "/api/admin/media/reorder" && method === "POST") return reorderMedia(request, env);
   if (path === "/api/admin/platform/bindings" && method === "GET") return platformBindings(env);
+
+  m = path.match(/^\/api\/admin\/media\/albums\/(\d+)$/);
+  if (m && method === "PATCH") return updateMediaAlbum(request, env, m[1]);
+  if (m && method === "DELETE") return deleteMediaAlbum(request, env, m[1]);
 
   m = path.match(/^\/api\/admin\/media\/(\d+)$/);
   if (m && method === "PATCH") return updateMedia(request, env, m[1]);
