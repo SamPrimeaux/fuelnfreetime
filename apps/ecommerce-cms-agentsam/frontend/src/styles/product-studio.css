@@ -78,6 +78,12 @@
   font-size: 12px;
   font-weight: 600;
 }
+.ps-topline-links {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-left: auto;
+}
 .ps-eyebrow {
   font-size: 10px;
   font-weight: 750;
