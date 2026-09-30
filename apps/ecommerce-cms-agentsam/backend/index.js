@@ -340,7 +340,7 @@ export default {
         Response.redirect(new URL(`${ADMIN_ANALYTICS_PREFIX}/overview`, request.url), 302)
       );
     }
-    if (analyticsViewMatch || accountViewMatch || productStudioMatch) {
+    if (analyticsViewMatch || accountViewMatch || productStudioMatch || productArtworkHelpMatch) {
       const user = await getSessionUser(request, env);
       if (!user) {
         return noStore(redirectToAdminLogin(request));
