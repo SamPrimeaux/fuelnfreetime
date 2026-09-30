@@ -708,6 +708,14 @@
   min-width: 0;
   text-align: center;
 }
+.ps-workspace-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  min-width: max-content !important;
+  text-align: initial !important;
+}
 .ps-workspace-header small {
   font-size: 9px;
   letter-spacing: 0.14em;
