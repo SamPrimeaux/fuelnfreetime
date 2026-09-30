@@ -249,6 +249,10 @@
   pointer-events: auto;
 }
 
+.brand-picker[hidden] {
+  display: none !important;
+}
+
 .brand-picker {
   position: fixed;
   inset: 8vh 7vw;
@@ -260,6 +264,8 @@
   border-radius: 16px;
   box-shadow: 0 24px 90px rgba(0, 0, 0, 0.24);
   opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
   transform: translateY(8px) scale(0.99);
   transition: opacity 0.18s ease, transform 0.18s ease;
   overflow: hidden;
@@ -267,6 +273,8 @@
 
 .brand-picker.is-open {
   opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
   transform: none;
 }
 

@@ -181,11 +181,22 @@
   border-radius: var(--c-radius);
   overflow: hidden;
   background: var(--c-surface);
-  cursor: grab;
-  transition: box-shadow 0.15s, opacity 0.15s;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, opacity 0.15s;
 }
 
-.media-item:active {
+.media-item:hover,
+.media-item:focus-visible {
+  border-color: #8b8b8b;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
+  outline: none;
+}
+
+.media-item.is-sortable {
+  cursor: grab;
+}
+
+.media-item.is-sortable:active {
   cursor: grabbing;
 }
 

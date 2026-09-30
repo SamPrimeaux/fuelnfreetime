@@ -149,18 +149,24 @@
     $("brand-picker-query").value = "";
     const roleInfo = workspace?.roles?.find((item) => item.role === role);
     $("brand-picker-title").textContent = "Choose " + (roleInfo?.label || "asset");
-    $("brand-picker").hidden = false;
+    const picker = $("brand-picker");
+    picker.hidden = false;
+    picker.inert = false;
+    picker.setAttribute("aria-hidden", "false");
     $("brand-picker-backdrop").classList.add("is-open");
-    requestAnimationFrame(() => $("brand-picker").classList.add("is-open"));
+    requestAnimationFrame(() => picker.classList.add("is-open"));
     renderPicker();
     $("brand-picker-query").focus();
   }
 
   function closePicker() {
-    $("brand-picker").classList.remove("is-open");
+    const picker = $("brand-picker");
+    picker.classList.remove("is-open");
+    picker.inert = true;
+    picker.setAttribute("aria-hidden", "true");
     $("brand-picker-backdrop").classList.remove("is-open");
     window.setTimeout(() => {
-      $("brand-picker").hidden = true;
+      picker.hidden = true;
       pickerRole = null;
     }, 180);
   }

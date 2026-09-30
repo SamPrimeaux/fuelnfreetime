@@ -309,6 +309,18 @@
       }
       openDrawer(assets.find((asset) => String(asset.id) === id));
     });
+    mountListener(els.grid, "keydown", (event) => {
+      const item = event.target.closest(".media-item[data-id]");
+      if (!item || !els.grid.contains(item)) return;
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      const id = item.dataset.id;
+      if (event.shiftKey || event.metaKey || event.ctrlKey) {
+        toggleSelection(id, event.shiftKey);
+        return;
+      }
+      openDrawer(assets.find((asset) => String(asset.id) === id));
+    });
     mountListener(els.grid, "dragstart", (event) => {
       const item = event.target.closest(".media-item[data-id]");
       if (!item) return;
@@ -673,7 +685,7 @@
       list
         .map(
           (a) => `
-      <article class="media-item${selectedIds.has(Number(a.id)) ? " is-selected" : ""}" draggable="${sortMode === "manual" ? "true" : "false"}" data-id="${a.id}" data-status="${a.status || "ready"}">
+      <article class="media-item${selectedIds.has(Number(a.id)) ? " is-selected" : ""}${sortMode === "manual" ? " is-sortable" : ""}" draggable="${sortMode === "manual" ? "true" : "false"}" data-id="${a.id}" data-status="${a.status || "ready"}" tabindex="0" role="button" aria-label="Open ${a.filename}">
         <div class="media-item-thumb">
           <button type="button" class="media-select-toggle${selectedIds.has(Number(a.id)) ? " is-selected" : ""}" data-media-select="${a.id}" aria-label="${selectedIds.has(Number(a.id)) ? "Deselect" : "Select"} ${a.filename}" aria-pressed="${selectedIds.has(Number(a.id)) ? "true" : "false"}">
             ${selectedIds.has(Number(a.id)) ? "✓" : ""}
