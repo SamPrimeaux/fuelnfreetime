@@ -910,6 +910,9 @@ export default function StudioWorkspace({
               />
               <div className="ps-upload-tips">
                 <h3>A better file. A better finish.</h3>
+                <a className="ps-upload-help-link" href="/admin/products/help/artwork">
+                  Review artwork requirements
+                </a>
                 <p>
                   <strong>PNG</strong> for transparent backgrounds. JPG images
                   include their background.
