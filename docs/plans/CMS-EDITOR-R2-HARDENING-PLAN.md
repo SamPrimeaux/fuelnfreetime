@@ -61,6 +61,9 @@ via REST; deploy applies the deleted_classes migration cleanly; storefront unaff
 See "miniAgentSam composer scope" below. Split feature gates into `customer` vs `operator`
 profiles, make tool access fail-closed, add per-surface tool allowlist, extend selected
 resource scoping, add contract tests.
+Plugin work (see "agentsam_plugins" section): add `audience` column defaulting to `operator`,
+mark existing rows, filter composer plugin list server-side, capture the table DDL into a
+repo migration.
 
 ### Phase 2 - Safe saves (backend only)
 - Client sends `expected_version`; server returns 409 on mismatch; UI shows
@@ -97,7 +100,9 @@ The composer helps end users edit and build content in realtime, but ONLY inside
 - CMS editor (pages, sections, blocks)
 - content creation areas
 - product creation / product editor interfaces
-It must never rewrite the outer shell, backend, config, or source code. Customers must
+It must never rewrite the outer shell, backend, config, or source code (theme package,
+worker, admin SPA). Front-facing custom markup/CSS stored AS CONTENT is allowed - see
+"Storefront custom code model". Customers must
 not be able to break their own site through it, and a hallucinating composer must not be
 able to reach anything outside editable content.
 
@@ -153,6 +158,73 @@ able to reach anything outside editable content.
 - no code/config/repo/db tool reachable under customer profile
 - invalid/unsafe content patch rejected
 
+## agentsam_plugins - taggable capability registry for the composer
+
+### What exists (verified in prod D1, 2026-09-29)
+`agentsam_plugins` is already the installed-integration registry, with the right shape for
+in-app tagging: `plugin_key`, `plugin_kind` (native/oauth/mcp), `category`,
+`mention_aliases_json` (@tags), `capabilities_json`, `tool_lanes_json`,
+`resource_scope_json`, `composer_visible`, `settings_visible`, `sort_priority`,
+`is_enabled`, `secret_ref`, health tracking columns; plus `agentsam_plugin_health_checks`.
+Installed rows: `completeful` (native), `github` (oauth), `cloudflare` (oauth),
+`agentsam-mcp` (oauth), `inneranimalmedia-mcp-server` (mcp).
+
+### Problems found
+1. ALL 5 rows have `composer_visible = 1`, including plugins whose capabilities include
+   `repository.write`, `git.push`, `database.write`, `d1.write`, `terminal.exec`,
+   `cloudflare.write`, `github.workflow.execute`. Fine for the operator's own site;
+   unacceptable in any customer install.
+2. No code found in this repo reading `composer_visible` or `mention_aliases_json`
+   (only `tool_lanes_json` is used, in mcp-servers.js / tools-registry.js). @-tag metadata
+   is stored but not enforced or consumed here.
+3. `mcp-servers.js` hardcodes an MCP server list with tool lanes alongside the table
+   (two sources of truth; migration patches already point resolution at the table).
+4. The `agentsam_plugins` CREATE TABLE is NOT in this repo's db/ (only UPDATE patches).
+   A fresh customer install would not get the table. Capture DDL from prod
+   `sqlite_master` into `db/migrate-agentsam-plugins-*.sql`.
+5. `resource_scope_json` on operator rows holds infrastructure identifiers; never seed
+   operator rows into customer installs.
+
+### Design
+- Add columns (additive migration): `audience TEXT NOT NULL DEFAULT 'operator'`
+  (fail-closed default) with values `customer|operator`; `surfaces_json` (e.g.
+  `["cms-editor","product-editor"]`).
+- Composer tag picker is served by a server endpoint
+  (e.g. `GET /api/admin/agentsam/plugins?surface=cms-editor`) returning ONLY rows where
+  `is_enabled=1 AND composer_visible=1 AND audience='customer'` and surface matches.
+  Operator plugins are never sent to the client and are rejected server-side if tagged.
+- Tagging: `@` opens the picker (aliases from `mention_aliases_json`). A tag selects
+  the plugin's lane for that turn; optional resource ref (`@pages/home#hero`,
+  `@products/123`) resolved and ownership-checked server-side. Untagged messages default
+  to the surface's default set (pages + media). Least privilege per turn.
+- Per-tool capability allowlist, not plugin-wide. E.g. customer `completeful` exposes
+  catalog.search/catalog.read (+ draft design.create); `product.publish`, `order.create`,
+  `catalog.sync` stay behind explicit human buttons in Product Studio.
+- Customer-audience native plugins to add (rows + handlers):
+  `pages` (@pages/@sections: read, propose patch, insert/move block),
+  `products` (@products: read, propose field update),
+  `media` (@media: list own media, attach),
+  `theme` (@theme: tokens/scoped custom CSS via the custom-code model below),
+  `completeful` (customer subset above).
+- Installer/seed for customer deployments seeds ONLY `audience='customer'` rows.
+- Health checks stay; composer hides plugins whose `health_status` is failing.
+
+## Storefront custom code model (what "content/code/sections" means safely)
+Goal: customers can have the composer make/adjust front-facing pages, sections and
+custom markup live, without any way to break the dashboard or the platform.
+- Allowed: content JSON, and custom-section HTML/CSS stored as content (R2, versioned,
+  revisions + undo like all content). HTML sanitized to an allowlist; CSS scoped under
+  the section id; no `<script>`, no inline event handlers, no external script/style URLs.
+- Behavior/JS: only via prebuilt allowlisted components/behaviors selected and configured
+  by JSON (carousel, tabs, accordion, etc.). True custom JS is an operator/developer
+  path, not the composer.
+- Never editable by the composer: theme package source, worker/backend code, admin SPA,
+  `wrangler.toml`, migrations, secrets.
+- Dashboard isolation: live preview is an iframe of the storefront (sandboxed, no
+  admin credentials/DOM access), so composer HTML/CSS physically cannot touch the
+  dashboard document. Admin and storefront are separate route spaces.
+- Every apply is draft-only, diffed, revisioned, undoable; publish is human-only.
+
 ## Rules for this work
 - Any D1 schema change: ship a migration file AND apply it to prod D1 BEFORE merging to
   main (main push auto-deploys; the product_studio_drafts table was missed this way).
@@ -167,6 +239,9 @@ able to reach anything outside editable content.
 4. KV vs Cache API for the published pointer.
 5. What rows are in prod `agentsam_tools` and which are reachable by the composer today?
 6. Should composer be allowed to change price/inventory, or read-only/confirm-required?
+7. Which UI currently lists plugins for the composer, and does it filter by
+   `composer_visible`? (no reader found in this repo)
+8. JS policy for custom sections: allowlisted components only (recommended) vs anything more?
 
 ## Start here tomorrow
 1. Trace question 1 (grep readSectionContent / draftKey / content_r2_key usage).
