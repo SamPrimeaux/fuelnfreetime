@@ -1,5 +1,7 @@
 /**
- * Virtual-folder media library (D1 metadata; R2 keys unchanged on move/reorder).
+ * Provider-neutral virtual-folder media library.
+ * Storage/provider identity stays behind the media asset contract; folders, albums,
+ * ordering, metadata, and selection are CMS concerns.
  */
 (function () {
   const FOLDERS = [
@@ -51,6 +53,26 @@
   let searchTimer = null;
 
   const els = {};
+  let lifecycleController = null;
+  let mountGeneration = 0;
+
+  function mountListener(target, type, handler, options = {}) {
+    if (!target) return;
+    const normalized = typeof options === "boolean" ? { capture: options } : { ...options };
+    if (lifecycleController) normalized.signal = lifecycleController.signal;
+    target.addEventListener(type, handler, normalized);
+  }
+
+  function destroyMediaLibrary() {
+    lifecycleController?.abort();
+    lifecycleController = null;
+    clearTimeout(searchTimer);
+    searchTimer = null;
+    if (pollTimer) {
+      clearTimeout(pollTimer);
+      pollTimer = null;
+    }
+  }
 
   function fmtBytes(n) {
     if (!n) return "—";
@@ -220,6 +242,132 @@
     }
   }
 
+  function bindDelegatedLibraryInteractions() {
+    mountListener(els.crumb, "click", (event) => {
+      if (!event.target.closest('[data-crumb="home"]')) return;
+      activeFolder = null;
+      activeAlbumId = null;
+      sortMode = "newest";
+      if (els.sortFilter) els.sortFilter.value = sortMode;
+      page = 1;
+      void load();
+    });
+
+    mountListener(els.folders, "click", (event) => {
+      const tile = event.target.closest("[data-folder]");
+      if (!tile || !els.folders.contains(tile)) return;
+      activeFolder = tile.dataset.folder;
+      activeAlbumId = null;
+      sortMode = "newest";
+      if (els.sortFilter) els.sortFilter.value = sortMode;
+      page = 1;
+      void load();
+    });
+    mountListener(els.folders, "dragover", (event) => {
+      const tile = event.target.closest("[data-folder]");
+      if (!tile || !dragId) return;
+      event.preventDefault();
+      tile.classList.add("is-drop-target");
+    });
+    mountListener(els.folders, "dragleave", (event) => {
+      event.target.closest("[data-folder]")?.classList.remove("is-drop-target");
+    });
+    mountListener(els.folders, "drop", (event) => {
+      const tile = event.target.closest("[data-folder]");
+      if (!tile) return;
+      event.preventDefault();
+      tile.classList.remove("is-drop-target");
+      const id = event.dataTransfer?.getData("text/plain") || dragId;
+      if (id) void moveToFolder(id, tile.dataset.folder);
+    });
+
+    mountListener(els.albums, "click", (event) => {
+      const button = event.target.closest("[data-media-album]");
+      if (!button || !els.albums.contains(button)) return;
+      const id = Number(button.dataset.mediaAlbum || 0);
+      activeAlbumId = id || null;
+      activeFolder = null;
+      sortMode = id ? "manual" : "newest";
+      if (els.sortFilter) els.sortFilter.value = sortMode;
+      page = 1;
+      void load();
+    });
+
+    mountListener(els.grid, "click", (event) => {
+      const add = event.target.closest("#media-grid-add");
+      if (add) {
+        els.fileInput?.click();
+        return;
+      }
+      const item = event.target.closest(".media-item[data-id]");
+      if (!item || !els.grid.contains(item) || item.classList.contains("is-dragging")) return;
+      const id = item.dataset.id;
+      if (event.target.closest("[data-media-select]") || event.metaKey || event.ctrlKey || event.shiftKey) {
+        event.preventDefault();
+        toggleSelection(id, event.shiftKey);
+        return;
+      }
+      openDrawer(assets.find((asset) => String(asset.id) === id));
+    });
+    mountListener(els.grid, "dragstart", (event) => {
+      const item = event.target.closest(".media-item[data-id]");
+      if (!item) return;
+      dragId = item.dataset.id;
+      item.classList.add("is-dragging");
+      event.dataTransfer?.setData("text/plain", dragId);
+      if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+    });
+    mountListener(els.grid, "dragend", (event) => {
+      event.target.closest(".media-item[data-id]")?.classList.remove("is-dragging");
+      dragId = null;
+    });
+    mountListener(els.grid, "dragover", (event) => {
+      const item = event.target.closest(".media-item[data-id]");
+      if (!item || !dragId || dragId === item.dataset.id) return;
+      event.preventDefault();
+    });
+    mountListener(els.grid, "drop", (event) => {
+      const item = event.target.closest(".media-item[data-id]");
+      if (!item) return;
+      event.preventDefault();
+      const fromId = event.dataTransfer?.getData("text/plain") || dragId;
+      if (fromId && fromId !== item.dataset.id) void reorderDrop(fromId, item.dataset.id);
+    });
+
+    mountListener(els.batchBar, "click", (event) => {
+      const action = event.target.closest("[data-media-batch]")?.dataset.mediaBatch;
+      if (!action) return;
+      if (action === "page") selectCurrentPage();
+      else if (action === "clear") clearSelection();
+      else if (action === "optimize") void runBatchAction("optimize");
+      else if (action === "seo") void runBatchAction("accept_suggestions");
+      else if (action === "new-album") openAlbumDialog();
+      else if (action === "remove-album" && activeAlbumId) void runBatchAction("album_remove", { album_id: activeAlbumId });
+    });
+    mountListener(els.batchBar, "change", (event) => {
+      const albumSelect = event.target.closest("[data-media-batch-album]");
+      if (albumSelect) {
+        const albumId = Number(albumSelect.value || 0);
+        if (albumId) void runBatchAction("album_add", { album_id: albumId });
+        return;
+      }
+      const moveSelect = event.target.closest("[data-media-batch-move]");
+      if (moveSelect?.value) void runBatchAction("move", { folder: moveSelect.value });
+    });
+
+    const pageClick = (event) => {
+      const control = event.target.closest("[data-media-page]");
+      if (!control || control.disabled) return;
+      const direction = control.dataset.mediaPage;
+      const nextPage = direction === "prev" ? Math.max(1, pagination.page - 1) : pagination.page + 1;
+      if ((direction === "prev" && !pagination.has_prev) || (direction === "next" && !pagination.has_next)) return;
+      page = nextPage;
+      void load().then(() => els.paginationTop?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    };
+    mountListener(els.paginationTop, "click", pageClick);
+    mountListener(els.pagination, "click", pageClick);
+  }
+
   function renderCrumb() {
     const parts = [];
     const hasScopedView = Boolean(activeFolder || activeAlbumId);
@@ -235,14 +383,6 @@
       parts.push(`<button type="button" class="is-current">${escapeHtml(label)}</button>`);
     }
     els.crumb.innerHTML = parts.join(" ");
-    els.crumb.querySelector('[data-crumb="home"]')?.addEventListener("click", () => {
-      activeFolder = null;
-      activeAlbumId = null;
-      sortMode = "newest";
-      if (els.sortFilter) els.sortFilter.value = sortMode;
-      page = 1;
-      load();
-    });
   }
 
   function renderFolders() {
@@ -255,29 +395,7 @@
       </button>`
     ).join("");
 
-    els.folders.querySelectorAll(".media-folder-tile").forEach((tile) => {
-      tile.addEventListener("click", () => {
-        activeFolder = tile.dataset.folder;
-        activeAlbumId = null;
-        sortMode = "newest";
-        if (els.sortFilter) els.sortFilter.value = sortMode;
-        page = 1;
-        load();
-      });
-      tile.addEventListener("dragover", (e) => {
-        if (!dragId) return;
-        e.preventDefault();
-        tile.classList.add("is-drop-target");
-      });
-      tile.addEventListener("dragleave", () => tile.classList.remove("is-drop-target"));
-      tile.addEventListener("drop", async (e) => {
-        e.preventDefault();
-        tile.classList.remove("is-drop-target");
-        const id = e.dataTransfer.getData("text/plain") || dragId;
-        if (!id) return;
-        await moveToFolder(id, tile.dataset.folder);
-      });
-    });
+
   }
 
   function escapeHtml(value) {
@@ -305,17 +423,7 @@
     ];
     els.albums.innerHTML = buttons.join("");
 
-    els.albums.querySelectorAll("[data-media-album]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const id = Number(button.dataset.mediaAlbum || 0);
-        activeAlbumId = id || null;
-        activeFolder = null;
-        sortMode = id ? "manual" : "newest";
-        if (els.sortFilter) els.sortFilter.value = sortMode;
-        page = 1;
-        void load();
-      });
-    });
+
   }
 
   function openAlbumDialog() {
@@ -520,22 +628,7 @@
 
     els.batchBar.hidden = false;
     els.batchBar.innerHTML = parts.join("");
-    els.batchBar.querySelector('[data-media-batch="page"]')?.addEventListener("click", selectCurrentPage);
-    els.batchBar.querySelector('[data-media-batch="clear"]')?.addEventListener("click", clearSelection);
-    els.batchBar.querySelector('[data-media-batch="optimize"]')?.addEventListener("click", () => void runBatchAction("optimize"));
-    els.batchBar.querySelector('[data-media-batch="seo"]')?.addEventListener("click", () => void runBatchAction("accept_suggestions"));
-    els.batchBar.querySelector('[data-media-batch="new-album"]')?.addEventListener("click", openAlbumDialog);
-    els.batchBar.querySelector('[data-media-batch="remove-album"]')?.addEventListener("click", () => {
-      if (activeAlbumId) void runBatchAction("album_remove", { album_id: activeAlbumId });
-    });
-    els.batchBar.querySelector("[data-media-batch-album]")?.addEventListener("change", (event) => {
-      const albumId = Number(event.target.value || 0);
-      if (albumId) void runBatchAction("album_add", { album_id: albumId });
-    });
-    els.batchBar.querySelector("[data-media-batch-move]")?.addEventListener("change", (event) => {
-      const folder = event.target.value;
-      if (folder) void runBatchAction("move", { folder });
-    });
+
   }
 
   function renderPagination() {
@@ -555,22 +648,8 @@
         <button type="button" class="btn small" data-media-page="next" ${pagination.has_next ? "" : "disabled"}>Next</button>
       </div>`;
 
-    async function goToPage(nextPage) {
-      page = nextPage;
-      await load();
-      els.paginationTop?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-
     targets.forEach((target) => {
       target.innerHTML = markup;
-      target.querySelector('[data-media-page="prev"]')?.addEventListener("click", () => {
-        if (!pagination.has_prev) return;
-        void goToPage(Math.max(1, pagination.page - 1));
-      });
-      target.querySelector('[data-media-page="next"]')?.addEventListener("click", () => {
-        if (!pagination.has_next) return;
-        void goToPage(pagination.page + 1);
-      });
     });
   }
 
@@ -587,7 +666,6 @@
             <div class="media-item-sub">Upload or drop files</div>
           </div>
         </button>`;
-      bindGridAdd();
       return;
     }
 
@@ -623,44 +701,6 @@
         </div>
       </button>`;
 
-    bindGridAdd();
-
-    els.grid.querySelectorAll(".media-item").forEach((item) => {
-      if (item.id === "media-grid-add") return;
-      const id = item.dataset.id;
-      item.addEventListener("click", (e) => {
-        if (item.classList.contains("is-dragging")) return;
-        if (e.target.closest("[data-media-select]") || e.metaKey || e.ctrlKey || e.shiftKey) {
-          e.preventDefault();
-          e.stopPropagation();
-          toggleSelection(id, e.shiftKey);
-          return;
-        }
-        openDrawer(assets.find((a) => String(a.id) === id));
-      });
-      item.addEventListener("dragstart", (e) => {
-        dragId = id;
-        item.classList.add("is-dragging");
-        e.dataTransfer.setData("text/plain", id);
-        e.dataTransfer.effectAllowed = "move";
-      });
-      item.addEventListener("dragend", () => {
-        dragId = null;
-        item.classList.remove("is-dragging");
-      });
-      item.addEventListener("dragover", (e) => {
-        if (!dragId || dragId === id) return;
-        e.preventDefault();
-      });
-      item.addEventListener("drop", async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const fromId = e.dataTransfer.getData("text/plain") || dragId;
-        if (!fromId || fromId === id) return;
-        await reorderDrop(fromId, id);
-      });
-    });
-
     maybePollProcessing();
   }
 
@@ -683,12 +723,6 @@
         maybePollProcessing();
       }
     }, 2000);
-  }
-
-  function bindGridAdd() {
-    document.getElementById("media-grid-add")?.addEventListener("click", () => {
-      els.fileInput?.click();
-    });
   }
 
   async function reorderDrop(fromId, toId) {
@@ -1077,26 +1111,26 @@
     const onChange = () => applyPlacementPreview();
 
     [els.glbTheta, els.glbPhi, els.glbRadius, els.glbFov, els.glbX, els.glbY, els.glbZ, els.glbScale].forEach((el) => {
-      el?.addEventListener("input", onChange);
+      if (el) mountListener(el, "input", onChange);
     });
 
     pairs.forEach(([num, range]) => {
-      num?.addEventListener("input", () => {
+      if (num) mountListener(num, "input", () => {
         if (range) range.value = num.value;
         onChange();
       });
-      range?.addEventListener("input", () => {
+      if (range) mountListener(range, "input", () => {
         if (num) num.value = range.value;
         onChange();
       });
     });
 
-    els.glbReset?.addEventListener("click", () => {
+    if (els.glbReset) mountListener(els.glbReset, "click", () => {
       syncPlacementInputs(DEFAULT_PLACEMENT);
       applyPlacementPreview();
     });
 
-    els.glbCopy?.addEventListener("click", async () => {
+    if (els.glbCopy) mountListener(els.glbCopy, "click", async () => {
       const text = els.glbExport?.value || "";
       if (!text) return;
       try {
@@ -1121,7 +1155,9 @@
     els.fieldFolder.value = asset.folder || "images";
     els.metaSize.textContent = fmtBytes(asset.size_bytes);
     els.metaDate.textContent = fmtDate(asset.created_at);
-    els.metaKey.textContent = asset.r2_key || "—";
+    const source = asset.source || {};
+    const sourceRef = source.key || source.asset_id || asset.r2_key || asset.delivery_url || asset.url || "—";
+    els.metaKey.textContent = source.provider ? source.provider + ": " + sourceRef : sourceRef;
 
     // Operator lifecycle — never expose pipeline jargon.
     const status = asset.status || "ready";
@@ -1159,6 +1195,7 @@
         selected_resource: {
           type: "media_asset",
           id: asset.id,
+          source: asset.source || null,
           r2_key: asset.r2_key,
           filename: asset.filename,
           content_type: asset.content_type,
@@ -1286,31 +1323,38 @@
   }
 
   function bindUpload() {
-    els.dropZone.addEventListener("click", () => els.fileInput.click());
+    mountListener(els.dropZone, "click", () => els.fileInput.click());
     els.dropZone.style.cursor = "pointer";
     ["dragenter", "dragover"].forEach((evt) =>
-      els.dropZone.addEventListener(evt, (e) => {
+      mountListener(els.dropZone, evt, (e) => {
         e.preventDefault();
         els.dropZone.classList.add("is-dragover");
       })
     );
     ["dragleave", "drop"].forEach((evt) =>
-      els.dropZone.addEventListener(evt, (e) => {
+      mountListener(els.dropZone, evt, (e) => {
         e.preventDefault();
         els.dropZone.classList.remove("is-dragover");
       })
     );
-    els.dropZone.addEventListener("drop", (e) => {
+    mountListener(els.dropZone, "drop", (e) => {
       if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files);
     });
-    els.fileInput.addEventListener("change", () => {
+    mountListener(els.fileInput, "change", () => {
       if (els.fileInput.files.length) uploadFiles(els.fileInput.files);
       els.fileInput.value = "";
     });
-    els.uploadBtn.addEventListener("click", () => els.fileInput.click());
+    mountListener(els.uploadBtn, "click", () => els.fileInput.click());
   }
 
+  window.destroyMediaLibrary = destroyMediaLibrary;
+
   window.initMediaLibrary = function initMediaLibrary() {
+    destroyMediaLibrary();
+    lifecycleController = new AbortController();
+    mountGeneration += 1;
+    const generation = mountGeneration;
+
     els.crumb = document.getElementById("media-crumb");
     els.folders = document.getElementById("media-folders");
     els.albums = document.getElementById("media-albums");
@@ -1361,46 +1405,78 @@
     els.glbCopy = document.getElementById("media-glb-copy");
     els.glbReset = document.getElementById("media-glb-reset");
 
-    bindPlacementControls();
+    const required = [
+      ["grid", els.grid],
+      ["folders", els.folders],
+      ["albums", els.albums],
+      ["drop zone", els.dropZone],
+      ["file input", els.fileInput],
+      ["upload button", els.uploadBtn],
+      ["drawer", els.drawer],
+      ["drawer backdrop", els.backdrop],
+    ];
+    const missing = required.filter(([, element]) => !element).map(([name]) => name);
+    if (missing.length) {
+      console.error("Media library mount aborted; missing required elements:", missing.join(", "));
+      destroyMediaLibrary();
+      return false;
+    }
 
-    els.albumNew?.addEventListener("click", openAlbumDialog);
-    els.albumCancel?.addEventListener("click", closeAlbumDialog);
-    els.albumCreate?.addEventListener("click", () => void createAlbumFromDialog());
-    els.albumForm?.addEventListener("submit", (event) => {
+    // Core controls mount before optional 3D behavior.
+    if (els.albumNew) mountListener(els.albumNew, "click", openAlbumDialog);
+    if (els.albumCancel) mountListener(els.albumCancel, "click", closeAlbumDialog);
+    if (els.albumCreate) mountListener(els.albumCreate, "click", () => void createAlbumFromDialog());
+    if (els.albumForm) mountListener(els.albumForm, "submit", (event) => {
       event.preventDefault();
       void createAlbumFromDialog();
     });
 
-    els.search?.addEventListener("input", (event) => {
+    if (els.search) mountListener(els.search, "input", (event) => {
       searchQuery = event.target.value || "";
       page = 1;
       clearTimeout(searchTimer);
-      searchTimer = setTimeout(() => void load(), 250);
+      searchTimer = setTimeout(() => {
+        if (generation === mountGeneration) void load();
+      }, 250);
     });
-    els.kindFilter?.addEventListener("change", (event) => {
+    if (els.kindFilter) mountListener(els.kindFilter, "change", (event) => {
       kindFilter = event.target.value || "all";
       page = 1;
       void load();
     });
-    els.statusFilter?.addEventListener("change", (event) => {
+    if (els.statusFilter) mountListener(els.statusFilter, "change", (event) => {
       statusFilter = event.target.value || "all";
       page = 1;
       void load();
     });
-    els.sortFilter?.addEventListener("change", (event) => {
+    if (els.sortFilter) mountListener(els.sortFilter, "change", (event) => {
       sortMode = event.target.value || "newest";
       page = 1;
       void load();
     });
 
-    document.getElementById("media-drawer-close")?.addEventListener("click", closeDrawer);
-    document.getElementById("media-drawer-open")?.addEventListener("click", () => openSelectedOriginal(false));
-    document.getElementById("media-drawer-download")?.addEventListener("click", () => openSelectedOriginal(true));
-    document.getElementById("media-drawer-save")?.addEventListener("click", saveDrawer);
-    document.getElementById("media-drawer-delete")?.addEventListener("click", deleteSelected);
-    els.backdrop?.addEventListener("click", closeDrawer);
+    const drawerClose = document.getElementById("media-drawer-close");
+    const drawerOpen = document.getElementById("media-drawer-open");
+    const drawerDownload = document.getElementById("media-drawer-download");
+    const drawerSave = document.getElementById("media-drawer-save");
+    const drawerDelete = document.getElementById("media-drawer-delete");
+    if (drawerClose) mountListener(drawerClose, "click", closeDrawer);
+    if (drawerOpen) mountListener(drawerOpen, "click", () => openSelectedOriginal(false));
+    if (drawerDownload) mountListener(drawerDownload, "click", () => openSelectedOriginal(true));
+    if (drawerSave) mountListener(drawerSave, "click", saveDrawer);
+    if (drawerDelete) mountListener(drawerDelete, "click", deleteSelected);
+    mountListener(els.backdrop, "click", closeDrawer);
+    bindDelegatedLibraryInteractions();
 
     bindUpload();
-    load();
+
+    try {
+      bindPlacementControls();
+    } catch (error) {
+      console.warn("Optional media placement controls unavailable:", error);
+    }
+
+    void load();
+    return true;
   };
 })();

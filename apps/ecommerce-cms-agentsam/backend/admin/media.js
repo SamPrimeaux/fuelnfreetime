@@ -1,7 +1,13 @@
 /**
- * Media library: R2 storage + D1 metadata (virtual folders).
- * Folder membership and display_order are D1-only — never R2 copy/move.
- * Uploads: intake → classify → enqueue job → automatic process/promote → ready.
+ * Media library control plane.
+ *
+ * The reusable CMS must not assume one storage vendor. Fuel & Free Time currently
+ * uses the R2 adapter (WEBSITE_ASSETS), while the portable media contract also
+ * supports provider-backed assets such as Cloudflare Images, Google Drive, or a
+ * local filesystem/runtime. Folder membership and display_order are metadata
+ * concerns and never imply a provider-side copy/move.
+ *
+ * Uploads on this adapter: intake → classify → enqueue job → process → ready.
  */
 
 import {
@@ -16,6 +22,7 @@ import {
   enqueueAssetJob,
   processAssetJobById,
 } from "../assets/product-optimize.js";
+import { mediaSourceFromRow } from "../media/provider-contract.js";
 
 const MEDIA_FOLDERS = ["images", "videos", "products"];
 
@@ -44,6 +51,30 @@ const NON_MEDIA_EXTS = new Set([
   "lock",
   "gitignore",
 ]);
+
+/**
+ * SQL equivalent of isBrowsableMedia().
+ *
+ * This predicate belongs in the query itself. Filtering after LIMIT/OFFSET made
+ * internal storage objects consume media-library pages and inflated totals.
+ */
+export function browsableMediaSql(alias = "m") {
+  const a = String(alias || "m").replace(/[^a-zA-Z0-9_]/g, "") || "m";
+  const key = "lower(COALESCE(" + a + ".r2_key, " + a + ".filename, ''))";
+  const ct = "lower(COALESCE(" + a + ".content_type, ''))";
+  return "(" +
+    ct + " LIKE 'image/%' OR " +
+    ct + " LIKE 'video/%' OR " +
+    ct + " LIKE 'model/%' OR " +
+    key + " GLOB '*.jpg' OR " + key + " GLOB '*.jpeg' OR " +
+    key + " GLOB '*.png' OR " + key + " GLOB '*.gif' OR " +
+    key + " GLOB '*.webp' OR " + key + " GLOB '*.svg' OR " +
+    key + " GLOB '*.avif' OR " +
+    key + " GLOB '*.mp4' OR " + key + " GLOB '*.mov' OR " +
+    key + " GLOB '*.webm' OR " + key + " GLOB '*.m4v' OR " +
+    key + " GLOB '*.glb' OR " + key + " GLOB '*.gltf' OR " +
+    key + " GLOB '*.usdz')";
+}
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -88,14 +119,27 @@ function resolveContentType(row) {
   return guessContentType(key);
 }
 
-function publicUrlFields(r2Key) {
-  const key = String(r2Key || "").replace(/^\/+/, "");
-  const urls = publicUrlsForKey(key);
+function publicUrlFields(row) {
+  const source = mediaSourceFromRow(row);
+  if (source.provider === "r2" && source.key) {
+    const key = String(source.key).replace(/^\/+/, "");
+    const urls = publicUrlsForKey(key);
+    return {
+      source,
+      url: mediaPathForKey(key),
+      delivery_url: deliveryUrlForKey(key, { preferWorker: true }),
+      cdn_url: urls.cdn,
+      public_base_url: ASSET_STORAGE.publicBaseUrl,
+    };
+  }
+
+  const url = source.url || row?.url || null;
   return {
-    url: mediaPathForKey(key),
-    delivery_url: deliveryUrlForKey(key, { preferWorker: true }),
-    cdn_url: urls.cdn,
-    public_base_url: ASSET_STORAGE.publicBaseUrl,
+    source,
+    url,
+    delivery_url: url,
+    cdn_url: null,
+    public_base_url: null,
   };
 }
 
@@ -184,7 +228,7 @@ function rowToAsset(row) {
     }
   }
   const contentType = resolveContentType(row);
-  const urls = publicUrlFields(row.r2_key);
+  const urls = publicUrlFields(row);
   const meta = parseMeta(row.meta_json);
   const jobStatus = String(row.processing_status || "").toLowerCase();
   const lifecycle =
@@ -192,6 +236,7 @@ function rowToAsset(row) {
   const opt = meta?.optimization || null;
   return {
     id: row.id,
+    source: urls.source,
     r2_key: row.r2_key,
     url: urls.url,
     delivery_url: urls.delivery_url,
@@ -240,13 +285,14 @@ const MEDIA_SELECT = `SELECT m.*,
 
 async function folderCounts(env) {
   const { results } = await env.DB.prepare(
-    `SELECT folder, r2_key, content_type, filename FROM media_assets`
+    "SELECT folder, COUNT(*) AS n FROM media_assets m WHERE " +
+      browsableMediaSql("m") +
+      " GROUP BY folder"
   ).all();
   const counts = { images: 0, videos: 0, products: 0 };
-  for (const row of results) {
-    if (!isBrowsableMedia(row)) continue;
+  for (const row of results || []) {
     const f = normalizeFolder(row.folder);
-    counts[f] = (counts[f] || 0) + 1;
+    counts[f] = (counts[f] || 0) + Number(row.n || 0);
   }
   return counts;
 }
@@ -617,7 +663,9 @@ export async function listMedia(request, env, url) {
 
   const counts = await folderCounts(env);
   const albums = await listMediaAlbumRows(env);
-  const clauses = [];
+  // Browsability is part of the database query so non-media registry rows can
+  // never consume pagination slots or inflate totals.
+  const clauses = [browsableMediaSql("m")];
   const binds = [];
 
   if (prefix) {
@@ -679,7 +727,7 @@ export async function listMedia(request, env, url) {
     clauses.push(`COALESCE(${latestStatus}, 'ready') NOT IN ('queued','processing','running','uploading','failed','error')`);
   }
 
-  const where = clauses.length ? `WHERE ${clauses.join(" AND")}` : "";
+  const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
   const manualOrder = albumId
     ? "ORDER BY COALESCE((SELECT maa.position FROM media_album_assets maa WHERE maa.album_id = " +
         albumId + " AND maa.media_asset_id = m.id), m.display_order) ASC, m.id ASC"
@@ -705,7 +753,7 @@ export async function listMedia(request, env, url) {
     `${MEDIA_SELECT} ${where} ${orderBy} LIMIT ? OFFSET ?`,
   ).bind(...binds, pageSize, safeOffset).all();
 
-  const assets = (results || []).map(rowToAsset).filter(isBrowsableMedia);
+  const assets = (results || []).map(rowToAsset);
 
   return json({
     ok: true,

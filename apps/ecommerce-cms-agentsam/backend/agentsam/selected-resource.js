@@ -1,3 +1,4 @@
+import { mediaSourceFromRow } from "../media/provider-contract.js";
 import { slugForStorefrontPath } from "../cms/html-rewriter.js";
 
 function parseMeta(raw) {
@@ -10,19 +11,58 @@ function parseMeta(raw) {
   }
 }
 
+function mediaResourceFromRow(row) {
+  const meta = parseMeta(row.meta_json);
+  return {
+    id: row.id,
+    source: mediaSourceFromRow(row),
+    filename: row.filename,
+    r2_key: row.r2_key,
+    content_type: row.content_type,
+    size_bytes: row.size_bytes,
+    folder: row.folder,
+    category: row.category || null,
+    alt_text: row.alt_text || "",
+    tags: Array.isArray(meta.tags) ? meta.tags.slice(0, 20) : [],
+    optimization: meta.optimization
+      ? {
+          status: meta.optimization.status || null,
+          width: meta.optimization.width || null,
+          height: meta.optimization.height || null,
+          savings_pct: meta.optimization.savings_pct ?? null,
+        }
+      : null,
+  };
+}
+
+async function loadMediaRows(env, ids) {
+  const placeholders = ids.map(() => "?").join(",");
+  const { results } = await env.DB.prepare(
+    "SELECT id,filename,r2_key,url,content_type,size_bytes,folder,alt_text,category,meta_json " +
+      "FROM media_assets WHERE id IN (" + placeholders + ") ORDER BY id"
+  ).bind(...ids).all();
+  return results || [];
+}
+
+async function resolveMediaAsset(env, resource) {
+  const id = Number(resource.id);
+  if (!Number.isInteger(id) || id <= 0) throw new Error("Invalid media asset");
+  const rows = await loadMediaRows(env, [id]);
+  if (rows.length !== 1) throw new Error("Selected media asset does not belong to this store");
+  return {
+    type: "media_asset",
+    surface: "content-library",
+    ...mediaResourceFromRow(rows[0]),
+  };
+}
+
 async function resolveMediaSelection(env, resource) {
   const ids = Array.isArray(resource.ids)
     ? [...new Set(resource.ids.map(Number).filter((id) => Number.isInteger(id) && id > 0))].slice(0, 100)
     : [];
   if (!ids.length) throw new Error("Media selection is empty");
 
-  const placeholders = ids.map(() => "?").join(",");
-  const { results } = await env.DB.prepare(
-    "SELECT id,filename,r2_key,content_type,size_bytes,folder,alt_text,category,meta_json " +
-      "FROM media_assets WHERE id IN (" + placeholders + ") ORDER BY id"
-  ).bind(...ids).all();
-
-  const rows = results || [];
+  const rows = await loadMediaRows(env, ids);
   if (rows.length !== ids.length) {
     throw new Error("One or more selected media assets do not belong to this store");
   }
@@ -32,28 +72,7 @@ async function resolveMediaSelection(env, resource) {
     surface: "content-library",
     count: rows.length,
     ids: rows.map((row) => row.id),
-    assets: rows.map((row) => {
-      const meta = parseMeta(row.meta_json);
-      return {
-        id: row.id,
-        filename: row.filename,
-        r2_key: row.r2_key,
-        content_type: row.content_type,
-        size_bytes: row.size_bytes,
-        folder: row.folder,
-        category: row.category || null,
-        alt_text: row.alt_text || "",
-        tags: Array.isArray(meta.tags) ? meta.tags.slice(0, 20) : [],
-        optimization: meta.optimization
-          ? {
-              status: meta.optimization.status || null,
-              width: meta.optimization.width || null,
-              height: meta.optimization.height || null,
-              savings_pct: meta.optimization.savings_pct ?? null,
-            }
-          : null,
-      };
-    }),
+    assets: rows.map(mediaResourceFromRow),
   };
 }
 
@@ -61,6 +80,10 @@ async function resolveMediaSelection(env, resource) {
 export async function resolveSelectedResource(env, resource) {
   if (!resource || typeof resource !== "object") {
     throw new Error("Unsupported editable resource");
+  }
+
+  if (resource.surface === "content-library" && resource.type === "media_asset") {
+    return resolveMediaAsset(env, resource);
   }
 
   if (resource.type === "media_selection" && resource.surface === "content-library") {

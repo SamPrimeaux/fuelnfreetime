@@ -178,6 +178,45 @@ test("media list is server-paged and search-filtered before rendering", async ()
   assert.ok(search.assets.every((asset) => asset.filename.startsWith("dirtbike-")));
 });
 
+
+test("non-media registry rows do not inflate media pagination or folder counts", async () => {
+  const { db, env } = fixture(65);
+  const insert = db.prepare(
+    "INSERT INTO media_assets " +
+      "(r2_key,url,filename,content_type,size_bytes,category,folder,display_order,alt_text,meta_json) " +
+      "VALUES (?,?,?,?,?,?,?,?,?,?)"
+  );
+
+  for (let i = 1; i <= 100; i += 1) {
+    insert.run(
+      "agentsam/thread-payloads/conv-" + i + "/messages.jsonl",
+      "/media/agentsam/thread-payloads/conv-" + i + "/messages.jsonl",
+      "messages.jsonl",
+      "application/octet-stream",
+      100 + i,
+      "internal",
+      "images",
+      1000 + i,
+      "",
+      "{}"
+    );
+  }
+
+  const response = await responseJson(
+    await listMedia(
+      new Request("https://example.test/api/admin/media"),
+      env,
+      new URL("https://example.test/api/admin/media?view=images&page=1&page_size=48&sync=0")
+    )
+  );
+
+  assert.equal(response.pagination.total, 65);
+  assert.equal(response.pagination.pages, 2);
+  assert.equal(response.assets.length, 48);
+  assert.equal(response.counts.images, 65);
+  assert.ok(response.assets.every((asset) => !asset.r2_key.startsWith("agentsam/")));
+});
+
 test("media sorting is explicit and deterministic", async () => {
   const { env } = fixture(6);
 
@@ -401,5 +440,32 @@ test("AgentSam media selection is server-verified and bounded", async () => {
         ids: [1, 999],
       }),
     /do not belong/
+  );
+});
+
+test("AgentSam single media asset context is server-verified", async () => {
+  const { env } = fixture(5);
+
+  const resolved = await resolveSelectedResource(env, {
+    type: "media_asset",
+    surface: "content-library",
+    id: 2,
+  });
+
+  assert.equal(resolved.type, "media_asset");
+  assert.equal(resolved.surface, "content-library");
+  assert.equal(resolved.id, 2);
+  assert.equal(resolved.filename, "campaign-2.jpg");
+  assert.equal(resolved.source.provider, "r2");
+  assert.equal(resolved.source.key, "images/campaign-2.jpg");
+
+  await assert.rejects(
+    () =>
+      resolveSelectedResource(env, {
+        type: "media_asset",
+        surface: "content-library",
+        id: 999,
+      }),
+    /does not belong/
   );
 });
