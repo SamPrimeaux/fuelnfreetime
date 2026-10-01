@@ -252,6 +252,19 @@ function rowToAsset(row) {
   const lifecycle =
     jobStatus || meta?.lifecycle || (meta?.optimization?.status === "ready" ? "ready" : null) || "ready";
   const opt = meta?.optimization || null;
+  const processingResult = parseMeta(row.processing_result) || null;
+  const preparedVersions = processingResult?.transformed
+    ? [{
+        label: "Storefront",
+        kind: processingResult.asset_role || "canonical",
+        width: processingResult.width || null,
+        height: processingResult.height || null,
+        format: String(processingResult.content_type || "").replace(/^image\//, "").toUpperCase() || null,
+        bytes: processingResult.output_bytes || null,
+        provider: urls.source?.provider || "storage",
+        key: processingResult.canonical_key || null,
+      }]
+    : [];
   return {
     id: row.id,
     source: urls.source,
@@ -291,6 +304,8 @@ function rowToAsset(row) {
           bytes: row.size_bytes || null,
         },
     suggestions: meta?.intelligence?.suggestions || meta?.suggestions || null,
+    prepared_versions: preparedVersions,
+    usage: [],
     created_at: row.created_at,
     updated_at: row.updated_at || row.created_at,
   };
@@ -298,7 +313,8 @@ function rowToAsset(row) {
 
 const MEDIA_SELECT = `SELECT m.*,
   (SELECT j.status FROM media_asset_jobs j WHERE j.media_asset_id = m.id ORDER BY j.updated_at DESC LIMIT 1) AS processing_status,
-  (SELECT j.last_error FROM media_asset_jobs j WHERE j.media_asset_id = m.id ORDER BY j.updated_at DESC LIMIT 1) AS processing_error
+  (SELECT j.last_error FROM media_asset_jobs j WHERE j.media_asset_id = m.id ORDER BY j.updated_at DESC LIMIT 1) AS processing_error,
+  (SELECT j.result_json FROM media_asset_jobs j WHERE j.media_asset_id = m.id AND j.status = 'succeeded' ORDER BY j.updated_at DESC LIMIT 1) AS processing_result
   FROM media_assets m`;
 
 async function folderCounts(env) {
@@ -789,6 +805,49 @@ export async function listMedia(request, env, url) {
   ).bind(...binds, pageSize, safeOffset).all();
 
   const assets = (results || []).map(rowToAsset);
+
+  if (assets.length) {
+    const ids = assets.map((asset) => Number(asset.id)).filter(Number.isInteger);
+    const placeholders = ids.map(() => "?").join(",");
+    const usageByAsset = new Map(ids.map((id) => [id, []]));
+
+    const { results: albumUsage } = await env.DB.prepare(
+      `SELECT maa.media_asset_id, a.id, a.name, a.meta_json
+       FROM media_album_assets maa
+       JOIN media_albums a ON a.id = maa.album_id
+       WHERE maa.media_asset_id IN (${placeholders})
+       ORDER BY lower(a.name), a.id`,
+    ).bind(...ids).all();
+    for (const row of albumUsage || []) {
+      const meta = parseMeta(row.meta_json) || {};
+      usageByAsset.get(Number(row.media_asset_id))?.push({
+        kind: meta.kind === "gallery" ? "Gallery" : "Album",
+        id: Number(row.id),
+        label: row.name,
+      });
+    }
+
+    try {
+      const { results: productUsage } = await env.DB.prepare(
+        `SELECT pi.media_asset_id, p.id, p.title
+         FROM product_images pi
+         JOIN products p ON p.id = pi.product_id
+         WHERE pi.media_asset_id IN (${placeholders})
+         ORDER BY lower(p.title), p.id`,
+      ).bind(...ids).all();
+      for (const row of productUsage || []) {
+        usageByAsset.get(Number(row.media_asset_id))?.push({
+          kind: "Product",
+          id: Number(row.id),
+          label: row.title,
+        });
+      }
+    } catch {
+      // Some portable/test deployments intentionally omit commerce tables.
+    }
+
+    for (const asset of assets) asset.usage = usageByAsset.get(Number(asset.id)) || [];
+  }
 
   return json({
     ok: true,

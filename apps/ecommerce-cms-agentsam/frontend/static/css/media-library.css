@@ -1204,3 +1204,47 @@
     grid-template-columns: 1fr;
   }
 }
+
+.media-seo-review {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.media-seo-review-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 10px;
+  border: 1px solid var(--admin-border, rgba(127, 127, 127, .2));
+  border-radius: 10px;
+}
+
+.media-seo-review-row span {
+  display: grid;
+  gap: 3px;
+}
+
+.media-seo-review-row small,
+.media-empty-state {
+  color: var(--admin-muted, #68707c);
+}
+
+.media-usage-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--admin-border, rgba(127, 127, 127, .16));
+}
+
+.media-version-group {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.media-version-row.is-preview-only {
+  opacity: .72;
+}

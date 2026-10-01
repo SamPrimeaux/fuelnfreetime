@@ -364,7 +364,20 @@ import {
       else if (action === "clear") clearSelection();
       else if (action === "gallery") openGalleryDialog();
       else if (action === "optimize") void runBatchAction("optimize");
-      else if (action === "seo") void runBatchAction("accept_suggestions");
+      else if (action === "seo") {
+        if (selectedIds.size === 1) {
+          const id = Number([...selectedIds][0]);
+          const asset = assets.find((item) => Number(item.id) === id);
+          if (asset) {
+            openDrawer(asset);
+            setInspectorTab("seo");
+          }
+        } else if (els.note) {
+          els.note.className = "admin-note";
+          els.note.style.display = "block";
+          els.note.textContent = "SEO review is approval-based. Open an asset to review its suggestions; no metadata was changed.";
+        }
+      }
       else if (action === "new-album") openAlbumDialog();
       else if (action === "remove-album" && activeAlbumId) void runBatchAction("album_remove", { album_id: activeAlbumId });
     });
@@ -516,7 +529,9 @@ import {
       const albumId = Number(result.album?.id || 0);
       if (!albumId) throw new Error("Gallery was created without an id.");
       await addIdsToAlbum(existingIds, albumId);
-      if (files.length) await uploadFiles(files, { albumId, reload: false });
+      const uploadResult = files.length
+        ? await uploadFiles(files, { albumId, reload: false, throwOnError: true })
+        : { ok: true, assets: [], uploaded_ids: [] };
       selectedIds.clear();
       activeAlbumId = albumId;
       activeFolder = null;
@@ -529,7 +544,13 @@ import {
       if (els.note) {
         els.note.className = "admin-note success";
         els.note.style.display = "block";
-        els.note.textContent = "Gallery created. Existing selections and new uploads are together and ready to arrange.";
+        const uploadedCount = uploadResult.assets?.length || uploadResult.uploaded_ids?.length || 0;
+        const existingCount = existingIds.length;
+        const parts = ["Gallery created"];
+        if (existingCount) parts.push(existingCount + " existing asset" + (existingCount === 1 ? "" : "s") + " added");
+        if (uploadedCount) parts.push(uploadedCount + " new file" + (uploadedCount === 1 ? "" : "s") + " uploaded");
+        parts.push("ready to arrange");
+        els.note.textContent = parts.join(" · ") + ".";
       }
     } catch (err) {
       if (els.note) {
@@ -708,7 +729,7 @@ import {
       '<button type="button" class="btn small" data-media-batch="clear">Clear</button>',
       '<button type="button" class="btn primary small" data-media-batch="gallery">Create gallery</button>',
       mediaCapabilities.can_materialize_derivatives ? '<button type="button" class="btn small" data-media-batch="optimize">Optimize</button>' : '',
-      '<button type="button" class="btn small" data-media-batch="seo">Apply suggested SEO</button>',
+      '<button type="button" class="btn small" data-media-batch="seo">Review SEO</button>',
       '<label class="media-batch-move"><span class="sr-only">Add selected assets to album</span>',
       '<select class="media-lib-filter" data-media-batch-album>',
       '<option value="">Add to album...</option>',
@@ -1302,6 +1323,85 @@ import {
     if (next) openDrawer(next);
   }
 
+  function renderSeoReview(asset) {
+    const host = document.getElementById("media-drawer-seo-review");
+    const button = document.getElementById("media-drawer-apply-seo");
+    const summary = document.getElementById("media-drawer-seo-summary");
+    if (!host) return;
+
+    const suggestions = asset?.meta?.intelligence?.suggestions || asset?.suggestions || {};
+    const protectedFields = asset?.meta?.intelligence?.protected_fields || {};
+    const fields = [
+      ["title", "Title", asset?.meta?.title || asset?.filename || ""],
+      ["alt_text", "Alt text", asset?.alt_text || ""],
+      ["tags", "Tags", Array.isArray(asset?.meta?.tags) ? asset.meta.tags.join(", ") : ""],
+    ];
+    const rows = [];
+    for (const [key, label, current] of fields) {
+      const suggested = suggestions?.[key];
+      if (suggested == null || suggested === "" || (Array.isArray(suggested) && !suggested.length)) continue;
+      const suggestedText = Array.isArray(suggested) ? suggested.join(", ") : String(suggested);
+      const locked = !!protectedFields?.[key];
+      rows.push(
+        '<label class="media-seo-review-row">' +
+          '<input type="checkbox" data-media-seo-field="' + escapeHtml(key) + '"' + (locked ? ' disabled' : ' checked') + '>' +
+          '<span><strong>' + escapeHtml(label) + '</strong>' +
+          '<small>Current: ' + escapeHtml(current || "—") + '</small>' +
+          '<small>Suggested: ' + escapeHtml(suggestedText) + '</small>' +
+          (locked ? '<small>Protected by existing human metadata</small>' : '') +
+          '</span></label>'
+      );
+    }
+    host.innerHTML = rows.length
+      ? rows.join("")
+      : '<p class="media-empty-state">No reviewable SEO suggestions are available for this asset.</p>';
+    if (button) button.disabled = !rows.length;
+    if (summary) summary.textContent = rows.length
+      ? "Choose exactly which suggested fields to approve. Nothing changes until you apply the checked fields."
+      : "No pending SEO suggestions. Existing metadata remains unchanged.";
+  }
+
+  async function applyApprovedSeo() {
+    if (!selected) return null;
+    const fields = [...document.querySelectorAll("[data-media-seo-field]:checked")]
+      .map((input) => input.dataset.mediaSeoField)
+      .filter(Boolean);
+    if (!fields.length) {
+      if (els.note) {
+        els.note.className = "admin-note";
+        els.note.style.display = "block";
+        els.note.textContent = "Choose at least one suggested field to apply.";
+      }
+      return null;
+    }
+    try {
+      await adminFetch("/api/admin/media/" + encodeURIComponent(selected.id), {
+        method: "PATCH",
+        body: JSON.stringify({ accept_suggestions: fields }),
+      });
+      if (els.note) {
+        els.note.className = "admin-note success";
+        els.note.style.display = "block";
+        els.note.textContent = "Applied " + fields.length + " approved SEO field" + (fields.length === 1 ? "" : "s") + ".";
+      }
+      const selectedId = Number(selected.id);
+      await load();
+      const refreshed = assets.find((asset) => Number(asset.id) === selectedId);
+      if (refreshed) {
+        openDrawer(refreshed);
+        setInspectorTab("seo");
+      }
+      return true;
+    } catch (error) {
+      if (els.note) {
+        els.note.className = "admin-note error";
+        els.note.style.display = "block";
+        els.note.textContent = error.message || "Could not apply approved SEO fields.";
+      }
+      return null;
+    }
+  }
+
   async function runSelectedAssetAction(action) {
     if (!selected) return null;
     try {
@@ -1410,13 +1510,41 @@ import {
         : "No transform provider is configured. Size previews are browser-only and do not create files or paid image variants.";
     }
 
+    renderSeoReview(asset);
+
+    const usage = document.getElementById("media-drawer-usage");
+    if (usage) {
+      const refs = Array.isArray(asset.usage) ? asset.usage : [];
+      usage.innerHTML = refs.length
+        ? refs.map((ref) =>
+            '<div class="media-usage-row"><span>' + escapeHtml(ref.kind || "Reference") + '</span><strong>' +
+            escapeHtml(ref.label || ref.id || "Used") + '</strong></div>'
+          ).join("")
+        : '<span class="media-empty-state">No known gallery or product references.</span>';
+    }
+
     const versions = document.getElementById("media-drawer-versions");
     if (versions) {
-      const rows = IMAGE_PREVIEW_PRESETS.map((preset) =>
-        '<div class="media-version-row"><span>' + escapeHtml(preset.label) + '</span><small>' +
-        escapeHtml(preset.id === "original" ? displayLine(asset) || "Source" : "Preview only · not generated") + '</small></div>'
+      const prepared = Array.isArray(asset.prepared_versions) ? asset.prepared_versions : [];
+      const preparedRows = prepared.map((version) =>
+        '<div class="media-version-row"><span>' + escapeHtml(version.label || version.kind || "Prepared") + '</span><small>' +
+        escapeHtml([
+          version.width && version.height ? version.width + "×" + version.height : "",
+          version.format || "",
+          version.bytes ? fmtBytes(version.bytes) : "",
+          version.provider || "",
+        ].filter(Boolean).join(" · ") || "Prepared version") + '</small></div>'
       );
-      versions.innerHTML = rows.join("");
+      const previewRows = IMAGE_PREVIEW_PRESETS
+        .filter((preset) => preset.id !== "original")
+        .map((preset) =>
+          '<div class="media-version-row is-preview-only"><span>' + escapeHtml(preset.label) + '</span><small>Preview only · not generated</small></div>'
+        );
+      versions.innerHTML =
+        '<div class="media-version-group"><strong>Original</strong><div class="media-version-row"><span>' +
+        escapeHtml(asset.filename || "Source") + '</span><small>' + escapeHtml(displayLine(asset) || "Source") + '</small></div></div>' +
+        (preparedRows.length ? '<div class="media-version-group"><strong>Prepared</strong>' + preparedRows.join("") + '</div>' : '') +
+        '<div class="media-version-group"><strong>Preview only</strong>' + previewRows.join("") + '</div>';
     }
     applyPreviewPreset("original");
 
@@ -1505,7 +1633,7 @@ import {
   }
 
   async function uploadFiles(fileList, options = {}) {
-    const { albumId = activeAlbumId, reload = true } = options;
+    const { albumId = activeAlbumId, reload = true, throwOnError = false } = options;
     const form = new FormData();
     for (const f of fileList) form.append("files", f);
     form.append("prefix", "intake/");
@@ -1532,11 +1660,13 @@ import {
       els.note.style.display = "block";
       if (reload) await load();
       maybePollProcessing();
-      return data;
+      return { ok: true, ...data, uploaded_ids: uploadedIds };
     } catch (err) {
       els.note.textContent = err.message;
       els.note.className = "admin-note error";
       els.note.style.display = "block";
+      if (throwOnError) throw err;
+      return { ok: false, error: err };
     } finally {
       els.dropLabel.textContent = "Drag and drop files here, or click to choose";
     }
@@ -1720,7 +1850,7 @@ import {
     if (drawerPrev) mountListener(drawerPrev, "click", () => navigateDrawer(-1));
     if (drawerNext) mountListener(drawerNext, "click", () => navigateDrawer(1));
     if (drawerOptimize) mountListener(drawerOptimize, "click", () => void runSelectedAssetAction("optimize"));
-    if (drawerApplySeo) mountListener(drawerApplySeo, "click", () => void runSelectedAssetAction("accept_suggestions"));
+    if (drawerApplySeo) mountListener(drawerApplySeo, "click", () => void applyApprovedSeo());
     mountListener(els.drawer, "click", (event) => {
       const preview = event.target.closest("[data-media-preview-preset]");
       if (preview) { applyPreviewPreset(preview.dataset.mediaPreviewPreset); return; }
