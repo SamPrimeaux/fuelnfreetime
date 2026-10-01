@@ -1,3 +1,10 @@
+import {
+  IMAGE_PREVIEW_PRESETS,
+  getImagePreviewPreset,
+  previewStyleForPreset,
+  previewLabel,
+} from "/admin/media-kit/index.js";
+
 /**
  * Provider-neutral virtual-folder media library.
  * Storage/provider identity stays behind the media asset contract; folders, albums,
@@ -28,6 +35,7 @@
 
   let assets = [];
   let counts = { images: 0, videos: 0, products: 0 };
+  let mediaCapabilities = { browser_preview: true, can_materialize_derivatives: false, transform_provider: null };
   let activeFolder = null;
   let selected = null;
   let dragId = null;
@@ -38,6 +46,8 @@
   let sortMode = "newest";
   let albums = [];
   let activeAlbumId = null;
+  let previewPresetId = "original";
+  let inspectorTab = "details";
   let page = 1;
   const pageSize = 48;
   let pagination = {
@@ -228,6 +238,7 @@
       syncedOnce = true;
       assets = data.assets || [];
       counts = data.counts || counts;
+      mediaCapabilities = data.capabilities || mediaCapabilities;
       albums = data.albums || albums;
       pagination = data.pagination || pagination;
       page = pagination.page || page;
@@ -351,6 +362,7 @@
       if (!action) return;
       if (action === "page") selectCurrentPage();
       else if (action === "clear") clearSelection();
+      else if (action === "gallery") openGalleryDialog();
       else if (action === "optimize") void runBatchAction("optimize");
       else if (action === "seo") void runBatchAction("accept_suggestions");
       else if (action === "new-album") openAlbumDialog();
@@ -428,7 +440,7 @@
         (Number(activeAlbumId) === Number(album.id) ? ' is-active' : '') +
         '" data-media-album="' + Number(album.id) + '">' +
         '<span>' + escapeHtml(album.name) + '</span>' +
-        '<small>' + Number(album.asset_count || 0) + ' asset' +
+        '<small>' + (album.meta?.kind === "gallery" ? 'Gallery · ' : '') + Number(album.asset_count || 0) + ' asset' +
         (Number(album.asset_count || 0) === 1 ? '' : 's') +
         '</small></button>'
       ),
@@ -453,6 +465,83 @@
     else els.albumDialog.removeAttribute("open");
   }
 
+  function openGalleryDialog() {
+    if (!els.galleryDialog) return;
+    if (els.galleryName) els.galleryName.value = "";
+    if (els.galleryDescription) els.galleryDescription.value = "";
+    if (els.galleryFiles) els.galleryFiles.value = "";
+    if (els.gallerySelectedCount) els.gallerySelectedCount.textContent = String(selectedIds.size);
+    if (els.galleryFileCount) els.galleryFileCount.textContent = "No new files selected";
+    if (typeof els.galleryDialog.showModal === "function") els.galleryDialog.showModal();
+    else els.galleryDialog.setAttribute("open", "");
+    setTimeout(() => els.galleryName?.focus(), 0);
+  }
+
+  function closeGalleryDialog() {
+    if (!els.galleryDialog) return;
+    if (typeof els.galleryDialog.close === "function") els.galleryDialog.close();
+    else els.galleryDialog.removeAttribute("open");
+  }
+
+  async function addIdsToAlbum(ids, albumId) {
+    const clean = [...new Set((ids || []).map(Number).filter(Number.isInteger))];
+    if (!clean.length || !albumId) return null;
+    return adminFetch("/api/admin/media/batch", {
+      method: "POST",
+      body: JSON.stringify({ ids: clean, action: "album_add", album_id: Number(albumId) }),
+    });
+  }
+
+  async function createGalleryFromDialog() {
+    const name = String(els.galleryName?.value || "").trim();
+    const description = String(els.galleryDescription?.value || "").trim();
+    if (!name) {
+      els.galleryName?.focus();
+      return;
+    }
+    const existingIds = [...selectedIds];
+    const files = els.galleryFiles?.files ? [...els.galleryFiles.files] : [];
+    if (els.galleryCreate) els.galleryCreate.disabled = true;
+    try {
+      const result = await adminFetch("/api/admin/media/albums", {
+        method: "POST",
+        body: JSON.stringify({
+          name,
+          description,
+          kind: "gallery",
+          status: "draft",
+          presentation: { layout: "grid", fit: "cover" },
+        }),
+      });
+      const albumId = Number(result.album?.id || 0);
+      if (!albumId) throw new Error("Gallery was created without an id.");
+      await addIdsToAlbum(existingIds, albumId);
+      if (files.length) await uploadFiles(files, { albumId, reload: false });
+      selectedIds.clear();
+      activeAlbumId = albumId;
+      activeFolder = null;
+      sortMode = "manual";
+      if (els.sortFilter) els.sortFilter.value = sortMode;
+      page = 1;
+      closeGalleryDialog();
+      emitSelection();
+      await load();
+      if (els.note) {
+        els.note.className = "admin-note success";
+        els.note.style.display = "block";
+        els.note.textContent = "Gallery created. Existing selections and new uploads are together and ready to arrange.";
+      }
+    } catch (err) {
+      if (els.note) {
+        els.note.className = "admin-note error";
+        els.note.style.display = "block";
+        els.note.textContent = err.message || "Could not create gallery.";
+      }
+    } finally {
+      if (els.galleryCreate) els.galleryCreate.disabled = false;
+    }
+  }
+
   async function createAlbumFromDialog() {
     const name = String(els.albumName?.value || "").trim();
     const description = String(els.albumDescription?.value || "").trim();
@@ -464,7 +553,7 @@
     try {
       const result = await adminFetch("/api/admin/media/albums", {
         method: "POST",
-        body: JSON.stringify({ name, description }),
+        body: JSON.stringify({ name, description, kind: "album", status: "draft" }),
       });
       const albumId = Number(result.album?.id || 0);
       if (albumId && selectedIds.size) {
@@ -617,7 +706,8 @@
       '<div class="media-batch-actions">',
       '<button type="button" class="btn small" data-media-batch="page">Select this page</button>',
       '<button type="button" class="btn small" data-media-batch="clear">Clear</button>',
-      '<button type="button" class="btn small" data-media-batch="optimize">Optimize</button>',
+      '<button type="button" class="btn primary small" data-media-batch="gallery">Create gallery</button>',
+      mediaCapabilities.can_materialize_derivatives ? '<button type="button" class="btn small" data-media-batch="optimize">Optimize</button>' : '',
       '<button type="button" class="btn small" data-media-batch="seo">Apply suggested SEO</button>',
       '<label class="media-batch-move"><span class="sr-only">Add selected assets to album</span>',
       '<select class="media-lib-filter" data-media-batch-album>',
@@ -1158,10 +1248,97 @@
     });
   }
 
+  function setInspectorTab(tab) {
+    inspectorTab = tab || "details";
+    els.drawer?.querySelectorAll("[data-media-inspector-tab]").forEach((button) => {
+      button.classList.toggle("is-active", button.dataset.mediaInspectorTab === inspectorTab);
+    });
+    els.drawer?.querySelectorAll("[data-media-inspector-panel]").forEach((panel) => {
+      panel.classList.toggle("is-active", panel.dataset.mediaInspectorPanel === inspectorTab);
+    });
+  }
+
+  function renderPreviewPresets(asset) {
+    if (!els.previewPresets) return;
+    if (assetKind(asset) !== "image") {
+      els.previewPresets.innerHTML = "";
+      if (els.previewNote) els.previewNote.hidden = true;
+      return;
+    }
+    if (els.previewNote) els.previewNote.hidden = false;
+    els.previewPresets.innerHTML = IMAGE_PREVIEW_PRESETS.map((preset) => {
+      const active = preset.id === previewPresetId ? " is-active" : "";
+      return '<button type="button" class="media-preview-preset' + active + '" data-media-preview-preset="' +
+        escapeHtml(preset.id) + '"><span>' + escapeHtml(preset.label) + '</span><small>' +
+        escapeHtml(preset.width && preset.height ? preset.width + '×' + preset.height : 'source') + '</small></button>';
+    }).join("");
+  }
+
+  function applyPreviewPreset(id) {
+    if (!selected || assetKind(selected) !== "image") return;
+    previewPresetId = getImagePreviewPreset(id)?.id || "original";
+    const preset = getImagePreviewPreset(previewPresetId);
+    const style = previewStyleForPreset(preset, { focal: selected.meta?.focal_point });
+    const image = els.drawerPreview?.querySelector("img");
+    if (els.drawerPreviewShell) {
+      els.drawerPreviewShell.style.aspectRatio = preset?.aspect_ratio || "auto";
+      els.drawerPreviewShell.classList.toggle("is-original", preset?.id === "original");
+    }
+    if (image) {
+      image.style.objectFit = style.objectFit;
+      image.style.objectPosition = style.objectPosition;
+    }
+    if (els.previewNote) els.previewNote.textContent = preset?.id === "original"
+      ? "Original source preview."
+      : previewLabel(preset) + " browser preview — no derivative file is generated.";
+    renderPreviewPresets(selected);
+  }
+
+  function navigateDrawer(delta) {
+    if (!selected || !assets.length) return;
+    const index = assets.findIndex((asset) => Number(asset.id) === Number(selected.id));
+    if (index < 0) return;
+    const next = assets[index + delta];
+    if (next) openDrawer(next);
+  }
+
+  async function runSelectedAssetAction(action) {
+    if (!selected) return null;
+    try {
+      const result = await adminFetch("/api/admin/media/batch", {
+        method: "POST",
+        body: JSON.stringify({ ids: [Number(selected.id)], action }),
+      });
+      if (els.note) {
+        els.note.className = "admin-note success";
+        els.note.style.display = "block";
+        els.note.textContent = action === "optimize"
+          ? "Prepared this asset for background storefront optimization."
+          : "Applied safe metadata suggestions to this asset.";
+      }
+      await load();
+      const refreshed = assets.find((asset) => Number(asset.id) === Number(selected?.id));
+      if (refreshed) openDrawer(refreshed);
+      return result;
+    } catch (error) {
+      if (els.note) {
+        els.note.className = "admin-note error";
+        els.note.style.display = "block";
+        els.note.textContent = error.message || "Asset action failed.";
+      }
+      return null;
+    }
+  }
+
   function openDrawer(asset) {
     if (!asset) return;
     selected = asset;
+    previewPresetId = "original";
     els.drawerPreview.innerHTML = previewHtml(asset);
+    if (els.drawerTitle) els.drawerTitle.textContent = asset.filename || "Asset";
+    if (els.drawerStatus) els.drawerStatus.textContent = statusLabel(asset).replace("…", "");
+    renderPreviewPresets(asset);
+    setInspectorTab("details");
     els.fieldFilename.value = asset.filename || "";
     els.fieldAlt.value = asset.alt_text || "";
     els.fieldFolder.value = asset.folder || "images";
@@ -1219,6 +1396,30 @@
       });
     }
 
+    const optimizeButton = document.getElementById("media-drawer-optimize");
+    const optimizeNote = document.getElementById("media-drawer-optimize-note");
+    if (optimizeButton) {
+      optimizeButton.disabled = !mediaCapabilities.can_materialize_derivatives;
+      optimizeButton.textContent = mediaCapabilities.can_materialize_derivatives
+        ? "Prepare recommended versions"
+        : "Preview only";
+    }
+    if (optimizeNote) {
+      optimizeNote.textContent = mediaCapabilities.can_materialize_derivatives
+        ? "Preview sizes first. Materialize only the delivery versions you actually need using " + (mediaCapabilities.transform_provider || "the configured transformer") + "."
+        : "No transform provider is configured. Size previews are browser-only and do not create files or paid image variants.";
+    }
+
+    const versions = document.getElementById("media-drawer-versions");
+    if (versions) {
+      const rows = IMAGE_PREVIEW_PRESETS.map((preset) =>
+        '<div class="media-version-row"><span>' + escapeHtml(preset.label) + '</span><small>' +
+        escapeHtml(preset.id === "original" ? displayLine(asset) || "Source" : "Preview only · not generated") + '</small></div>'
+      );
+      versions.innerHTML = rows.join("");
+    }
+    applyPreviewPreset("original");
+
     const is3d = isModel3d(asset);
     els.glbPlacement.hidden = !is3d;
     if (is3d) {
@@ -1237,12 +1438,14 @@
       }
     }
 
+    document.body.classList.add("media-inspector-open");
     els.backdrop.classList.add("is-open");
     els.drawer.classList.add("is-open");
   }
 
   function closeDrawer() {
     selected = null;
+    document.body.classList.remove("media-inspector-open");
     els.backdrop.classList.remove("is-open");
     els.drawer.classList.remove("is-open");
   }
@@ -1264,8 +1467,9 @@
         body: JSON.stringify(payload),
       });
       selected = data.asset;
-      closeDrawer();
       await load();
+      const refreshed = assets.find((asset) => Number(asset.id) === Number(data.asset?.id)) || data.asset;
+      openDrawer(refreshed);
     } catch (err) {
       alert(err.message);
     }
@@ -1290,7 +1494,7 @@
 
   async function deleteSelected() {
     if (!selected) return;
-    if (!confirm("Delete this asset permanently? Removes the D1 row and R2 object.")) return;
+    if (!confirm("Delete this asset permanently? This removes the asset record and asks the configured source provider to remove its source object when supported.")) return;
     try {
       await adminFetch(`/api/admin/media/${selected.id}`, { method: "DELETE" });
       closeDrawer();
@@ -1300,7 +1504,8 @@
     }
   }
 
-  async function uploadFiles(fileList) {
+  async function uploadFiles(fileList, options = {}) {
+    const { albumId = activeAlbumId, reload = true } = options;
     const form = new FormData();
     for (const f of fileList) form.append("files", f);
     form.append("prefix", "intake/");
@@ -1317,14 +1522,17 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Upload failed");
       const n = data.assets?.length || 0;
+      const uploadedIds = (data.assets || []).map((asset) => Number(asset.id)).filter(Number.isInteger);
+      if (albumId && uploadedIds.length) await addIdsToAlbum(uploadedIds, albumId);
       const processing = (data.assets || []).some((a) => a.status === "processing");
       els.note.textContent = processing
         ? `Uploaded ${n} file(s). Processing…`
         : `Uploaded ${n} file(s).`;
       els.note.className = "admin-note success";
       els.note.style.display = "block";
-      await load();
+      if (reload) await load();
       maybePollProcessing();
+      return data;
     } catch (err) {
       els.note.textContent = err.message;
       els.note.className = "admin-note error";
@@ -1377,6 +1585,16 @@
     els.albumDescription = document.getElementById("media-album-description");
     els.albumCancel = document.getElementById("media-album-cancel");
     els.albumCreate = document.getElementById("media-album-create");
+    els.galleryNew = document.getElementById("media-gallery-new");
+    els.galleryDialog = document.getElementById("media-gallery-dialog");
+    els.galleryForm = document.getElementById("media-gallery-form");
+    els.galleryName = document.getElementById("media-gallery-name");
+    els.galleryDescription = document.getElementById("media-gallery-description");
+    els.galleryFiles = document.getElementById("media-gallery-files");
+    els.gallerySelectedCount = document.getElementById("media-gallery-selected-count");
+    els.galleryFileCount = document.getElementById("media-gallery-file-count");
+    els.galleryCancel = document.getElementById("media-gallery-cancel");
+    els.galleryCreate = document.getElementById("media-gallery-create");
     els.grid = document.getElementById("media-grid");
     els.search = document.getElementById("media-search");
     els.kindFilter = document.getElementById("media-kind-filter");
@@ -1393,6 +1611,11 @@
     els.backdrop = document.getElementById("media-drawer-backdrop");
     els.drawer = document.getElementById("media-drawer");
     els.drawerPreview = document.getElementById("media-drawer-preview");
+    els.drawerPreviewShell = document.getElementById("media-drawer-preview-shell");
+    els.previewPresets = document.getElementById("media-preview-presets");
+    els.previewNote = document.getElementById("media-preview-note");
+    els.drawerTitle = document.getElementById("media-drawer-title");
+    els.drawerStatus = document.getElementById("media-drawer-status");
     els.fieldFilename = document.getElementById("media-field-filename");
     els.fieldAlt = document.getElementById("media-field-alt");
     els.fieldFolder = document.getElementById("media-field-folder");
@@ -1442,6 +1665,19 @@
       event.preventDefault();
       void createAlbumFromDialog();
     });
+    if (els.galleryNew) mountListener(els.galleryNew, "click", openGalleryDialog);
+    if (els.galleryCancel) mountListener(els.galleryCancel, "click", closeGalleryDialog);
+    if (els.galleryCreate) mountListener(els.galleryCreate, "click", () => void createGalleryFromDialog());
+    if (els.galleryForm) mountListener(els.galleryForm, "submit", (event) => {
+      event.preventDefault();
+      void createGalleryFromDialog();
+    });
+    if (els.galleryFiles) mountListener(els.galleryFiles, "change", () => {
+      const count = els.galleryFiles.files?.length || 0;
+      if (els.galleryFileCount) els.galleryFileCount.textContent = count
+        ? count + " new file" + (count === 1 ? "" : "s") + " selected"
+        : "No new files selected";
+    });
 
     if (els.search) mountListener(els.search, "input", (event) => {
       searchQuery = event.target.value || "";
@@ -1472,11 +1708,25 @@
     const drawerDownload = document.getElementById("media-drawer-download");
     const drawerSave = document.getElementById("media-drawer-save");
     const drawerDelete = document.getElementById("media-drawer-delete");
+    const drawerPrev = document.getElementById("media-drawer-prev");
+    const drawerNext = document.getElementById("media-drawer-next");
+    const drawerOptimize = document.getElementById("media-drawer-optimize");
+    const drawerApplySeo = document.getElementById("media-drawer-apply-seo");
     if (drawerClose) mountListener(drawerClose, "click", closeDrawer);
     if (drawerOpen) mountListener(drawerOpen, "click", () => openSelectedOriginal(false));
     if (drawerDownload) mountListener(drawerDownload, "click", () => openSelectedOriginal(true));
     if (drawerSave) mountListener(drawerSave, "click", saveDrawer);
     if (drawerDelete) mountListener(drawerDelete, "click", deleteSelected);
+    if (drawerPrev) mountListener(drawerPrev, "click", () => navigateDrawer(-1));
+    if (drawerNext) mountListener(drawerNext, "click", () => navigateDrawer(1));
+    if (drawerOptimize) mountListener(drawerOptimize, "click", () => void runSelectedAssetAction("optimize"));
+    if (drawerApplySeo) mountListener(drawerApplySeo, "click", () => void runSelectedAssetAction("accept_suggestions"));
+    mountListener(els.drawer, "click", (event) => {
+      const preview = event.target.closest("[data-media-preview-preset]");
+      if (preview) { applyPreviewPreset(preview.dataset.mediaPreviewPreset); return; }
+      const tab = event.target.closest("[data-media-inspector-tab]");
+      if (tab) setInspectorTab(tab.dataset.mediaInspectorTab);
+    });
     mountListener(els.backdrop, "click", closeDrawer);
     bindDelegatedLibraryInteractions();
 
@@ -1492,3 +1742,6 @@
     return true;
   };
 })();
+
+export const initMediaLibrary = window.initMediaLibrary;
+export const destroyMediaLibrary = window.destroyMediaLibrary;

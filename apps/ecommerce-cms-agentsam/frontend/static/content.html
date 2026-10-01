@@ -12,7 +12,6 @@
 </head>
 <body>
 <script src="/admin/js/shell.js"></script>
-<script src="/admin/js/media-library.js"></script>
 <script src="/admin/js/brand-workspace.js"></script>
 <script>
 renderShell("/admin/content", `
@@ -50,7 +49,8 @@ renderShell("/admin/content", `
           <option value="manual">Manual order</option>
         </select>
         <input type="file" id="media-file-input" multiple accept="image/*,video/*,.glb,.usdz">
-        <button type="button" class="btn primary small" id="media-upload-btn">Upload</button>
+        <button type="button" class="btn small" id="media-upload-btn">Upload</button>
+        <button type="button" class="btn primary small" id="media-gallery-new">+ Create gallery</button>
       </div>
     </div>
 
@@ -83,6 +83,36 @@ renderShell("/admin/content", `
         <div class="media-album-form-actions">
           <button type="button" class="btn small" id="media-album-cancel">Cancel</button>
           <button type="button" class="btn primary small" id="media-album-create">Create album</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="media-album-dialog media-gallery-dialog" id="media-gallery-dialog">
+      <form method="dialog" class="media-album-form media-gallery-form" id="media-gallery-form">
+        <div>
+          <p class="media-album-kicker">Gallery builder</p>
+          <h2>Create gallery</h2>
+          <p>Combine existing library selections with new device uploads. New files are added to this gallery automatically.</p>
+        </div>
+        <label>
+          Gallery name
+          <input type="text" id="media-gallery-name" maxlength="120" required placeholder="Dirt Bike Launch">
+        </label>
+        <label>
+          Description
+          <textarea id="media-gallery-description" rows="3" maxlength="1000" placeholder="Launch gallery, product story, campaign selects..."></textarea>
+        </label>
+        <div class="media-gallery-source-summary">
+          <div><strong id="media-gallery-selected-count">0</strong><span> existing selected</span></div>
+          <label class="media-gallery-device-picker">
+            <span>Upload from device</span>
+            <input type="file" id="media-gallery-files" multiple accept="image/*,video/*,.glb,.usdz">
+          </label>
+          <div class="media-gallery-file-count" id="media-gallery-file-count">No new files selected</div>
+        </div>
+        <div class="media-album-form-actions">
+          <button type="button" class="btn small" id="media-gallery-cancel">Cancel</button>
+          <button type="button" class="btn primary small" id="media-gallery-create">Create gallery</button>
         </div>
       </form>
     </dialog>
@@ -154,11 +184,30 @@ renderShell("/admin/content", `
   <div class="media-drawer-backdrop" id="media-drawer-backdrop"></div>
   <aside class="media-drawer" id="media-drawer" aria-label="Asset details">
     <div class="media-drawer-head">
-      <strong>Asset</strong>
-      <button type="button" class="btn ghost small" id="media-drawer-close">Close</button>
+      <div class="media-drawer-title">
+        <strong id="media-drawer-title">Asset</strong>
+        <span class="media-status-pill" id="media-drawer-status">Ready</span>
+      </div>
+      <div class="media-drawer-nav">
+        <button type="button" class="btn ghost small" id="media-drawer-prev" aria-label="Previous asset">‹</button>
+        <button type="button" class="btn ghost small" id="media-drawer-next" aria-label="Next asset">›</button>
+        <button type="button" class="btn ghost small" id="media-drawer-close">Close</button>
+      </div>
     </div>
     <div class="media-drawer-body">
-      <div class="media-drawer-preview" id="media-drawer-preview"></div>
+      <div class="media-drawer-preview-shell" id="media-drawer-preview-shell">
+        <div class="media-drawer-preview" id="media-drawer-preview"></div>
+      </div>
+      <div class="media-preview-presets" id="media-preview-presets" aria-label="Preview sizes"></div>
+      <p class="media-preview-note" id="media-preview-note">Preview only — no derivative file is generated.</p>
+      <div class="media-inspector-tabs" role="tablist" aria-label="Asset inspector">
+        <button type="button" class="is-active" data-media-inspector-tab="details">Details</button>
+        <button type="button" data-media-inspector-tab="optimize">Optimize</button>
+        <button type="button" data-media-inspector-tab="seo">SEO</button>
+        <button type="button" data-media-inspector-tab="usage">Usage</button>
+        <button type="button" data-media-inspector-tab="versions">Versions</button>
+      </div>
+      <div class="media-inspector-panel is-active" data-media-inspector-panel="details">
       <div class="media-drawer-field">
         <label for="media-field-filename">Filename</label>
         <input type="text" id="media-field-filename" autocomplete="off">
@@ -214,6 +263,33 @@ renderShell("/admin/content", `
         <div>Uploaded: <span id="media-meta-date">—</span></div>
         <div>Source: <code id="media-meta-key" style="font-size:11px;word-break:break-all;">—</code></div>
       </div>
+      </div>
+      <div class="media-inspector-panel" data-media-inspector-panel="optimize">
+        <div class="media-inspector-card">
+          <strong>Prepare for storefront</strong>
+          <p id="media-drawer-optimize-note">Preview sizes first. Materialize only the delivery versions you actually need.</p>
+          <button type="button" class="btn primary small" id="media-drawer-optimize">Prepare recommended versions</button>
+        </div>
+      </div>
+      <div class="media-inspector-panel" data-media-inspector-panel="seo">
+        <div class="media-inspector-card">
+          <strong>SEO & accessibility</strong>
+          <p id="media-drawer-seo-summary">Review filename, alt text, and available suggestions before applying changes.</p>
+          <button type="button" class="btn small" id="media-drawer-apply-seo">Apply safe suggestions</button>
+        </div>
+      </div>
+      <div class="media-inspector-panel" data-media-inspector-panel="usage">
+        <div class="media-inspector-card">
+          <strong>Where it is used</strong>
+          <p id="media-drawer-usage">Usage links will appear here as CMS sections, products, galleries, and campaigns reference this asset.</p>
+        </div>
+      </div>
+      <div class="media-inspector-panel" data-media-inspector-panel="versions">
+        <div class="media-inspector-card">
+          <strong>Versions</strong>
+          <div id="media-drawer-versions"></div>
+        </div>
+      </div>
     </div>
     <div class="media-drawer-foot">
       <div class="media-drawer-foot-links">
@@ -226,7 +302,7 @@ renderShell("/admin/content", `
       </div>
     </div>
   </aside>
-`, { onReady: () => { initMediaLibrary(); initBrandWorkspace(); } });
+`, { onReady: async () => { const media = await import("/admin/js/media-library.js"); media.initMediaLibrary(); initBrandWorkspace(); } });
 </script>
 </body>
 </html>

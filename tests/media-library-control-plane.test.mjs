@@ -311,6 +311,8 @@ test("media albums curate selected assets without moving the originals", async (
   );
   assert.equal(created.ok, true);
   assert.equal(created.album.name, "Dirt Bike Launch");
+  assert.equal(created.album.meta.kind, "album");
+  assert.equal(created.album.meta.status, "draft");
   const albumId = Number(created.album.id);
   assert.ok(albumId > 0);
 
@@ -377,6 +379,33 @@ test("media albums curate selected assets without moving the originals", async (
     db.prepare("SELECT folder FROM media_assets WHERE id=1").get().folder,
     "images"
   );
+});
+
+
+test("gallery collections persist portable kind and presentation metadata", async () => {
+  const { env } = fixture(3);
+  const created = await responseJson(
+    await createMediaAlbum(
+      new Request("https://example.test/api/admin/media/albums", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: "Launch Gallery",
+          description: "Existing plus device uploads",
+          kind: "gallery",
+          status: "draft",
+          presentation: { layout: "grid", fit: "cover" },
+        }),
+      }),
+      env
+    )
+  );
+  assert.equal(created.album.meta.kind, "gallery");
+  assert.equal(created.album.meta.status, "draft");
+  assert.deepEqual(created.album.meta.presentation, { layout: "grid", fit: "cover" });
+
+  const listed = await responseJson(await listMediaAlbums(new Request("https://example.test/api/admin/media/albums"), env));
+  assert.equal(listed.albums[0].meta.kind, "gallery");
 });
 
 test("album reorder updates membership positions without touching base media order", async () => {

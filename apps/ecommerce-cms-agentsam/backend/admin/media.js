@@ -23,8 +23,26 @@ import {
   processAssetJobById,
 } from "../assets/product-optimize.js";
 import { mediaSourceFromRow } from "../media/provider-contract.js";
+import { collectionMetaFromDraft } from "../media/collection-contract.js";
 
 const MEDIA_FOLDERS = ["images", "videos", "products"];
+
+export function mediaCapabilitySummary(env = {}) {
+  const sourceProvider = String(
+    env.MEDIA_SOURCE_PROVIDER || (env.WEBSITE_ASSETS ? "r2" : "external")
+  );
+  const transformProvider = env.MEDIA_TRANSFORM_PROVIDER
+    ? String(env.MEDIA_TRANSFORM_PROVIDER)
+    : env.IMAGES
+      ? "cf_images"
+      : null;
+  return {
+    source_provider: sourceProvider,
+    transform_provider: transformProvider,
+    browser_preview: true,
+    can_materialize_derivatives: Boolean(transformProvider),
+  };
+}
 
 const VIDEO_EXTS = new Set(["mp4", "mov", "webm", "m4v", "glb", "usdz"]);
 const IMAGE_EXTS = new Set(["jpg", "jpeg", "png", "gif", "webp", "svg", "avif"]);
@@ -568,6 +586,7 @@ async function listMediaAlbumRows(env) {
     ...row,
     id: Number(row.id),
     asset_count: Number(row.asset_count || 0),
+    meta: parseMeta(row.meta_json) || {},
     cover_media_asset_id: row.cover_media_asset_id == null ? null : Number(row.cover_media_asset_id),
     resolved_cover_media_asset_id:
       row.resolved_cover_media_asset_id == null ? null : Number(row.resolved_cover_media_asset_id),
@@ -584,16 +603,32 @@ export async function createMediaAlbum(request, env) {
   const description = String(body?.description || "").trim().slice(0, 1000);
   if (!name) return json({ error: "name required" }, { status: 400 });
 
+  let meta;
+  try {
+    meta = collectionMetaFromDraft({
+      name,
+      description,
+      kind: body?.kind || "album",
+      status: body?.status || "draft",
+      presentation: body?.presentation || {},
+    });
+  } catch (error) {
+    return json({ error: String(error?.message || error) }, { status: 400 });
+  }
+
   const slug = await availableAlbumSlug(env, name);
   const sql =
     "INSERT INTO media_albums (slug,name,description,meta_json,created_at,updated_at)" +
-    " VALUES (?,?,?,NULL,datetime('now'),datetime('now'))";
-  const result = await env.DB.prepare(sql).bind(slug, name, description || null).run();
+    " VALUES (?,?,?,?,datetime('now'),datetime('now'))";
+  const result = await env.DB.prepare(sql).bind(slug, name, description || null, JSON.stringify(meta)).run();
   const id = Number(result?.meta?.last_row_id || 0);
   const album = id
     ? await env.DB.prepare("SELECT * FROM media_albums WHERE id = ?").bind(id).first()
     : await env.DB.prepare("SELECT * FROM media_albums WHERE slug = ?").bind(slug).first();
-  return json({ ok: true, album: { ...album, id: Number(album.id), asset_count: 0 } }, { status: 201 });
+  return json({
+    ok: true,
+    album: { ...album, id: Number(album.id), asset_count: 0, meta: parseMeta(album.meta_json) || {} },
+  }, { status: 201 });
 }
 
 export async function updateMediaAlbum(request, env, id) {
@@ -773,6 +808,7 @@ export async function listMedia(request, env, url) {
       has_next: safePage < pages,
     },
     filters: { q, kind, status },
+    capabilities: mediaCapabilitySummary(env),
   });
 }
 
