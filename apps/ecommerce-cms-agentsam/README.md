@@ -1,6 +1,28 @@
 # AgentSam Ecommerce + CMS
 
-Fuel & Free Time is the working reference installation. This app owns the shared navigation renderer and contextual inspector. React mounts content through a portal into the same shell used by CMS, product editor and media pages. The public shell and inspector are generated mirrors.
+Fuel & Free Time is customer #1 and the first paying purchaser of
+@inneranimalmedia/ecommerce-cms-agentsam. It is not a donor project.
+
+This F&FT repository is the first production customer installation of the
+product. The app owns the shared navigation renderer and contextual inspector.
+React mounts content through a portal into the same shell used by CMS, product
+editor and media pages. The public shell and inspector are generated mirrors.
+
+Customer-specific brand identity, products, media, campaigns, credentials and
+provider selections belong to the F&FT installation. Reusable application
+capabilities belong to @inneranimalmedia/ecommerce-cms-agentsam.
+
+## Theme packages
+
+The current customer storefront uses the local
+@inneranimalmedia/heuristic-theme. Additional themes are additive packages,
+not replacements for customer data.
+
+The first packaged alternate theme is @inneranimalmedia/revise-theme, backed by
+@inneranimalmedia/site-contracts and
+@inneranimalmedia/section-library. The ecommerce CMS is responsible for theme
+registration/selection and for passing normalized customer content into the
+selected theme.
 
 App-local commands:
 

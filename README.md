@@ -2,6 +2,30 @@
 
 Official Cloudflare Workers site and admin dashboard for **Fuel & Free Time** — storefront, D1/R2-backed CMS, product catalog, growth campaigns, discounts, analytics, and Agent Sam on a single Worker.
 
+## Product installation relationship
+
+Fuel & Free Time is **customer #1 and the first paying purchaser** of
+@inneranimalmedia/ecommerce-cms-agentsam.
+
+This repository is a customer installation of that product, not a donor project.
+The production capabilities proven here are being hardened into the reusable
+ecommerce/CMS package, while Fuel & Free Time branding, products, campaigns,
+media, credentials, provider selections, storefront content and business data
+remain customer-specific installation state.
+
+The theme model is intentionally additive:
+
+- the existing local @inneranimalmedia/heuristic-theme remains a valid installed
+  customer theme;
+- @inneranimalmedia/revise-theme is an independently published alternate theme;
+- shared @inneranimalmedia/site-contracts and
+  @inneranimalmedia/section-library provide portable contracts/renderers;
+- the ecommerce CMS host owns which theme/preset/page composition is active.
+
+Installing a new theme must not replace customer content or mutate another theme.
+The goal is for this same product package to be installable for customer #2,
+customer #3, and beyond with different branding/data/theme choices.
+
 **Production:** https://fuelnfreetime.com  
 **Workers.dev:** https://fuelnfreetime.meauxbility.workers.dev
 
