@@ -1,0 +1,19 @@
+{
+  "type": "site-header",
+  "scope": "global",
+  "editable": true,
+  "data": {
+    "logo": {
+      "assetKey": "brand.logo"
+    },
+    "navigation": {
+      "source": "site.navigation.primary"
+    }
+  },
+  "behavior": {
+    "fixed": true,
+    "mobileMenu": true,
+    "hideOnDownScroll": true,
+    "activeRoute": true
+  }
+}

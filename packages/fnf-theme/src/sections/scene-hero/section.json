@@ -1,0 +1,41 @@
+{
+  "type": "scene-hero",
+  "variant": "fnf-home",
+  "layout": {
+    "width": "full",
+    "bleed": "background",
+    "spacing": "none"
+  },
+  "data": {
+    "eyebrow": "TIME IS THE",
+    "heading": "REAL HORSEPOWER",
+    "description": "For those who've earned their freedom \u2014 on two wheels, four wheels, water, or in the garage.",
+    "actions": [
+      {
+        "label": "Explore More",
+        "href": "/shop",
+        "style": "primary"
+      }
+    ],
+    "scene": {
+      "assetKey": "home.hero.model",
+      "posterAssetKey": "home.hero.poster",
+      "adapter": "model-viewer",
+      "camera": {
+        "azimuth": 0,
+        "polar": 75,
+        "radiusPercent": 110,
+        "fieldOfView": 35
+      },
+      "scroll": {
+        "enabled": true,
+        "orbitDegrees": 42,
+        "liftPx": 18
+      }
+    }
+  },
+  "motion": {
+    "entrance": "stagger-up",
+    "reducedMotion": "static"
+  }
+}

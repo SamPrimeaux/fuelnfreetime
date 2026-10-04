@@ -1,0 +1,23 @@
+{
+  "type": "countdown-banner",
+  "variant": "fnf-light",
+  "layout": {
+    "width": "content",
+    "bleed": "background",
+    "spacing": "lg"
+  },
+  "data": {
+    "heading": "The Clock is Ticking",
+    "eyebrow": null,
+    "targetAt": null,
+    "targetLabel": null,
+    "message": null,
+    "expiredMessage": "We're live.",
+    "units": [
+      "days",
+      "hours",
+      "minutes",
+      "seconds"
+    ]
+  }
+}

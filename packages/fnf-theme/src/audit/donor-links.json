@@ -1,0 +1,92 @@
+[
+  {
+    "kind": "font",
+    "url": "https://fonts.googleapis.com",
+    "action": "external dependency; keep only through typography loader policy"
+  },
+  {
+    "kind": "font",
+    "url": "https://fonts.gstatic.com",
+    "action": "external dependency"
+  },
+  {
+    "kind": "font-css",
+    "url": "https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&family=Space+Mono:wght@400;700&display=swap",
+    "action": "source typography evidence"
+  },
+  {
+    "kind": "runtime",
+    "url": "https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js",
+    "action": "remove hardcoded CDN runtime; host/runtime adapter should supply model-viewer"
+  },
+  {
+    "kind": "model",
+    "url": "https://cdn.shopify.com/3d/models/a86e19579a1c90eb/Emblem_of_Elegance_0822010524_texture.glb",
+    "action": "REPLACE; current FNF site config points to R2/custom-domain GLB"
+  },
+  {
+    "kind": "image",
+    "url": "https://cdn.shopify.com/s/files/1/0666/4060/9411/files/fandft-clear-background.png?v=1755572638",
+    "action": "REPLACE in actual FNF site config with Cloudflare Images logo"
+  },
+  {
+    "kind": "image",
+    "url": "https://cdn.shopify.com/s/files/1/0666/4060/9411/files/50C9CEB5-3EA4-4A67-9CB3-9D25FFDA72BF.png?v=1756307782",
+    "action": "legacy donor asset; migrate/resolve via site asset registry"
+  },
+  {
+    "kind": "image",
+    "url": "https://cdn.shopify.com/s/files/1/0666/4060/9411/files/high_octane.jpg?v=1756307558",
+    "action": "legacy donor collection asset; resolve from catalog/media registry"
+  },
+  {
+    "kind": "image",
+    "url": "https://cdn.shopify.com/s/files/1/0666/4060/9411/files/Masters.png?v=1756307485",
+    "action": "legacy donor collection asset; resolve from catalog/media registry"
+  },
+  {
+    "kind": "image",
+    "url": "https://cdn.shopify.com/s/files/1/0666/4060/9411/files/Gone_Fishing.png?v=1756307634",
+    "action": "legacy donor collection asset; resolve from catalog/media registry"
+  },
+  {
+    "kind": "route",
+    "url": "https://fuelnfreetime.com/collections/high-octane-performance-gear",
+    "action": "convert to collection route/data binding"
+  },
+  {
+    "kind": "route",
+    "url": "https://fuelnfreetime.com/collections/masters",
+    "action": "convert to collection route/data binding"
+  },
+  {
+    "kind": "route",
+    "url": "https://fuelnfreetime.com/collections/essentials",
+    "action": "convert to collection route/data binding"
+  },
+  {
+    "kind": "route",
+    "url": "https://fuelnfreetime.com/pages/shop",
+    "action": "normalize to site route config"
+  },
+  {
+    "kind": "route",
+    "url": "https://fuelnfreetime.com/pages/community",
+    "action": "normalize to site route config"
+  },
+  {
+    "kind": "route",
+    "url": "https://fuelnfreetime.com/pages/collab",
+    "action": "normalize to site route config"
+  },
+  {
+    "kind": "route",
+    "url": "https://fuelnfreetime.com/pages/contact",
+    "action": "normalize to site route config"
+  },
+  {
+    "kind": "route",
+    "url": "https://fuelnfreetime.com/pages/data-sharing-opt-out",
+    "action": "normalize to site route config"
+  }
+]

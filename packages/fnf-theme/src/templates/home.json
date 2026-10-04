@@ -1,0 +1,36 @@
+{
+  "id": "fnf-home",
+  "type": "page-template",
+  "theme": "fnf",
+  "shell": "fnf-site",
+  "sections": [
+    {
+      "type": "scene-hero",
+      "preset": "fnf-home"
+    },
+    {
+      "type": "media-copy-sequence",
+      "preset": "fnf-manifesto"
+    },
+    {
+      "type": "collection-list",
+      "preset": "fnf-overlay-grid"
+    },
+    {
+      "type": "feature-card-grid",
+      "preset": "fnf-values"
+    },
+    {
+      "type": "feature-card-grid",
+      "preset": "fnf-community"
+    },
+    {
+      "type": "countdown-banner",
+      "preset": "fnf-light"
+    },
+    {
+      "type": "cta-band",
+      "preset": "fnf-newsletter"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "type": "collection-list",
+  "variant": "fnf-overlay",
+  "layout": {
+    "width": "max",
+    "bleed": "background",
+    "spacing": "lg"
+  },
+  "data": {
+    "eyebrow": "Limited Drops",
+    "heading": "Fuel Your Style",
+    "layout": "grid",
+    "source": {
+      "type": "collections",
+      "items": [
+        "high-octane",
+        "masters",
+        "essentials"
+      ]
+    }
+  }
+}

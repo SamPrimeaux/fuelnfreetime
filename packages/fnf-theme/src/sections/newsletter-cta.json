@@ -1,0 +1,19 @@
+{
+  "type": "cta-band",
+  "variant": "fnf-newsletter",
+  "layout": {
+    "width": "reading",
+    "bleed": "background",
+    "spacing": "md"
+  },
+  "data": {
+    "heading": "Stay Fueled Up",
+    "description": "Get first access to drops, event invites, and the stories that matter.",
+    "form": {
+      "type": "newsletter",
+      "emailPlaceholder": "Enter your email",
+      "submitLabel": "Join",
+      "actionSource": "site.newsletter.action"
+    }
+  }
+}

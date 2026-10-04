@@ -1,0 +1,37 @@
+.layout-shell { width: 100%; min-width: 0; }
+.layout-container,
+.layout-wide,
+.layout-content,
+.layout-reading {
+  width: min(calc(100% - (var(--layout-gutter) * 2)), var(--layout-width));
+  margin-inline: auto;
+  min-width: 0;
+}
+.layout-container { --layout-width: var(--layout-max); }
+.layout-wide { --layout-width: var(--layout-wide); }
+.layout-content { --layout-width: var(--layout-content); }
+.layout-reading { --layout-width: var(--layout-reading); }
+
+.layout-full { width: 100%; min-width: 0; }
+.section-space { padding-block: var(--section-y-md); }
+
+.safe-inline {
+  padding-left: max(var(--layout-gutter), env(safe-area-inset-left));
+  padding-right: max(var(--layout-gutter), env(safe-area-inset-right));
+}
+.safe-bottom {
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+
+button, a, input, select, textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+button, [role="button"], .touch-target {
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  touch-action: manipulation;
+}
+img, video, canvas, model-viewer { max-width: 100%; }
+@media (max-width: 767px) {
+  input, select, textarea { font-size: max(16px, 1rem); }
+}
