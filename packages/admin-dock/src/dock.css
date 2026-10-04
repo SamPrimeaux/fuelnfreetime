@@ -18,7 +18,7 @@
   --admin-dock-ink: #1a1a1a;
   --admin-dock-muted: #6b6b6b;
   --admin-dock-accent: #7c3aed;
-  --admin-dock-accent-soft: rgba(124, 58, 237, 0.12);
+  --admin-dock-accent-soft: color-mix(in srgb, var(--admin-dock-accent) 12%, transparent);
   --admin-dock-warn: #8a5a00;
   --admin-dock-z: 120;
 }
