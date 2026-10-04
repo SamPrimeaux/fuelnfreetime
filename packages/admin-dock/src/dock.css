@@ -68,8 +68,17 @@ body.agentsam-open .admin-dock {
   pointer-events: none;
 }
 
+.admin-dock__veil {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: rgba(0, 0, 0, 0.06);
+  pointer-events: none;
+}
+
 .admin-dock__main {
   position: relative;
+  z-index: 1;
   flex: 1;
   min-width: 0;
   pointer-events: auto;
