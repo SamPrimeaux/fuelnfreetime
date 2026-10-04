@@ -39,6 +39,26 @@ If a feature does not fit an existing contract, **update the contract first** (o
 
 ---
 
+## Brand, site, and launch operating layer
+
+The runtime contracts above remain authoritative for implementation behavior.
+
+For cross-domain brand/site planning and launch work, use:
+
+| Purpose | Document |
+|---|---|
+| Canonical Fuel & Free Time brand truth | [docs/brand/business-brand-dossier.md](docs/brand/business-brand-dossier.md) |
+| Operating-doc authority and state model | [docs/operating/README.md](docs/operating/README.md) |
+| Current site/brand launch operating brief | [docs/operating/FNF-SITE-OPERATING-BRIEF-2026-10-01.md](docs/operating/FNF-SITE-OPERATING-BRIEF-2026-10-01.md) |
+| Public page + admin surface contracts | [docs/operating/FNF-PAGE-ADMIN-CONTRACTS-2026-10-01.md](docs/operating/FNF-PAGE-ADMIN-CONTRACTS-2026-10-01.md) |
+| Evidence-backed launch/audit ledger | [docs/operating/FNF-AUDIT-LEDGER-2026-10-01.md](docs/operating/FNF-AUDIT-LEDGER-2026-10-01.md) |
+| AgentSam CLI/machine automation alignment | [docs/operating/FNF-AGENTSAM-AUTOMATION-MAP-2026-10-01.md](docs/operating/FNF-AGENTSAM-AUTOMATION-MAP-2026-10-01.md) |
+| Reusable non-client planning template | [docs/templates/UNIVERSAL-BRAND-SITE-OPERATING-BRIEF.md](docs/templates/UNIVERSAL-BRAND-SITE-OPERATING-BRIEF.md) |
+
+Do **not** create a second brand source of truth. The business/brand dossier already owns CONFIRMED / ASPIRATIONAL / TBD brand decisions. The operating layer should reference it, identify evidence and outcomes, and keep future productization from blocking client launch work.
+
+---
+
 ## Key source files
 
 | Area | Path |
