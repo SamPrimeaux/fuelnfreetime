@@ -1,0 +1,20 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "fnf-cloudflare-runtime",
+  "name": "fnf-cloudflare-runtime",
+  "description": "Fuel & Free Time Cloudflare Worker runtime \u2014 bindings, deploy, AgentSam bridge, D1/R2/KV/DO/Workers AI. Always apply for platform and deploy questions on this repo.",
+  "icon": "skill",
+  "slash": {
+    "suggested": "/fnf-cloudflare-runtime"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  }
+}
