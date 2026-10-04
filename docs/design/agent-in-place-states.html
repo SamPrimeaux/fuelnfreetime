@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent in place: four states (mock)</title>
+<style>
+:root{--surface-0:#f4f4f2;--surface-1:#f1efe8;--surface-2:#fff;--border:rgba(0,0,0,.12);--border-strong:rgba(0,0,0,.25);--border-stronger:rgba(0,0,0,.4);--text-primary:#1a1a1a;--text-secondary:#5f5e5a;--text-muted:#8a8984;--text-accent:#534ab7;--text-warning:#854f0b;--bg-accent:#eeedfe;--border-accent:#7f77dd}
+*{box-sizing:border-box}body{margin:0;padding:24px;background:var(--surface-0);color:var(--text-primary);font:14px/1.5 Inter,system-ui,sans-serif}
+h1{font-size:18px;font-weight:500;margin:0 0 4px}.lead{color:var(--text-secondary);margin:0 0 20px;max-width:640px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,230px));gap:18px}
+.frame-wrap{background:var(--surface-1);border-radius:12px;padding:10px}
+.frame{height:250px;border:.5px solid var(--border-strong);border-radius:14px;background:var(--surface-2);overflow:hidden;position:relative}
+.bar{height:22px;background:#161616}
+.t{font-size:13px;font-weight:500;margin:8px 0 0}.d{font-size:12px;color:var(--text-secondary);margin:2px 0 0}
+svg{display:block}
+</style>
+</head>
+<body>
+<h1>Agent in place: four states</h1>
+<p class="lead">Mock for the dock and agent UX polish pass. The agent works while the page stays visible; full-screen chat is something you choose. See docs/FNF-ADMIN-DOCK-AND-AGENT-UX-POLISH-HANDOFF-2026-10-04.md.</p>
+<div class="grid">
+
+<div><div class="frame-wrap"><div class="frame" style="display:flex;flex-direction:column">
+<div class="bar"></div>
+<div style="padding:8px 10px;border-bottom:.5px solid var(--border);font-size:11px;font-weight:500;display:flex;justify-content:space-between"><span>AgentSam</span><span aria-hidden="true">x</span></div>
+<div style="padding:10px;display:flex;flex-direction:column;gap:6px;flex:1">
+<div style="align-self:flex-end;background:#1a1a1a;color:#fff;font-size:11px;padding:6px 8px;border-radius:10px;max-width:80%">Make me a garage tee</div>
+<div style="border:.5px solid var(--border);font-size:11px;padding:6px 8px;border-radius:10px;color:var(--text-secondary);width:60%">Thinking...</div></div>
+<div style="border-top:.5px solid var(--border);padding:8px;font-size:11px;color:var(--text-muted)">Ask anything...</div>
+</div></div><p class="t">Today (the problem)</p><p class="d">Chat covers the page. You can't see what's being made.</p></div>
+
+<div><div class="frame-wrap"><div class="frame">
+<div class="bar"></div>
+<div style="padding:10px"><div style="height:8px;width:50%;background:var(--border-strong);border-radius:4px;margin-bottom:8px"></div><div style="height:22px;border:.5px solid var(--border);border-radius:6px;margin-bottom:6px"></div><div style="height:44px;border:.5px solid var(--border);border-radius:6px"></div></div>
+<div style="position:absolute;left:8px;right:8px;bottom:62px;background:var(--surface-2);border:.5px solid var(--border-strong);border-radius:12px;padding:8px 10px">
+<p style="margin:0;font-size:11px;font-weight:500">Drafting your tee</p><p style="margin:2px 0 6px;font-size:11px;color:var(--text-secondary)">Reading the catalog...</p><span style="font-size:11px;color:var(--text-accent)">Open chat</span></div>
+<div style="position:absolute;left:8px;right:8px;bottom:8px;height:44px;border:.5px solid var(--border-strong);border-radius:22px;background:var(--surface-2);display:flex;align-items:center;justify-content:space-around;font-size:11px;color:var(--text-secondary)"><span>Home</span><span>Prod</span><span style="color:var(--text-accent)">Agent</span><span>Ord</span><span>More</span></div>
+</div></div><p class="t">1. Peek card</p><p class="d">Page stays visible. Progress and the reply show above the dock. Full chat only on "Open chat".</p></div>
+
+<div><div class="frame-wrap"><div class="frame">
+<div class="bar"></div>
+<div style="padding:10px;font-size:11px">
+<div style="color:var(--text-secondary);margin-bottom:2px">Title</div><div style="border:1px solid var(--border-accent);background:var(--bg-accent);border-radius:6px;padding:5px 7px;margin-bottom:6px">Garage Tee</div>
+<div style="color:var(--text-secondary);margin-bottom:2px">Price</div><div style="border:1px solid var(--border-accent);background:var(--bg-accent);border-radius:6px;padding:5px 7px;margin-bottom:6px">$34.00</div>
+<div style="color:var(--text-secondary);margin-bottom:2px">Description</div><div style="border:1px solid var(--border-accent);background:var(--bg-accent);border-radius:6px;padding:5px 7px">Heavyweight cotton for people who fuel hard.</div></div>
+<div style="position:absolute;left:8px;right:8px;bottom:8px;height:44px;border:.5px solid var(--border-strong);border-radius:22px;background:var(--surface-2);display:flex;align-items:center;padding:0 8px;gap:6px;font-size:11px">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#534ab7" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/></svg>
+<span style="flex:1;color:var(--text-warning)">Draft, 3 fields</span><span style="color:var(--text-secondary)">Undo</span><span style="background:#1a1a1a;color:#fff;border-radius:14px;padding:5px 10px">Save</span></div>
+</div></div><p class="t">2. In-place draft</p><p class="d">The agent fills the real form. You review, then Save or Undo. Never auto-saves or publishes.</p></div>
+
+<div><div class="frame-wrap"><div class="frame">
+<div class="bar"></div>
+<div style="padding:10px"><div style="height:8px;width:50%;background:var(--border-strong);border-radius:4px;margin-bottom:8px"></div><div style="height:22px;border:.5px solid var(--border);border-radius:6px"></div></div>
+<div style="position:absolute;left:0;right:0;bottom:0;height:150px;background:var(--surface-2);border-top:.5px solid var(--border-strong);border-radius:14px 14px 0 0;padding:6px 10px">
+<div style="width:30px;height:4px;border-radius:2px;background:var(--border-stronger);margin:0 auto 8px"></div>
+<div style="font-size:11px;background:var(--surface-1);border-radius:8px;padding:6px 8px;margin-bottom:6px">Want it in black or washed white?</div>
+<div style="font-size:11px;background:#1a1a1a;color:#fff;border-radius:8px;padding:6px 8px;width:60%;margin-left:auto;margin-bottom:8px">Black</div>
+<div style="border:.5px solid var(--border-strong);border-radius:16px;padding:6px 10px;font-size:11px;color:var(--text-muted)">Ask AgentSam...</div></div>
+</div></div><p class="t">3. Half sheet</p><p class="d">Pull the peek card up to talk. The page still shows above. Full chat is a third step.</p></div>
+
+</div>
+</body>
+</html>

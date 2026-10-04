@@ -54,6 +54,7 @@ For cross-domain brand/site planning and launch work, use:
 | Evidence-backed launch/audit ledger | [docs/operating/FNF-AUDIT-LEDGER-2026-10-01.md](docs/operating/FNF-AUDIT-LEDGER-2026-10-01.md) |
 | AgentSam CLI/machine automation alignment | [docs/operating/FNF-AGENTSAM-AUTOMATION-MAP-2026-10-01.md](docs/operating/FNF-AGENTSAM-AUTOMATION-MAP-2026-10-01.md) |
 | Reusable non-client planning template | [docs/templates/UNIVERSAL-BRAND-SITE-OPERATING-BRIEF.md](docs/templates/UNIVERSAL-BRAND-SITE-OPERATING-BRIEF.md) |
+| Admin dock + in-place agent UX polish (active handoff) | [docs/FNF-ADMIN-DOCK-AND-AGENT-UX-POLISH-HANDOFF-2026-10-04.md](docs/FNF-ADMIN-DOCK-AND-AGENT-UX-POLISH-HANDOFF-2026-10-04.md) |
 
 Do **not** create a second brand source of truth. The business/brand dossier already owns CONFIRMED / ASPIRATIONAL / TBD brand decisions. The operating layer should reference it, identify evidence and outcomes, and keep future productization from blocking client launch work.
 
