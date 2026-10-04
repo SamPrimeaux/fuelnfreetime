@@ -65,7 +65,10 @@ export function normalizeDockConfig(raw) {
     startHidden: raw.startHidden === true,
     tabs,
     scopes,
-    agent: { label: (raw.agent && raw.agent.label) || "Agent" },
+    agent: {
+      label: (raw.agent && raw.agent.label) || "Agent",
+      accent: normalizeAccent(raw.agent?.accent),
+    },
   };
 }
 
