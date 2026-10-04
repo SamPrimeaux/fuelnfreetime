@@ -180,7 +180,8 @@ body.agentsam-open .admin-dock {
 .admin-dock__chip:focus-visible,
 .admin-dock__send:focus-visible,
 .admin-dock__grab:focus-visible,
-.admin-dock__handle:focus-visible { outline: 2px solid var(--admin-dock-accent); outline-offset: 2px; }
+.admin-dock__handle:focus-visible,
+.admin-dock__peek-link:focus-visible { outline: 2px solid var(--admin-dock-accent); outline-offset: 2px; }
 
 /* ---- shared controls ---- */
 .admin-dock__icon-btn {
