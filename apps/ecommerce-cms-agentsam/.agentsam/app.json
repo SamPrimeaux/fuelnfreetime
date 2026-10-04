@@ -66,7 +66,7 @@
   },
   "dock": {
     "startHidden": false,
-    "agent": { "label": "AgentSam" },
+    "agent": { "label": "AgentSam", "accent": "#7c3aed" },
     "tabs": [
       { "id": "home", "label": "Home", "href": "/admin/home", "icon": "home" },
       { "id": "products", "label": "Products", "href": "/admin/products", "icon": "products", "match": ["/admin/products", "/admin/products/*", "/admin/product-edit", "/admin/inventory"] },
