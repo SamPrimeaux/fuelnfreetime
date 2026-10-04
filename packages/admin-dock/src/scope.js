@@ -18,6 +18,11 @@ function cleanPath(p) {
   return s.length > 1 ? s.replace(/\/+$/, "") : s;
 }
 
+function normalizeAccent(value) {
+  const accent = typeof value === "string" ? value.trim() : "";
+  return /^#[0-9a-f]{6}$/i.test(accent) ? accent : null;
+}
+
 export function patternScore(pathname, pattern) {
   const path = cleanPath(pathname);
   const pat = String(pattern || "");
@@ -60,7 +65,10 @@ export function normalizeDockConfig(raw) {
     startHidden: raw.startHidden === true,
     tabs,
     scopes,
-    agent: { label: (raw.agent && raw.agent.label) || "Agent" },
+    agent: {
+      label: (raw.agent && raw.agent.label) || "Agent",
+      accent: normalizeAccent(raw.agent?.accent),
+    },
   };
 }
 

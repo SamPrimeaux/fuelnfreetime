@@ -30,7 +30,16 @@ test("normalizeDockConfig rejects empty or malformed config and drops bad entrie
   assert.equal(cfg.scopes.length, 1);
   assert.equal(cfg.scopes[0].chips.length, 1);
   assert.equal(cfg.agent.label, "Agent");
+  assert.equal(cfg.agent.accent, null);
   assert.equal("breakpoint" in cfg, false);
+});
+
+test("agent accent is portable manifest config, not a package hardcode", () => {
+  const tabs = [{ id: "a", label: "A", href: "/a" }];
+  assert.equal(normalizeDockConfig({ tabs, agent: { accent: "#12Ab34" } }).agent.accent, "#12Ab34");
+  assert.equal(normalizeDockConfig({ tabs, agent: { accent: "purple" } }).agent.accent, null);
+  assert.equal(normalizeDockConfig({ tabs, agent: { accent: "#123" } }).agent.accent, null);
+  assert.equal(app.dock.agent.accent, "#7c3aed");
 });
 
 test("manifest dock block: twin manifests agree and the dock feature is registered", () => {

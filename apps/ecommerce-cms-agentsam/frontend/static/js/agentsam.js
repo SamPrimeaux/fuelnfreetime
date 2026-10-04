@@ -175,7 +175,9 @@ async function sendAgentsamMessage(text, options = {}) {
   } finally {
     drawerRequestActive = false;
     setBusy(false);
-    document.getElementById("agentsam-input")?.focus();
+    if (document.body.classList.contains("agentsam-open")) {
+      document.getElementById("agentsam-input")?.focus();
+    }
   }
 }
 

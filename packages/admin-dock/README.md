@@ -8,6 +8,9 @@ inside it, not a separate button.
 | nav | default | tabs from config; the `agent` tab opens the composer, `nav` opens the full menu |
 | edit | a page publishes save state | agent button, hint, discard, save (replaces a page's own sticky save bar) |
 | compose | agent tab tapped | scope chip, quick chips for the current route, input, send |
+| peek | a dock send resolves | compact status/reply above the capsule; full chat opens only from **Open chat** |
+
+The active composer border, AgentSam tab, send button, focus rings, and peek actions all use the same manifest-driven accent. A host can therefore brand the interaction without changing this package.
 
 **Swipe:** drag the capsule down to tuck it away; a 44px handle stays at the bottom edge.
 Swipe the handle up (or tap it) to bring the capsule back. In compose, swiping down closes
@@ -25,11 +28,11 @@ mountAdminDock({
 });
 ```
 
-Load `dock.css` once. All config lives in the manifest `dock` block — no env vars.
+Load `dock.css` once. All config lives in the manifest `dock` block — no env vars. `agent.accent` accepts a six-digit hex color and falls back to the package default when omitted or invalid. `host.send` should resolve to the shared chat response (including `reply`); `host.open` is used only for the explicit **Open chat** transition.
 
 ```json
 "dock": {
-  "agent": { "label": "AgentSam" },
+  "agent": { "label": "AgentSam", "accent": "#7c3aed" },
   "tabs": [
     { "id": "home", "label": "Home", "href": "/admin/home", "icon": "home" },
     { "id": "agent", "label": "AgentSam", "action": "agent", "icon": "sparkle" },

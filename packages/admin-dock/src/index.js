@@ -35,7 +35,7 @@ const ICONS = {
   menu: '<path d="M4 7h16M4 12h16M4 17h10"/>',
   sparkle: '<path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/><path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z"/>',
   close: '<path d="M6 6l12 12M18 6L6 18"/>',
-  send: '<path d="M5 12h13M12 5l7 7-7 7"/>',
+  send: '<path d="M12 19V5M6 11l6-6 6 6"/>',
   undo: '<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>',
   chevronUp: '<path d="M6 15l6-6 6 6"/>',
   dot: '<circle cx="12" cy="12" r="3"/>',
@@ -95,13 +95,27 @@ export function mountAdminDock(options = {}) {
   root.setAttribute("data-admin-dock", "");
   root.setAttribute("data-mode", "nav");
   root.setAttribute("data-hidden", "false");
+  if (config.agent.accent) root.style.setProperty("--admin-dock-accent", config.agent.accent);
   root.innerHTML = `
+    <div class="admin-dock__veil" hidden></div>
     <div class="admin-dock__main">
       <div class="admin-dock__context" hidden>
         <div class="admin-dock__scope"><span>Scope</span><strong>${esc(scope?.label || "This page")}</strong></div>
         ${chipsHtml ? `<div class="admin-dock__chips">${chipsHtml}</div>` : ""}
         <p class="admin-dock__note" role="status" aria-live="polite" hidden></p>
       </div>
+      <section class="admin-dock__peek" data-state="idle" aria-live="polite" hidden>
+        <div class="admin-dock__peek-grab" aria-hidden="true"><span></span></div>
+        <div class="admin-dock__peek-head">
+          <strong>${esc(agentLabel)}</strong>
+          <span class="admin-dock__peek-status"></span>
+        </div>
+        <p class="admin-dock__peek-text"></p>
+        <div class="admin-dock__peek-actions">
+          <button type="button" class="admin-dock__peek-link" data-peek-action="expand" hidden>Show more</button>
+          <button type="button" class="admin-dock__peek-link admin-dock__peek-link--primary" data-peek-action="open">Open chat</button>
+        </div>
+      </section>
       <div class="admin-dock__bar">
         <button type="button" class="admin-dock__grab" aria-label="Hide navigation"><span></span></button>
         <nav class="admin-dock__panel admin-dock__tabs" aria-label="Quick navigation">${tabsHtml}</nav>
@@ -122,14 +136,21 @@ export function mountAdminDock(options = {}) {
   doc.body.appendChild(root);
 
   const $ = (sel) => root.querySelector(sel);
+  const veil = $(".admin-dock__veil");
   const main = $(".admin-dock__main");
   const bar = $(".admin-dock__bar");
   const context = $(".admin-dock__context");
   const note = $(".admin-dock__note");
+  const peekEl = $(".admin-dock__peek");
+  const peekStatus = $(".admin-dock__peek-status");
+  const peekTextEl = $(".admin-dock__peek-text");
+  const peekExpand = $('[data-peek-action="expand"]');
+  const peekOpen = $('[data-peek-action="open"]');
   const tabsPanel = $(".admin-dock__tabs");
   const editPanel = $(".admin-dock__edit");
   const composePanel = $(".admin-dock__compose");
   const input = $(".admin-dock__input");
+  const sendEl = $(".admin-dock__send");
   const handle = $(".admin-dock__handle");
   const grab = $(".admin-dock__grab");
   const hintEl = $(".admin-dock__hint");
@@ -141,10 +162,28 @@ export function mountAdminDock(options = {}) {
   // Session choice wins; otherwise the manifest default (dock.startHidden, false unless set).
   let hidden = readHidden(win) ?? config.startHidden;
   let edit = null;
+  let peek = { visible: false, state: "idle", text: "", expanded: false };
 
   function setNote(text) {
     note.textContent = text || "";
     note.hidden = !text;
+  }
+
+  function dismissPeek({ focus = false } = {}) {
+    if (!peek.visible) return;
+    peek = { visible: false, state: "idle", text: "", expanded: false };
+    render();
+    if (focus) bar.querySelector('[data-action="agent"]')?.focus?.({ preventScroll: true });
+  }
+
+  function setPeek(state, text = "") {
+    peek = {
+      visible: true,
+      state,
+      text: String(text || ""),
+      expanded: false,
+    };
+    render();
   }
 
   function render() {
@@ -156,12 +195,24 @@ export function mountAdminDock(options = {}) {
     editPanel.hidden = mode !== "edit";
     composePanel.hidden = mode !== "compose";
     context.hidden = mode !== "compose";
+    veil.hidden = !composing || hidden;
+    peekEl.hidden = !peek.visible || hidden;
+    peekEl.dataset.state = peek.state;
+    peekEl.classList.toggle("is-expanded", peek.expanded);
+    peekStatus.textContent = peek.state === "pending" ? "Thinking…" : peek.state === "error" ? "Needs attention" : "";
+    peekTextEl.textContent = peek.text;
+    peekTextEl.hidden = !peek.text;
+    peekExpand.hidden = peek.state !== "success" || peek.text.length < 180;
+    peekExpand.textContent = peek.expanded ? "Show less" : "Show more";
+    peekOpen.disabled = typeof host.open !== "function";
     main.inert = hidden;
     handle.tabIndex = hidden ? 0 : -1;
     doc.body.classList.toggle("admin-dock-compose", composing);
     doc.body.classList.toggle("admin-dock-has-edit", editing);
     doc.body.classList.toggle("admin-dock-hidden", hidden);
+    doc.body.classList.toggle("admin-dock-peek", peek.visible && !hidden);
     input.disabled = busy;
+    sendEl.disabled = busy;
     if (editing) {
       hintEl.textContent = edit.hint || "";
       hintEl.classList.toggle("is-dirty", Boolean(edit.dirty));
@@ -181,7 +232,9 @@ export function mountAdminDock(options = {}) {
   }
 
   function setComposing(next) {
-    composing = Boolean(next);
+    const shouldCompose = Boolean(next);
+    if (shouldCompose) dismissPeek();
+    composing = shouldCompose;
     if (composing && hidden) setHidden(false);
     setNote("");
     render();
@@ -193,25 +246,28 @@ export function mountAdminDock(options = {}) {
     const prompt = String(text || "").trim();
     if (!prompt || busy) return;
     if (typeof host.send !== "function") {
-      setNote(`${agentLabel} is not available on this page.`);
+      composing = false;
+      setPeek("error", `${agentLabel} is not available on this page.`);
       return;
     }
+
     busy = true;
     setNote("");
+    setPeek("pending");
+    input.value = "";
+    composing = false;
     render();
+
     try {
-      const pending = Promise.resolve(host.send(prompt, { context: { dock_scope: scope ? { id: scope.id, label: scope.label } : null } }));
-      // A rejected send (agent busy, not loaded) lands almost immediately; a real reply takes longer.
-      const early = await Promise.race([
-        pending.then(() => null, (err) => err || new Error("Could not send.")),
-        new Promise((resolve) => setTimeout(() => resolve(null), 60)),
-      ]);
-      if (early) throw early;
-      host.open?.();
-      input.value = "";
-      composing = false;
+      const data = await Promise.resolve(host.send(prompt, {
+        propagateError: true,
+        context: { dock_scope: scope ? { id: scope.id, label: scope.label } : null },
+      }));
+      const reply = String(data?.reply || "").trim();
+      if (!reply) throw new Error(`${agentLabel} returned no reply.`);
+      setPeek("success", reply);
     } catch (err) {
-      setNote(err?.message || "Could not send.");
+      setPeek("error", err?.message || "Could not send.");
     } finally {
       busy = false;
       render();
@@ -245,9 +301,64 @@ export function mountAdminDock(options = {}) {
   });
   grab.addEventListener("click", () => (composing ? setComposing(false) : setHidden(true, { focus: true })));
   handle.addEventListener("click", () => setHidden(false, { focus: true }));
-  doc.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && composing) setComposing(false);
+
+  peekEl.addEventListener("click", (event) => {
+    const action = event.target.closest("[data-peek-action]")?.dataset.peekAction;
+    if (action === "expand") {
+      peek.expanded = !peek.expanded;
+      render();
+    } else if (action === "open") {
+      host.open?.();
+      dismissPeek();
+    }
   });
+
+  function onDocumentPointerDown(event) {
+    if (peek.visible && !peekEl.contains(event.target)) dismissPeek();
+  }
+  function onDockKeyDown(event) {
+    if (event.key !== "Escape") return;
+    if (composing) setComposing(false);
+    else if (peek.visible) dismissPeek({ focus: true });
+  }
+  doc.addEventListener("pointerdown", onDocumentPointerDown, true);
+  doc.addEventListener("keydown", onDockKeyDown);
+
+  // ---- peek card: swipe down dismisses it; upward expansion arrives with the half-sheet phase ----
+  let peekDrag = null;
+  peekEl.addEventListener("pointerdown", (event) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    if (event.target.closest("button")) return;
+    peekDrag = { id: event.pointerId, x: event.clientX, y: event.clientY, t: win.performance.now(), dy: 0, active: false };
+  });
+  peekEl.addEventListener("pointermove", (event) => {
+    if (!peekDrag || event.pointerId !== peekDrag.id) return;
+    const dx = event.clientX - peekDrag.x;
+    const dy = event.clientY - peekDrag.y;
+    if (!peekDrag.active) {
+      if (Math.abs(dy) < DRAG_START_PX || Math.abs(dy) < Math.abs(dx)) return;
+      if (dy < 0) { peekDrag = null; return; }
+      peekDrag.active = true;
+      peekEl.classList.add("is-dragging");
+      try { peekEl.setPointerCapture(event.pointerId); } catch { /* synthetic or released pointer */ }
+    }
+    peekDrag.dy = Math.max(0, dy);
+    peekEl.style.transform = `translateY(${peekDrag.dy}px)`;
+    peekEl.style.opacity = String(Math.max(0.25, 1 - peekDrag.dy / 120));
+  });
+  function endPeekDrag(event) {
+    if (!peekDrag || (event && event.pointerId !== peekDrag.id)) return;
+    const { active, dy, t } = peekDrag;
+    peekDrag = null;
+    peekEl.classList.remove("is-dragging");
+    peekEl.style.transform = "";
+    peekEl.style.opacity = "";
+    if (!active || event?.type === "pointercancel") return;
+    const elapsed = Math.max(1, win.performance.now() - t);
+    if (dy > HIDE_DISTANCE_PX || dy / elapsed > FLICK_PX_PER_MS) dismissPeek();
+  }
+  peekEl.addEventListener("pointerup", endPeekDrag);
+  peekEl.addEventListener("pointercancel", endPeekDrag);
 
   // ---- swipe: down on the capsule hides it (closes the composer in compose); up on the handle shows it ----
   let swallowClick = false;
@@ -357,7 +468,9 @@ export function mountAdminDock(options = {}) {
       mq.removeEventListener("change", syncVisible);
       vv?.removeEventListener("resize", syncKeyboard);
       vv?.removeEventListener("scroll", syncKeyboard);
-      doc.body.classList.remove("admin-dock-active", "admin-dock-visible", "admin-dock-compose", "admin-dock-has-edit", "admin-dock-hidden");
+      doc.removeEventListener("pointerdown", onDocumentPointerDown, true);
+      doc.removeEventListener("keydown", onDockKeyDown);
+      doc.body.classList.remove("admin-dock-active", "admin-dock-visible", "admin-dock-compose", "admin-dock-has-edit", "admin-dock-hidden", "admin-dock-peek");
       root.remove();
     },
   };
