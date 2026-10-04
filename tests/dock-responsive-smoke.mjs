@@ -41,7 +41,13 @@ const out = {};
 try {
   try { sessionStorage.removeItem("admin-dock:hidden"); } catch {}
   const config = await (await fetch("/admin/dock/dock.config.json")).json();
-  const mk = () => mountAdminDock({ config, pathname: "/admin/products/create", host: { send: async () => {}, open() {}, openNav() { out.navOpened = true; } } });
+  const unsafeReply = "Literal <script>alert('nope')</script> text stays text. Here is a deliberately longer AgentSam response so the compact peek clamps the preview to a few lines until the user explicitly asks to show more. Nothing in this reply should become executable markup.";
+  const host = {
+    send: async () => ({ reply: unsafeReply, conversation_id: "conv_smoke" }),
+    open() { out.opened = (out.opened || 0) + 1; },
+    openNav() { out.navOpened = true; },
+  };
+  const mk = () => mountAdminDock({ config, pathname: "/admin/products/create", host });
   let dock = mk();
   const $ = (s) => document.querySelector(s), R = (e) => e.getBoundingClientRect(), wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const pe = (type, el, x, y, id = 5) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: id, pointerType: "touch", isPrimary: true, clientX: x, clientY: y }));
@@ -65,10 +71,57 @@ try {
     // compose (from edit mode, via the agent control inside the capsule)
     $('.admin-dock__edit [data-action="agent"]').click(); await wait(20);
     const close = $('[data-action="close-compose"]'), send = $(".admin-dock__send");
-    out.compose = { mode: $(".admin-dock").dataset.mode, inputFont: getComputedStyle($(".admin-dock__input")).fontSize, inputH: Math.round(R($(".admin-dock__input")).height),
-      minChipH: Math.round(Math.min(...[...document.querySelectorAll(".admin-dock__chip")].map((c) => R(c).height))), closeW: Math.round(R(close).width), closeH: Math.round(R(close).height), sendW: Math.round(R(send).width) };
+    const activeBarStyle = getComputedStyle($(".admin-dock__bar"));
+    out.compose = {
+      mode: $(".admin-dock").dataset.mode,
+      inputFont: getComputedStyle($(".admin-dock__input")).fontSize,
+      inputH: Math.round(R($(".admin-dock__input")).height),
+      minChipH: Math.round(Math.min(...[...document.querySelectorAll(".admin-dock__chip")].map((c) => R(c).height))),
+      closeW: Math.round(R(close).width),
+      closeH: Math.round(R(close).height),
+      sendW: Math.round(R(send).width),
+      accent: getComputedStyle($(".admin-dock")).getPropertyValue("--admin-dock-accent").trim(),
+      borderColor: activeBarStyle.borderTopColor,
+      veilVisible: !$(".admin-dock__veil").hidden,
+      sendPointsUp: send.querySelector("path")?.getAttribute("d") === "M12 19V5M6 11l6-6 6 6",
+    };
     close.click(); await wait(10); out.composeClosesToEdit = $(".admin-dock").dataset.mode === "edit";
     document.dispatchEvent(new CustomEvent("admin-dock:edit", { detail: { active: false } })); await wait(10);
+
+    // P1 reply stays in place: no automatic drawer, safe text, compact card above the capsule.
+    $('[data-tab="agent"]').click(); await wait(10);
+    $(".admin-dock__input").value = "Tell me about this page";
+    $(".admin-dock__compose").requestSubmit();
+    await wait(40);
+    const peek = $(".admin-dock__peek"), peekText = $(".admin-dock__peek-text"), openChat = $('[data-peek-action="open"]'), expand = $('[data-peek-action="expand"]');
+    const peekRect = R(peek), peekBarRect = R($(".admin-dock__bar"));
+    out.peek = {
+      state: peek.dataset.state,
+      visible: !peek.hidden,
+      autoOpened: (out.opened || 0) > 0,
+      safeText: peekText.textContent === unsafeReply && !peek.querySelector("script"),
+      noOverlap: peekRect.bottom <= peekBarRect.top,
+      openTargetH: Math.round(R(openChat).height),
+      showMoreVisible: !expand.hidden,
+      clamped: getComputedStyle(peekText).webkitLineClamp === "4",
+    };
+    expand.click(); await wait(10);
+    out.peek.expands = peek.classList.contains("is-expanded");
+    openChat.click(); await wait(10);
+    out.peek.explicitOpen = out.opened === 1 && peek.hidden;
+
+    // Tap outside dismisses a later reply.
+    $('[data-tab="agent"]').click(); $(".admin-dock__input").value = "Again"; $(".admin-dock__compose").requestSubmit(); await wait(30);
+    document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerType: "touch", pointerId: 21 }));
+    await wait(10);
+    out.peek.tapOutsideDismisses = $(".admin-dock__peek").hidden;
+
+    // Swipe down uses the dock's existing gesture language to dismiss.
+    $('[data-tab="agent"]').click(); $(".admin-dock__input").value = "One more"; $(".admin-dock__compose").requestSubmit(); await wait(30);
+    const peek2 = $(".admin-dock__peek"), p2 = R(peek2), px = p2.left + Math.min(80, p2.width / 2), py = p2.top + 28;
+    pe("pointerdown", peek2, px, py, 22); pe("pointermove", peek2, px, py + 62, 22); pe("pointerup", peek2, px, py + 62, 22); await wait(30);
+    out.peek.swipeDismisses = peek2.hidden;
+
     // swipe: a slow short drag snaps back
     const barEl = $(".admin-dock__bar"), mainEl = $(".admin-dock__main"), handle = $(".admin-dock__handle");
     pe("pointerdown", barEl, 200, 760); await wait(300); pe("pointermove", barEl, 200, 772); pe("pointermove", barEl, 200, 782); await wait(50);
@@ -146,7 +199,7 @@ for (const w of VISIBLE) {
   const check = (ok, msg) => { if (!ok) failures.push(`${w}px: ${msg}`); };
   check(r && !r.error && r.visible, `dock should be visible ${r?.error || ""}`);
   if (!r?.visible) continue;
-  const n = r.nav, e = r.edit, c = r.compose, s = r.swipe;
+  const n = r.nav, e = r.edit, c = r.compose, p = r.peek, s = r.swipe;
   check(n.orbGone, "no separate orb: the agent lives inside the capsule");
   check(n.agentInBar && n.tabCount === 5 && n.agentIndex === 2, `agent must be the middle of 5 tabs inside the bar (tabs=${n.tabCount}, agentIndex=${n.agentIndex})`);
   check(n.minTap >= 44, `tab hit area ${n.minTap} < 44`);
@@ -163,6 +216,19 @@ for (const w of VISIBLE) {
   check(c.mode === "compose" && r.composeClosesToEdit === true, "agent control opens compose; close returns to edit");
   check(c.inputFont === "16px", `input font ${c.inputFont} would zoom on iOS`);
   check(c.inputH >= 44 && c.minChipH >= 44 && c.closeW >= 44 && c.closeH >= 44 && c.sendW >= 44, "compose targets < 44");
+  check(c.accent === "#7c3aed", `manifest accent did not reach dock token: ${c.accent}`);
+  check(c.borderColor === "rgb(124, 58, 237)", `active composer border is not the agent accent: ${c.borderColor}`);
+  check(c.veilVisible === true, "compose mode should quietly dim the page");
+  check(c.sendPointsUp === true, "send arrow should point upward");
+  check(p && p.visible && p.state === "success", "reply should resolve into a visible success peek card");
+  check(p.autoOpened === false, "sending from the dock must never auto-open full chat");
+  check(p.safeText === true, "model HTML must render as inert text");
+  check(p.noOverlap === true, "peek card must sit above, not overlap, the capsule");
+  check(p.openTargetH >= 44, `Open chat target only ${p.openTargetH}px tall`);
+  check(p.showMoreVisible === true && p.clamped === true && p.expands === true, "long replies need a four-line preview with explicit expansion");
+  check(p.explicitOpen === true, "Open chat should be the explicit drawer transition");
+  check(p.tapOutsideDismisses === true, "tap outside should dismiss the peek card");
+  check(p.swipeDismisses === true, "swipe down should dismiss the peek card");
   check(s.draggingMidway === true, "capsule should follow the finger while dragging");
   check(s.slowShortStays === true, "a slow short drag must snap back");
   check(s.fastHides === true, "a quick swipe down must tuck the capsule away");
