@@ -169,7 +169,7 @@ const outer = `<!doctype html><pre id="out"></pre><script>
 const widths=${JSON.stringify(widths)},res={};let i=0;
 function next(){if(i>=widths.length){document.getElementById('out').textContent=JSON.stringify(res);return}
 const w=widths[i++],f=document.createElement('iframe');f.width=w;f.height=844;f.style.cssText='border:0;display:block';f.src='/inner.html';
-f.onload=()=>setTimeout(()=>{try{res[w]=JSON.parse(f.contentDocument.getElementById('out').textContent)}catch(e){res[w]={error:String(e)}}f.remove();next()},1500);document.body.appendChild(f)}
+f.onload=()=>setTimeout(()=>{try{res[w]=JSON.parse(f.contentDocument.getElementById('out').textContent)}catch(e){res[w]={error:String(e)}}f.remove();next()},2600);document.body.appendChild(f)}
 next();</script>`;
 
 const server = http.createServer((req, res) => {
