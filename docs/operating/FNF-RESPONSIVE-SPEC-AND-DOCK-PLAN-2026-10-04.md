@@ -18,7 +18,7 @@ CSS px, not device pixels. Device widths are approximate and PROPOSED until meas
 
 | Tier | Width | Typical devices | Shell | Bottom dock | Agent |
 |---|---|---|---|---|---|
-| phone | <= 639 | iPhone 360-440 | slide-in drawer, 1 column | full width, 16 margin | drawer overlay (orb opens it) |
+| phone | <= 639 | iPhone 360-440 | slide-in drawer, 1 column | full width, 16 margin | drawer overlay (the agent tab opens it) |
 | tablet portrait | 640-900 | iPad mini 744, iPad 820/834 | slide-in drawer, 1 column | capped 560, centered | drawer overlay |
 | tablet landscape / small laptop | 901-1199 | iPad landscape 1024-1194, iPad Pro 13 portrait | persistent rail | none | side dock 400 |
 | desktop | 1200-1599 | MacBook default scaled 1280-1512 | rail | none | side dock 400 |
@@ -43,7 +43,7 @@ Wide and TV (viewing distance is larger):
 - Content never stretches edge to edge: forms and editors 1120 max (OBSERVED on product editor), dashboards 1440 max at >= 1600 and 1760 at >= 2200, centered.
 - Stat grids use `auto-fill, minmax(220px, 1fr)` and cap at 4 columns (desktop) and 6 (wide).
 
-Dock (OBSERVED, enforced by `tests/dock-responsive-smoke.mjs`): bar 64 tall, orb 56, every dock target >= 44, input 16px, margins >= 16, hidden above 900.
+Dock (OBSERVED, enforced by `tests/dock-responsive-smoke.mjs`): bar 64 tall, every dock target >= 44, handle 44, input 16px, margins >= 16, hidden above 900.
 
 ## 4. What this branch changed
 
@@ -64,10 +64,10 @@ Wide screens (new, needs eyes on the Mac and TV):
 - The AgentSam side panel grows with `--admin-agent-w`: 400 / 440 / 520.
 
 Dock (`packages/admin-dock`):
-- Nav / edit / compose modes, detached agent orb, keyboard lift via `visualViewport`, route scope chips.
+- Nav / edit / compose modes in one capsule; the agent is a tab inside it (middle slot), not a separate button. Swipe the capsule down to tuck it away, swipe the handle up (or tap) to bring it back; keyboard lift via `visualViewport`; route scope chips.
 - Config has one source: the manifest `dock` block (mirrored in `.agentsam/app.json`, enforced by a test). `scripts/sync-app-frontend.mjs` emits `dock.config.json`. No env vars.
-- The orb reuses the existing AgentSam drawer; the dock owns no transport or sessions.
-- Product editor, page editor and preferences publish save state through `window.publishDockEdit`; their own fixed save bars hide while the dock shows edit mode. Discard hides when a page supplies none.
+- The agent tab reuses the existing AgentSam drawer; the dock owns no transport or sessions.
+- Product editor, page editor and preferences publish save state through `window.publishDockEdit`; their own fixed save bars hide while the dock shows edit mode, and return as the fallback when the dock is tucked away. Discard hides when a page supplies none.
 - Full-bleed tool pages (mail, analytics, AgentSam, theme editor, growth, discounts) set `admin-dock-off`, because they own the whole viewport and have not reserved clearance. The topbar sparkle still opens the agent there.
 - Scope and `context.dock_scope` are hints; the server still authorizes any resource.
 

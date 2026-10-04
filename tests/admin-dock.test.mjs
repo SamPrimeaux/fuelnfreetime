@@ -40,13 +40,16 @@ test("manifest dock block: twin manifests agree and the dock feature is register
   assert.ok(twin.features.includes("admin.mobile-dock"));
 });
 
-test("manifest dock block: ids unique, one nav action, every tab is a link or the nav action", () => {
+test("manifest dock block: ids unique, one nav action, one agent action, every tab is a link or an action", () => {
   const cfg = normalizeDockConfig(app.dock);
   assert.ok(cfg);
   const ids = cfg.tabs.map((t) => t.id);
   assert.equal(new Set(ids).size, ids.length);
   assert.equal(cfg.tabs.filter((t) => t.action === "nav").length, 1);
-  for (const t of cfg.tabs) assert.ok(t.href || t.action === "nav", `${t.id} needs href or nav action`);
+  assert.equal(cfg.tabs.filter((t) => t.action === "agent").length, 1, "the agent is a tab inside the dock, exactly once");
+  const agentAt = cfg.tabs.findIndex((t) => t.action === "agent");
+  assert.ok(agentAt > 0 && agentAt < cfg.tabs.length - 1, "agent sits between the other tabs, not on an edge");
+  for (const t of cfg.tabs) assert.ok(t.href || ["nav", "agent"].includes(t.action), `${t.id} needs href or a nav/agent action`);
   assert.ok(cfg.tabs.length <= 5, "a phone dock holds at most 5 tabs");
 });
 

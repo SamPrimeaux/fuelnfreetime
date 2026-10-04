@@ -544,7 +544,7 @@
     padding: 16px 0 calc(var(--admin-dock-clearance, 96px) + 16px);
   }
   /* The dock's edit mode replaces this bar while the dock is on screen. */
-  body.admin-dock-visible.admin-dock-has-edit .product-editor-bar {
+  body.admin-dock-visible.admin-dock-has-edit:not(.admin-dock-hidden) .product-editor-bar {
     display: none;
   }
   .product-editor-top-actions .btn,
