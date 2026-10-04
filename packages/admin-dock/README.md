@@ -32,7 +32,7 @@ Load `dock.css` once. All config lives in the manifest `dock` block — no env v
 
 ```json
 "dock": {
-  "agent": { "label": "AgentSam" },
+  "agent": { "label": "AgentSam", "accent": "#7c3aed" },
   "tabs": [
     { "id": "home", "label": "Home", "href": "/admin/home", "icon": "home" },
     { "id": "agent", "label": "AgentSam", "action": "agent", "icon": "sparkle" },
