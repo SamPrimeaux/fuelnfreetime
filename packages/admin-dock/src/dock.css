@@ -459,5 +459,5 @@ body.agentsam-open .admin-dock {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .admin-dock, .admin-dock__main, .admin-dock__tab { transition: none; }
+  .admin-dock, .admin-dock__main, .admin-dock__tab, .admin-dock__bar, .admin-dock__peek { transition: none; }
 }
