@@ -1,0 +1,25 @@
+{
+  "type": "site-footer",
+  "scope": "global",
+  "editable": true,
+  "data": {
+    "logo": {
+      "assetKey": "brand.logo"
+    },
+    "tagline": {
+      "source": "brand.tagline"
+    },
+    "description": {
+      "source": "brand.description"
+    },
+    "navigation": {
+      "source": "site.navigation.footer"
+    },
+    "social": {
+      "source": "site.social"
+    },
+    "newsletter": {
+      "source": "site.newsletter"
+    }
+  }
+}

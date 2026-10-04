@@ -1,0 +1,20 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "web-perf",
+  "name": "web-perf",
+  "description": "Analyzes web performance using Chrome DevTools MCP. Measures Core Web Vitals (FCP, LCP, TBT, CLS, Speed Index), identifies render-blocking resources, network dependency chains, layout shifts, caching issues, and accessibility gaps. Use when asked to audit, profile, debug, or optimize page load performance, Lighthouse scores, or site speed.",
+  "icon": "skill",
+  "slash": {
+    "suggested": "/web-perf"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  }
+}

@@ -41,6 +41,24 @@ function setDirty(next) {
     hint.classList.toggle("is-dirty", dirty);
   }
   if (btn) btn.disabled = !dirty || saveInFlight;
+  syncDockEdit();
+}
+
+/** Mirrors the sticky save bar into the mobile dock (admin-dock edit mode). Harmless when no dock is mounted. */
+function syncDockEdit() {
+  const hint = document.getElementById("save-hint");
+  const btn = document.getElementById("save-btn");
+  const detail = {
+    active: true,
+    // Short strings: the dock is ~294px wide on a 390pt phone.
+    hint: isNew && !dirty ? "New product" : hint ? hint.textContent : "",
+    dirty,
+    canSave: Boolean(btn) && !btn.disabled,
+    saveLabel: saveInFlight ? "Saving…" : isNew ? "Create" : "Save",
+    onSave: () => document.getElementById("save-btn")?.click(),
+    discardHref: "/admin/products",
+  };
+  window.publishDockEdit?.(detail);
 }
 
 function imgNote(msg, kind) {
@@ -571,10 +589,10 @@ function renderInventory(variants) {
     .map((v) => {
       const label = [v.size, v.color].filter(Boolean).join(" / ") || "Default";
       return `<tr>
-        <td>Default</td>
-        <td>${label}</td>
-        <td>${v.sku}</td>
-        <td>${v.inventory_qty}</td>
+        <td data-label="Location">Default</td>
+        <td data-label="Variant">${label}</td>
+        <td data-label="SKU">${v.sku}</td>
+        <td data-label="Available">${v.inventory_qty}</td>
       </tr>`;
     })
     .join("");
@@ -603,12 +621,12 @@ function renderVariants(variants) {
     .map(
       (v) => `
     <tr data-id="${v.id}">
-      <td><input class="v-sku" value="${v.sku}"></td>
-      <td><input class="v-size" value="${v.size || ""}"></td>
-      <td><input class="v-color" value="${v.color || ""}"></td>
-      <td><input class="v-price" type="number" step="0.01" value="${v.price_cents != null ? (v.price_cents / 100).toFixed(2) : ""}"></td>
-      <td><input class="v-qty" type="number" value="${v.inventory_qty}"></td>
-      <td>
+      <td data-label="SKU"><input class="v-sku" value="${v.sku}"></td>
+      <td data-label="Size"><input class="v-size" value="${v.size || ""}"></td>
+      <td data-label="Color"><input class="v-color" value="${v.color || ""}"></td>
+      <td data-label="Price"><input class="v-price" type="number" step="0.01" value="${v.price_cents != null ? (v.price_cents / 100).toFixed(2) : ""}"></td>
+      <td data-label="Qty"><input class="v-qty" type="number" value="${v.inventory_qty}"></td>
+      <td class="v-actions">
         <button type="button" class="btn ghost small v-save">Save</button>
         <button type="button" class="btn ghost small v-delete">Delete</button>
       </td>
@@ -722,6 +740,7 @@ async function saveProduct() {
   saveInFlight = true;
   setDirty(dirty);
   document.getElementById("save-btn").textContent = isNew ? "Saving…" : "Saving…";
+  syncDockEdit();
 
   try {
     if (isNew) {

@@ -23,7 +23,7 @@ Aligned with **inneranimalmedia** `agentsam_skill` / `agentsam_hook` / `agentsam
 | **D1** | `agentsam_tool_stats_compacted` | Rolled-up tool reliability stats |
 | **D1** | `agentsam_workflow_nodes` | Step graph per workflow (trigger → output spine) |
 | **R2** | `agentsam/skills/{slug}/…` on `WEBSITE_ASSETS` | Markdown bodies |
-| **Repo** | `.cursor/skills/` | Cursor source → synced to R2 |
+| **Repo** | `skills/` (vendored Cloudflare/Stripe skills moved here from `.cursor/skills/`; the sync script still reads both roots) | Source → synced to R2 |
 
 ### Tenant IDs
 

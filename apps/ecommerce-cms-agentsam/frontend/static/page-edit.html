@@ -147,6 +147,19 @@ renderShell("/admin/pages", `
 function setDirty(next = true) {
   dirty = next;
   document.getElementById("save-btn").disabled = !dirty;
+  syncDockEdit();
+}
+
+/** Mirrors the fixed save bar into the mobile dock (admin-dock edit mode). */
+function syncDockEdit(saving = false) {
+  window.publishDockEdit?.({
+    active: true,
+    hint: saving ? "Saving…" : dirty ? "Unsaved changes" : "All changes saved",
+    dirty,
+    canSave: dirty && !saving,
+    saveLabel: saving ? "Saving…" : "Save",
+    onSave: () => document.getElementById("save-btn")?.click(),
+  });
 }
 
 function showNote(msg, kind) {
@@ -439,6 +452,7 @@ document.addEventListener("keydown", (event) => {
 async function savePage() {
   const saveBtn = document.getElementById("save-btn");
   saveBtn.disabled = true;
+  syncDockEdit(true);
 
   try {
     const title = document.getElementById("page-title-input").value.trim();

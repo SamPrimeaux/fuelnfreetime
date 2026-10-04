@@ -1,0 +1,68 @@
+:root,
+[data-theme="fnf"] {
+  /* semantic color */
+  --fnf-color-canvas: #0a0a0a;
+  --fnf-color-surface-1: #141414;
+  --fnf-color-surface-2: #1f1f1f;
+  --fnf-color-steel: #1a1a1a;
+  --fnf-color-asphalt: #2a2a2a;
+  --fnf-color-text: #ffffff;
+  --fnf-color-text-muted: #b0b0b0;
+  --fnf-color-text-subtle: #8a8a8a;
+  --fnf-color-light: #f8f8f8;
+  --fnf-color-light-2: #f0f0f0;
+
+  --fnf-color-brand-primary: #ff4500;
+  --fnf-color-brand-secondary: #dc143c;
+  --fnf-color-gold: #ffd700;
+  --fnf-color-bronze: #cd7f32;
+  --fnf-color-bronze-light: #e5a558;
+  --fnf-color-bronze-dark: #9b5f1f;
+
+  /* typography roles */
+  --fnf-font-display: "Bebas Neue", sans-serif;
+  --fnf-font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --fnf-font-mono: "Space Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* layout */
+  --layout-max: 1440px;
+  --layout-wide: 1320px;
+  --layout-content: 1200px;
+  --layout-reading: 760px;
+  --layout-gutter: clamp(16px, 4vw, 56px);
+
+  /* spacing */
+  --space-1: clamp(4px, .5vw, 8px);
+  --space-2: clamp(8px, 1vw, 12px);
+  --space-3: clamp(12px, 1.5vw, 20px);
+  --space-4: clamp(20px, 2.5vw, 32px);
+  --space-5: clamp(28px, 4vw, 56px);
+  --space-6: clamp(40px, 6vw, 80px);
+  --section-y-sm: clamp(48px, 7vw, 80px);
+  --section-y-md: clamp(64px, 9vw, 120px);
+  --section-y-lg: clamp(80px, 11vw, 160px);
+
+  /* shape */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+
+  /* motion */
+  --fnf-ease: cubic-bezier(.2, .8, .2, 1);
+  --motion-fast: 180ms;
+  --motion-base: 300ms;
+  --motion-slow: 700ms;
+
+  /* interaction */
+  --touch-min: 44px;
+  --header-height: 80px;
+}
+
+@media (max-width: 767px) {
+  :root,
+  [data-theme="fnf"] {
+    --header-height: 70px;
+  }
+}

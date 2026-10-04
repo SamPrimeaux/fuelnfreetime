@@ -1,0 +1,32 @@
+{
+  "id": "fnf",
+  "package": "@inneranimalmedia/fnf-theme",
+  "displayName": "FNF",
+  "source": "Original FNF design system",
+  "layout": {
+    "max": 1440,
+    "wide": 1320,
+    "content": 1200,
+    "reading": 760,
+    "mobileFirst": true,
+    "containerQueryReady": true
+  },
+  "typography": {
+    "display": "Bebas Neue",
+    "body": "Inter",
+    "mono": "Space Mono"
+  },
+  "surfaces": {
+    "industrialDark": "dark layered charcoal/black",
+    "light": "off-white/light-gray",
+    "brandFire": "orange/red",
+    "metal": "bronze/gold",
+    "heroGradient": "dark radial orange + bronze glows"
+  },
+  "interaction": {
+    "touchTargetMinPx": 44,
+    "reducedMotionSafe": true,
+    "safeAreaAware": true,
+    "iosFormFontMinPx": 16
+  }
+}

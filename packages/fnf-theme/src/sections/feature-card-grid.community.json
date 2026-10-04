@@ -1,0 +1,39 @@
+{
+  "type": "feature-card-grid",
+  "variant": "fnf-community",
+  "layout": {
+    "width": "content",
+    "bleed": "background",
+    "spacing": "lg"
+  },
+  "data": {
+    "heading": "Join the Movement",
+    "description": "Where every mile has a story and every hour is earned",
+    "items": [
+      {
+        "iconKey": "flag",
+        "heading": "Hunt Drops",
+        "body": "Exclusive scavenger hunts for limited gear"
+      },
+      {
+        "iconKey": "tools",
+        "heading": "Garage Nights",
+        "body": "Monthly meetups in Lafayette and beyond"
+      },
+      {
+        "iconKey": "bolt",
+        "heading": "Fuel Stops",
+        "body": "Pop-ups where stories meet the road"
+      },
+      {
+        "iconKey": "target",
+        "heading": "Early Access",
+        "body": "First dibs on every limited release"
+      }
+    ]
+  },
+  "motion": {
+    "reveal": "stagger",
+    "reducedMotion": "fade"
+  }
+}

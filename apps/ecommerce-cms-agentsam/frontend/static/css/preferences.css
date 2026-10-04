@@ -329,14 +329,18 @@
 
 @media (max-width: 900px) {
   .prefs-hub {
-    padding: 20px 16px 96px;
+    padding: 20px 0 calc(var(--admin-dock-clearance, 96px) + 16px);
+  }
+
+  body.admin-dock-visible.admin-dock-has-edit .prefs-savebar {
+    display: none;
   }
 
   .prefs-seo-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .prefs-nav-row { grid-template-columns: 1fr; }
+  .prefs-nav-row { grid-template-columns: minmax(0, 1fr); }
   .prefs-nav-row > .prefs-switch { justify-self: start; }
   .prefs-nav-actions { justify-content: flex-end; }
 

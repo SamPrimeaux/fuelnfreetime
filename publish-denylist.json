@@ -1,0 +1,20 @@
+{
+  "note": "Patterns that must never appear in a published package tarball (file names or contents). The stock theme name 'fnf' is allowed; customer identity is not.",
+  "patterns": [
+    {
+      "id": "customer-name",
+      "regex": "fuelnfreetime|fuel[\\s-]*(?:&|&amp;|and|n|'n)?[\\s-]*free[\\s-]*time",
+      "flags": "i"
+    },
+    {
+      "id": "customer-shopify-cdn",
+      "regex": "cdn\\.shopify\\.com/s/files/\\d+/\\d+/\\d+/\\d+",
+      "flags": "i"
+    },
+    {
+      "id": "customer-logo-image-id",
+      "regex": "ad23b2d9-e2e4-4ad6-eb81-9e4c983df000",
+      "flags": "i"
+    }
+  ]
+}

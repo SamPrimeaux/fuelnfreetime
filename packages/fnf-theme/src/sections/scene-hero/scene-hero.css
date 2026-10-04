@@ -1,0 +1,62 @@
+[data-section="scene-hero"] {
+  position: relative;
+  min-height: max(540px, 72svh);
+  overflow: clip;
+  background:
+    radial-gradient(ellipse at 72% 24%, color-mix(in srgb, var(--fnf-color-brand-primary) 9%, transparent), transparent 55%),
+    radial-gradient(ellipse at 30% 66%, color-mix(in srgb, var(--fnf-color-bronze-light) 6%, transparent), transparent 55%),
+    linear-gradient(180deg, var(--fnf-color-canvas), var(--fnf-color-surface-2));
+}
+.scene-hero__inner {
+  width: min(calc(100% - (var(--layout-gutter) * 2)), var(--layout-max));
+  min-height: inherit;
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  position: relative;
+}
+.scene-hero__copy {
+  position: relative;
+  z-index: 2;
+  max-width: 720px;
+  padding-block: calc(var(--header-height) + var(--space-6)) var(--space-6);
+}
+.scene-hero__eyebrow {
+  font: 700 clamp(.9rem, 1.3vw, 1.2rem)/1.1 var(--fnf-font-mono);
+  letter-spacing: .16em;
+  color: var(--fnf-color-text-muted);
+}
+.scene-hero__title {
+  margin: .2em 0 .25em;
+  font: 400 clamp(3.2rem, 7vw, 7.5rem)/.88 var(--fnf-font-display);
+  letter-spacing: -.02em;
+  text-transform: uppercase;
+  color: var(--fnf-color-text);
+}
+.scene-hero__scene {
+  position: absolute;
+  inset: 0 max(-10vw, -140px) 0 auto;
+  width: min(54vw, 760px);
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+}
+.scene-hero__scene model-viewer {
+  width: 100%;
+  height: min(72svh, 760px);
+  background: transparent;
+  --poster-color: transparent;
+}
+@media (max-width: 767px) {
+  .scene-hero__copy { text-align: center; margin-inline: auto; padding-top: calc(var(--header-height) + 12svh); }
+  .scene-hero__scene {
+    width: min(72vw, 420px);
+    inset: -4svh -18vw auto auto;
+    opacity: .45;
+  }
+  .scene-hero__scene model-viewer { height: min(48svh, 420px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-section="scene-hero"] * { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
+}

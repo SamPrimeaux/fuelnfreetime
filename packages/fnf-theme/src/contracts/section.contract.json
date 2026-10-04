@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Reusable Section Contract",
+  "type": "object",
+  "required": [
+    "type",
+    "layout",
+    "data"
+  ],
+  "properties": {
+    "type": {
+      "type": "string"
+    },
+    "variant": {
+      "type": "string"
+    },
+    "layout": {
+      "type": "object",
+      "properties": {
+        "width": {
+          "enum": [
+            "full",
+            "max",
+            "wide",
+            "content",
+            "reading"
+          ]
+        },
+        "bleed": {
+          "enum": [
+            "none",
+            "background",
+            "media"
+          ]
+        },
+        "spacing": {
+          "enum": [
+            "none",
+            "sm",
+            "md",
+            "lg"
+          ]
+        }
+      }
+    },
+    "data": {
+      "type": "object"
+    },
+    "motion": {
+      "type": "object"
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "site": {
+    "id": "demo",
+    "name": "Demo Brand",
+    "theme": "@inneranimalmedia/fnf-theme"
+  },
+  "brand": {
+    "tagline": "Your tagline here.",
+    "description": "One sentence about your brand.",
+    "logo": {
+      "provider": "none",
+      "note": "Point brand.logo at your own logo: Cloudflare Images, an R2 custom domain, or any URL."
+    }
+  },
+  "assets": {
+    "brand.logo": { "provider": "none", "url": null },
+    "home.hero.model": { "provider": "none", "url": null },
+    "home.hero.poster": { "provider": "none", "url": null },
+    "home.manifesto.image": { "provider": "none", "url": null }
+  },
+  "navigation": {
+    "primary": [
+      { "label": "Home", "href": "/" },
+      { "label": "Shop", "href": "/shop" },
+      { "label": "About", "href": "/about" },
+      { "label": "Contact", "href": "/contact" }
+    ]
+  },
+  "newsletter": {
+    "action": null,
+    "status": "adapter-required"
+  }
+}

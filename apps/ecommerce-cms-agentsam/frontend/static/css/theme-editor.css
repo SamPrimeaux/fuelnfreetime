@@ -17,6 +17,7 @@
 
 .theme-studio {
   height: calc(100vh - 56px);
+  height: calc(100dvh - 56px);
   min-height: 680px;
   display: grid;
   grid-template-rows: 54px minmax(0, 1fr);
@@ -154,6 +155,7 @@
   left: 0;
   width: 320px;
   max-height: min(520px, calc(100vh - 120px));
+  max-height: min(520px, calc(100dvh - 120px));
   padding: 8px;
   border: 1px solid var(--te-border);
   border-radius: 13px;
@@ -801,6 +803,7 @@
 .te-media-dialog {
   width: min(880px, calc(100vw - 60px));
   height: min(680px, calc(100vh - 90px));
+  height: min(680px, calc(100dvh - 90px));
   border-radius: 14px;
   background: #fff;
   box-shadow: 0 24px 80px rgba(0,0,0,.22);
@@ -1249,6 +1252,7 @@
   .theme-studio {
     height: auto;
     min-height: calc(100vh - 56px);
+    min-height: calc(100dvh - 56px);
     overflow: auto;
   }
   .theme-studio-toolbar {
@@ -1258,7 +1262,7 @@
   }
   .theme-studio-toolbar__center { display: none; }
   .theme-studio-workspace {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     overflow: visible;
   }
   .theme-studio-tree {

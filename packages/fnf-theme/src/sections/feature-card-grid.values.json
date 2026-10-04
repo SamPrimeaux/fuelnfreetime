@@ -1,0 +1,33 @@
+{
+  "type": "feature-card-grid",
+  "variant": "fnf-values",
+  "layout": {
+    "width": "content",
+    "bleed": "background",
+    "spacing": "lg"
+  },
+  "data": {
+    "heading": "More Than Merch",
+    "items": [
+      {
+        "index": "01",
+        "heading": "Earned Not Given",
+        "body": "Every thread tells a story of hard work and dedication."
+      },
+      {
+        "index": "02",
+        "heading": "Built in Lafayette",
+        "body": "Proudly designed, cut, and sewn in Louisiana."
+      },
+      {
+        "index": "03",
+        "heading": "Community First",
+        "body": "We're building connections that matter."
+      }
+    ]
+  },
+  "motion": {
+    "reveal": "fade-up",
+    "surfaceTransition": "glass-to-solid"
+  }
+}

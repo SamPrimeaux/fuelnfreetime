@@ -108,6 +108,14 @@ function ensureConsoleAssets() {
     link.href = "/admin/css/agentsam.css";
     document.head.appendChild(link);
   }
+  if (!document.getElementById("admin-dock-css")) {
+    const link = document.createElement("link");
+    link.id = "admin-dock-css";
+    link.rel = "stylesheet";
+    link.href = "/admin/dock/dock.css";
+    document.head.appendChild(link);
+  }
+  ensureViewportCover();
   if (!document.querySelector('link[href*="fonts.googleapis.com"]')) {
     const pre1 = document.createElement("link");
     pre1.rel = "preconnect";
@@ -499,6 +507,8 @@ function renderShell(activeHref, mainHtml, options = {}) {
   `;
 
   if (fullBleed) document.body.classList.add("console-body-bleed", "admin-body-bleed");
+  // Full-bleed tool pages own the whole viewport and have not reserved dock clearance; hide the dock there.
+  document.body.classList.toggle("admin-dock-off", fullBleed);
 
   bindConsoleGlobalHandlers();
   import('/admin/profile-popup/index.js')
@@ -547,6 +557,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
   initAgentsamShell();
   wireAgentsamTriggers();
   stabilizeShellDrawers();
+  mountShellDock();
 
   document.querySelectorAll("[data-agentsam-open]").forEach((el) => {
     el.addEventListener("click", (e) => {
@@ -631,6 +642,46 @@ function initPersistentNav() {
   let open = true;
   try { open = localStorage.getItem("fnf-console-nav") !== "collapsed"; } catch {}
   setPersistentNav(open);
+}
+
+/** Safe-area insets only resolve when the viewport opts in to full-bleed. Idempotent. */
+function ensureViewportCover() {
+  const meta = document.querySelector('meta[name="viewport"]');
+  if (!meta) return;
+  const content = meta.getAttribute("content") || "";
+  if (!/viewport-fit\s*=/.test(content)) {
+    meta.setAttribute("content", `${content}${content ? ", " : ""}viewport-fit=cover`);
+  }
+}
+
+/** Pages publish save state to the dock: publishDockEdit({ active, hint, dirty, canSave, saveLabel, onSave, discardHref }). */
+window.publishDockEdit = function publishDockEdit(detail) {
+  window.__adminDockEdit = detail;
+  document.dispatchEvent(new CustomEvent("admin-dock:edit", { detail }));
+};
+
+/** Mobile/tablet dock. Config comes from the app manifest (built into dock.config.json). Non-fatal. */
+async function mountShellDock() {
+  try {
+    const [{ mountAdminDock }, config] = await Promise.all([
+      import("/admin/dock/index.js"),
+      fetch("/admin/dock/dock.config.json", { credentials: "include" }).then((res) => (res.ok ? res.json() : null)),
+    ]);
+    if (!config) return;
+    mountAdminDock({
+      config,
+      host: {
+        open: () => window.openAgentsamDrawer?.(),
+        send: (prompt, opts) => {
+          if (typeof window.sendAgentsamMessage !== "function") throw new Error("AgentSam is still loading. Try again in a moment.");
+          return window.sendAgentsamMessage(prompt, opts);
+        },
+        openNav: () => (document.getElementById("admin-menu-toggle") || document.querySelector("[data-console-nav-toggle]"))?.click(),
+      },
+    });
+  } catch (err) {
+    console.warn("[admin-dock] not mounted", err);
+  }
 }
 
 function initAgentsamShell() {

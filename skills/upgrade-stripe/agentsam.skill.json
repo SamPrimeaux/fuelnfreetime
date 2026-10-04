@@ -1,0 +1,20 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "upgrade-stripe",
+  "name": "upgrade-stripe",
+  "description": "Guide for upgrading Stripe API versions and SDKs",
+  "icon": "skill",
+  "slash": {
+    "suggested": "/upgrade-stripe"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  }
+}

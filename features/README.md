@@ -9,6 +9,7 @@ Schema SSOT: `agentsam-sdk/protocol/features/agentsam.feature.v1.schema.json`
 | provider.resend | provider | incubating |
 | provider.completeful | provider | extracted (`@inneranimalmedia/agentsam-provider-completeful`) |
 | admin.shell-nav | ui | incubating |
+| admin.mobile-dock | ui | incubating (`@inneranimalmedia/admin-dock`) |
 | agentsam.mini-composer | composer | extracted (package) |
 | growth.campaigns | domain | incubating |
 | commerce.product-studio | domain | incubating · requires `commerce.catalog` |

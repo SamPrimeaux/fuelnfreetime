@@ -1,0 +1,59 @@
+{
+  "site": {
+    "id": "fuelnfreetime",
+    "name": "Fuel & Free Time",
+    "theme": "@inneranimalmedia/fnf-theme"
+  },
+  "brand": {
+    "tagline": "Time is the real flex.",
+    "logo": {
+      "provider": "cloudflare-images",
+      "imageId": "ad23b2d9-e2e4-4ad6-eb81-9e4c983df000",
+      "deliveryHash": "g7wf09fCONpnidkRnR_5vw",
+      "currentVariant": "thumbnail",
+      "currentUrl": "https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ad23b2d9-e2e4-4ad6-eb81-9e4c983df000/thumbnail",
+      "note": "Use a dedicated brand-logo/header variant when one is defined; do not bury delivery URLs in header/footer markup."
+    }
+  },
+  "assets": {
+    "brand.logo": {
+      "ref": "brand.logo"
+    },
+    "home.hero.model": {
+      "provider": "r2-custom-domain",
+      "url": "https://assets.fuelnfreetime.com/3d-models/emblem-of-elegance.glb"
+    },
+    "home.hero.poster": {
+      "provider": "configurable",
+      "url": null
+    },
+    "home.manifesto.image": {
+      "status": "legacy-shopify-donor",
+      "url": "https://cdn.shopify.com/s/files/1/0666/4060/9411/files/50C9CEB5-3EA4-4A67-9CB3-9D25FFDA72BF.png?v=1756307782"
+    }
+  },
+  "navigation": {
+    "primary": [
+      {
+        "label": "Home",
+        "href": "/"
+      },
+      {
+        "label": "Shop",
+        "href": "/shop"
+      },
+      {
+        "label": "About",
+        "href": "/about"
+      },
+      {
+        "label": "Community",
+        "href": "/community"
+      }
+    ]
+  },
+  "newsletter": {
+    "action": null,
+    "status": "adapter-required"
+  }
+}

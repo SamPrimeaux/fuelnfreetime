@@ -51,6 +51,8 @@ CommerceAdminNav
 
 The dashboard does not mount `mobile-glass-drawer` as a competing package. The public adapter reuses the orange hamburger/X interaction and presents the storefront links in a compact glass drawer.
 
+A fourth presentation, the mobile/tablet glass dock (`packages/admin-dock`, feature `admin.mobile-dock`), shows at or below 900px. It is a quick-nav over the top destinations listed in the manifest `dock` block (its More tab opens the full `CommerceAdminNav` drawer), and its agent orb opens the existing AgentSam drawer. See `docs/operating/FNF-RESPONSIVE-SPEC-AND-DOCK-PLAN-2026-10-04.md`.
+
 Catalog refresh uses small resumable requests, a single-writer lease, atomic per-product replacement, R2 storage for complete provider payloads, and visible pause/retry/error states. This is resumable request processing, not a durable background queue.
 
 Public provider images use an origin allowlist, bounded Cloudflare transformations, edge caching, and original fallback. Originals remain available for production artwork. Customer artwork does not use the public catalog-image route.

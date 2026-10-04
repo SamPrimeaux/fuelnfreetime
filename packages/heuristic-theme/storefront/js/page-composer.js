@@ -1,3 +1,5 @@
+import { projectCmsSections } from "./cms-structure.js";
+
 const script = document.querySelector('script[type="module"][src$="/js/page-composer.js"]');
 const presetId = script?.dataset.preset;
 const pageId = script?.dataset.page;
@@ -81,16 +83,12 @@ function applyTokens(tokens) {
   }
 }
 
-function cmsSectionMap(cmsPage) {
-  if (!Array.isArray(cmsPage?.sections)) fail("CMS page sections are required");
-  return new Map(cmsPage.sections.map((section) => [section.key, section.content]));
-}
-
 function applyCmsContent(section, content) {
   if (!content) fail(`CMS section ${section.cmsKey} is required`);
   const block = (type) => requiredBlock(section, type);
+  const templateKey = section.cmsTemplateKey || section.cmsKey;
 
-  switch (section.cmsKey) {
+  switch (templateKey) {
     case "hero": {
       block("copy.display").content = {
         eyebrow: "The Earned Hours Collection",
@@ -255,14 +253,20 @@ async function compose() {
   ]);
 
   if (!cmsResponse?.ok || !cmsResponse.page) fail(`CMS page ${pageId} is required`);
+  if (!Array.isArray(cmsResponse.page.sections)) fail("CMS page sections are required");
   applyTokens(tokens);
-  const cmsSections = cmsSectionMap(cmsResponse.page);
 
-  root.innerHTML = page.sections
+  const composedSections = projectCmsSections(page.sections, cmsResponse.page.sections, {
+    onUnregistered: (cmsSection, templateKey) => {
+      console.warn(
+        `[Heuristic] ignoring legacy CMS section ${cmsSection.key}; preset template ${templateKey} is not registered`
+      );
+    },
+  });
+  root.innerHTML = composedSections
     .filter((section) => section.visibility?.enabled !== false)
     .map((section) => {
-      if (!section.cmsKey) fail(`${section.id} requires cmsKey`);
-      applyCmsContent(section, cmsSections.get(section.cmsKey));
+      applyCmsContent(section, section.cmsContent);
       const renderer = renderers.get(section.type);
       if (!renderer) fail(`renderer ${section.type} is not registered`);
       return renderer(section, assets);

@@ -1,0 +1,31 @@
+{
+  "name": "@inneranimalmedia/fnf-theme",
+  "version": "0.1.0",
+  "description": "Dark industrial streetwear theme: tokens, layout contract, section presets, shell, home template, and a stock demo site config.",
+  "type": "module",
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "exports": {
+    "./tokens.css": "./src/theme/tokens.css",
+    "./layout.css": "./src/layout/layout.css",
+    "./theme.json": "./src/theme/theme.json",
+    "./sections/scene-hero": "./src/sections/scene-hero/scene-hero.js",
+    "./sections/countdown-banner": "./src/sections/countdown-banner/countdown-banner.js",
+    "./templates/home": "./src/templates/home.json",
+    "./sites/demo": "./src/sites/demo.json",
+    "./sections/*": "./src/sections/*",
+    "./shell/*": "./src/shell/*",
+    "./contracts/*": "./src/contracts/*"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prepublishOnly": "node ../../scripts/check-publish-denylist.mjs --package ."
+  }
+}

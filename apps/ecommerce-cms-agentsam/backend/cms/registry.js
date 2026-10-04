@@ -441,17 +441,6 @@ export const PAGE_REGISTRY = {
           f4: { title: "Early Access", text: "First dibs on every limited release" },
         },
       },
-      comingSoon: {
-        sortOrder: 5,
-        fields: [
-          { key: "title", label: "Title", type: "text" },
-          { key: "dateLabel", label: "Date label", type: "text" },
-        ],
-        defaultContent: {
-          title: "The Clock is Ticking",
-          dateLabel: "First Drop • November 3rd, 2025",
-        },
-      },
       newsletter: {
         sortOrder: 6,
         fields: [

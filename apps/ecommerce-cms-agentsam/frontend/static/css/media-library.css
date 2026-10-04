@@ -567,11 +567,11 @@
 
 @media (max-width: 900px) {
   .media-lib {
-    padding: 12px 16px 40px;
+    padding: 12px 0 calc(var(--admin-dock-clearance, 24px) + 16px);
   }
 
   .media-lib-folders {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -1201,7 +1201,7 @@
   }
 
   .media-gallery-source-summary {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

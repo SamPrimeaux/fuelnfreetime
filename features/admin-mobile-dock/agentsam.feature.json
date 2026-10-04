@@ -1,0 +1,39 @@
+{
+  "schema": "agentsam.feature.v1",
+  "id": "admin.mobile-dock",
+  "name": "Admin Mobile Dock",
+  "kind": "ui",
+  "status": "incubating",
+  "package": {
+    "name": "@inneranimalmedia/admin-dock",
+    "version": "0.1.0",
+    "directory": "packages/admin-dock"
+  },
+  "provides": [
+    "admin.dock.mount",
+    "admin.dock.edit-mode",
+    "admin.dock.scope"
+  ],
+  "requires": ["admin.shell-nav"],
+  "optional": ["agentsam.mini-composer"],
+  "runtime": ["browser"],
+  "contributes": {
+    "ui": ["glass-dock", "agent-orb", "edit-mode-bar", "scope-chips"]
+  },
+  "host_bindings": {
+    "required": ["dock_config_from_app_manifest", "send(prompt,{context})", "open()", "openNav()"],
+    "forbidden_in_feature": ["FNF_ACCOUNT_ID", "env_var_overrides", "store_specific_strings"]
+  },
+  "source": {
+    "proving_ground": "fuelnfreetime",
+    "implementation_paths": [
+      "packages/admin-dock/src/index.js",
+      "packages/admin-dock/src/scope.js",
+      "packages/admin-dock/src/dock.css"
+    ],
+    "notes": "Config lives only in the app manifest `dock` block (agentsam.app.json and its .agentsam/app.json twin). The agent orb reuses the existing AgentSam drawer; the dock never owns transport or sessions."
+  },
+  "activation": {
+    "steps": ["validate_manifest", "check_runtime", "operator_approval", "activate", "verify", "write_install_receipt"]
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "on-brand-genmedia",
+  "name": "On-Brand GenMedia - Fuel & Free Time",
+  "description": "Fuel & Free Time brand-aware visual generation and product mockup workflow. Use for generated product art, banners, campaign creative, social media, product mockups, image review, and media that must follow the F&FT brand dossier.",
+  "icon": "skill",
+  "slash": {
+    "suggested": "/on-brand-genmedia"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  }
+}

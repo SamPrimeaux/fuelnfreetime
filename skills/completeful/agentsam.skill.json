@@ -1,0 +1,20 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "completeful",
+  "name": "Completeful - Fuel & Free Time",
+  "description": "Operate and extend Fuel & Free Time's Completeful Partner API integration. Use for Completeful shops, catalog sync/search, product mapping, designs, assets, mockups, exports, order quotes/creates, webhooks, provider errors, and fulfillment debugging.",
+  "icon": "skill",
+  "slash": {
+    "suggested": "/completeful"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  }
+}

@@ -367,12 +367,12 @@
   }
 
   .brand-workspace {
-    padding: 18px 14px 44px;
+    padding: 18px 0 calc(var(--admin-dock-clearance, 28px) + 16px);
   }
 
   .brand-overview,
   .brand-fields {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .brand-workspace-head {

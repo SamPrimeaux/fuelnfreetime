@@ -109,6 +109,12 @@
     "test:catalog": "python3 tests/catalog-migration.py",
     "test:product-studio": "node --test tests/product-studio-contract.test.mjs",
     "test:admin-boundary": "node tests/admin-boundary.mjs",
+    "test:admin-dock": "node --test tests/admin-dock.test.mjs",
+    "test:admin-dock:smoke": "node tests/dock-responsive-smoke.mjs",
+    "test:admin-css": "node --test tests/admin-css-guards.test.mjs",
+    "test:admin-layout": "node tests/admin-layout-smoke.mjs",
+    "check:publish": "node scripts/check-publish-denylist.mjs",
+    "test:publish-denylist": "node --test tests/publish-denylist.test.mjs",
     "test:cms-warm": "node tests/cms-warm.mjs",
     "test:cms-r2": "node --test tests/cms-r2-store.test.mjs",
     "test:storefront-collections": "node --test tests/storefront-collections.test.mjs",
@@ -127,6 +133,9 @@
     "wrangler": "4.145.0"
   },
   "dependencies": {
+    "@inneranimalmedia/revise-theme": "0.2.0",
+    "@inneranimalmedia/section-library": "0.1.0",
+    "@inneranimalmedia/site-contracts": "0.1.0",
     "@jsquash/jpeg": "^1.6.0",
     "@jsquash/png": "^3.1.1",
     "@jsquash/resize": "^2.1.1",

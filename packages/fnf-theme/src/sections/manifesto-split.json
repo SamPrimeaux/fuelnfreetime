@@ -1,0 +1,26 @@
+{
+  "type": "media-copy-sequence",
+  "variant": "fnf-manifesto",
+  "layout": {
+    "width": "max",
+    "bleed": "background",
+    "spacing": "lg"
+  },
+  "data": {
+    "heading": "Some chase horsepower. We chase hours.",
+    "body": [
+      "We aren't about how fast you go \u2014 it's about finally having the time to go at all.",
+      "Born in a Lafayette garage, built for those who've earned their freedom.",
+      "Time is everything money can't buy back."
+    ],
+    "media": {
+      "assetKey": "home.manifesto.image",
+      "aspectRatio": "1/1",
+      "position": "right"
+    }
+  },
+  "motion": {
+    "reveal": "split-slide",
+    "mediaHover": "grayscale-to-color"
+  }
+}

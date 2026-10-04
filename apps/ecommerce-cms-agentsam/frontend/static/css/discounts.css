@@ -430,10 +430,10 @@
   }
 
   .fnf-disc-editor-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .fnf-disc-dates {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
