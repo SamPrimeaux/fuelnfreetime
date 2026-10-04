@@ -15,6 +15,11 @@ await cp(path.join(frontend, 'static'), path.join(output, 'admin'), { recursive:
 await cp(path.join(frontend, 'dist'), path.join(output, 'admin/_spa'), { recursive: true });
 await cp(path.join(root, 'packages/agentsam-workbench/src'), path.join(output, 'admin/workbench'), { recursive: true });
 await cp(path.join(root, 'packages/admin-profile-popup/src'), path.join(output, 'admin/profile-popup'), { recursive: true });
+await cp(path.join(root, 'packages/admin-dock/src'), path.join(output, 'admin/dock'), { recursive: true });
+// Dock config has one source: the app manifest's `dock` block. No env vars, no copies to keep in step.
+const manifest = JSON.parse(await readFile(path.join(root, 'apps/ecommerce-cms-agentsam/agentsam.app.json'), 'utf8'));
+if (!manifest.dock) throw new Error('agentsam.app.json is missing the "dock" block');
+await writeFile(path.join(output, 'admin/dock/dock.config.json'), JSON.stringify(manifest.dock, null, 2) + '\n');
 await cp(path.join(root, 'packages/media-kit/src'), path.join(output, 'admin/media-kit'), { recursive: true });
 for (const file of ['shell.js', 'inspector.js']) {
   await cp(path.join(frontend, file), path.join(output, 'admin/js', file));

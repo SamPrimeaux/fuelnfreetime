@@ -522,9 +522,15 @@
   border-radius: 12px 12px 0 0;
 }
 
+/* Grid children may shrink below their content; without this a wide child clips at the right edge. */
+.product-editor-grid > * {
+  min-width: 0;
+}
+
 @media (max-width: 980px) {
   .product-editor-grid {
-    grid-template-columns: 1fr;
+    /* "1fr" alone is minmax(auto, 1fr): min-content can push the track wider than the screen. */
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .product-editor-bar {
@@ -534,7 +540,16 @@
 
 @media (max-width: 900px) {
   .product-editor {
-    padding: 16px 16px 96px;
+    /* The shell (.admin-main) already supplies side padding; do not double it. */
+    padding: 16px 0 calc(var(--admin-dock-clearance, 96px) + 16px);
+  }
+  /* The dock's edit mode replaces this bar while the dock is on screen. */
+  body.admin-dock-visible.admin-dock-has-edit .product-editor-bar {
+    display: none;
+  }
+  .product-editor-top-actions .btn,
+  .product-editor-top-actions button {
+    min-height: 44px;
   }
   .product-editor-bar {
     padding-left: 16px;

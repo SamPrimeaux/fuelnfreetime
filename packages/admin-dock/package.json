@@ -1,0 +1,15 @@
+{
+  "name": "@inneranimalmedia/admin-dock",
+  "version": "0.1.0",
+  "description": "Framework-neutral mobile/tablet glass dock for AgentSam admin shells: quick nav, edit-mode save bar, and a portable agent composer.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./scope": "./src/scope.js",
+    "./dock.css": "./src/dock.css"
+  },
+  "files": ["src", "README.md"],
+  "license": "UNLICENSED",
+  "publishConfig": { "access": "restricted" }
+}

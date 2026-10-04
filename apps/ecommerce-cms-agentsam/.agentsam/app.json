@@ -41,6 +41,7 @@
   ],
   "features": [
     "admin.shell-nav",
+    "admin.mobile-dock",
     "agentsam.mini-composer",
     "commerce.product-studio",
     "growth.campaigns",
@@ -62,6 +63,36 @@
     "catalog": true,
     "annotation": true,
     "fulfillment_automation": false
+  },
+  "dock": {
+    "agent": { "label": "AgentSam" },
+    "tabs": [
+      { "id": "home", "label": "Home", "href": "/admin/home", "icon": "home" },
+      { "id": "products", "label": "Products", "href": "/admin/products", "icon": "products", "match": ["/admin/products", "/admin/products/*", "/admin/product-edit", "/admin/inventory"] },
+      { "id": "orders", "label": "Orders", "href": "/admin/orders", "icon": "orders" },
+      { "id": "menu", "label": "More", "action": "nav", "icon": "menu" }
+    ],
+    "scopes": [
+      { "id": "store", "label": "Store overview", "match": ["/admin/home"], "chips": [
+        { "label": "Summarize activity", "prompt": "Summarize recent store activity: orders, inventory changes, and anything that needs my attention." },
+        { "label": "Low stock check", "prompt": "Check inventory and list products that are low or out of stock." },
+        { "label": "Draft shop hero", "prompt": "Draft options for the shop hero headline and subtext." }
+      ] },
+      { "id": "products", "label": "All products", "match": ["/admin/products", "/admin/inventory"], "chips": [
+        { "label": "Low stock check", "prompt": "Check inventory and list products that are low or out of stock." },
+        { "label": "Product ideas", "prompt": "Suggest product ideas that fit the current catalog and brand." }
+      ] },
+      { "id": "product", "label": "This product", "match": ["/admin/products/*", "/admin/product-edit"], "chips": [
+        { "label": "Rewrite description", "prompt": "Rewrite the description of the product I am viewing. Keep the brand voice and give me options." },
+        { "label": "Write alt text", "prompt": "Write alt text for the images on the product I am viewing." },
+        { "label": "Suggest price", "prompt": "Suggest a price for the product I am viewing and explain the reasoning." }
+      ] },
+      { "id": "orders", "label": "Orders", "match": ["/admin/orders", "/admin/orders/*"], "chips": [
+        { "label": "Flag problems", "prompt": "Review recent orders and flag any that look stuck, unpaid, or unfulfilled." },
+        { "label": "Draft customer reply", "prompt": "Draft a friendly reply to a customer asking about their order status." }
+      ] },
+      { "id": "page", "label": "This page", "match": ["*"], "chips": [] }
+    ]
   },
   "notes": "Mountable ecommerce admin APP. Canonical SDK identity TBD reconcile with @inneranimalmedia/agentsam-sdk-ecommerce."
 }

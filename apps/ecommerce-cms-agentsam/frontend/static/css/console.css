@@ -1796,3 +1796,22 @@ body.console-nav-collapsed .console-nav-ghost-toggle--persistent:hover::before {
   color: #6b6b6b;
   margin: 8px 0 0;
 }
+
+/* ---- Compact shell (<= 900px): in-flow topbar, dock clearance, tap targets ----
+   The legacy .admin-main padding (68px top) predates the in-flow console topbar and
+   double-counted it. Safe-area insets resolve because shell.js adds viewport-fit=cover. */
+@media (max-width: 900px) {
+  body.console-theme .console-main.admin-main:not(.console-main--bleed) {
+    padding:
+      16px
+      max(16px, env(safe-area-inset-right, 0px))
+      calc(var(--admin-dock-clearance, 0px) + 16px)
+      max(16px, env(safe-area-inset-left, 0px));
+  }
+  body.console-theme .console-main .btn {
+    min-height: 44px;
+  }
+  body.console-theme .console-main .admin-table .btn {
+    min-height: 36px;
+  }
+}

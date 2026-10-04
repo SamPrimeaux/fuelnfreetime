@@ -41,6 +41,25 @@ function setDirty(next) {
     hint.classList.toggle("is-dirty", dirty);
   }
   if (btn) btn.disabled = !dirty || saveInFlight;
+  syncDockEdit();
+}
+
+/** Mirrors the sticky save bar into the mobile dock (admin-dock edit mode). Harmless when no dock is mounted. */
+function syncDockEdit() {
+  const hint = document.getElementById("save-hint");
+  const btn = document.getElementById("save-btn");
+  const detail = {
+    active: true,
+    // Short strings: the dock is ~294px wide on a 390pt phone.
+    hint: isNew && !dirty ? "New product" : hint ? hint.textContent : "",
+    dirty,
+    canSave: Boolean(btn) && !btn.disabled,
+    saveLabel: saveInFlight ? "Saving…" : isNew ? "Create" : "Save",
+    onSave: () => document.getElementById("save-btn")?.click(),
+    discardHref: "/admin/products",
+  };
+  window.__adminDockEdit = detail;
+  document.dispatchEvent(new CustomEvent("admin-dock:edit", { detail }));
 }
 
 function imgNote(msg, kind) {
@@ -722,6 +741,7 @@ async function saveProduct() {
   saveInFlight = true;
   setDirty(dirty);
   document.getElementById("save-btn").textContent = isNew ? "Saving…" : "Saving…";
+  syncDockEdit();
 
   try {
     if (isNew) {

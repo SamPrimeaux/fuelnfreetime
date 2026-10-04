@@ -1,0 +1,252 @@
+/*
+ * @inneranimalmedia/admin-dock — glass dock.
+ * Visibility is driven by the .is-visible class (set from COMPACT_MAX_WIDTH in JS),
+ * so this file has no hard-coded compact breakpoint. Override tokens on :root or
+ * [data-admin-dock] to rebrand; nothing here names a store.
+ *
+ * Size contract (CSS px):  bar 64 tall · orb 56 · tab hit area >= 44 · side margin 16
+ * Inputs are 16px so iOS never zooms on focus.
+ */
+:root {
+  --admin-dock-h: 64px;
+  --admin-dock-orb: 56px;
+  --admin-dock-gap: 8px;
+  --admin-dock-margin: 16px;
+  --admin-dock-radius: 32px;
+  --admin-dock-glass: rgba(255, 255, 255, 0.72);
+  --admin-dock-glass-border: rgba(255, 255, 255, 0.65);
+  --admin-dock-hairline: rgba(0, 0, 0, 0.08);
+  --admin-dock-ink: #1a1a1a;
+  --admin-dock-muted: #6b6b6b;
+  --admin-dock-accent: #8b5cf6;
+  --admin-dock-orb-bg: rgba(33, 27, 48, 0.94);
+  --admin-dock-warn: #8a5a00;
+  --admin-dock-z: 120;
+}
+
+/* Clearance pages should reserve at the bottom so nothing hides under the glass. */
+body.admin-dock-visible {
+  --admin-dock-clearance: calc(var(--admin-dock-h) + 24px + max(12px, env(safe-area-inset-bottom, 0px)));
+}
+
+.admin-dock,
+.admin-dock *,
+.admin-dock *::before,
+.admin-dock *::after {
+  box-sizing: border-box;
+}
+
+.admin-dock {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(max(12px, env(safe-area-inset-bottom, 0px)) + var(--admin-dock-kb, 0px));
+  z-index: var(--admin-dock-z);
+  padding: 0 max(var(--admin-dock-margin), env(safe-area-inset-right, 0px)) 0 max(var(--admin-dock-margin), env(safe-area-inset-left, 0px));
+  align-items: flex-end;
+  gap: var(--admin-dock-gap);
+  pointer-events: none;
+  font: 500 13px/1.3 Inter, system-ui, -apple-system, sans-serif;
+  color: var(--admin-dock-ink);
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease;
+}
+.admin-dock.is-visible { display: flex; }
+.admin-dock [hidden] { display: none !important; }
+.admin-dock > * { pointer-events: auto; }
+
+/* Hide while a full-screen layer owns the screen. */
+body.admin-nav-open .admin-dock,
+body.agentsam-open .admin-dock {
+  transform: translateY(160%);
+  opacity: 0;
+  pointer-events: none;
+}
+body.admin-nav-open .admin-dock > *,
+body.agentsam-open .admin-dock > * { pointer-events: none; }
+
+.admin-dock__main { position: relative; flex: 1; min-width: 0; }
+
+.admin-dock__bar {
+  min-height: var(--admin-dock-h);
+  border-radius: var(--admin-dock-radius);
+  background: var(--admin-dock-glass);
+  -webkit-backdrop-filter: blur(22px) saturate(1.5);
+  backdrop-filter: blur(22px) saturate(1.5);
+  border: 1px solid var(--admin-dock-glass-border);
+  box-shadow: 0 0 0 1px var(--admin-dock-hairline), 0 12px 32px rgba(0, 0, 0, 0.14);
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+}
+.admin-dock__panel { flex: 1; min-width: 0; display: flex; align-items: center; }
+
+/* ---- nav ---- */
+.admin-dock__tabs { padding: 6px; gap: 2px; }
+.admin-dock__tab {
+  flex: 1;
+  min-width: 44px;
+  min-height: 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: 24px;
+  background: transparent;
+  color: var(--admin-dock-muted);
+  font: inherit;
+  font-size: 11px;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.admin-dock__tab[aria-current="page"] { background: rgba(0, 0, 0, 0.07); color: var(--admin-dock-ink); }
+.admin-dock__tab:focus-visible,
+.admin-dock__btn:focus-visible,
+.admin-dock__chip:focus-visible,
+.admin-dock__orb:focus-visible,
+.admin-dock__send:focus-visible { outline: 2px solid var(--admin-dock-accent); outline-offset: 2px; }
+
+/* ---- edit ---- */
+.admin-dock__edit { padding: 8px 8px 8px 16px; gap: 8px; }
+.admin-dock__hint { flex: 1; min-width: 0; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--admin-dock-muted); }
+.admin-dock__hint.is-dirty { color: var(--admin-dock-warn); font-weight: 600; }
+.admin-dock__btn {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--admin-dock-hairline);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--admin-dock-ink);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.admin-dock__btn--primary { background: #1a1a1a; border-color: #1a1a1a; color: #fff; }
+.admin-dock__btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ---- compose ---- */
+.admin-dock__compose { padding: 6px 6px 6px 20px; gap: 6px; }
+.admin-dock__input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--admin-dock-ink);
+  font: inherit;
+  font-size: 16px; /* never below 16px: prevents iOS focus zoom */
+}
+.admin-dock__input::placeholder { color: var(--admin-dock-muted); }
+.admin-dock__send {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--admin-dock-accent);
+  color: #fff;
+  cursor: pointer;
+}
+.admin-dock__send:disabled { opacity: 0.5; }
+
+.admin-dock__context {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 8px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.admin-dock__scope {
+  align-self: flex-start;
+  display: inline-flex;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--admin-dock-glass);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--admin-dock-glass-border);
+  box-shadow: 0 0 0 1px var(--admin-dock-hairline);
+  font-size: 12px;
+}
+.admin-dock__scope span { color: var(--admin-dock-muted); }
+.admin-dock__chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.admin-dock__chips::-webkit-scrollbar { display: none; }
+.admin-dock__chip {
+  flex: none;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--admin-dock-glass-border);
+  border-radius: 22px;
+  background: var(--admin-dock-glass);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 0 0 1px var(--admin-dock-hairline);
+  color: var(--admin-dock-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.admin-dock__note {
+  margin: 0;
+  align-self: flex-start;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--admin-dock-glass);
+  box-shadow: 0 0 0 1px var(--admin-dock-hairline);
+  color: var(--admin-dock-warn);
+  font-size: 12px;
+}
+
+/* ---- orb ---- */
+.admin-dock__orb {
+  position: relative;
+  flex: none;
+  width: var(--admin-dock-orb);
+  height: var(--admin-dock-orb);
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  background: var(--admin-dock-orb-bg);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  color: #f5f2fb;
+  box-shadow: 0 10px 28px rgba(22, 12, 52, 0.35), inset 0 0 0 1px rgba(139, 92, 246, 0.35);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.admin-dock__orb > span { position: absolute; display: grid; place-items: center; transition: opacity 0.18s ease, transform 0.18s ease; }
+.admin-dock__orb-close { opacity: 0; transform: rotate(-45deg) scale(0.8); }
+.admin-dock[data-mode="compose"] .admin-dock__orb-open { opacity: 0; transform: rotate(45deg) scale(0.8); }
+.admin-dock[data-mode="compose"] .admin-dock__orb-close { opacity: 1; transform: none; }
+
+/* ---- narrow phones (360-380): give the edit-mode hint room ---- */
+@media (max-width: 380px) {
+  .admin-dock__edit { padding-left: 12px; gap: 6px; }
+  .admin-dock__btn { padding: 0 10px; }
+}
+
+/* ---- tablet portrait: cap and center the capsule ---- */
+@media (min-width: 641px) {
+  .admin-dock { justify-content: center; }
+  .admin-dock__main { flex: 0 1 560px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-dock, .admin-dock__orb > span { transition: none; }
+}
