@@ -41,7 +41,7 @@ const out = {};
 try {
   try { sessionStorage.removeItem("admin-dock:hidden"); } catch {}
   const config = await (await fetch("/admin/dock/dock.config.json")).json();
-  const unsafeReply = "Literal <script>alert('nope')</script> text stays text. Here is a deliberately longer AgentSam response so the compact peek clamps the preview to a few lines until the user explicitly asks to show more. Nothing in this reply should become executable markup.";
+  const unsafeReply = "Literal <script>alert('nope')<\\/script> text stays text. Here is a deliberately longer AgentSam response so the compact peek clamps the preview to a few lines until the user explicitly asks to show more. Nothing in this reply should become executable markup.";
   const host = {
     send: async () => ({ reply: unsafeReply, conversation_id: "conv_smoke" }),
     open() { out.opened = (out.opened || 0) + 1; },
