@@ -102,6 +102,14 @@ body.agentsam-open .admin-dock {
   backdrop-filter: blur(24px) saturate(1.6);
   border: 1px solid var(--admin-dock-glass-edge);
   box-shadow: 0 0 0 1px var(--admin-dock-hairline), 0 10px 30px rgba(0, 0, 0, 0.14);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.admin-dock[data-mode="compose"] .admin-dock__bar {
+  border-color: var(--admin-dock-accent);
+  box-shadow:
+    0 0 0 2px var(--admin-dock-accent-soft),
+    0 10px 30px rgba(0, 0, 0, 0.14);
   display: flex;
   align-items: stretch;
   overflow: hidden;
