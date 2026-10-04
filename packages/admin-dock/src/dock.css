@@ -436,6 +436,7 @@ body.agentsam-open .admin-dock {
   pointer-events: auto;
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
+  z-index: 1;
 }
 .admin-dock__handle span {
   display: block;
