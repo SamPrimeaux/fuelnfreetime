@@ -28,7 +28,7 @@ mountAdminDock({
 });
 ```
 
-Load `dock.css` once. All config lives in the manifest `dock` block — no env vars.
+Load `dock.css` once. All config lives in the manifest `dock` block — no env vars. `agent.accent` accepts a six-digit hex color and falls back to the package default when omitted or invalid. `host.send` should resolve to the shared chat response (including `reply`); `host.open` is used only for the explicit **Open chat** transition.
 
 ```json
 "dock": {
