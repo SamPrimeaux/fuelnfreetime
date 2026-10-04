@@ -30,6 +30,7 @@ test("normalizeDockConfig rejects empty or malformed config and drops bad entrie
   assert.equal(cfg.scopes.length, 1);
   assert.equal(cfg.scopes[0].chips.length, 1);
   assert.equal(cfg.agent.label, "Agent");
+  assert.equal(cfg.agent.accent, null);
   assert.equal("breakpoint" in cfg, false);
 });
 
