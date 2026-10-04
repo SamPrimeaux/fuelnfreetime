@@ -199,6 +199,19 @@ renderShell("/admin/preferences", `
 function setDirty(next = true) {
   dirty = next;
   document.getElementById("save-prefs-btn").disabled = !dirty;
+  syncDockEdit();
+}
+
+/** Mirrors the fixed save bar into the mobile dock (admin-dock edit mode). */
+function syncDockEdit(saving = false) {
+  window.publishDockEdit?.({
+    active: true,
+    hint: saving ? "Saving…" : dirty ? "Unsaved changes" : "All changes saved",
+    dirty,
+    canSave: dirty && !saving,
+    saveLabel: saving ? "Saving…" : "Save",
+    onSave: () => document.getElementById("save-prefs-btn")?.click(),
+  });
 }
 
 function showNote(msg, kind) {
@@ -397,6 +410,7 @@ document.querySelectorAll("[data-pref]").forEach((el) => {
 document.getElementById("save-prefs-btn").addEventListener("click", async () => {
   const btn = document.getElementById("save-prefs-btn");
   btn.disabled = true;
+  syncDockEdit(true);
   try {
     const d = await adminFetch("/api/admin/store/preferences", {
       method: "POST",

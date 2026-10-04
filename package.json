@@ -111,6 +111,8 @@
     "test:admin-boundary": "node tests/admin-boundary.mjs",
     "test:admin-dock": "node --test tests/admin-dock.test.mjs",
     "test:admin-dock:smoke": "node tests/dock-responsive-smoke.mjs",
+    "test:admin-css": "node --test tests/admin-css-guards.test.mjs",
+    "test:admin-layout": "node tests/admin-layout-smoke.mjs",
     "test:cms-warm": "node tests/cms-warm.mjs",
     "test:cms-r2": "node --test tests/cms-r2-store.test.mjs",
     "test:storefront-collections": "node --test tests/storefront-collections.test.mjs",

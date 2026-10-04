@@ -44,7 +44,9 @@ window.__adminDockEdit = detail;
 document.dispatchEvent(new CustomEvent("admin-dock:edit", { detail }));
 // detail: { active, hint, dirty, canSave, saveLabel, onSave, discardHref, onDiscard }
 ```
-Set `active: false` (or never publish) to return to nav.
+Set `active: false` (or never publish) to return to nav. Omit `discardHref`/`onDiscard` to hide Discard.
+In this app, `window.publishDockEdit(detail)` (from `shell.js`) does both lines.
+Add `admin-dock-off` to `<body>` to hide the dock on a page that has not reserved `--admin-dock-clearance`.
 
 ## Authority
 

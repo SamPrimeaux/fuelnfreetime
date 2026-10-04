@@ -505,6 +505,7 @@
 }
 .mail-root .settings-modal {
   width: min(980px, calc(100vw - 32px)); height: min(760px, calc(100vh - 32px));
+  width: min(980px, calc(100vw - 32px)); height: min(760px, calc(100dvh - 32px));
   display: grid; grid-template-rows: auto 1fr; overflow: hidden;
   border-radius: var(--radius-xl); background: var(--fnf-steel);
   border: 1px solid var(--fnf-line); box-shadow: var(--shadow-1);
@@ -674,7 +675,7 @@
   .mail-root .message-list, .mail-root .reader { display: none; height: 100%; }
   .mail-root .mail-app[data-mobile="list"] .message-list { display: grid; }
   .mail-root .mail-app[data-mobile="reader"] .reader { display: grid; }
-  .mail-root .email-cards { grid-template-columns: 1fr; }
-  .mail-root .settings-body { grid-template-columns: 1fr; }
-  .mail-root .settings-grid, .mail-root .form-grid { grid-template-columns: 1fr; }
+  .mail-root .email-cards { grid-template-columns: minmax(0, 1fr); }
+  .mail-root .settings-body { grid-template-columns: minmax(0, 1fr); }
+  .mail-root .settings-grid, .mail-root .form-grid { grid-template-columns: minmax(0, 1fr); }
 }

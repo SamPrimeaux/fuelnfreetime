@@ -575,3 +575,64 @@
     max-width: 75vw;
   }
 }
+
+/* Cards size themselves, so tables restack by CARD width (not viewport): the same card is
+   ~390px wide on an iPad landscape beside the sidebar and on a phone. */
+.product-card {
+  container-type: inline-size;
+}
+
+.product-inventory-table input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+#variants-table-wrap {
+  overflow-x: auto; /* fallback for browsers without container queries */
+}
+
+@container (max-width: 600px) {
+  .product-inventory-table,
+  .product-inventory-table tbody {
+    display: block;
+  }
+  .product-inventory-table thead {
+    display: none;
+  }
+  .product-inventory-table tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid #ececec;
+  }
+  .product-inventory-table tr:last-child {
+    border-bottom: 0;
+  }
+  .product-inventory-table td {
+    display: block;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+  }
+  .product-inventory-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b6b6b;
+  }
+  .product-inventory-table td[colspan],
+  .product-inventory-table td.v-actions {
+    grid-column: 1 / -1;
+  }
+  .product-inventory-table td.v-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .product-inventory-table input[type="number"] {
+    width: 100%;
+  }
+}

@@ -507,6 +507,8 @@ function renderShell(activeHref, mainHtml, options = {}) {
   `;
 
   if (fullBleed) document.body.classList.add("console-body-bleed", "admin-body-bleed");
+  // Full-bleed tool pages own the whole viewport and have not reserved dock clearance; hide the dock there.
+  document.body.classList.toggle("admin-dock-off", fullBleed);
 
   bindConsoleGlobalHandlers();
   import('/admin/profile-popup/index.js')
@@ -651,6 +653,12 @@ function ensureViewportCover() {
     meta.setAttribute("content", `${content}${content ? ", " : ""}viewport-fit=cover`);
   }
 }
+
+/** Pages publish save state to the dock: publishDockEdit({ active, hint, dirty, canSave, saveLabel, onSave, discardHref }). */
+window.publishDockEdit = function publishDockEdit(detail) {
+  window.__adminDockEdit = detail;
+  document.dispatchEvent(new CustomEvent("admin-dock:edit", { detail }));
+};
 
 /** Mobile/tablet dock. Config comes from the app manifest (built into dock.config.json). Non-fatal. */
 async function mountShellDock() {

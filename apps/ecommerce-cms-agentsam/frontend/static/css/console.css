@@ -298,7 +298,7 @@ body.console-theme {
 }
 
 body.agentsam-open .agentsam-dock {
-  width: min(400px, 36vw);
+  width: min(var(--admin-agent-w, 400px), 36vw);
   border-left-width: 1px;
 }
 
@@ -1366,7 +1366,7 @@ body.console-theme .admin-login-logo span.brand-tag {
   }
 
   .theme-editor-body {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .theme-editor-preview {
@@ -1726,7 +1726,7 @@ body.console-nav-collapsed .console-nav-ghost-toggle--persistent:hover::before {
 
 @media (max-width: 900px) {
   .account-card-body {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -1814,4 +1814,79 @@ body.console-nav-collapsed .console-nav-ghost-toggle--persistent:hover::before {
   body.console-theme .console-main .admin-table .btn {
     min-height: 36px;
   }
+}
+
+/* ---- Touch sizing: width picks the layout, pointer picks the size ----
+   An iPad in landscape is wider than 900px (so it gets the desktop rail) but is still touch. */
+@media (pointer: coarse) {
+  body.console-theme .console-icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+  body.console-theme .console-nav-item,
+  body.console-theme .console-nav-child {
+    min-height: 44px;
+    height: auto;
+  }
+  body.console-theme .console-main .btn {
+    min-height: 44px;
+  }
+  body.console-theme .console-main .admin-table .btn {
+    min-height: 36px;
+  }
+  /* 16px stops iOS zooming on focus; applies at every width on touch devices. */
+  body.console-theme .console-main input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  body.console-theme .console-main select,
+  body.console-theme .console-main textarea {
+    font-size: 16px;
+  }
+}
+
+/* ---- Wide screens: content stops stretching, the agent panel grows ----
+   Tiers (CSS px): desktop 1200-1599, wide 1600-2199, ultra/TV >= 2200.
+   Boundaries are PROPOSED until measured on the real Mac and TV (see docs/operating responsive spec). */
+:root {
+  --admin-content-max: 1440px;
+  --admin-agent-w: 400px;
+}
+
+@media (min-width: 1600px) {
+  :root {
+    --admin-agent-w: 440px;
+  }
+  body.console-theme .console-main.admin-main:not(.console-main--bleed) {
+    padding-left: max(40px, calc((100% - var(--admin-content-max)) / 2));
+    padding-right: max(40px, calc((100% - var(--admin-content-max)) / 2));
+  }
+}
+
+@media (min-width: 2200px) {
+  :root {
+    --admin-content-max: 1760px;
+    --admin-agent-w: 520px;
+  }
+}
+
+/* Feature panel: fixed-width art beside the copy on wide screens, stacked on phones. */
+.console-feature-panel__art {
+  width: 280px;
+  flex: none;
+}
+
+@media (max-width: 640px) {
+  .console-feature-panel {
+    flex-direction: column;
+  }
+  .console-feature-panel__art {
+    width: auto;
+    padding: 16px;
+  }
+}
+
+/* Wide tables scroll inside their own card instead of being clipped by .console-main (overflow-x: hidden).
+   Applies at every width; cards whose table fits look exactly as before. Restacking into cards is polish-pass work. */
+.console-main .admin-card:has(.admin-table),
+.console-main .pages-card:has(.pages-table) {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }

@@ -52,6 +52,13 @@ try {
     out.edit = { hintW: Math.round(R(hint).width), hintClipped: hint.scrollWidth > hint.clientWidth, overflow: ed.scrollWidth > ed.clientWidth,
       minBtnH: Math.min(...[...document.querySelectorAll(".admin-dock__edit .admin-dock__btn")].map((b) => R(b).height)) };
     $(".admin-dock__orb").click(); await wait(20);
+    document.dispatchEvent(new CustomEvent("admin-dock:edit", { detail: { active: true, hint: "x", dirty: false, canSave: false, saveLabel: "Save" } })); await wait(10);
+    out.discardHiddenWhenNone = $('[data-edit="discard"]').hidden === true;
+    document.body.classList.add("admin-dock-off");
+    out.offHides = getComputedStyle($(".admin-dock")).display === "none";
+    document.body.classList.remove("admin-dock-off");
+    document.dispatchEvent(new CustomEvent("admin-dock:edit", { detail }));
+    await wait(10);
     out.compose = { inputFont: getComputedStyle($(".admin-dock__input")).fontSize, inputH: R($(".admin-dock__input")).height,
       minChipH: Math.min(...[...document.querySelectorAll(".admin-dock__chip")].map((c) => R(c).height)), sendW: R($(".admin-dock__send")).width };
   }
@@ -98,6 +105,8 @@ for (const w of VISIBLE) {
   check(w, !r.edit.overflow, "edit panel overflows");
   check(w, r.edit.hintW >= 90, `edit hint only ${r.edit.hintW}px wide (clipped=${r.edit.hintClipped})`);
   check(w, r.edit.minBtnH >= 44, `edit button height ${r.edit.minBtnH} < 44`);
+  check(w, r.discardHiddenWhenNone === true, "Discard must hide when no discardHref/onDiscard");
+  check(w, r.offHides === true, "body.admin-dock-off must hide the dock");
   check(w, r.compose.inputFont === "16px", `input font ${r.compose.inputFont} would zoom on iOS`);
   check(w, r.compose.inputH >= 44 && r.compose.minChipH >= 44 && r.compose.sendW >= 44, "compose targets < 44");
 }

@@ -133,8 +133,8 @@ export function mountAdminDock(options = {}) {
       hintEl.classList.toggle("is-dirty", Boolean(edit.dirty));
       saveEl.textContent = edit.saveLabel || "Save";
       saveEl.disabled = !edit.canSave;
-      if (edit.discardHref) discardEl.setAttribute("href", edit.discardHref);
-      else discardEl.setAttribute("href", "#");
+      discardEl.hidden = !(edit.discardHref || edit.onDiscard);
+      discardEl.setAttribute("href", edit.discardHref || "#");
     }
   }
 

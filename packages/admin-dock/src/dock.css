@@ -52,6 +52,9 @@ body.admin-dock-visible {
   transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease;
 }
 .admin-dock.is-visible { display: flex; }
+/* A host can switch the dock off per page (e.g. full-bleed tools that have not reserved clearance). */
+body.admin-dock-off .admin-dock { display: none !important; }
+body.admin-dock-off { --admin-dock-clearance: 0px; }
 .admin-dock [hidden] { display: none !important; }
 .admin-dock > * { pointer-events: auto; }
 
