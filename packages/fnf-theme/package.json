@@ -1,7 +1,7 @@
 {
   "name": "@inneranimalmedia/fnf-theme",
   "version": "0.1.0",
-  "description": "Normalized Fuel & Free Time-derived theme, section presets, page templates, and asset contracts.",
+  "description": "Dark industrial streetwear theme: tokens, layout contract, section presets, shell, home template, and a stock demo site config.",
   "type": "module",
   "files": [
     "src",
@@ -14,12 +14,18 @@
     "./sections/scene-hero": "./src/sections/scene-hero/scene-hero.js",
     "./sections/countdown-banner": "./src/sections/countdown-banner/countdown-banner.js",
     "./templates/home": "./src/templates/home.json",
-    "./sites/fuelnfreetime": "./src/sites/fuelnfreetime.json"
+    "./sites/demo": "./src/sites/demo.json",
+    "./sections/*": "./src/sections/*",
+    "./shell/*": "./src/shell/*",
+    "./contracts/*": "./src/contracts/*"
   },
   "sideEffects": [
     "**/*.css"
   ],
   "publishConfig": {
     "access": "public"
+  },
+  "scripts": {
+    "prepublishOnly": "node ../../scripts/check-publish-denylist.mjs --package ."
   }
 }

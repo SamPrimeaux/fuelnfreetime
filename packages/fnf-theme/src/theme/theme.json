@@ -2,7 +2,7 @@
   "id": "fnf",
   "package": "@inneranimalmedia/fnf-theme",
   "displayName": "FNF",
-  "source": "Fuel & Free Time historical site harvest",
+  "source": "Original FNF design system",
   "layout": {
     "max": 1440,
     "wide": 1320,

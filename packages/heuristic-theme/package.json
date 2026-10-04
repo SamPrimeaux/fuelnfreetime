@@ -1,6 +1,7 @@
 {
   "name": "@inneranimalmedia/heuristic-theme",
   "version": "0.1.0",
+  "private": true,
   "type": "module",
   "files": ["contracts", "presets", "storefront", "theme.json", "theme.schema.json", "README.md"],
   "exports": {

@@ -1,31 +1,23 @@
-# @inneranimalmedia/fnf-theme — remaster candidate
+# @inneranimalmedia/fnf-theme
 
-This package is a normalized harvest of the historical Fuel & Free Time site design.
+FNF is a dark, industrial streetwear theme: tokens, layout contract, section presets, a global shell, and a home page template. It ships with a neutral demo site so you can run it as-is, then swap in your own brand.
 
-## Boundaries
+## What's inside
 
-- `@inneranimalmedia/fnf-theme` owns **visual character**: tokens, surfaces, gradients, section presets, motion presets, and FNF page compositions.
-- Generic renderers/contracts should live in a reusable section/theme library instead of being duplicated here.
-- `fuelnfreetime` remains the **customer/site implementation**. Site-specific URLs, current logo delivery, current GLB URLs, collection IDs, newsletter actions, and other deployment data live under `src/sites/`, not in renderer source.
-- Header and footer are **global shell components**. Pages are compositions of sections/blocks/groups; pages are not monolithic `index.html` files.
+- `tokens.css`, `layout.css`, `theme.json`: color, type, spacing, motion, and the layout contract
+- `sections/*`: `scene-hero` (3D model aware), `countdown-banner`, `manifesto-split`, `collection-list`, `feature-card-grid` (values, community), `newsletter-cta`
+- `shell/*`: global site header and footer
+- `templates/home`: the home page as a composition of sections
+- `sites/demo`: a stock site config (no real brand, no URLs)
+
+## Make it yours
+
+Sections never contain URLs. They refer to logical asset keys such as `brand.logo` and `home.hero.model`; a site config maps those keys to your real files. Copy `sites/demo.json` into your own project, fill it in, and keep it there. Do not edit the package.
 
 ## Layout contract
 
-Mobile first. Default outer ceiling is 1440px, with 1320px wide, 1200px content, and 760px reading widths. Gutters are fluid. Full-bleed backgrounds are distinct from full-bleed media/content. Touch targets are >=44px; form text is >=16px on compact screens; safe-area and reduced-motion behavior are expected.
+Mobile first. Outer ceiling 1440px (1320 wide, 1200 content, 760 reading). Fluid gutters. Touch targets are 44px or larger, form text is 16px or larger on compact screens, and safe-area and reduced-motion behavior are expected.
 
-## Home composition extracted from the donor
+## Boundaries
 
-1. `scene-hero` — remastered GLB-aware hero; model URL comes from site config.
-2. `manifesto-split`
-3. `collection-list` (`grid` presentation)
-4. `feature-card-grid` (`values` preset)
-5. `feature-card-grid` (`community` preset)
-6. `countdown-banner` — standalone reusable launch/drop timer; target date is data, never source code.
-7. `newsletter-cta`
-8. Global `site-header` / `site-footer`
-
-See `src/templates/home.json`.
-
-## Asset rule
-
-Renderers refer to logical asset keys such as `brand.logo` and `home.hero.model`. A site resolver/config maps those keys to Cloudflare Images, R2/custom-domain URLs, or another provider. This prevents future asset replacements from requiring a 1,500-line source hunt.
+This package owns visual character only. Generic renderers belong in a reusable section library. Customer data (real logos, model URLs, copy, navigation, store IDs) belongs in the customer's own repository.
