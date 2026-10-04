@@ -57,6 +57,7 @@ export function normalizeDockConfig(raw) {
         .map((c) => ({ label: String(c.label), prompt: String(c.prompt) })),
     }));
   return {
+    startHidden: raw.startHidden === true,
     tabs,
     scopes,
     agent: { label: (raw.agent && raw.agent.label) || "Agent" },

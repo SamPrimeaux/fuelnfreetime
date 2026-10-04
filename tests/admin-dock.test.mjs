@@ -40,13 +40,16 @@ test("manifest dock block: twin manifests agree and the dock feature is register
   assert.ok(twin.features.includes("admin.mobile-dock"));
 });
 
-test("manifest dock block: ids unique, one nav action, every tab is a link or the nav action", () => {
+test("manifest dock block: ids unique, one nav action, one agent action, every tab is a link or an action", () => {
   const cfg = normalizeDockConfig(app.dock);
   assert.ok(cfg);
   const ids = cfg.tabs.map((t) => t.id);
   assert.equal(new Set(ids).size, ids.length);
   assert.equal(cfg.tabs.filter((t) => t.action === "nav").length, 1);
-  for (const t of cfg.tabs) assert.ok(t.href || t.action === "nav", `${t.id} needs href or nav action`);
+  assert.equal(cfg.tabs.filter((t) => t.action === "agent").length, 1, "the agent is a tab inside the dock, exactly once");
+  const agentAt = cfg.tabs.findIndex((t) => t.action === "agent");
+  assert.ok(agentAt > 0 && agentAt < cfg.tabs.length - 1, "agent sits between the other tabs, not on an edge");
+  for (const t of cfg.tabs) assert.ok(t.href || ["nav", "agent"].includes(t.action), `${t.id} needs href or a nav/agent action`);
   assert.ok(cfg.tabs.length <= 5, "a phone dock holds at most 5 tabs");
 });
 
@@ -73,4 +76,12 @@ test("compact breakpoint matches the shell drawer breakpoint", () => {
   assert.equal(COMPACT_MAX_WIDTH, 900);
   const admin = readFileSync(new URL("../apps/ecommerce-cms-agentsam/frontend/static/css/admin.css", import.meta.url), "utf8");
   assert.match(admin, /@media \(max-width: 900px\)/);
+});
+
+test("startHidden defaults to visible, is opt-in, and is set explicitly in the manifest", () => {
+  const tabs = [{ id: "a", label: "A", href: "/a" }];
+  assert.equal(normalizeDockConfig({ tabs }).startHidden, false);
+  assert.equal(normalizeDockConfig({ tabs, startHidden: "yes" }).startHidden, false);
+  assert.equal(normalizeDockConfig({ tabs, startHidden: true }).startHidden, true);
+  assert.equal(app.dock.startHidden, false, "dock starts visible by default");
 });

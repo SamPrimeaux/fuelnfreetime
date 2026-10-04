@@ -1,20 +1,21 @@
 /**
- * Responsive smoke test for the admin dock: serves dist/assets, loads the dock in
- * iframes at real CSS widths, and asserts the size contract. Node stdlib only.
+ * Responsive + gesture smoke test for the admin dock: serves dist/assets, loads the dock in an
+ * iframe at real CSS widths (one at a time), and asserts the size contract and the swipe behavior.
+ * Node stdlib only.
  *
  *   npm run build:admin:skip && node tests/dock-responsive-smoke.mjs
  *
- * Chrome is located on macOS/Linux PATH defaults; the test skips (exit 0) with a
- * message when no Chrome is found, so CI without a browser stays green.
+ * Chrome is located on macOS/Linux PATH defaults; the test skips (exit 0) with a message when no
+ * Chrome is found, so CI without a browser stays green.
  */
 import http from "node:http";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-const run = promisify(execFile);
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+const run = promisify(execFile);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const assets = path.join(root, "dist/assets");
 const chrome = [
@@ -38,39 +39,85 @@ const inner = `<!doctype html><meta charset="utf-8"><meta name="viewport" conten
 import { mountAdminDock } from "/admin/dock/index.js";
 const out = {};
 try {
+  try { sessionStorage.removeItem("admin-dock:hidden"); } catch {}
   const config = await (await fetch("/admin/dock/dock.config.json")).json();
-  mountAdminDock({ config, pathname: "/admin/products/create", host: { send: async () => {}, open() {}, openNav() {} } });
+  const mk = () => mountAdminDock({ config, pathname: "/admin/products/create", host: { send: async () => {}, open() {}, openNav() { out.navOpened = true; } } });
+  let dock = mk();
   const $ = (s) => document.querySelector(s), R = (e) => e.getBoundingClientRect(), wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const pe = (type, el, x, y, id = 5) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: id, pointerType: "touch", isPrimary: true, clientX: x, clientY: y }));
   out.w = innerWidth; out.visible = $(".admin-dock").classList.contains("is-visible");
   if (out.visible) {
-    const bar = R($(".admin-dock__bar")), orb = R($(".admin-dock__orb"));
-    out.nav = { barH: Math.round(bar.height), orb: Math.round(orb.width), left: Math.round(bar.left), right: Math.round(innerWidth - orb.right),
-      minTap: Math.min(...[...document.querySelectorAll(".admin-dock__tab")].flatMap((t) => [R(t).width, R(t).height])) };
+    const bar = R($(".admin-dock__bar"));
+    const tabs = [...document.querySelectorAll(".admin-dock__tab")];
+    out.nav = { orbGone: !$(".admin-dock__orb"), tabCount: tabs.length, agentIndex: tabs.findIndex((t) => t.dataset.action === "agent"), agentInBar: !!$('.admin-dock__bar [data-action="agent"]'),
+      barH: Math.round(bar.height), barW: Math.round(bar.width), left: Math.round(bar.left), right: Math.round(innerWidth - bar.right),
+      minTap: Math.round(Math.min(...tabs.flatMap((t) => [R(t).width, R(t).height]))) };
+    // edit mode
     const detail = { active: true, hint: "Unsaved changes", dirty: true, canSave: true, saveLabel: "Create", onSave() {}, discardHref: "/admin/products" };
     document.dispatchEvent(new CustomEvent("admin-dock:edit", { detail })); await wait(20);
     const hint = $(".admin-dock__hint"), ed = $(".admin-dock__edit");
-    out.edit = { hintW: Math.round(R(hint).width), hintClipped: hint.scrollWidth > hint.clientWidth, overflow: ed.scrollWidth > ed.clientWidth,
-      minBtnH: Math.min(...[...document.querySelectorAll(".admin-dock__edit .admin-dock__btn")].map((b) => R(b).height)) };
-    $(".admin-dock__orb").click(); await wait(20);
+    const ctl = [...document.querySelectorAll(".admin-dock__edit .admin-dock__btn, .admin-dock__edit .admin-dock__icon-btn")].filter((e) => !e.hidden);
+    out.edit = { hintW: Math.round(R(hint).width), overflow: ed.scrollWidth > ed.clientWidth, minCtl: Math.round(Math.min(...ctl.flatMap((b) => [R(b).width, R(b).height]))), agentInEdit: !!$('.admin-dock__edit [data-action="agent"]') };
     document.dispatchEvent(new CustomEvent("admin-dock:edit", { detail: { active: true, hint: "x", dirty: false, canSave: false, saveLabel: "Save" } })); await wait(10);
     out.discardHiddenWhenNone = $('[data-edit="discard"]').hidden === true;
-    document.body.classList.add("admin-dock-off");
-    out.offHides = getComputedStyle($(".admin-dock")).display === "none";
-    document.body.classList.remove("admin-dock-off");
-    document.dispatchEvent(new CustomEvent("admin-dock:edit", { detail }));
-    await wait(10);
-    out.compose = { inputFont: getComputedStyle($(".admin-dock__input")).fontSize, inputH: R($(".admin-dock__input")).height,
-      minChipH: Math.min(...[...document.querySelectorAll(".admin-dock__chip")].map((c) => R(c).height)), sendW: R($(".admin-dock__send")).width };
+    document.body.classList.add("admin-dock-off"); out.offHides = getComputedStyle($(".admin-dock")).display === "none"; document.body.classList.remove("admin-dock-off");
+    document.dispatchEvent(new CustomEvent("admin-dock:edit", { detail })); await wait(10);
+    // compose (from edit mode, via the agent control inside the capsule)
+    $('.admin-dock__edit [data-action="agent"]').click(); await wait(20);
+    const close = $('[data-action="close-compose"]'), send = $(".admin-dock__send");
+    out.compose = { mode: $(".admin-dock").dataset.mode, inputFont: getComputedStyle($(".admin-dock__input")).fontSize, inputH: Math.round(R($(".admin-dock__input")).height),
+      minChipH: Math.round(Math.min(...[...document.querySelectorAll(".admin-dock__chip")].map((c) => R(c).height))), closeW: Math.round(R(close).width), closeH: Math.round(R(close).height), sendW: Math.round(R(send).width) };
+    close.click(); await wait(10); out.composeClosesToEdit = $(".admin-dock").dataset.mode === "edit";
+    document.dispatchEvent(new CustomEvent("admin-dock:edit", { detail: { active: false } })); await wait(10);
+    // swipe: a slow short drag snaps back
+    const barEl = $(".admin-dock__bar"), mainEl = $(".admin-dock__main"), handle = $(".admin-dock__handle");
+    pe("pointerdown", barEl, 200, 760); await wait(300); pe("pointermove", barEl, 200, 772); pe("pointermove", barEl, 200, 782); await wait(50);
+    out.swipe = { draggingMidway: $(".admin-dock").classList.contains("is-dragging") && mainEl.style.transform.startsWith("translateY(") };
+    pe("pointerup", barEl, 200, 782); await wait(20);
+    out.swipe.slowShortStays = $(".admin-dock").dataset.hidden === "false" && mainEl.style.transform === "";
+    // a quick longer swipe hides it, leaving only the handle
+    pe("pointerdown", barEl, 200, 760); pe("pointermove", barEl, 200, 790); pe("pointermove", barEl, 200, 830); pe("pointerup", barEl, 200, 830); await wait(350);
+    const hr = R(handle);
+    out.swipe.fastHides = $(".admin-dock").dataset.hidden === "true";
+    out.swipe.handleH = Math.round(hr.height); out.swipe.handleW = Math.round(hr.width); out.swipe.handleShown = getComputedStyle(handle).display !== "none";
+    out.swipe.bodyClass = document.body.classList.contains("admin-dock-hidden"); out.swipe.mainInert = mainEl.inert === true;
+    out.swipe.persisted = (() => { try { return sessionStorage.getItem("admin-dock:hidden") === "1"; } catch { return null; } })();
+    out.swipe.clearanceShrinks = getComputedStyle(document.body).getPropertyValue("--admin-dock-clearance").includes("44px");
+    // survives the next page load
+    dock.destroy(); dock = mk(); await wait(20);
+    out.swipe.hiddenAfterRemount = $(".admin-dock").dataset.hidden === "true";
+    // swipe the handle up to bring it back
+    const handle2 = $(".admin-dock__handle");
+    pe("pointerdown", handle2, 200, 820, 6); pe("pointermove", handle2, 200, 790, 6); pe("pointerup", handle2, 200, 790, 6); await wait(350);
+    out.swipe.swipeUpRestores = $(".admin-dock").dataset.hidden === "false";
+    // grabber button hides, handle tap restores
+    $(".admin-dock__grab").click(); await wait(20); const hiddenByGrab = $(".admin-dock").dataset.hidden === "true";
+    $(".admin-dock__handle").click(); await wait(20);
+    out.swipe.grabAndTap = hiddenByGrab && $(".admin-dock").dataset.hidden === "false";
+    // in compose, swiping down closes the composer instead of tucking the dock away
+    $('[data-tab="agent"]').click(); await wait(20); const composing = $(".admin-dock").dataset.mode === "compose";
+    const bar2 = $(".admin-dock__bar");
+    pe("pointerdown", bar2, 200, 760, 7); pe("pointermove", bar2, 200, 790, 7); pe("pointermove", bar2, 200, 830, 7); pe("pointerup", bar2, 200, 830, 7); await wait(60);
+    out.swipe.composeSwipeCloses = composing && $(".admin-dock").dataset.mode === "nav" && $(".admin-dock").dataset.hidden === "false";
+    try { sessionStorage.removeItem("admin-dock:hidden"); } catch {}
+    // config default: startHidden true starts tucked away; the default (false) starts visible
+    dock.destroy(); dock = mountAdminDock({ config: { ...config, startHidden: true }, pathname: "/admin/home", host: {} }); await wait(20);
+    out.startHiddenHonored = $(".admin-dock").dataset.hidden === "true";
+    dock.destroy(); dock = mk(); await wait(20);
+    out.startsVisibleByDefault = $(".admin-dock").dataset.hidden === "false";
+    try { sessionStorage.removeItem("admin-dock:hidden"); } catch {}
   }
 } catch (e) { out.error = String(e && e.stack || e); }
 document.getElementById("out").textContent = JSON.stringify(out);
 </script>`;
 const widths = [...VISIBLE, ...HIDDEN];
+// One iframe at a time: sessionStorage is shared across same-origin frames.
 const outer = `<!doctype html><pre id="out"></pre><script>
-const widths=${JSON.stringify(widths)},res={};let n=0;
-widths.forEach(w=>{const f=document.createElement('iframe');f.width=w;f.height=844;f.src='/inner.html';f.style.cssText='border:0;display:block';
-f.onload=()=>setTimeout(()=>{try{res[w]=JSON.parse(f.contentDocument.getElementById('out').textContent)}catch(e){res[w]={error:String(e)}}
-if(++n===widths.length)document.getElementById('out').textContent=JSON.stringify(res)},900);document.body.appendChild(f)});</script>`;
+const widths=${JSON.stringify(widths)},res={};let i=0;
+function next(){if(i>=widths.length){document.getElementById('out').textContent=JSON.stringify(res);return}
+const w=widths[i++],f=document.createElement('iframe');f.width=w;f.height=844;f.style.cssText='border:0;display:block';f.src='/inner.html';
+f.onload=()=>setTimeout(()=>{try{res[w]=JSON.parse(f.contentDocument.getElementById('out').textContent)}catch(e){res[w]={error:String(e)}}f.remove();next()},1500);document.body.appendChild(f)}
+next();</script>`;
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, "http://x").pathname;
@@ -86,30 +133,51 @@ const port = server.address().port;
 let dom;
 try {
   // Async on purpose: the server above lives in this process, so a blocking exec would deadlock it.
-  ({ stdout: dom } = await run(chrome, ["--headless=new", "--disable-gpu", "--window-size=1600,900", "--virtual-time-budget=15000", "--dump-dom", `http://127.0.0.1:${port}/index.html`], { encoding: "utf8", maxBuffer: 1 << 24, timeout: 60000 }));
+  ({ stdout: dom } = await run(chrome, ["--headless=new", "--disable-gpu", "--window-size=1600,900", "--virtual-time-budget=90000", "--dump-dom", `http://127.0.0.1:${port}/index.html`], { encoding: "utf8", maxBuffer: 1 << 24, timeout: 120000 }));
 } finally { server.close(); }
 const m = dom.match(/<pre id="out">([\s\S]*?)<\/pre>/);
-if (!m) { console.error("no result from Chrome"); process.exit(1); }
+if (!m || !m[1].trim()) { console.error("no result from Chrome"); process.exit(1); }
 const results = JSON.parse(m[1].replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">"));
 
+if (process.env.DOCK_SMOKE_DEBUG) for (const w of [390, 744]) console.log(w, JSON.stringify(results[w]));
 const failures = [];
-const check = (w, ok, msg) => { if (!ok) failures.push(`${w}px: ${msg}`); };
 for (const w of VISIBLE) {
   const r = results[w];
-  check(w, r && !r.error && r.visible, `dock should be visible ${r?.error || ""}`);
+  const check = (ok, msg) => { if (!ok) failures.push(`${w}px: ${msg}`); };
+  check(r && !r.error && r.visible, `dock should be visible ${r?.error || ""}`);
   if (!r?.visible) continue;
-  check(w, r.nav.minTap >= 44, `tab hit area ${r.nav.minTap} < 44`);
-  check(w, r.nav.orb === 56, `orb ${r.nav.orb} != 56`);
-  check(w, r.nav.barH >= 62 && r.nav.barH <= 66, `bar height ${r.nav.barH} not ~64`);
-  check(w, r.nav.left >= 16 && r.nav.right >= 16, `side margins ${r.nav.left}/${r.nav.right} < 16`);
-  check(w, !r.edit.overflow, "edit panel overflows");
-  check(w, r.edit.hintW >= 90, `edit hint only ${r.edit.hintW}px wide (clipped=${r.edit.hintClipped})`);
-  check(w, r.edit.minBtnH >= 44, `edit button height ${r.edit.minBtnH} < 44`);
-  check(w, r.discardHiddenWhenNone === true, "Discard must hide when no discardHref/onDiscard");
-  check(w, r.offHides === true, "body.admin-dock-off must hide the dock");
-  check(w, r.compose.inputFont === "16px", `input font ${r.compose.inputFont} would zoom on iOS`);
-  check(w, r.compose.inputH >= 44 && r.compose.minChipH >= 44 && r.compose.sendW >= 44, "compose targets < 44");
+  const n = r.nav, e = r.edit, c = r.compose, s = r.swipe;
+  check(n.orbGone, "no separate orb: the agent lives inside the capsule");
+  check(n.agentInBar && n.tabCount === 5 && n.agentIndex === 2, `agent must be the middle of 5 tabs inside the bar (tabs=${n.tabCount}, agentIndex=${n.agentIndex})`);
+  check(n.minTap >= 44, `tab hit area ${n.minTap} < 44`);
+  check(n.barH >= 63 && n.barH <= 65, `bar height ${n.barH} not 64`);
+  if (w <= 640) check(Math.abs(n.barW - (w - 32)) <= 2, `phone bar should fill the width (barW ${n.barW}, expected ${w - 32})`);
+  else check(n.barW <= 561, `tablet bar capped at 560 (barW ${n.barW})`);
+  check(n.left >= 16 && n.right >= 16, `side margins ${n.left}/${n.right} < 16`);
+  check(!e.overflow, "edit panel overflows");
+  check(e.hintW >= 90, `edit hint only ${e.hintW}px wide`);
+  check(e.minCtl >= 44, `edit control ${e.minCtl} < 44`);
+  check(e.agentInEdit, "agent stays reachable inside the capsule in edit mode");
+  check(r.discardHiddenWhenNone === true, "Discard must hide when no discardHref/onDiscard");
+  check(r.offHides === true, "body.admin-dock-off must hide the dock");
+  check(c.mode === "compose" && r.composeClosesToEdit === true, "agent control opens compose; close returns to edit");
+  check(c.inputFont === "16px", `input font ${c.inputFont} would zoom on iOS`);
+  check(c.inputH >= 44 && c.minChipH >= 44 && c.closeW >= 44 && c.closeH >= 44 && c.sendW >= 44, "compose targets < 44");
+  check(s.draggingMidway === true, "capsule should follow the finger while dragging");
+  check(s.slowShortStays === true, "a slow short drag must snap back");
+  check(s.fastHides === true, "a quick swipe down must tuck the capsule away");
+  check(s.handleShown && s.handleH >= 44 && s.handleW >= 44, `handle must remain (>=44): ${s.handleW}x${s.handleH}`);
+  check(s.bodyClass === true && s.mainInert === true, "hidden state must set body class and make the capsule inert");
+  check(s.persisted === true && s.hiddenAfterRemount === true, "hidden state must persist across page loads (sessionStorage)");
+  check(s.clearanceShrinks === true, "page clearance must shrink when the capsule is tucked away");
+  check(s.swipeUpRestores === true, "swiping the handle up must bring the capsule back");
+  check(s.grabAndTap === true, "grabber hides, handle tap restores");
+  check(r.startsVisibleByDefault === true, "dock starts visible by default");
+  check(r.startHiddenHonored === true, "dock.startHidden: true starts tucked away");
+  check(s.composeSwipeCloses === true, "swipe down in compose closes the composer, not the dock");
 }
-for (const w of HIDDEN) check(w, results[w] && results[w].visible === false, "dock must be hidden above 900px");
+for (const w of HIDDEN) {
+  if (!(results[w] && results[w].visible === false)) failures.push(`${w}px: dock must be hidden above 900px`);
+}
 if (failures.length) { console.error("FAIL\n" + failures.map((f) => " - " + f).join("\n")); process.exit(1); }
-console.log(`PASS: ${VISIBLE.length} compact widths meet the size contract; dock hidden at ${HIDDEN.join(", ")}px`);
+console.log(`PASS: ${VISIBLE.length} compact widths meet the size contract and swipe behavior; dock hidden at ${HIDDEN.join(", ")}px`);

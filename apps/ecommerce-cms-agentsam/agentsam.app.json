@@ -34,10 +34,12 @@
     "provider.resend"
   ],
   "dock": {
+    "startHidden": false,
     "agent": { "label": "AgentSam" },
     "tabs": [
       { "id": "home", "label": "Home", "href": "/admin/home", "icon": "home" },
       { "id": "products", "label": "Products", "href": "/admin/products", "icon": "products", "match": ["/admin/products", "/admin/products/*", "/admin/product-edit", "/admin/inventory"] },
+      { "id": "agent", "label": "AgentSam", "action": "agent", "icon": "sparkle" },
       { "id": "orders", "label": "Orders", "href": "/admin/orders", "icon": "orders" },
       { "id": "menu", "label": "More", "action": "nav", "icon": "menu" }
     ],

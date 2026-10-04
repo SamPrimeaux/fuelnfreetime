@@ -18,7 +18,7 @@
   "optional": ["agentsam.mini-composer"],
   "runtime": ["browser"],
   "contributes": {
-    "ui": ["glass-dock", "agent-orb", "edit-mode-bar", "scope-chips"]
+    "ui": ["glass-dock", "agent-tab", "edit-mode-bar", "scope-chips", "swipe-to-hide"]
   },
   "host_bindings": {
     "required": ["dock_config_from_app_manifest", "send(prompt,{context})", "open()", "openNav()"],
@@ -31,7 +31,7 @@
       "packages/admin-dock/src/scope.js",
       "packages/admin-dock/src/dock.css"
     ],
-    "notes": "Config lives only in the app manifest `dock` block (agentsam.app.json and its .agentsam/app.json twin). The agent orb reuses the existing AgentSam drawer; the dock never owns transport or sessions."
+    "notes": "Config lives only in the app manifest `dock` block (agentsam.app.json and its .agentsam/app.json twin). The agent tab reuses the existing AgentSam drawer; the dock never owns transport or sessions."
   },
   "activation": {
     "steps": ["validate_manifest", "check_runtime", "operator_approval", "activate", "verify", "write_install_receipt"]

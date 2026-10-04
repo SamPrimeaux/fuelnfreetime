@@ -38,13 +38,13 @@ test("compact shell, touch sizing and wide tiers are defined once in console.css
   assert.match(css, /@media \(min-width: 2200px\)/);
 });
 
-test("pages with their own save bar hide it while the dock shows edit mode", () => {
+test("pages with their own save bar hide it only while the dock is showing edit mode", () => {
   for (const [file, selector] of [
     ["product-edit.css", ".product-editor-bar"],
     ["pages.css", ".page-editor-savebar"],
     ["preferences.css", ".prefs-savebar"],
   ]) {
     const css = readFileSync(path.join(staticDir, "css", file), "utf8");
-    assert.ok(css.includes(`body.admin-dock-visible.admin-dock-has-edit ${selector}`), `${file} should hide ${selector}`);
+    assert.ok(css.includes(`body.admin-dock-visible.admin-dock-has-edit:not(.admin-dock-hidden) ${selector}`), `${file} should hide ${selector} only while the dock is showing (the bar is the fallback when the dock is tucked away)`);
   }
 });

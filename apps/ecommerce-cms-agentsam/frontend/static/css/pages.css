@@ -803,7 +803,7 @@
     padding: 16px 0 calc(var(--admin-dock-clearance, 96px) + 16px);
   }
 
-  body.admin-dock-visible.admin-dock-has-edit .page-editor-savebar {
+  body.admin-dock-visible.admin-dock-has-edit:not(.admin-dock-hidden) .page-editor-savebar {
     display: none;
   }
 
