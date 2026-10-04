@@ -8,6 +8,9 @@ inside it, not a separate button.
 | nav | default | tabs from config; the `agent` tab opens the composer, `nav` opens the full menu |
 | edit | a page publishes save state | agent button, hint, discard, save (replaces a page's own sticky save bar) |
 | compose | agent tab tapped | scope chip, quick chips for the current route, input, send |
+| peek | a dock send resolves | compact status/reply above the capsule; full chat opens only from **Open chat** |
+
+The active composer border, AgentSam tab, send button, focus rings, and peek actions all use the same manifest-driven accent. A host can therefore brand the interaction without changing this package.
 
 **Swipe:** drag the capsule down to tuck it away; a 44px handle stays at the bottom edge.
 Swipe the handle up (or tap it) to bring the capsule back. In compose, swiping down closes
