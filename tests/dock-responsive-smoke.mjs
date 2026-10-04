@@ -100,6 +100,12 @@ try {
     pe("pointerdown", bar2, 200, 760, 7); pe("pointermove", bar2, 200, 790, 7); pe("pointermove", bar2, 200, 830, 7); pe("pointerup", bar2, 200, 830, 7); await wait(60);
     out.swipe.composeSwipeCloses = composing && $(".admin-dock").dataset.mode === "nav" && $(".admin-dock").dataset.hidden === "false";
     try { sessionStorage.removeItem("admin-dock:hidden"); } catch {}
+    // config default: startHidden true starts tucked away; the default (false) starts visible
+    dock.destroy(); dock = mountAdminDock({ config: { ...config, startHidden: true }, pathname: "/admin/home", host: {} }); await wait(20);
+    out.startHiddenHonored = $(".admin-dock").dataset.hidden === "true";
+    dock.destroy(); dock = mk(); await wait(20);
+    out.startsVisibleByDefault = $(".admin-dock").dataset.hidden === "false";
+    try { sessionStorage.removeItem("admin-dock:hidden"); } catch {}
   }
 } catch (e) { out.error = String(e && e.stack || e); }
 document.getElementById("out").textContent = JSON.stringify(out);
@@ -166,6 +172,8 @@ for (const w of VISIBLE) {
   check(s.clearanceShrinks === true, "page clearance must shrink when the capsule is tucked away");
   check(s.swipeUpRestores === true, "swiping the handle up must bring the capsule back");
   check(s.grabAndTap === true, "grabber hides, handle tap restores");
+  check(r.startsVisibleByDefault === true, "dock starts visible by default");
+  check(r.startHiddenHonored === true, "dock.startHidden: true starts tucked away");
   check(s.composeSwipeCloses === true, "swipe down in compose closes the composer, not the dock");
 }
 for (const w of HIDDEN) {

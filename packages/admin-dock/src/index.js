@@ -50,8 +50,12 @@ function esc(value) {
   return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 }
 
+/** The visitor's choice this session ("1" / "0"), or null when they have not swiped yet. */
 function readHidden(win) {
-  try { return win.sessionStorage.getItem(HIDDEN_KEY) === "1"; } catch { return false; }
+  try {
+    const v = win.sessionStorage.getItem(HIDDEN_KEY);
+    return v === "1" ? true : v === "0" ? false : null;
+  } catch { return null; }
 }
 function writeHidden(win, hidden) {
   try { win.sessionStorage.setItem(HIDDEN_KEY, hidden ? "1" : "0"); } catch { /* storage unavailable: per-page only */ }
@@ -134,7 +138,8 @@ export function mountAdminDock(options = {}) {
 
   let composing = false;
   let busy = false;
-  let hidden = readHidden(win);
+  // Session choice wins; otherwise the manifest default (dock.startHidden, false unless set).
+  let hidden = readHidden(win) ?? config.startHidden;
   let edit = null;
 
   function setNote(text) {

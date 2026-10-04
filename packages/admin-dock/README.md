@@ -12,7 +12,7 @@ inside it, not a separate button.
 **Swipe:** drag the capsule down to tuck it away; a 44px handle stays at the bottom edge.
 Swipe the handle up (or tap it) to bring the capsule back. In compose, swiping down closes
 the composer instead. The small grabber on top of the capsule is also a button. The hidden
-state lasts for the browser session. While tucked away, a page's own save bar returns as the
+state lasts for the browser session. Set `"startHidden": true` in the `dock` block to start every session tucked away (default `false`); a swipe during the session always wins. While tucked away, a page's own save bar returns as the
 fallback, so Save is never unreachable.
 
 ## Install into a host

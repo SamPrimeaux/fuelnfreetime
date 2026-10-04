@@ -65,6 +65,7 @@
     "fulfillment_automation": false
   },
   "dock": {
+    "startHidden": false,
     "agent": { "label": "AgentSam" },
     "tabs": [
       { "id": "home", "label": "Home", "href": "/admin/home", "icon": "home" },

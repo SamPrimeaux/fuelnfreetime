@@ -77,3 +77,11 @@ test("compact breakpoint matches the shell drawer breakpoint", () => {
   const admin = readFileSync(new URL("../apps/ecommerce-cms-agentsam/frontend/static/css/admin.css", import.meta.url), "utf8");
   assert.match(admin, /@media \(max-width: 900px\)/);
 });
+
+test("startHidden defaults to visible, is opt-in, and is set explicitly in the manifest", () => {
+  const tabs = [{ id: "a", label: "A", href: "/a" }];
+  assert.equal(normalizeDockConfig({ tabs }).startHidden, false);
+  assert.equal(normalizeDockConfig({ tabs, startHidden: "yes" }).startHidden, false);
+  assert.equal(normalizeDockConfig({ tabs, startHidden: true }).startHidden, true);
+  assert.equal(app.dock.startHidden, false, "dock starts visible by default");
+});
