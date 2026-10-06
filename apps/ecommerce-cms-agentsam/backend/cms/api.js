@@ -346,6 +346,7 @@ export async function listPagesAdmin(env) {
       ...resolvePageAuthority(row.slug, CMS_STOREFRONT_ROUTES, {
         seeded: true,
         cmsPublished: Boolean(published),
+        cmsDraftLinked: linked,
       }),
     });
   }
