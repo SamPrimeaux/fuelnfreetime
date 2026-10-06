@@ -1,0 +1,35 @@
+{
+  "contractVersion": 1,
+  "id": "shop",
+  "name": "Shop",
+  "pageType": "collection-index",
+  "layout": {
+    "headerGroup": "site/header",
+    "mainRegion": "template",
+    "footerGroup": "site/footer"
+  },
+  "sections": [
+    {
+      "id": "hero",
+      "type": "media-hero",
+      "preset": "revise/sticky-curtain",
+      "enabled": true,
+      "settings": {},
+      "blocks": [],
+      "bindings": {
+        "media": { "source": "media", "ref": "shop.hero.image" }
+      }
+    },
+    {
+      "id": "collections",
+      "type": "collection-list",
+      "preset": "revise/wardrobe-rail",
+      "enabled": true,
+      "settings": {},
+      "blocks": [],
+      "bindings": {
+        "items": { "source": "collection", "query": { "limit": 6 } }
+      }
+    }
+  ]
+}

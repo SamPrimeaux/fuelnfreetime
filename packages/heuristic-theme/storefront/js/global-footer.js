@@ -91,9 +91,16 @@
       if (!response.ok) throw new Error("site CMS unavailable");
       const data = await response.json();
       const sections = sectionMap(data && data.page);
+      const legacyBrand = { ...DEFAULTS.brand, ...(sections.get("brand") || {}) };
+      const footer = { ...DEFAULTS.footer, ...(sections.get("footer") || {}) };
       return {
-        brand: { ...DEFAULTS.brand, ...(sections.get("brand") || {}) },
-        footer: { ...DEFAULTS.footer, ...(sections.get("footer") || {}) },
+        brand: {
+          ...legacyBrand,
+          ...(footer.logoUrl ? { logoUrl: footer.logoUrl } : {}),
+          ...(footer.tagline ? { tagline: footer.tagline } : {}),
+          ...(footer.description ? { footerDescription: footer.description } : {}),
+        },
+        footer,
       };
     } catch (error) {
       console.warn("[FNF footer] using safe defaults:", error && error.message ? error.message : error);
@@ -126,7 +133,7 @@
       '<footer class="fnf-footer" data-global-footer-root>' +
         '<div class="fnf-footer-container">' +
           '<div class="fnf-footer-content">' +
-            '<div class="fnf-footer-brand" data-cms-scope="site" data-cms-section="brand">' +
+            '<div class="fnf-footer-brand" data-cms-scope="site" data-cms-section="footer">' +
               '<a href="/" class="fnf-footer-logo">' +
                 '<img data-cms="logoUrl" data-cms-attr="src" src="' + escapeHtml(safeHref(brand.logoUrl, DEFAULTS.brand.logoUrl)) + '" alt="Fuel & Free Time">' +
               "</a>" +

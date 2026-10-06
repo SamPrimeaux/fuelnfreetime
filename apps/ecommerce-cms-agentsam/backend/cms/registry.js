@@ -220,8 +220,71 @@ export const PAGE_REGISTRY = {
   site: {
     title: "Site (global)",
     sections: {
-      brand: {
+      header: {
         sortOrder: 0,
+        label: "Header",
+        icon: "header",
+        capabilities: { reorder: false, duplicate: false, remove: false, blocks: true },
+        fields: [
+          { key: "logoUrl", label: "Logo", type: "media", group: "Brand" },
+          { key: "logoHeight", label: "Logo height", type: "range", group: "Brand", min: 40, max: 120, step: 2, unit: "px", default: 58 },
+          {
+            key: "preset",
+            label: "Header style",
+            type: "select",
+            group: "Layout",
+            default: "adaptive-bar",
+            options: [
+              { label: "Adaptive bar", value: "adaptive-bar" },
+              { label: "Frost pill", value: "frost-pill" },
+            ],
+          },
+          { key: "announcementEnabled", label: "Show announcement", type: "boolean", group: "Announcement", default: false },
+          { key: "announcementText", label: "Announcement text", type: "text", group: "Announcement" },
+          { key: "announcementHref", label: "Announcement link", type: "link", group: "Announcement" },
+        ],
+        blocks: [
+          {
+            key: "nav-link",
+            label: "Navigation link",
+            repeatable: true,
+            min: 1,
+            max: 12,
+            fields: [
+              { key: "label", label: "Label", type: "text" },
+              { key: "href", label: "Link", type: "link" },
+              { key: "visible", label: "Visible", type: "boolean", default: true },
+            ],
+            defaultContent: {
+              label: "New link",
+              href: "/",
+              visible: true,
+            },
+          },
+        ],
+        defaultContent: {
+          logoUrl: M.logo,
+          logoHeight: 58,
+          preset: "adaptive-bar",
+          announcementEnabled: false,
+          announcementText: "",
+          announcementHref: "",
+          nav1: { label: "Home", href: "/", visible: true },
+          nav2: { label: "Shop", href: "/shop", visible: true },
+          nav3: { label: "About", href: "/about", visible: true },
+          nav4: { label: "Community", href: "/community", visible: true },
+          __editor: {
+            blocks: [
+              { id: "nav1", templateKey: "nav-link", enabled: true },
+              { id: "nav2", templateKey: "nav-link", enabled: true },
+              { id: "nav3", templateKey: "nav-link", enabled: true },
+              { id: "nav4", templateKey: "nav-link", enabled: true },
+            ],
+          },
+        },
+      },
+      brand: {
+        sortOrder: 1,
         fields: [
           { key: "logoUrl", label: "Logo URL", type: "media" },
           { key: "tagline", label: "Tagline", type: "text" },
@@ -235,10 +298,13 @@ export const PAGE_REGISTRY = {
         },
       },
       footer: {
-        sortOrder: 1,
+        sortOrder: 2,
         label: "Global Footer",
         icon: "footer",
         fields: [
+          { key: "logoUrl", label: "Footer logo", type: "media", group: "Brand" },
+          { key: "tagline", label: "Tagline", type: "text", group: "Brand" },
+          { key: "description", label: "Description", type: "textarea", group: "Brand" },
           { key: "exploreTitle", label: "Explore heading", type: "text", group: "Explore" },
           { key: "exploreShopLabel", label: "Shop label", type: "text", group: "Explore" },
           { key: "exploreShopHref", label: "Shop link", type: "link", group: "Explore" },
@@ -270,6 +336,9 @@ export const PAGE_REGISTRY = {
           { key: "closingLine", label: "Closing line", type: "text", group: "Footer bottom" },
         ],
         defaultContent: {
+          logoUrl: M.logo,
+          tagline: "Time is the real flex.",
+          description: "For those who've earned their freedom through hard work, service, and dedication.",
           exploreTitle: "Explore",
           exploreShopLabel: "Shop",
           exploreShopHref: "/shop",

@@ -2,8 +2,13 @@
   const params = new URLSearchParams(location.search);
   let slug = params.get('slug') || 'shop';
   let pageData = null;
+  let siteData = null;
   let pages = [];
   let activeSectionKey = null;
+  let activeSectionOwner = slug;
+  let selectedTheme = localStorage.getItem('theme-studio:selected-theme') || 'heuristic';
+  let previewBlobUrl = null;
+  let siteDraftTouched = false;
   let activeBlockId = null;
   let activeFieldKey = null;
   let activeTab = 'content';
@@ -50,11 +55,18 @@
             '</div>',
             '<span class="te-save-state" id="te-save-state">Loading</span>',
           '</div>',
-          '<div class="theme-studio-toolbar__center"><div class="te-device-switch" aria-label="Preview device">',
-            '<button type="button" class="te-device-btn" data-device="desktop" title="Desktop">', icon.desktop, '</button>',
-            '<button type="button" class="te-device-btn" data-device="tablet" title="Tablet">', icon.tablet, '</button>',
-            '<button type="button" class="te-device-btn" data-device="mobile" title="Mobile">', icon.mobile, '</button>',
-          '</div></div>',
+          '<div class="theme-studio-toolbar__center">',
+            '<div class="te-theme-switch" id="te-theme-switch" aria-label="Visual theme">' +
+              ((window.ThemeStudioPreview && window.ThemeStudioPreview.themes) || []).map(function(theme) {
+                return '<button type="button" class="te-theme-btn" data-theme-preview="' + cmsEscapeAttr(theme.id) + '" title="' + cmsEscapeAttr(theme.description || theme.name) + '">' + cmsEscapeHtml(theme.name) + '</button>';
+              }).join('') +
+            '</div>',
+            '<div class="te-device-switch" aria-label="Preview device">',
+              '<button type="button" class="te-device-btn" data-device="desktop" title="Desktop">', icon.desktop, '</button>',
+              '<button type="button" class="te-device-btn" data-device="tablet" title="Tablet">', icon.tablet, '</button>',
+              '<button type="button" class="te-device-btn" data-device="mobile" title="Mobile">', icon.mobile, '</button>',
+            '</div>',
+          '</div>',
           '<div class="theme-studio-toolbar__right"><a class="te-toolbar-btn" id="te-page-settings" href="#">Page settings</a><button type="button" class="te-toolbar-btn is-primary" id="te-publish">Publish</button></div>',
         '</header>',
         '<div class="theme-studio-workspace">',
@@ -94,14 +106,71 @@
     return found ? found.route : '/';
   }
 
+
+  function ownerSections(ownerSlug) {
+    const doc = ownerSlug === 'site' ? siteData : pageData;
+    return (doc && doc.sections) || [];
+  }
+
+  function findSection(sectionKey, ownerSlug) {
+    if (!sectionKey) return null;
+    const requestedOwner = ownerSlug || activeSectionOwner || slug;
+    const direct = ownerSections(requestedOwner).find(function(section) { return section.key === sectionKey; });
+    if (direct) return direct;
+    const site = ownerSections('site').find(function(section) { return section.key === sectionKey; });
+    if (site) return site;
+    return ownerSections(slug).find(function(section) { return section.key === sectionKey; }) || null;
+  }
+
+  function sectionOwner(section) {
+    return section && section.__ownerSlug || slug;
+  }
+
+  function dirtyRef(section) {
+    return sectionOwner(section) + ':' + section.key;
+  }
+
+  function parseDirtyRef(ref) {
+    const idx = String(ref).indexOf(':');
+    return idx < 0 ? { owner: slug, key: String(ref) } : { owner: ref.slice(0, idx), key: ref.slice(idx + 1) };
+  }
+
+  function themeCatalog() {
+    const runtime = window.ThemeStudioPreview;
+    return runtime && runtime.catalog && runtime.catalog[selectedTheme] || [];
+  }
+
+  function setTheme(nextTheme) {
+    if (!nextTheme || nextTheme === selectedTheme) return;
+    selectedTheme = nextTheme;
+    localStorage.setItem('theme-studio:selected-theme', selectedTheme);
+    document.querySelectorAll('[data-theme-preview]').forEach(function(button) {
+      button.classList.toggle('is-active', button.dataset.themePreview === selectedTheme);
+    });
+    syncPublishCapability();
+    renderTree();
+    refreshPreview();
+  }
+
+  function syncPublishCapability() {
+    const button = byId('te-publish');
+    if (!button) return;
+    const previewOnly = selectedTheme !== 'heuristic';
+    button.disabled = previewOnly;
+    button.title = previewOnly
+      ? 'Preview only: this visual theme has not passed the publish/rollback gate.'
+      : 'Publish the current CMS page and changed global sections';
+  }
+
   function currentSection() {
-    if (!pageData || !pageData.sections) return null;
-    return pageData.sections.find(function(section) { return section.key === activeSectionKey; }) || null;
+    return findSection(activeSectionKey, activeSectionOwner);
   }
 
   function schemaForSection(section) {
-    const schemas = window.SECTION_SCHEMAS && window.SECTION_SCHEMAS[slug];
-    if (!schemas || !section) return null;
+    if (!section) return null;
+    const owner = section.__ownerSlug || slug;
+    const schemas = window.SECTION_SCHEMAS && window.SECTION_SCHEMAS[owner];
+    if (!schemas) return null;
     if (schemas[section.key]) return schemas[section.key];
     const templateKey = section.content && section.content.__editor && section.content.__editor.templateKey;
     return templateKey && schemas[templateKey] ? schemas[templateKey] : null;
@@ -179,10 +248,11 @@
       next = Boolean(value);
     }
     cmsSetPath(section.content, field.key, next);
-    dirtySections.add(section.key);
+    dirtySections.add(dirtyRef(section));
+    if (sectionOwner(section) === 'site') siteDraftTouched = true;
     setDirty(true);
     scheduleLocalPreview();
-    byId('te-selected-path').textContent = slug + ' / ' + section.key + ' / ' + field.key;
+    byId('te-selected-path').textContent = (sectionOwner(section) === 'site' ? 'Global' : slug) + ' / ' + section.key + ' / ' + field.key;
   }
 
   function setNote(message, kind) {
@@ -229,136 +299,174 @@
   }
 
   function renderTree() {
-    const sections = (pageData && pageData.sections) || [];
+    const pageSections = ownerSections(slug);
+    const siteSections = ownerSections('site');
+    const header = siteSections.find(function(section) { return section.key === 'header'; });
+    const footer = siteSections.find(function(section) { return section.key === 'footer'; });
     const registrySections = (window.SECTION_SCHEMAS && window.SECTION_SCHEMAS[slug]) || {};
+
     byId('te-tree-title').textContent = (pageData && pageData.title) || humanize(slug);
     byId('te-tree-path').textContent = pageRoute(slug);
 
-    const rows = sections.map(function(section, index) {
+    function sectionNode(section, index, group) {
+      if (!section) return '';
+      const owner = sectionOwner(section);
       const schema = schemaForSection(section) || {};
       const fields = schema.fields || [];
       const editor = section.content && section.content.__editor || {};
       const visible = !editor.visibility || editor.visibility.enabled !== false;
       const capabilities = schema.capabilities || {};
-      const label = schema.label || humanize(editor.templateKey || section.key);
-      const blocks = Array.isArray(editor.blocks) ? editor.blocks : [];
-      const blockRows = blocks.map(function(meta, blockIndex) {
+      const isGlobal = owner === 'site';
+      const label = schema.label || (section.key === 'header' ? 'Header' : section.key === 'footer' ? 'Footer' : humanize(editor.templateKey || section.key));
+      const sectionSelected = section.key === activeSectionKey && owner === activeSectionOwner;
+      const blockMeta = Array.isArray(editor.blocks) ? editor.blocks : [];
+
+      const blockRows = blockMeta.map(function(meta, blockIndex) {
         const blockSchema = blockSchemaFor(section, meta) || {};
         const blockLabel = blockSchema.label || humanize(meta.templateKey || meta.id);
-        return '<div class="te-block-row' + (section.key === activeSectionKey && meta.id === activeBlockId ? ' is-active' : '') + '" data-block-id="' + cmsEscapeAttr(meta.id) + '" data-block-index="' + blockIndex + '" data-block-section="' + cmsEscapeAttr(section.key) + '" draggable="true">' +
-          '<button type="button" class="te-block-row__main" data-select-block="' + cmsEscapeAttr(meta.id) + '" data-block-section="' + cmsEscapeAttr(section.key) + '">' +
+        return '<div class="te-block-row' + (sectionSelected && meta.id === activeBlockId ? ' is-active' : '') + '" data-block-id="' + cmsEscapeAttr(meta.id) + '" data-block-index="' + blockIndex + '" data-block-section="' + cmsEscapeAttr(section.key) + '" data-block-owner="' + cmsEscapeAttr(owner) + '" draggable="true">' +
+          '<button type="button" class="te-block-row__main" data-select-block="' + cmsEscapeAttr(meta.id) + '" data-block-section="' + cmsEscapeAttr(section.key) + '" data-block-owner="' + cmsEscapeAttr(owner) + '">' +
             '<span class="te-block-row__rail"></span><span class="te-block-row__copy"><strong>' + cmsEscapeHtml(blockLabel) + '</strong><small>' + cmsEscapeHtml(meta.id) + '</small></span>' +
           '</button>' +
           '<span class="te-tree-row__actions">' +
-            '<button type="button" class="te-tree-mini" data-duplicate-block="' + cmsEscapeAttr(meta.id) + '" data-block-section="' + cmsEscapeAttr(section.key) + '" title="Duplicate block">⧉</button>' +
-            '<button type="button" class="te-tree-mini" data-remove-block="' + cmsEscapeAttr(meta.id) + '" data-block-section="' + cmsEscapeAttr(section.key) + '" title="Remove block">×</button>' +
+            '<button type="button" class="te-tree-mini" data-duplicate-block="' + cmsEscapeAttr(meta.id) + '" data-block-section="' + cmsEscapeAttr(section.key) + '" data-block-owner="' + cmsEscapeAttr(owner) + '" title="Duplicate block">⧉</button>' +
+            '<button type="button" class="te-tree-mini" data-remove-block="' + cmsEscapeAttr(meta.id) + '" data-block-section="' + cmsEscapeAttr(section.key) + '" data-block-owner="' + cmsEscapeAttr(owner) + '" title="Remove block">×</button>' +
           '</span></div>';
       }).join('');
+
       const blockTemplates = Array.isArray(schema.blocks) ? schema.blocks : [];
       const addBlock = blockTemplates.length
-        ? '<button type="button" class="te-add-block" data-add-block-section="' + cmsEscapeAttr(section.key) + '">+ Add block</button>' +
-          '<div class="te-block-menu" data-block-menu="' + cmsEscapeAttr(section.key) + '" hidden><select data-block-template="' + cmsEscapeAttr(section.key) + '">' +
+        ? '<button type="button" class="te-add-block" data-add-block-section="' + cmsEscapeAttr(section.key) + '" data-block-owner="' + cmsEscapeAttr(owner) + '">+ Add block</button>' +
+          '<div class="te-block-menu" data-block-menu="' + cmsEscapeAttr(owner + ':' + section.key) + '" hidden><select data-block-template="' + cmsEscapeAttr(owner + ':' + section.key) + '">' +
             blockTemplates.map(function(block) { return '<option value="' + cmsEscapeAttr(block.key) + '">' + cmsEscapeHtml(block.label || humanize(block.key)) + '</option>'; }).join('') +
-          '</select><button type="button" class="te-media-button" data-insert-block="' + cmsEscapeAttr(section.key) + '">Add</button></div>'
+          '</select><button type="button" class="te-media-button" data-insert-block="' + cmsEscapeAttr(section.key) + '" data-block-owner="' + cmsEscapeAttr(owner) + '">Add</button></div>'
         : '';
 
-      return '<div class="te-tree-section" data-tree-section="' + cmsEscapeAttr(section.key) + '">' +
-        '<div class="te-tree-row' + (section.key === activeSectionKey && !activeBlockId ? ' is-active' : '') + '" data-section-key="' + cmsEscapeAttr(section.key) + '" draggable="' + (capabilities.reorder !== false) + '" data-index="' + index + '">' +
-          '<button type="button" class="te-tree-row__main" data-select-section="' + cmsEscapeAttr(section.key) + '">' +
+      const canReorder = !isGlobal && capabilities.reorder !== false;
+      const metaText = (isGlobal ? 'global' : (visible ? section.status || 'draft' : 'hidden')) + ' · ' + fields.length + ' fields' + (blockMeta.length ? ' · ' + blockMeta.length + ' blocks' : '');
+
+      return '<div class="te-tree-section" data-tree-section="' + cmsEscapeAttr(owner + ':' + section.key) + '" data-group="' + cmsEscapeAttr(group) + '">' +
+        '<div class="te-tree-row' + (sectionSelected && !activeBlockId ? ' is-active' : '') + '" data-section-key="' + cmsEscapeAttr(section.key) + '" data-section-owner="' + cmsEscapeAttr(owner) + '" draggable="' + canReorder + '" data-index="' + index + '">' +
+          '<button type="button" class="te-tree-row__main" data-select-section="' + cmsEscapeAttr(section.key) + '" data-section-owner="' + cmsEscapeAttr(owner) + '">' +
             '<span class="te-tree-row__icon">' + icon.section + '</span><span class="te-tree-row__copy"><span class="te-tree-row__name">' + cmsEscapeHtml(label) +
-            '</span><span class="te-tree-row__meta">' + (visible ? cmsEscapeHtml(section.status || 'draft') : 'hidden') + ' · ' + fields.length + ' fields' + (blocks.length ? ' · ' + blocks.length + ' blocks' : '') + '</span></span>' +
+            '</span><span class="te-tree-row__meta">' + cmsEscapeHtml(metaText) + '</span></span>' +
           '</button>' +
           '<span class="te-tree-row__actions">' +
-            '<button type="button" class="te-tree-mini" data-toggle-section="' + cmsEscapeAttr(section.key) + '" title="' + (visible ? 'Hide section' : 'Show section') + '">' + (visible ? '◉' : '○') + '</button>' +
-            (capabilities.duplicate !== false ? '<button type="button" class="te-tree-mini" data-duplicate-section="' + cmsEscapeAttr(section.key) + '" title="Duplicate section">⧉</button>' : '') +
-            (capabilities.remove !== false ? '<button type="button" class="te-tree-mini" data-remove-section="' + cmsEscapeAttr(section.key) + '" title="Remove section">×</button>' : '') +
+            (!isGlobal ? '<button type="button" class="te-tree-mini" data-toggle-section="' + cmsEscapeAttr(section.key) + '" data-section-owner="' + cmsEscapeAttr(owner) + '" title="' + (visible ? 'Hide section' : 'Show section') + '">' + (visible ? '◉' : '○') + '</button>' : '') +
+            (!isGlobal && capabilities.duplicate !== false ? '<button type="button" class="te-tree-mini" data-duplicate-section="' + cmsEscapeAttr(section.key) + '" title="Duplicate section">⧉</button>' : '') +
+            (!isGlobal && capabilities.remove !== false ? '<button type="button" class="te-tree-mini" data-remove-section="' + cmsEscapeAttr(section.key) + '" title="Remove section">×</button>' : '') +
           '</span></div>' +
           '<div class="te-block-list">' + blockRows + addBlock + '</div>' +
         '</div>';
-    }).join('');
+    }
 
-    const templateOptions = Object.entries(registrySections).map(function(entry) {
-      const key = entry[0];
-      const schema = entry[1] || {};
-      return '<option value="' + cmsEscapeAttr(key) + '">' + cmsEscapeHtml(schema.label || humanize(key)) + '</option>';
-    }).join('');
+    const pageRows = pageSections.map(function(section, index) { return sectionNode(section, index, 'template'); }).join('');
+    const headerRow = sectionNode(header, -1, 'header');
+    const footerRow = sectionNode(footer, -1, 'footer');
 
     byId('te-tree').innerHTML =
-      '<div class="te-tree-group"><div class="te-tree-group__label">Sections</div>' + rows + '</div>' +
+      '<div class="te-tree-group te-tree-group--global"><div class="te-tree-group__label">Header</div>' + headerRow + '</div>' +
+      '<div class="te-tree-group"><div class="te-tree-group__label">Template</div>' + pageRows + '</div>' +
       '<button type="button" class="te-add-section" id="te-add-section">+ Add section</button>' +
-      '<div class="te-section-menu" id="te-section-menu" hidden><select id="te-section-template">' + templateOptions + '</select>' +
-      '<div class="te-section-menu__actions"><button type="button" class="te-media-button" id="te-section-cancel">Cancel</button><button type="button" class="te-media-button" id="te-section-insert">Add</button></div></div>';
+      '<div class="te-section-menu" id="te-section-menu" hidden>' +
+        '<div class="te-section-menu__head"><strong>Add section · ' + cmsEscapeHtml(humanize(selectedTheme)) + '</strong><button type="button" class="te-tree-mini" id="te-section-cancel" aria-label="Close">×</button></div>' +
+        '<input class="te-section-search" id="te-section-search" placeholder="Search sections" autocomplete="off">' +
+        '<div class="te-section-catalog" id="te-section-catalog"></div>' +
+      '</div>' +
+      '<div class="te-tree-group te-tree-group--global"><div class="te-tree-group__label">Footer</div>' + footerRow + '</div>';
+
+    function renderCatalog(query) {
+      const needle = String(query || '').trim().toLowerCase();
+      let entries = themeCatalog();
+      if (!entries.length) {
+        entries = Object.entries(registrySections).map(function(pair) {
+          return { id: selectedTheme + '/' + pair[0], label: pair[1].label || humanize(pair[0]), type: pair[0], templateKey: pair[0], preset: selectedTheme + '/' + pair[0] };
+        });
+      }
+      const filtered = entries.filter(function(entry) {
+        return !needle || (entry.label + ' ' + entry.type + ' ' + entry.id).toLowerCase().includes(needle);
+      });
+      byId('te-section-catalog').innerHTML = filtered.length ? filtered.map(function(entry) {
+        return '<button type="button" class="te-section-catalog-item" data-catalog-template="' + cmsEscapeAttr(entry.templateKey) + '" data-catalog-preset="' + cmsEscapeAttr(entry.preset || entry.id) + '">' +
+          '<span class="te-section-catalog-item__icon">' + icon.section + '</span><span><strong>' + cmsEscapeHtml(entry.label) + '</strong><small>' + cmsEscapeHtml(entry.type || entry.templateKey) + '</small></span>' +
+        '</button>';
+      }).join('') : '<div class="te-empty">No sections match that search.</div>';
+
+      byId('te-section-catalog').querySelectorAll('[data-catalog-template]').forEach(function(button) {
+        button.addEventListener('click', function() {
+          insertSection(button.dataset.catalogTemplate, button.dataset.catalogPreset);
+        });
+      });
+    }
 
     byId('te-tree').querySelectorAll('[data-select-section]').forEach(function(button) {
-      button.addEventListener('click', function() { selectSection(button.dataset.selectSection, null, true); });
+      button.addEventListener('click', function() {
+        selectSection(button.dataset.selectSection, null, true, button.dataset.sectionOwner);
+      });
     });
     byId('te-tree').querySelectorAll('[data-select-block]').forEach(function(button) {
       button.addEventListener('click', function() {
-        selectBlock(button.dataset.blockSection, button.dataset.selectBlock, null, true);
+        selectBlock(button.dataset.blockSection, button.dataset.selectBlock, null, true, button.dataset.blockOwner);
       });
     });
     byId('te-tree').querySelectorAll('[data-toggle-section]').forEach(function(button) {
       button.addEventListener('click', function(event) {
         event.stopPropagation();
-        const section = sections.find(function(item) { return item.key === button.dataset.toggleSection; });
-        const currentVisible = !section?.content?.__editor?.visibility || section.content.__editor.visibility.enabled !== false;
-        setSectionVisibility(button.dataset.toggleSection, !currentVisible);
+        const owner = button.dataset.sectionOwner || slug;
+        const target = findSection(button.dataset.toggleSection, owner);
+        const currentVisible = !target?.content?.__editor?.visibility || target.content.__editor.visibility.enabled !== false;
+        setSectionVisibility(button.dataset.toggleSection, !currentVisible, owner);
       });
     });
     byId('te-tree').querySelectorAll('[data-duplicate-section]').forEach(function(button) {
-      button.addEventListener('click', function(event) {
-        event.stopPropagation();
-        duplicateSection(button.dataset.duplicateSection);
-      });
+      button.addEventListener('click', function(event) { event.stopPropagation(); duplicateSection(button.dataset.duplicateSection); });
     });
     byId('te-tree').querySelectorAll('[data-remove-section]').forEach(function(button) {
-      button.addEventListener('click', function(event) {
-        event.stopPropagation();
-        removeSection(button.dataset.removeSection);
-      });
+      button.addEventListener('click', function(event) { event.stopPropagation(); removeSection(button.dataset.removeSection); });
     });
 
     byId('te-tree').querySelectorAll('[data-add-block-section]').forEach(function(button) {
       button.addEventListener('click', function() {
-        const menu = byId('te-tree').querySelector('[data-block-menu="' + CSS.escape(button.dataset.addBlockSection) + '"]');
+        const ref = (button.dataset.blockOwner || slug) + ':' + button.dataset.addBlockSection;
+        const menu = byId('te-tree').querySelector('[data-block-menu="' + CSS.escape(ref) + '"]');
         if (menu) menu.hidden = !menu.hidden;
       });
     });
     byId('te-tree').querySelectorAll('[data-insert-block]').forEach(function(button) {
       button.addEventListener('click', function() {
-        const sectionKey = button.dataset.insertBlock;
-        const select = byId('te-tree').querySelector('[data-block-template="' + CSS.escape(sectionKey) + '"]');
-        if (select && select.value) insertBlock(sectionKey, select.value);
+        const owner = button.dataset.blockOwner || slug;
+        const ref = owner + ':' + button.dataset.insertBlock;
+        const select = byId('te-tree').querySelector('[data-block-template="' + CSS.escape(ref) + '"]');
+        if (select && select.value) insertBlock(button.dataset.insertBlock, select.value, owner);
       });
     });
     byId('te-tree').querySelectorAll('[data-duplicate-block]').forEach(function(button) {
       button.addEventListener('click', function(event) {
         event.stopPropagation();
-        duplicateBlock(button.dataset.blockSection, button.dataset.duplicateBlock);
+        duplicateBlock(button.dataset.blockSection, button.dataset.duplicateBlock, button.dataset.blockOwner || slug);
       });
     });
     byId('te-tree').querySelectorAll('[data-remove-block]').forEach(function(button) {
       button.addEventListener('click', function(event) {
         event.stopPropagation();
-        removeBlock(button.dataset.blockSection, button.dataset.removeBlock);
+        removeBlock(button.dataset.blockSection, button.dataset.removeBlock, button.dataset.blockOwner || slug);
       });
     });
 
     const add = byId('te-add-section');
     const menu = byId('te-section-menu');
-    if (add && menu) add.addEventListener('click', function() { menu.hidden = false; add.hidden = true; });
-    byId('te-section-cancel')?.addEventListener('click', function() { menu.hidden = true; add.hidden = false; });
-    byId('te-section-insert')?.addEventListener('click', function() {
-      const select = byId('te-section-template');
-      if (select && select.value) insertSection(select.value);
+    add?.addEventListener('click', function() {
+      menu.hidden = false;
+      add.hidden = true;
+      renderCatalog('');
+      requestAnimationFrame(function() { byId('te-section-search')?.focus(); });
     });
+    byId('te-section-cancel')?.addEventListener('click', function() { menu.hidden = true; add.hidden = false; });
+    byId('te-section-search')?.addEventListener('input', function(event) { renderCatalog(event.target.value); });
 
     let draggedKey = null;
     byId('te-tree').querySelectorAll('.te-tree-row[draggable="true"]').forEach(function(row) {
-      row.addEventListener('dragstart', function() {
-        draggedKey = row.dataset.sectionKey;
-        row.classList.add('is-dragging');
-      });
+      row.addEventListener('dragstart', function() { draggedKey = row.dataset.sectionKey; row.classList.add('is-dragging'); });
       row.addEventListener('dragend', function() {
         draggedKey = null;
         row.classList.remove('is-dragging');
@@ -382,7 +490,7 @@
     byId('te-tree').querySelectorAll('.te-block-row[draggable="true"]').forEach(function(row) {
       row.addEventListener('dragstart', function(event) {
         event.stopPropagation();
-        draggedBlock = { id: row.dataset.blockId, section: row.dataset.blockSection };
+        draggedBlock = { id: row.dataset.blockId, section: row.dataset.blockSection, owner: row.dataset.blockOwner || slug };
         row.classList.add('is-dragging');
       });
       row.addEventListener('dragend', function(event) {
@@ -392,18 +500,18 @@
         byId('te-tree').querySelectorAll('.te-block-row.is-drop-target').forEach(function(node) { node.classList.remove('is-drop-target'); });
       });
       row.addEventListener('dragover', function(event) {
-        if (!draggedBlock || draggedBlock.section !== row.dataset.blockSection || draggedBlock.id === row.dataset.blockId) return;
+        if (!draggedBlock || draggedBlock.owner !== (row.dataset.blockOwner || slug) || draggedBlock.section !== row.dataset.blockSection || draggedBlock.id === row.dataset.blockId) return;
         event.preventDefault();
         event.stopPropagation();
         row.classList.add('is-drop-target');
       });
       row.addEventListener('dragleave', function() { row.classList.remove('is-drop-target'); });
       row.addEventListener('drop', function(event) {
-        if (!draggedBlock || draggedBlock.section !== row.dataset.blockSection || draggedBlock.id === row.dataset.blockId) return;
+        if (!draggedBlock || draggedBlock.owner !== (row.dataset.blockOwner || slug) || draggedBlock.section !== row.dataset.blockSection || draggedBlock.id === row.dataset.blockId) return;
         event.preventDefault();
         event.stopPropagation();
         row.classList.remove('is-drop-target');
-        moveBlock(draggedBlock.section, draggedBlock.id, Number(row.dataset.blockIndex));
+        moveBlock(draggedBlock.section, draggedBlock.id, Number(row.dataset.blockIndex), draggedBlock.owner);
       });
     });
   }
@@ -776,7 +884,8 @@
     cmsSetPath(section.content, fieldKey, url);
     activeFieldKey = fieldKey;
     setDirty(true);
-    dirtySections.add(section.key);
+    dirtySections.add(dirtyRef(section));
+    if (sectionOwner(section) === 'site') siteDraftTouched = true;
     renderInspector();
     scheduleLocalPreview();
     closeMediaPicker();
@@ -785,16 +894,28 @@
   function pushLocalPreview() {
     const iframe = byId('theme-preview');
     if (!iframe?.contentWindow || !pageData) return;
+
+    if (selectedTheme !== 'heuristic') {
+      const runtime = window.ThemeStudioPreview;
+      if (!runtime || !runtime.render) return;
+      const html = runtime.render(selectedTheme, pageData, siteData);
+      if (!html) return;
+      iframe.srcdoc = html;
+      if (previewBlobUrl) URL.revokeObjectURL(previewBlobUrl);
+      previewBlobUrl = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+      byId('te-open-tab').href = previewBlobUrl;
+      byId('te-preview-label').textContent = humanize(selectedTheme) + ' preview — ' + ((pageData && pageData.title) || humanize(slug));
+      return;
+    }
+
     iframe.contentWindow.postMessage({
       type: 'fnf-cms-preview',
       slug: slug,
       sections: (pageData.sections || []).map(function(section) {
-        return {
-          key: section.key,
-          sort_order: section.sort_order,
-          status: section.status,
-          content: section.content || {}
-        };
+        return { key: section.key, sort_order: section.sort_order, status: section.status, content: section.content || {} };
+      }),
+      siteSections: (siteData?.sections || []).map(function(section) {
+        return { key: section.key, sort_order: section.sort_order, status: section.status, content: section.content || {} };
       })
     }, location.origin);
   }
@@ -804,10 +925,11 @@
     patchTimer = setTimeout(pushLocalPreview, 80);
   }
 
-  function selectSection(sectionKey, fieldKey, scrollPreview) {
-    const section = pageData && pageData.sections && pageData.sections.find(function(item) { return item.key === sectionKey; });
+  function selectSection(sectionKey, fieldKey, scrollPreview, ownerSlug) {
+    const section = findSection(sectionKey, ownerSlug);
     if (!section) return;
     activeSectionKey = sectionKey;
+    activeSectionOwner = sectionOwner(section);
     activeBlockId = null;
     activeFieldKey = fieldKey || null;
 
@@ -818,7 +940,8 @@
 
     renderTree();
     renderInspector();
-    byId('te-selected-path').textContent = fieldKey ? slug + ' / ' + sectionKey + ' / ' + fieldKey : slug + ' / ' + sectionKey;
+    const prefix = activeSectionOwner === 'site' ? 'Global' : slug;
+    byId('te-selected-path').textContent = fieldKey ? prefix + ' / ' + sectionKey + ' / ' + fieldKey : prefix + ' / ' + sectionKey;
 
     if (scrollPreview) {
       try {
@@ -830,19 +953,18 @@
     highlightPreviewSelection();
   }
 
-  function selectBlock(sectionKey, blockId, fieldKey, scrollPreview) {
-    const section = pageData && pageData.sections && pageData.sections.find(function(item) { return item.key === sectionKey; });
-    const blocks = section && section.content && section.content.__editor && section.content.__editor.blocks;
-    const block = Array.isArray(blocks) ? blocks.find(function(item) { return item.id === blockId; }) : null;
+  function selectBlock(sectionKey, blockId, fieldKey, scrollPreview, ownerSlug) {
+    const section = findSection(sectionKey, ownerSlug);
+    const blockMeta = section && section.content && section.content.__editor && section.content.__editor.blocks;
+    const block = Array.isArray(blockMeta) ? blockMeta.find(function(item) { return item.id === blockId; }) : null;
     if (!section || !block) return;
 
     activeSectionKey = sectionKey;
+    activeSectionOwner = sectionOwner(section);
     activeBlockId = blockId;
     activeFieldKey = fieldKey || null;
 
-    if (activeFieldKey && activeFieldKey.indexOf(blockId + '.') !== 0) {
-      activeFieldKey = blockId + '.' + activeFieldKey;
-    }
+    if (activeFieldKey && activeFieldKey.indexOf(blockId + '.') !== 0) activeFieldKey = blockId + '.' + activeFieldKey;
 
     if (activeFieldKey) {
       const field = currentSchema().find(function(item) { return item.key === activeFieldKey; });
@@ -853,9 +975,10 @@
 
     renderTree();
     renderInspector();
+    const prefix = activeSectionOwner === 'site' ? 'Global' : slug;
     byId('te-selected-path').textContent = activeFieldKey
-      ? slug + ' / ' + sectionKey + ' / ' + blockId + ' / ' + activeFieldKey.replace(blockId + '.', '')
-      : slug + ' / ' + sectionKey + ' / ' + blockId;
+      ? prefix + ' / ' + sectionKey + ' / ' + blockId + ' / ' + activeFieldKey.replace(blockId + '.', '')
+      : prefix + ' / ' + sectionKey + ' / ' + blockId;
 
     if (scrollPreview) {
       try {
@@ -902,16 +1025,17 @@
 
         if (!sectionKey && fieldKey.indexOf('.') > 0) {
           const first = fieldKey.split('.')[0];
-          if (pageData && pageData.sections && pageData.sections.some(function(section) { return section.key === first; })) sectionKey = first;
+          if (findSection(first, slug) || findSection(first, 'site')) sectionKey = first;
         }
 
         if (sectionKey && fieldKey.indexOf(sectionKey + '.') === 0) fieldKey = fieldKey.slice(sectionKey.length + 1);
-        if (!sectionKey || !pageData.sections.some(function(section) { return section.key === sectionKey; })) return;
+        const owner = (sectionKey === 'header' || sectionKey === 'footer' || sectionKey === 'brand') ? 'site' : slug;
+        if (!sectionKey || !findSection(sectionKey, owner)) return;
 
         event.preventDefault();
         event.stopImmediatePropagation();
-        if (blockId) selectBlock(sectionKey, blockId, fieldKey || null, false);
-        else selectSection(sectionKey, fieldKey || null, false);
+        if (blockId) selectBlock(sectionKey, blockId, fieldKey || null, false, owner);
+        else selectSection(sectionKey, fieldKey || null, false, owner);
       }, true);
     }
 
@@ -956,11 +1080,20 @@
   }
 
   function refreshPreview() {
+    if (selectedTheme !== 'heuristic') {
+      pushLocalPreview();
+      return;
+    }
+    if (previewBlobUrl) {
+      URL.revokeObjectURL(previewBlobUrl);
+      previewBlobUrl = null;
+    }
     const route = pageRoute(slug);
     const separator = route.indexOf('?') >= 0 ? '&' : '?';
+    byId('theme-preview').removeAttribute('srcdoc');
     byId('theme-preview').src = route + separator + 'preview=1&_=' + Date.now();
     byId('te-open-tab').href = route + separator + 'preview=1';
-    byId('te-preview-label').textContent = 'Preview — ' + ((pageData && pageData.title) || humanize(slug));
+    byId('te-preview-label').textContent = 'Heuristic preview — ' + ((pageData && pageData.title) || humanize(slug));
   }
 
   function schedulePreview() {
@@ -976,19 +1109,28 @@
       await loadCmsRegistry();
       const results = await Promise.all([
         adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug)),
-        adminFetch('/api/admin/cms/pages').catch(function() { return { pages: [] }; })
+        adminFetch('/api/admin/cms/pages').catch(function() { return { pages: [] }; }),
+        adminFetch('/api/admin/cms/pages/site')
       ]);
       pageData = results[0].page;
+      siteData = results[2].page;
       pages = (results[1].pages || []).filter(function(page) { return page.slug !== 'site'; });
 
+      (pageData.sections || []).forEach(function(section) { section.__ownerSlug = slug; });
+      (siteData.sections || []).forEach(function(section) { section.__ownerSlug = 'site'; });
+
       if (!pages.some(function(page) { return page.slug === slug; })) pages.unshift({ slug: slug, title: pageData.title || humanize(slug) });
-      if (!activeSectionKey || !pageData.sections.some(function(section) { return section.key === activeSectionKey; })) {
-        activeSectionKey = pageData.sections && pageData.sections[0] ? pageData.sections[0].key : null;
+
+      const selectedStillExists = activeSectionKey && findSection(activeSectionKey, activeSectionOwner);
+      if (!selectedStillExists) {
+        activeSectionOwner = slug;
+        activeSectionKey = pageData.sections && pageData.sections[0] ? pageData.sections[0].key : (siteData.sections?.find(function(section) { return section.key === 'header'; })?.key || null);
         activeBlockId = null;
         activeFieldKey = null;
       }
+
       if (activeBlockId) {
-        const selectedSection = pageData.sections.find(function(section) { return section.key === activeSectionKey; });
+        const selectedSection = currentSection();
         const selectedBlocks = selectedSection?.content?.__editor?.blocks;
         if (!Array.isArray(selectedBlocks) || !selectedBlocks.some(function(block) { return block.id === activeBlockId; })) {
           activeBlockId = null;
@@ -999,6 +1141,10 @@
       byId('te-page-title').textContent = pageData.title || humanize(slug);
       byId('te-page-settings').href = '/admin/page-edit?slug=' + encodeURIComponent(slug);
       byId('te-manage-page').href = '/admin/page-edit?slug=' + encodeURIComponent(slug);
+      document.querySelectorAll('[data-theme-preview]').forEach(function(button) {
+        button.classList.toggle('is-active', button.dataset.themePreview === selectedTheme);
+      });
+      syncPublishCapability();
       renderPageOptions('');
       renderTree();
       renderInspector();
@@ -1013,16 +1159,17 @@
   }
 
   async function saveDraft() {
-    const keys = dirtySections.size ? Array.from(dirtySections) : (activeSectionKey ? [activeSectionKey] : []);
-    if (!keys.length) return true;
+    const refs = dirtySections.size ? Array.from(dirtySections) : (activeSectionKey ? [activeSectionOwner + ':' + activeSectionKey] : []);
+    if (!refs.length) return true;
     const button = byId('te-save');
     button.disabled = true;
     setNote('Saving…');
     try {
-      for (const key of keys) {
-        const section = pageData && pageData.sections && pageData.sections.find(function(item) { return item.key === key; });
+      for (const ref of refs) {
+        const parsed = parseDirtyRef(ref);
+        const section = findSection(parsed.key, parsed.owner);
         if (!section) continue;
-        const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(section.key), {
+        const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(parsed.owner) + '/sections/' + encodeURIComponent(section.key), {
           method: 'PUT',
           body: JSON.stringify({
             content: section.content,
@@ -1032,23 +1179,19 @@
         section.status = 'draft';
         section.version = result.version ?? section.version;
         section.updated_at = result.updated_at || section.updated_at;
+        if (parsed.owner === 'site') siteData.status = 'draft';
+        else pageData.status = 'draft';
       }
-      pageData.status = 'draft';
       dirtySections.clear();
       setDirty(false);
-      setNote(keys.length > 1 ? keys.length + ' section drafts saved.' : 'Draft saved.', 'success');
+      setNote(refs.length > 1 ? refs.length + ' section drafts saved.' : 'Draft saved.', 'success');
       renderTree();
       renderInspector();
       schedulePreview();
       return true;
     } catch (error) {
       const conflict = error?.status === 409;
-      setNote(
-        conflict
-          ? 'This page changed in another tab. Reload before saving.'
-          : (error.message || String(error)),
-        'error'
-      );
+      setNote(conflict ? 'This content changed in another tab. Reload before saving.' : (error.message || String(error)), 'error');
       setSaveState(conflict ? 'Reload required' : 'Save failed', 'error');
       return false;
     } finally {
@@ -1057,16 +1200,28 @@
   }
 
   async function publishPage() {
+    if (selectedTheme !== 'heuristic') {
+      setNote('This theme is visual-preview only. Publication is disabled until its renderer and rollback pass acceptance.', 'error');
+      return;
+    }
     const button = byId('te-publish');
     button.disabled = true;
     button.textContent = 'Publishing…';
     try {
       if (dirty && !(await saveDraft())) throw new Error('Could not save draft before publishing');
+      let siteResult = null;
+      if (siteDraftTouched) {
+        siteResult = await adminFetch('/api/admin/cms/pages/site/publish', { method: 'POST' });
+        siteData.status = 'published';
+        (siteData.sections || []).forEach(function(section) { section.status = 'published'; });
+        siteDraftTouched = false;
+      }
       const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/publish', { method: 'POST' });
       pageData.status = 'published';
       (pageData.sections || []).forEach(function(section) { section.status = 'published'; });
       setDirty(false);
-      setNote(result.published_at ? 'Published ' + fmtPageDate(result.published_at) + '.' : 'Published to live site.', 'success');
+      const publishedAt = result.published_at || siteResult?.published_at;
+      setNote(publishedAt ? 'Published ' + fmtPageDate(publishedAt) + '.' : 'Published to live site.', 'success');
       renderTree();
       renderInspector();
       refreshPreview();
@@ -1079,19 +1234,24 @@
     }
   }
 
-  async function insertSection(templateKey) {
+  async function insertSection(templateKey, themePreset) {
     setNote('Adding section…');
     try {
       const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections', {
         method: 'POST',
-        body: JSON.stringify({ templateKey: templateKey, toIndex: (pageData?.sections || []).length })
+        body: JSON.stringify({
+          templateKey: templateKey,
+          themePreset: themePreset || '',
+          toIndex: (pageData?.sections || []).length
+        })
       });
+      activeSectionOwner = slug;
       activeSectionKey = result.section_key;
       activeBlockId = null;
       activeFieldKey = null;
-      setNote('Section added.', 'success');
+      setNote('Section added from ' + humanize(selectedTheme) + '.', 'success');
       await loadPage();
-      selectSection(result.section_key, null, true);
+      selectSection(result.section_key, null, true, slug);
     } catch (error) {
       setNote(error.message || String(error), 'error');
     }
@@ -1104,6 +1264,7 @@
         method: 'POST',
         body: JSON.stringify({})
       });
+      activeSectionOwner = slug;
       activeSectionKey = result.section_key;
       activeBlockId = null;
       activeFieldKey = null;
@@ -1122,24 +1283,25 @@
         body: JSON.stringify({ toIndex: toIndex })
       });
       setNote('Section moved.', 'success');
+      activeSectionOwner = slug;
       await loadPage();
-      selectSection(sectionKey, null, true);
+      selectSection(sectionKey, null, true, slug);
     } catch (error) {
       setNote(error.message || String(error), 'error');
     }
   }
 
-  async function setSectionVisibility(sectionKey, enabled) {
+  async function setSectionVisibility(sectionKey, enabled, ownerSlug) {
+    const owner = ownerSlug || slug;
     try {
-      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/visibility', {
+      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(owner) + '/sections/' + encodeURIComponent(sectionKey) + '/visibility', {
         method: 'PUT',
         body: JSON.stringify({ enabled: enabled })
       });
+      if (owner === 'site') siteDraftTouched = true;
       setNote(enabled ? 'Section shown.' : 'Section hidden.', 'success');
       await loadPage();
-      if ((pageData?.sections || []).some(function(section) { return section.key === sectionKey; })) {
-        selectSection(sectionKey, null, false);
-      }
+      if (findSection(sectionKey, owner)) selectSection(sectionKey, null, false, owner);
     } catch (error) {
       setNote(error.message || String(error), 'error');
     }
@@ -1165,77 +1327,88 @@
     }
   }
 
-  async function insertBlock(sectionKey, templateKey) {
+  async function insertBlock(sectionKey, templateKey, ownerSlug) {
+    const owner = ownerSlug || slug;
     setNote('Adding block…');
     try {
-      const section = (pageData?.sections || []).find(function(item) { return item.key === sectionKey; });
+      const section = findSection(sectionKey, owner);
       const blocks = section?.content?.__editor?.blocks || [];
-      const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks', {
+      const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(owner) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks', {
         method: 'POST',
         body: JSON.stringify({ templateKey: templateKey, toIndex: blocks.length })
       });
+      if (owner === 'site') siteDraftTouched = true;
+      activeSectionOwner = owner;
       activeSectionKey = sectionKey;
       activeBlockId = result.block_id;
       activeFieldKey = null;
       setNote('Block added.', 'success');
       await loadPage();
-      selectBlock(sectionKey, result.block_id, null, true);
+      selectBlock(sectionKey, result.block_id, null, true, owner);
     } catch (error) {
       setNote(error.message || String(error), 'error');
     }
   }
 
-  async function duplicateBlock(sectionKey, blockId) {
+  async function duplicateBlock(sectionKey, blockId, ownerSlug) {
+    const owner = ownerSlug || slug;
     setNote('Duplicating block…');
     try {
-      const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId) + '/duplicate', {
+      const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(owner) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId) + '/duplicate', {
         method: 'POST',
         body: JSON.stringify({})
       });
+      if (owner === 'site') siteDraftTouched = true;
+      activeSectionOwner = owner;
       activeSectionKey = sectionKey;
       activeBlockId = result.block_id;
       activeFieldKey = null;
       setNote('Block duplicated.', 'success');
       await loadPage();
-      selectBlock(sectionKey, result.block_id, null, true);
+      selectBlock(sectionKey, result.block_id, null, true, owner);
     } catch (error) {
       setNote(error.message || String(error), 'error');
     }
   }
 
-  async function moveBlock(sectionKey, blockId, toIndex) {
+  async function moveBlock(sectionKey, blockId, toIndex, ownerSlug) {
+    const owner = ownerSlug || slug;
     try {
-      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId) + '/move', {
+      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(owner) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId) + '/move', {
         method: 'POST',
         body: JSON.stringify({ toIndex: toIndex })
       });
+      if (owner === 'site') siteDraftTouched = true;
       setNote('Block moved.', 'success');
       await loadPage();
-      selectBlock(sectionKey, blockId, null, true);
+      selectBlock(sectionKey, blockId, null, true, owner);
     } catch (error) {
       setNote(error.message || String(error), 'error');
     }
   }
 
-  async function removeBlock(sectionKey, blockId) {
-    const section = (pageData?.sections || []).find(function(item) { return item.key === sectionKey; });
+  async function removeBlock(sectionKey, blockId, ownerSlug) {
+    const owner = ownerSlug || slug;
+    const section = findSection(sectionKey, owner);
     const meta = section?.content?.__editor?.blocks?.find(function(item) { return item.id === blockId; });
     const blockSchema = blockSchemaFor(section, meta);
     const label = (blockSchema && blockSchema.label) || humanize(blockId);
     if (!confirm('Remove "' + label + '" from this section?')) return;
 
     try {
-      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId), {
+      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(owner) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId), {
         method: 'DELETE'
       });
+      if (owner === 'site') siteDraftTouched = true;
       setNote('Block removed.', 'success');
       if (activeBlockId === blockId) {
         activeBlockId = null;
         activeFieldKey = null;
       }
+      activeSectionOwner = owner;
       activeSectionKey = sectionKey;
       await loadPage();
-      selectSection(sectionKey, null, false);
+      selectSection(sectionKey, null, false, owner);
     } catch (error) {
       setNote(error.message || String(error), 'error');
     }
@@ -1248,6 +1421,7 @@
     }
     if (dirty && !confirm('You have unsaved changes in this section. Switch pages anyway?')) return;
     slug = nextSlug;
+    activeSectionOwner = slug;
     activeSectionKey = null;
     activeBlockId = null;
     activeFieldKey = null;
@@ -1334,6 +1508,10 @@
     if (!byId('te-media-modal').hidden) renderMediaGrid(byId('te-media-search').value);
     return assets;
   }
+
+  document.querySelectorAll('[data-theme-preview]').forEach(function(button) {
+    button.addEventListener('click', function() { setTheme(button.dataset.themePreview); });
+  });
 
   document.querySelectorAll('.te-device-btn').forEach(function(button) {
     button.addEventListener('click', function() { setDevice(button.dataset.device); });
