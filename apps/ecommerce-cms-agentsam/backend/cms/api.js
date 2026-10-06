@@ -419,8 +419,11 @@ export async function importLivePageDraft(env, slug, body = {}) {
 
   const existing = await loadPageRow(env, slug);
   const replacing = Boolean(existing);
-  if (replacing && (existing.status === "published" || body.mode !== "reconcile")) {
-    return { error: "An existing CMS page must be explicitly reconciled from its live source.", status: 409 };
+  // A cached published snapshot can remain active even when D1 has newer drafts.
+  // Never replace that live authority through the legacy-source import endpoint.
+  const activePublication = replacing ? await getPublishedPage(env, slug) : null;
+  if (replacing && (existing.status === "published" || activePublication || body.mode !== "reconcile")) {
+    return { error: "This page has published CMS content or requires explicit draft reconciliation.", status: 409 };
   }
   const sections = body?.sections;
   if (!Array.isArray(sections) || sections.length === 0 || sections.length > 50) {
