@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Aviation Scene Lab | FNF CMS</title>
+<link rel="stylesheet" href="/admin/css/admin.css">
+<style>
+:root{font-family:Inter,system-ui,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:#0b0e13;color:#f5f5f4}
+a{color:inherit}
+.scene-shell{max-width:1700px;margin:0 auto;padding:clamp(16px,2vw,32px)}
+.scene-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.scene-toolbar a{font-size:13px;text-decoration:none;padding:10px 14px;border:1px solid #434752;border-radius:9px}
+.scene-toolbar a:hover{background:#242a36}
+.scene-brand{display:flex;flex-direction:column;gap:5px}
+.scene-eyebrow{color:#dda977;font-size:11px;text-transform:uppercase;letter-spacing:.18em;font-weight:750}
+h1{font-size:clamp(26px,3vw,40px);letter-spacing:-.045em;margin:0}
+.scene-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(270px,325px);gap:18px;align-items:start}
+.scene-stage{border:1px solid #353943;border-radius:14px;overflow:hidden;background:#04050a;min-width:0}
+.scene-stage iframe{display:block;width:100%;height:min(77vh,890px);border:0;background:#03050b}
+.scene-status{display:flex;gap:14px;flex-wrap:wrap;justify-content:space-between;padding:12px 16px;color:#c5c6cc;font-size:12px;border-top:1px solid #30313b}
+.scene-notes{background:#141821;border:1px solid #353943;border-radius:14px;padding:20px;line-height:1.55}
+.scene-notes h2{font-size:17px;margin:0 0 12px}
+.scene-notes p,.scene-notes li{font-size:13px;color:#bec0c9}
+.scene-notes ul{padding-left:18px}
+.scene-notes hr{border:0;border-top:1px solid #313641;margin:20px 0}
+.scene-notes strong{color:#f5f1e9}
+.scene-source{overflow-wrap:anywhere;font-family:ui-monospace,monospace;font-size:11px!important}
+.scene-action{display:block;text-align:center;margin-top:18px;padding:11px;background:#edc69f;color:#17181b;border-radius:9px;text-decoration:none;font-weight:750;font-size:13px}
+@media(max-width:980px){.scene-layout{grid-template-columns:1fr}.scene-stage iframe{height:65vh}}
+@media(max-width:600px){.scene-stage iframe{height:55vh;min-height:340px}}
+</style>
+</head>
+<body>
+<main class="scene-shell">
+  <header class="scene-toolbar">
+    <div class="scene-brand"><span class="scene-eyebrow">Fuel &amp; Free Time · Experiences / Workbench</span><h1>Aviation Scene Lab</h1></div>
+    <nav aria-label="Scene workspace"><a href="/admin/pages">All CMS pages</a> <a href="/admin/theme-editor?slug=community">Community editor</a> <a href="/media/cms/pages/bridge-fly/index.html" target="_blank" rel="noopener">Open original scene ↗</a></nav>
+  </header>
+  <div class="scene-layout">
+    <section class="scene-stage" aria-label="Original R2 3D scene preview">
+      <iframe id="scene-preview" src="/media/cms/pages/bridge-fly/index.html" title="R2 Golden Gate bridge flyover scene" loading="eager" allow="fullscreen" referrerpolicy="same-origin" sandbox="allow-scripts allow-pointer-lock allow-fullscreen"></iframe>
+      <div class="scene-status"><span>Actual R2 scene bundle · Preview only · Nothing published by this editor</span><span id="scene-state" role="status">Loading original scene…</span></div>
+    </section>
+    <aside class="scene-notes">
+      <span class="scene-eyebrow">Artifact: bridge-fly</span>
+      <h2>Existing 3D source — ready for review</h2>
+      <p>This is the <strong>Golden Gate bridge flyover prototype</strong> currently stored in FNF R2. It is not a helicopter restoration animation yet. The original bundle is preserved without rewriting its camera, mesh, or styling.</p>
+      <p>Review it here before deciding which parts can form an <strong>aviation / helicopter restoration</strong> experience.</p>
+      <hr>
+      <span class="scene-eyebrow">Design directions to validate</span>
+      <ul>
+        <li>Helicopter restoration journal, with real milestones and documentation</li>
+        <li>Interactive hangar / aircraft walkthrough as an optional campaign scene</li>
+        <li>A cinematic launch chapter tied to real progress, not invented capabilities</li>
+        <li>GPU, keyboard, touch and reduced-motion fallbacks before public rollout</li>
+      </ul>
+      <hr>
+      <p class="scene-source">R2: fuelnfreetime/cms/pages/bridge-fly/{index.html,app.js,app.css}</p>
+      <p>No publishing action is available on this review surface. The scene stays independent of the customer storefront until its reusable renderer contract is approved.</p>
+      <a class="scene-action" href="/admin/theme-editor?slug=community">Review community sections →</a>
+    </aside>
+  </div>
+</main>
+<script>
+const frame=document.getElementById('scene-preview');
+const status=document.getElementById('scene-state');
+frame.addEventListener('load',()=>{status.textContent='Scene document loaded · Inspect animation visually';});
+frame.addEventListener('error',()=>{status.textContent='Scene failed to load · Check the R2 object';});
+</script>
+</body>
+</html>
