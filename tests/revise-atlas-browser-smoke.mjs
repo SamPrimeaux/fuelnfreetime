@@ -30,6 +30,8 @@ const probe = "<script>window.confirm=()=>true;setTimeout(function(){" +
   "var campaignCount=document.querySelectorAll('#atlas-rendered [data-cms-section]').length;" +
   "document.querySelector('[data-select=\"campaigns-before-after-3\"]').click();" +
   "var before=!!document.querySelector('#campaigns-before-after-3 [data-before-after]');" +
+  "var stage=document.querySelector('#campaigns-before-after-3 .iam-before-after__stage');" +
+  "var actualStyle=stage?{position:getComputedStyle(stage).position,minHeight:getComputedStyle(stage).minHeight,background:getComputedStyle(stage).backgroundColor}:null;" +
   "var heading=document.querySelector('#atlas-fields [data-path=\"heading\"]');" +
   "if(heading){heading.value='A REAL REVISED CAMPAIGN';heading.dispatchEvent(new Event('input',{bubbles:true}));}" +
   "var edit=!!document.getElementById('campaigns-before-after-3')?.textContent.includes('A REAL REVISED CAMPAIGN');" +
