@@ -16,7 +16,6 @@
   let unmanagedLiveSections = [];
   let activeBlockId = null;
   let activeFieldKey = null;
-  let activeTab = 'content';
   let patchTimer = null;
   let refreshTimer = null;
   let mediaLibrary = [];
@@ -683,29 +682,57 @@
     return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label for="' + id + '">' + cmsEscapeHtml(field.label) + '<span>' + cmsEscapeHtml(field.type || field.key) + '</span></label>' + input + help + '</div>';
   }
 
-  function renderSettings() {
-    const section = currentSection();
-    const settings = currentSettings();
-    const grouped = {};
-    settings.forEach(function(field) {
-      const group = field.group || 'settings';
-      if (!grouped[group]) grouped[group] = [];
-      grouped[group].push(field);
+  // One contextual inspector for the selected section or block. Field types
+  // determine visual grouping, not competing editor tabs or stored schemas.
+  function renderInspectorGroups(section) {
+    const groups = { content: [], media: [], links: [] };
+    currentSchema().forEach(function(field) {
+      groups[fieldKind(field)].push(field);
     });
-
-    let html = Object.keys(grouped).map(function(group) {
-      return '<div class="te-setting-group"><div class="te-setting-group__title">' + cmsEscapeHtml(humanize(group)) + '</div>' +
-        grouped[group].map(function(field) { return renderField(section, field); }).join('') + '</div>';
+    const titles = { content: 'Content', media: 'Media', links: 'Buttons and links' };
+    const descriptions = {
+      content: 'Edit the copy and values for this selection.',
+      media: 'Use the existing media library or upload a file.',
+      links: 'Choose where visitors go when they click.'
+    };
+    let html = Object.keys(groups).filter(function(kind) {
+      return groups[kind].length > 0;
+    }).map(function(kind) {
+      return '<section class="te-inspector-group" aria-label="' + titles[kind] + '">' +
+        '<div class="te-inspector-group__head"><h3>' + titles[kind] + '</h3><p>' + descriptions[kind] + '</p></div>' +
+        groups[kind].map(function(field) { return renderField(section, field); }).join('') +
+        '</section>';
     }).join('');
 
-    html += '<div class="te-setting-group"><div class="te-setting-group__title">Editor view</div><div class="te-setting-card">' +
-      '<div class="te-setting-row"><div><strong>Editable outlines</strong><span>Show CMS boundaries in the live preview.</span></div><button type="button" class="te-switch" id="te-outline-switch" role="switch" aria-checked="' + showOutlines + '"></button></div>' +
-      '<div class="te-setting-row"><div><strong>Auto-refresh preview</strong><span>Refresh after live draft updates.</span></div><button type="button" class="te-switch" id="te-auto-switch" role="switch" aria-checked="' + autoPreview + '"></button></div>' +
-      '</div></div>';
+    const settings = currentSettings();
+    if (settings.length) {
+      const byGroup = {};
+      settings.forEach(function(field) {
+        const group = field.group || 'layout';
+        if (!byGroup[group]) byGroup[group] = [];
+        byGroup[group].push(field);
+      });
+      const focusedSetting = settings.some(function(field) { return field.key === activeFieldKey; });
+      html += '<details class="te-inspector-disclosure" data-inspector-advanced' + (focusedSetting ? ' open' : '') + '>' +
+        '<summary>Appearance and layout<span class="te-disclosure-chevron" aria-hidden="true">⌄</span></summary>' +
+        '<div class="te-inspector-disclosure__body">' +
+        Object.keys(byGroup).map(function(group) {
+          return '<div class="te-setting-group"><div class="te-setting-group__title">' + cmsEscapeHtml(humanize(group)) + '</div>' +
+            byGroup[group].map(function(field) { return renderField(section, field); }).join('') + '</div>';
+        }).join('') + '</div></details>';
+    }
 
-    byId('te-inspector-body').innerHTML = html || '<div class="te-empty">No section settings registered.</div>';
-    wireFields();
+    html += '<details class="te-inspector-disclosure te-inspector-disclosure--tools">' +
+      '<summary>Preview preferences<span class="te-disclosure-chevron" aria-hidden="true">⌄</span></summary>' +
+      '<div class="te-inspector-disclosure__body"><div class="te-setting-card">' +
+        '<div class="te-setting-row"><div><strong>Editable outlines</strong><span>Highlight CMS boundaries in the preview.</span></div><button type="button" class="te-switch" id="te-outline-switch" role="switch" aria-label="Editable outlines" aria-checked="' + showOutlines + '"></button></div>' +
+        '<div class="te-setting-row"><div><strong>Auto-refresh preview</strong><span>Update the preview after saved changes.</span></div><button type="button" class="te-switch" id="te-auto-switch" role="switch" aria-label="Auto-refresh preview" aria-checked="' + autoPreview + '"></button></div>' +
+      '</div></div></details>';
 
+    return html;
+  }
+
+  function wireInspectorPreferences() {
     const outlineSwitch = byId('te-outline-switch');
     if (outlineSwitch) outlineSwitch.addEventListener('click', function(event) {
       showOutlines = event.currentTarget.getAttribute('aria-checked') !== 'true';
@@ -713,7 +740,6 @@
       event.currentTarget.setAttribute('aria-checked', String(showOutlines));
       bindPreviewSelection();
     });
-
     const autoSwitch = byId('te-auto-switch');
     if (autoSwitch) autoSwitch.addEventListener('click', function(event) {
       autoPreview = event.currentTarget.getAttribute('aria-checked') !== 'true';
@@ -725,10 +751,9 @@
   function renderInspector() {
     const section = currentSection();
     if (!section) {
-      byId('te-inspector-body').innerHTML = '<div class="te-empty">Choose a section to edit it.</div>';
+      byId('te-inspector-body').innerHTML = '<div class="te-empty">Choose a section or block in the page structure to begin editing.</div>';
       return;
     }
-
     const sectionSchema = currentSectionSchema();
     const blockMeta = currentBlockMeta();
     const blockSchema = currentBlockSchema();
@@ -742,31 +767,19 @@
     byId('te-section-status').textContent = section.status || 'draft';
     byId('te-section-status').className = 'te-badge' + (section.status === 'published' ? ' is-published' : '');
 
-    byId('te-tabs').querySelectorAll('[data-tab]').forEach(function(tab) {
-      tab.classList.toggle('is-active', tab.dataset.tab === activeTab);
-    });
-
-    if (activeTab === 'settings') {
-      renderSettings();
-      return;
-    }
-
-    const fields = currentSchema().filter(function(field) { return fieldKind(field) === activeTab; });
-    if (!fields.length) {
-      byId('te-inspector-body').innerHTML = '<div class="te-empty">No ' + cmsEscapeHtml(activeTab) + ' controls are registered for this section.</div>';
-      return;
-    }
-
-    byId('te-inspector-body').innerHTML = fields.map(function(field) { return renderField(section, field); }).join('');
+    const panel = byId('te-inspector-body');
+    panel.innerHTML = renderInspectorGroups(section);
     wireFields();
+    wireInspectorPreferences();
 
     if (activeFieldKey) {
       requestAnimationFrame(function() {
-        const node = document.querySelector('[data-field-key="' + CSS.escape(activeFieldKey) + '"]');
-        if (node) {
-          node.classList.add('is-selected');
-          node.scrollIntoView({ block: 'nearest' });
-        }
+        const node = panel.querySelector('[data-field-key="' + CSS.escape(activeFieldKey) + '"]');
+        if (!node) return;
+        const disclosure = node.closest('details');
+        if (disclosure) disclosure.open = true;
+        node.classList.add('is-selected');
+        node.scrollIntoView({ block: 'nearest' });
       });
     }
   }
@@ -1209,11 +1222,6 @@
     activeBlockId = null;
     activeFieldKey = fieldKey || null;
 
-    if (fieldKey) {
-      const field = currentSchema().find(function(item) { return item.key === fieldKey; });
-      activeTab = field ? fieldKind(field) : 'content';
-    }
-
     renderTree();
     renderInspector();
     if (window.matchMedia('(max-width: 900px)').matches) setMobilePane('settings');
@@ -1242,13 +1250,6 @@
     activeFieldKey = fieldKey || null;
 
     if (activeFieldKey && activeFieldKey.indexOf(blockId + '.') !== 0) activeFieldKey = blockId + '.' + activeFieldKey;
-
-    if (activeFieldKey) {
-      const field = currentSchema().find(function(item) { return item.key === activeFieldKey; });
-      activeTab = field ? fieldKind(field) : 'content';
-    } else if (!currentSchema().some(function(field) { return fieldKind(field) === activeTab; }) && activeTab !== 'settings') {
-      activeTab = 'content';
-    }
 
     renderTree();
     renderInspector();
@@ -1819,13 +1820,6 @@
 
   document.querySelectorAll('.te-device-btn').forEach(function(button) {
     button.addEventListener('click', function() { setDevice(button.dataset.device); });
-  });
-
-  byId('te-tabs').querySelectorAll('[data-tab]').forEach(function(button) {
-    button.addEventListener('click', function() {
-      activeTab = button.dataset.tab;
-      renderInspector();
-    });
   });
 
   byId('te-page-trigger').addEventListener('click', function() {
