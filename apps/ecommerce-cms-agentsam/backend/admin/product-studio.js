@@ -357,10 +357,11 @@ async function saveDraft(request, env) {
     await env.DB.prepare(
       `UPDATE product_studio_drafts
         SET completeful_shop_id = ?, placement_json = ?, preview_media_asset_id = ?, title = ?, description = ?, retail_price_cents = ?,
+            state = CASE WHEN state = 'error' THEN ? ELSE state END,
             last_error_code = NULL, last_error_message = NULL, updated_at = datetime('now')
         WHERE id = ?`,
     )
-      .bind(shop?.completeful_shop_id || null, JSON.stringify(placement), previewMediaId, title, description, price, id)
+      .bind(shop?.completeful_shop_id || null, JSON.stringify(placement), previewMediaId, title, description, price, state, id)
       .run();
   } else {
     await env.DB.prepare(

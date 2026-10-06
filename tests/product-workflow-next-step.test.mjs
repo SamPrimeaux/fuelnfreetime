@@ -30,6 +30,7 @@ test("Studio saves a draft without rewriting its commercial title, description, 
   assert.match(studioBackend, /createProductFromDraft/);
   assert.match(studioBackend, /Number\(product\.price_cents\) <= 0/);
   assert.match(studioBackend, /already_linked: true/);
+  assert.match(studioBackend, /state = CASE WHEN state = 'error' THEN \? ELSE state END/);
 });
 
 test("Product Editor has top-right persistence actions, verified saves, design handoff, and guarded publishing", () => {
