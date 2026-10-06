@@ -82,6 +82,7 @@ function fixture() {
   };
 
   const objects = new Map();
+  const publishedCache = new Map();
   const putDoc = (key, content, version = 1, status = "draft") => {
     objects.set(
       key,
@@ -125,11 +126,9 @@ function fixture() {
       },
     },
     CMS_CACHE: {
-      async delete() {},
-      async get() {
-        return null;
-      },
-      async put() {},
+      async delete(key) { publishedCache.delete(key); },
+      async get(key) { return publishedCache.get(key) || null; },
+      async put(key, body) { publishedCache.set(key, JSON.parse(body)); },
     },
   };
 
@@ -326,6 +325,7 @@ test("merchant can add Revise/FNF sections, edit, reload draft, and publish one 
   try {
     // The current live storefront must remain untouched while the merchant
     // edits a genuine portable section using the existing D1/R2 authorities.
+    await publishPage(fx.env, "shop"); // Seed the realistic live snapshot/KV state.
     const original = await getPublishedPage(fx.env, "shop");
     assert.ok(original?.sections?.length >= 3);
     const added = await insertSection(fx.env, "shop", {
@@ -336,7 +336,9 @@ test("merchant can add Revise/FNF sections, edit, reload draft, and publish one 
     assert.equal(added.ok, true, JSON.stringify(added));
 
     const beforePublish = await getPublishedPage(fx.env, "shop");
-    assert.equal(beforePublish, null, "Draft edits must not automatically become public.");
+    assert.ok(beforePublish?.sections?.length >= 3, "Public KV snapshot remains readable during a draft.");
+    assert.equal(beforePublish.sections.some(section => section.key === added.section_key), false,
+      "Draft sections must not automatically become publicly visible.");
 
     const freshDraft = await getPageAdmin(fx.env, "shop");
     const current = freshDraft.page.sections.find(section => section.key === added.section_key);
