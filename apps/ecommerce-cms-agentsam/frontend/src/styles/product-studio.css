@@ -1607,3 +1607,35 @@
 .ps-preview-badge--provider {
   background: #304224e8;
 }
+
+/* Context-first product canvas: the tool rail stays available while panels collapse. */
+.ps-workspace-body.is-panel-collapsed { grid-template-columns: 76px minmax(0, 1fr); }
+.ps-toolpanel[hidden] { display: none !important; }
+.ps-panel-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.ps-panel-dismiss { border: 1px solid var(--ps-line); border-radius: 8px; background: white; min-width: 32px; min-height: 32px; font-size: 20px; }
+.ps-stage { position: relative; overflow: hidden; padding-bottom: 48px; }
+.ps-product-design-preview { transform-origin: center center; transition: transform .16s ease; }
+.ps-artwork-toolbar { margin: 4px auto 12px; width: fit-content; max-width: 100%; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; padding: 5px; border: 1px solid var(--ps-line); border-radius: 10px; background: #fff; }
+.ps-artwork-toolbar button, .ps-canvas-controls button { min-height: 33px; padding: 6px 10px; border: 0; border-radius: 6px; background: #edf0e5; font-size: 11px; font-weight: 600; }
+.ps-artwork-toolbar span { min-width: 34px; text-align: center; font-size: 11px; font-variant-numeric: tabular-nums; }
+.ps-mini-map { position: absolute; bottom: 14px; right: 14px; width: clamp(120px, 18%, 168px); background: #fafbf9; border: 1px solid var(--ps-line); border-radius: 11px; overflow: hidden; box-shadow: 0 5px 22px #1c271523; z-index: 2; }
+.ps-mini-head { display: flex; gap: 4px; justify-content: space-between; align-items: center; padding: 8px 9px; font-size: 10px; }
+.ps-mini-head button { border: 0; background: transparent; text-decoration: underline; font-size: 10px; }
+.ps-mini-image { position: relative; aspect-ratio: 4 / 5; background: #fff; overflow: hidden; }
+.ps-mini-image > img, .ps-mini-image > .ps-image-fallback { width: 100%; height: 100%; object-fit: contain; }
+.ps-mini-placement { position: absolute; left: 50%; top: 50%; width: 34%; transform: translate(-50%,-50%); aspect-ratio: 1; pointer-events: none; }
+.ps-mini-placement img { position: absolute; max-height: none; object-fit: contain; }
+.ps-mini-map small { display: block; padding: 7px 8px; font-size: 9px; color: var(--ps-muted); line-height: 1.3; }
+.ps-canvas-controls { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; padding: 8px; font-size: 11px; }
+.ps-canvas-controls label { display: flex; align-items: center; gap: 8px; }
+.ps-canvas-controls input { max-width: 150px; accent-color: #718a51; }
+@media (max-width: 1100px) and (min-width: 761px) {
+  .ps-workspace-body.is-panel-collapsed { grid-template-columns: 66px minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .ps-workspace-body.is-panel-collapsed { display: flex; flex-direction: column; }
+  .ps-stage { flex-wrap: wrap; padding: 14px; gap: 12px; }
+  .ps-mini-map { position: relative; inset: auto; width: min(100%, 220px); margin-left: auto; }
+  .ps-artwork-toolbar { margin-inline: 12px; }
+  .ps-artwork-toolbar button { font-size: 10px; }
+}

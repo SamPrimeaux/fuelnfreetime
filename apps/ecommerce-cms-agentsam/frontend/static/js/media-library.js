@@ -297,6 +297,11 @@ import {
         openAlbumDialog();
         return;
       }
+      const deleteButton = event.target.closest("[data-media-album-delete]");
+      if (deleteButton && els.albums.contains(deleteButton)) {
+        void deleteAlbum(Number(deleteButton.dataset.mediaAlbumDelete));
+        return;
+      }
       const button = event.target.closest("[data-media-album]");
       if (!button || !els.albums.contains(button)) return;
       const id = Number(button.dataset.mediaAlbum || 0);
@@ -384,6 +389,7 @@ import {
           els.note.textContent = "SEO review is approval-based. Open an asset to review its suggestions; no metadata was changed.";
         }
       }
+      else if (action === "delete") void deleteSelection();
       else if (action === "new-album") openAlbumDialog();
       else if (action === "remove-album" && activeAlbumId) void runBatchAction("album_remove", { album_id: activeAlbumId });
     });
@@ -456,13 +462,14 @@ import {
         '" data-media-album=""><span>All media</span><small>Library</small></button>',
       '<button type="button" class="media-album-chip media-album-create-mobile" data-media-album-create aria-label="Create new album"><span>+ New album</span><small>Create group</small></button>',
       ...albums.map((album) =>
-        '<button type="button" class="media-album-chip' +
+        '<div class="media-album-item"><button type="button" class="media-album-chip' +
         (Number(activeAlbumId) === Number(album.id) ? ' is-active' : '') +
         '" data-media-album="' + Number(album.id) + '">' +
         '<span>' + escapeHtml(album.name) + '</span>' +
         '<small>' + (album.meta?.kind === "gallery" ? 'Gallery · ' : '') + Number(album.asset_count || 0) + ' asset' +
         (Number(album.asset_count || 0) === 1 ? '' : 's') +
-        '</small></button>'
+        '</small></button><button type="button" class="media-album-delete" data-media-album-delete="' + Number(album.id) +
+        '" aria-label="Delete album ' + escapeHtml(album.name) + '" title="Delete album without deleting its assets">×</button></div>'
       ),
     ];
     els.albums.innerHTML = buttons.join("");
@@ -659,6 +666,47 @@ import {
     emitSelection();
   }
 
+  async function deleteAlbum(albumId) {
+    const album = albums.find((item) => Number(item.id) === albumId);
+    if (!album || !confirm('Delete album "' + album.name + '"? Its media assets will remain in the library.')) return;
+    try {
+      await adminFetch('/api/admin/media/albums/' + encodeURIComponent(albumId), { method: 'DELETE' });
+      if (Number(activeAlbumId) === albumId) activeAlbumId = null;
+      page = 1;
+      await load();
+    } catch (err) {
+      if (els.note) {
+        els.note.className = 'admin-note error';
+        els.note.textContent = 'Could not delete album: ' + (err.message || 'Unknown error');
+        els.note.style.display = 'block';
+      }
+    }
+  }
+
+  async function deleteSelection() {
+    const ids = [...selectedIds];
+    if (!ids.length || !confirm('Permanently delete ' + ids.length + ' selected asset(s)? This also deletes their stored source objects where supported. This cannot be undone.')) return;
+    els.batchBar?.classList.add('is-busy');
+    let deleted = 0;
+    let failures = 0;
+    for (const id of ids) {
+      try {
+        await adminFetch('/api/admin/media/' + encodeURIComponent(id), { method: 'DELETE' });
+        selectedIds.delete(id);
+        deleted++;
+      } catch (_err) {
+        failures++;
+      }
+    }
+    els.batchBar?.classList.remove('is-busy');
+    await load();
+    if (els.note) {
+      els.note.className = failures ? 'admin-note error' : 'admin-note success';
+      els.note.textContent = deleted + ' asset(s) deleted.' + (failures ? ' ' + failures + ' failed; retry after checking their usage.' : '');
+      els.note.style.display = 'block';
+    }
+  }
+
   function clearSelection() {
     selectedIds.clear();
     renderGrid();
@@ -748,6 +796,7 @@ import {
       '<button type="button" data-media-batch="seo">Review SEO</button>',
       mediaCapabilities.can_materialize_derivatives ? '<button type="button" data-media-batch="optimize">Optimize selected</button>' : '',
       '<button type="button" data-media-batch="new-album">New album</button>',
+      '<button type="button" class="media-batch-danger" data-media-batch="delete">Delete selected assets…</button>',
       activeAlbumId ? '<button type="button" data-media-batch="remove-album">Remove from current album</button>' : '',
       '<label class="media-batch-menu-label">Move to folder',
       '<select class="media-lib-filter" data-media-batch-move>',
@@ -1658,8 +1707,19 @@ import {
         body: form,
         credentials: "include",
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed");
+      const contentType = res.headers.get("content-type") || "";
+      const body = await res.text();
+      let data;
+      try {
+        data = JSON.parse(body);
+      } catch {
+        if (res.status === 413) throw new Error("Upload exceeds the server limit. Try a smaller file.");
+        if (res.status === 401 || res.status === 403) throw new Error("Your admin session expired. Sign in and retry.");
+        throw new Error(contentType.includes("html") || /^\s*</.test(body)
+          ? "The upload endpoint returned HTML instead of JSON (HTTP " + res.status + "). Check the deployed Worker route and upload limits."
+          : "Unexpected upload response (HTTP " + res.status + ").");
+      }
+      if (!res.ok) throw new Error(data?.error || "Upload failed (HTTP " + res.status + ")");
       const n = data.assets?.length || 0;
       const uploadedIds = (data.assets || []).map((asset) => Number(asset.id)).filter(Number.isInteger);
       if (albumId && uploadedIds.length) await addIdsToAlbum(uploadedIds, albumId);
