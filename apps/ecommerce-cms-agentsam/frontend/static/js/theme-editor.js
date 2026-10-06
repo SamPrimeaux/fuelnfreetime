@@ -1411,7 +1411,9 @@
     byId('theme-preview').removeAttribute('srcdoc');
     byId('theme-preview').src = route + separator + (liveUnimported ? '_=' : 'preview=1&_=' ) + Date.now();
     byId('te-open-tab').href = liveUnimported ? route : route + separator + 'preview=1';
-    byId('te-preview-label').textContent = liveUnimported ? 'Live storefront — source inspection' : 'Heuristic draft preview — ' + ((pageData && pageData.title) || humanize(slug));
+    byId('te-preview-label').textContent = slug === 'bridge-fly'
+      ? 'Aviation scene · authenticated preview only'
+      : liveUnimported ? 'Live storefront — source inspection' : 'Heuristic draft preview — ' + ((pageData && pageData.title) || humanize(slug));
   }
 
   function schedulePreview() {
