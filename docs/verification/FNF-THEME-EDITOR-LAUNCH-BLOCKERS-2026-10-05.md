@@ -19,10 +19,10 @@ Require visible proof + persistence proof + regression proof.
 
 ## P0 blockers from actual repo
 
-1. No Header and Footer groups in the actual Theme Editor tree. Existing code loads only the current page slug and filters the global site page out of its chooser. WIP registry and storefront shell additions have not been integrated into editor JS.
-2. No Heuristic / Revise / FNF theme switcher in the actual editor. No selected theme state reaches the page renderer.
-3. No proven three-renderer implementation. The FNF build assembles the Heuristic storefront; FNF theme package is a candidate; Revise is mentioned in documentation but absent from this repo's packages tree. Do not fabricate selectable themes.
-4. Add Section is generated from the application PAGE_REGISTRY for the page, not a theme-specific catalog of registered, renderable section presets.
+1. Initially no Header/Footer groups in Theme Editor. During this audit, the Theme Studio owner wired both site and page documents into the existing editor. Current desktop fixture browser test now shows Header / Template / Footer (visible checkpoint only; persistence/publish still unproved).
+2. Initially no visual-theme selector. During this audit the Theme Studio owner added visible Heuristic / Revise / FNF choices. This passes the visibility gate but does NOT yet prove each choice renders genuine package implementations or deploys truthfully.
+3. No proven three-renderer implementation. Revise is a declared/installed npm package dependency, but current alternate-preview runtime generates hand-authored preview HTML from a few generic render functions. FNF also has a package candidate. Those preview stand-ins have not been proved equivalent to package-native live rendering.
+4. Theme Studio now presents a per-theme searchable Add Section catalog, but its entries are currently hardcoded in theme-preview-runtime.js and funnel through a few generic templateKey handlers rather than validated theme-specific renderers.
 5. Shop registry advertises Newsletter, but the current Shop storefront HTML has only Hero, Collections, and Stories section anchors. Its CMS hydration clones known templates; a missing template is skipped.
 6. About and Community lack full CMS section wrappers for advertised sections. Some text slots can hydrate, but section-level add/reorder/hide/preview selection cannot be assumed functional.
 7. Shop contains unregistered static catalog/editorial sections even though merchants reasonably expect their positions/settings to be editable.
@@ -36,10 +36,11 @@ Require visible proof + persistence proof + regression proof.
 
 - Browser smoke launched actual Theme Editor frontend JS in Chrome against CMS fixture API, on main and the Theme Studio worktree.
 - PASS: Shop loads, sections and Hero inspector show, Add Section / Save draft / Publish / preview iframe exist.
-- BLOCKED: Header, Footer and three-theme selector are absent.
-- At 744px: tree is hidden; no full-document horizontal clipping, but controls are inaccessible.
+- Initial baseline: Header, Footer and three-theme selector were absent. New concurrent Theme Studio changes now make those groups and choices VISIBLE on desktop, but persistence and real renderer parity remain unproved.
+- At 744px on the latest WIP: tree is hidden; no full-document horizontal clipping, but Add Section is inaccessible.
 - Renderer parity test: Shop, About and Community fail; Collaborate, Policies and Terms pass for static section marker coverage.
 - Home uses a separate page composer, covered by other existing alignment tests.
+- The new preset semantic test confirms advertised Revise/FNF variants collapse onto generic preview layouts; compare fixture content across advertised presets.
 - These fixture tests do NOT claim real storefront pixel accuracy or real D1/R2 publish persistence.
 
 ## Gate A — first visible merchant checkpoint (Theme Studio owner)
@@ -99,3 +100,7 @@ App changes only in feat/theme-studio-universal-v1, after any necessary handoff.
 QA changes only tests/launch and docs/verification.
 store-theme-library-v1 remains reference-only and DO NOT MERGE.
 Production Repair PR #32 and Merch lane remain independent.
+
+## Concurrent WIP checkpoint update
+
+As the audit ran, the Theme Studio owner modified the actual editor and preview assets (without any QA-branch edits to their worktree). The updated desktop Chrome fixture passes grouped Header / Template / Footer and visible Heuristic / Revise / FNF choices. This is good visible progress, but not the final merchant gate. Alternate-preview HTML is currently assembled by browser-side JS and maps many distinct advertised presets to the same handful of visual implementations. The 744px section tree remains hidden. Continue requiring real renderer equivalence, save/reload, publish, recovery and live data evidence.

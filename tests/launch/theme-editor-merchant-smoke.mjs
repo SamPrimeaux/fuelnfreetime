@@ -49,7 +49,7 @@ setTimeout(() => {
   const treeText = tree?.textContent || '';
   const themeChoices = [...document.querySelectorAll(
     'select[aria-label*="theme" i] option, [data-theme-option], [data-theme-select] option'
-  )].map(n => n.textContent.trim());
+  ), ...document.querySelectorAll("[data-theme-preview]")].map(n => n.textContent.trim());
   const select = document.querySelector('.te-tree-row__main');
   select?.click();
   const snapshot = {
@@ -86,6 +86,7 @@ const server = http.createServer((req, res) => {
   const p = u.pathname;
   if (p === "/api/admin/cms/registry") return json(res, registryForAdmin());
   if (p === "/api/admin/cms/pages/shop") return json(res, { ok: true, page: getRegistryPage("shop") });
+  if (p === "/api/admin/cms/pages/site") return json(res, { ok: true, page: getRegistryPage("site") });
   if (p === "/api/admin/cms/pages") return json(res, { ok: true, pages: listRegistryPages() });
   if (p === "/api/admin/me") return json(res, { ok: true, user: { id: 1, role: "owner", email: "merchant@example.com", display_name: "Merchant" }, role: "owner", email: "merchant@example.com" });
   if (p === "/api/admin/media") return json(res, { ok: true, assets: [] });
