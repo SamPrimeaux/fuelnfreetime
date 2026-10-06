@@ -381,7 +381,7 @@
           };
         })
         .filter(Boolean);
-      if (items.length) navConfig.items = items;
+      if (items.length && (previewOverride || navConfig.navigationAuthority !== "preferences")) navConfig.items = items;
     }
   }
 
