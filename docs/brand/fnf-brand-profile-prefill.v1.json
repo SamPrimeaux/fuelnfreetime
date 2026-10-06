@@ -1,0 +1,44 @@
+{
+  "brand": "Fuel & Free Time",
+  "status": "working-draft",
+  "source": "docs/brand/business-brand-dossier.md",
+  "sourceVersion": "2026-09",
+  "tokenSource": "packages/heuristic-theme/presets/fuel-free-time/tokens.json",
+  "reviewNote": "Imported from a confirmed working brand dossier and existing theme tokens. Review and refine with the customer. Future aspirations are not committed business facts.",
+  "profile": {
+    "purpose": "People work hard for the freedom to spend time on what matters. Fuel & Free Time exists to celebrate earned freedom, genuine experiences, and the people, machines, and places that make life worth living.",
+    "mission": "Connect people who work hard and make their free time count through authentic lifestyle goods, stories, machines, community, and shared experiences. Apparel expresses the idea; it is not the entire brand.",
+    "originStory": "Fuel & Free Time grew from the desire to bring real interests together without being trapped in a single category. A truck owner, rider, fisherman, veteran, retiree, traveler, or garage builder can all recognize the feeling: putting in the hours so you have time for meaningful experiences.",
+    "audience": "Blue-collar workers, gearheads, car and truck enthusiasts, riders, boaters, fishermen, veterans, retirees, weekend warriors, builders, travelers, and families or friends who make time for the things they love. No expensive machine or exclusive club is required to belong.",
+    "positioning": "A grounded, premium lifestyle and media brand built around earned free time rather than status, fake luxury, or generic automotive merch. It brings cars, motorcycles, boats, outdoors, travel, craftsmanship, and community together through a single meaningful perspective.",
+    "promise": "Stay real, value the hours people earn, and make goods and stories worthy of the time they spend on them. Quality, authentic interests, community, and real experiences matter more than empty hype.",
+    "values": "Earned freedom; genuine effort; independence; craftsmanship; family and friendship; adventure; belonging across backgrounds, budgets, and hobbies; making memories instead of chasing status.",
+    "personality": "Authentic, adventurous, blue-collar, independent, welcoming, funny, premium, and energetic. Confident without arrogance; clean without losing character; rooted in real experiences.",
+    "voice": "Direct, confident, conversational, grounded, and occasionally funny. Write the way someone actually speaks in a shop, at a launch, on a ride, or at an event. Let details and lived experiences carry the message.",
+    "voiceDo": "Lead with earned time and real experiences. Use strong, simple lines: \"Time is the real horsepower.\" \"Gas up. Live free.\" \"Built to roam.\" Make room for humor and authentic stories. Show people, machines, craftsmanship, and places.",
+    "voiceDont": "Avoid empty lifestyle hype, fake motivational speeches, copied slogans, constant profanity, status flexing, or clichés. Never frame recklessness, exclusion, cheap knockoff luxury, or aggressive posturing as the whole brand.",
+    "keyMessage": "Time is the real horsepower. The machine is part of the story, but the freedom to use it, enjoy it, and share the experience matters most.",
+    "shortDescription": "Fuel & Free Time is a lifestyle brand for people who work hard, value their time, and use it on machines, people, places, and experiences worth living for.",
+    "headlineFont": "Bebas Neue",
+    "bodyFont": "Inter",
+    "imageDirection": "Premium but grounded: real garages, tools, weld light, machine details, roads at golden hour, early boat launches, water and landscapes, hands doing the work, friends and families in motion. Pair strong recognizable subjects with clean composition, subtle grit, texture, metal, leather, and restraint.",
+    "secondaryColor": "#d99142",
+    "textColor": "#f7f5f0"
+  },
+  "assetRoles": {
+    "logo": { "media_asset_id": 45, "r2_key": "archive/shopify-import/logos/fandft-clear-background.png" },
+    "social_image": { "media_asset_id": 37, "r2_key": "archive/shopify-import/graphics/high_octane.jpg" }
+  },
+  "leftForCustomer": [
+    "vision",
+    "instagramUrl",
+    "facebookUrl",
+    "tiktokUrl",
+    "youtubeUrl",
+    "favicon",
+    "logo_dark",
+    "logo_light",
+    "mark",
+    "brand_hero"
+  ]
+}

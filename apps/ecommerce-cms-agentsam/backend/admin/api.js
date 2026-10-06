@@ -572,7 +572,7 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   if (orderMatch && method === "GET") return getOrder(request, env, orderMatch[1]);
   if (path === "/api/admin/subscribers" && method === "GET") return listSubscribers(request, env);
 
-  if (path === "/api/admin/brand" && method === "GET") return getBrandWorkspace(env);
+  if (path === "/api/admin/brand" && method === "GET") return getBrandWorkspace(env, { includeAssets: url.searchParams.get("include_assets") !== "0" });
   if (path === "/api/admin/brand/assets" && method === "GET") return searchBrandAssets(request, env);
   if (path === "/api/admin/brand" && method === "PATCH") return patchBrandWorkspace(request, env);
 

@@ -214,7 +214,7 @@ export async function searchBrandAssets(request, env) {
   });
 }
 
-export async function getBrandWorkspace(env) {
+export async function getBrandWorkspace(env, options = {}) {
   const company = await getCompany(env);
   if (!company) return json({ ok: false, error: "company_not_configured" }, { status: 404 });
 
@@ -223,7 +223,9 @@ export async function getBrandWorkspace(env) {
     company,
     profile: company.meta?.brand_profile || {},
     roles: Object.keys(BRAND_ROLES).map((role) => currentRole(company, role)),
-    assets: await listBrandCandidates(env),
+    // Existing consumers receive media candidates by default. New mobile
+    // workspaces request include_assets=0 and search on demand instead.
+    assets: options.includeAssets === false ? [] : await listBrandCandidates(env),
     authority: {
       identity: "company",
       assets: "media_assets",
