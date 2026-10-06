@@ -361,7 +361,7 @@ export async function listPagesAdmin(env) {
       status: "draft",
       updated_at: null,
       section_count: registryPage.section_count,
-      preview: previewFromRegistry(registryPage.slug),
+      preview: "Live storefront exists; CMS has not imported this page",
       source: "registry",
       ...resolvePageAuthority(registryPage.slug, CMS_STOREFRONT_ROUTES),
     });
