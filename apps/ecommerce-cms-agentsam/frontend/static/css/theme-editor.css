@@ -244,6 +244,8 @@
 .te-save-state.is-saved::before { background: var(--te-success); }
 .te-save-state.is-error::before { background: var(--te-danger); }
 
+.te-mobile-pane-switch { display: none; }
+
 .theme-studio-workspace {
   min-height: 0;
   display: grid;
