@@ -1,0 +1,39 @@
+name: FNF About and Community CMS source fidelity
+on:
+  pull_request:
+    paths:
+      - "packages/heuristic-theme/storefront/**"
+      - "apps/ecommerce-cms-agentsam/backend/cms/**"
+      - "apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor.js"
+      - "tests/cms-about-community-source.test.mjs"
+      - "tests/cms-editor-mutations.test.mjs"
+      - "scripts/smoke-about-community-cms.mjs"
+      - ".github/workflows/fnf-marketing-cms-fidelity.yml"
+      - "package*.json"
+  push:
+    branches: [main]
+    paths:
+      - "packages/heuristic-theme/storefront/**"
+      - "apps/ecommerce-cms-agentsam/backend/cms/**"
+      - "tests/cms-about-community-source.test.mjs"
+      - "scripts/smoke-about-community-cms.mjs"
+jobs:
+  source-fidelity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build existing admin and storefront
+        run: npm run build:admin
+      - name: Test source contracts and existing CMS mutations
+        run: node --test tests/cms-editor-mutations.test.mjs tests/cms-about-community-source.test.mjs
+      - name: Check actual About and Community browser layouts
+        run: node scripts/smoke-about-community-cms.mjs
