@@ -29,6 +29,9 @@ renderShell("/admin/content", `
           <span class="sr-only">Search content</span>
           <input type="search" id="media-search" placeholder="Search assets" autocomplete="off">
         </label>
+        <div class="media-lib-advanced" id="media-lib-advanced">
+          <button type="button" class="media-lib-advanced-toggle" id="media-filter-toggle" aria-expanded="false" aria-controls="media-advanced-controls">Filters</button>
+          <div class="media-lib-advanced-controls" id="media-advanced-controls">
         <select id="media-kind-filter" class="media-lib-filter" aria-label="Filter by type">
           <option value="all">All types</option>
           <option value="image">Images</option>
@@ -48,9 +51,11 @@ renderShell("/admin/content", `
           <option value="largest">Largest</option>
           <option value="manual">Manual order</option>
         </select>
+          </div>
+        </div>
         <input type="file" id="media-file-input" multiple accept="image/*,video/*,.glb,.usdz">
         <button type="button" class="btn small" id="media-upload-btn">Upload</button>
-        <button type="button" class="btn primary small" id="media-gallery-new">+ Create gallery</button>
+        <button type="button" class="btn primary small" id="media-gallery-new"><span class="media-label-desktop">+ Create gallery</span><span class="media-label-mobile">+ Gallery</span></button>
       </div>
     </div>
 

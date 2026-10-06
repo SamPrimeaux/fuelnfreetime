@@ -293,6 +293,10 @@ import {
     });
 
     mountListener(els.albums, "click", (event) => {
+      if (event.target.closest("[data-media-album-create]")) {
+        openAlbumDialog();
+        return;
+      }
       const button = event.target.closest("[data-media-album]");
       if (!button || !els.albums.contains(button)) return;
       const id = Number(button.dataset.mediaAlbum || 0);
@@ -450,6 +454,7 @@ import {
       '<button type="button" class="media-album-chip' +
         (!activeAlbumId && !activeFolder ? ' is-active' : '') +
         '" data-media-album=""><span>All media</span><small>Library</small></button>',
+      '<button type="button" class="media-album-chip media-album-create-mobile" data-media-album-create aria-label="Create new album"><span>+ New album</span><small>Create group</small></button>',
       ...albums.map((album) =>
         '<button type="button" class="media-album-chip' +
         (Number(activeAlbumId) === Number(album.id) ? ' is-active' : '') +
@@ -1823,18 +1828,40 @@ import {
         if (generation === mountGeneration) void load();
       }, 250);
     });
+    // Secondary search refinements collapse only on narrow screens. The desktop
+    // toolbar keeps every filter immediately visible and existing IDs unchanged.
+    const filterToggle = document.getElementById("media-filter-toggle");
+    const advancedFilters = document.getElementById("media-lib-advanced");
+    function syncFilterToggle() {
+      if (!filterToggle || !advancedFilters) return;
+      const activeCount = Number(kindFilter !== "all") +
+        Number(statusFilter !== "all") + Number(sortMode !== "newest");
+      filterToggle.textContent = "Filters" + (activeCount ? " (" + activeCount + ")" : "");
+      filterToggle.setAttribute("aria-expanded", advancedFilters.classList.contains("is-open") ? "true" : "false");
+      filterToggle.classList.toggle("has-active-filters", activeCount > 0);
+    }
+    if (filterToggle && advancedFilters) {
+      mountListener(filterToggle, "click", () => {
+        advancedFilters.classList.toggle("is-open");
+        syncFilterToggle();
+      });
+      syncFilterToggle();
+    }
     if (els.kindFilter) mountListener(els.kindFilter, "change", (event) => {
       kindFilter = event.target.value || "all";
+      syncFilterToggle();
       page = 1;
       void load();
     });
     if (els.statusFilter) mountListener(els.statusFilter, "change", (event) => {
       statusFilter = event.target.value || "all";
+      syncFilterToggle();
       page = 1;
       void load();
     });
     if (els.sortFilter) mountListener(els.sortFilter, "change", (event) => {
       sortMode = event.target.value || "newest";
+      syncFilterToggle();
       page = 1;
       void load();
     });
