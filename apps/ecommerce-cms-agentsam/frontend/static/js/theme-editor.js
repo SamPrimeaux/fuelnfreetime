@@ -1251,7 +1251,7 @@
       liveSourceCaptured = false;
       if (liveUnimported) selectedTheme = 'heuristic';
       byId('te-import-live').hidden = true;
-      byId('te-save').textContent = liveUnimported ? 'Import & save draft' : 'Save draft';
+      byId('te-save').textContent = liveUnimported ? (liveExistingDraft ? 'Reconcile & save draft' : 'Import & save draft') : 'Save draft';
       siteData = results[2].page;
       pages = (results[1].pages || []).filter(function(page) { return page.slug !== 'site'; });
 
