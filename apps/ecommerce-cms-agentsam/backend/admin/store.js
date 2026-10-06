@@ -174,6 +174,16 @@ async function saveStorePreferences(env, incoming) {
   if (incoming.announcementHref != null) {
     next.announcementHref = String(incoming.announcementHref).trim().slice(0, 512);
   }
+  if (incoming.announcementStyle != null) {
+    next.announcementStyle = incoming.announcementStyle === "marquee" ? "marquee" : "static";
+  }
+  for (const key of ["announcementBgColor", "announcementTextColor"]) {
+    if (incoming[key] != null) {
+      const color = String(incoming[key]);
+      if (!/^#[0-9a-f]{6}$/i.test(color)) return { ok: false, error: "invalid_announcement_color" };
+      next[key] = color;
+    }
+  }
 
   if (incoming.storePassword != null && incoming.storePassword !== "" && incoming.storePassword !== "••••••••") {
     const { hash, salt } = await hashPassword(String(incoming.storePassword).slice(0, 128));
