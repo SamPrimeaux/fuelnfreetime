@@ -558,6 +558,19 @@
     });
     byId('te-section-cancel')?.addEventListener('click', function() { menu.hidden = true; add.hidden = false; });
     byId('te-section-search')?.addEventListener('input', function(event) { renderCatalog(event.target.value); });
+    // Preserve old atlas links without maintaining another source editor.
+    // This opens the one canonical cross-theme section catalog in place.
+    if (new URLSearchParams(location.search).get('catalog') === 'revise') {
+      add?.click();
+      const search = byId('te-section-search');
+      if (search) {
+        search.value = 'revise';
+        renderCatalog('revise');
+      }
+      const cleaned = new URL(location.href);
+      cleaned.searchParams.delete('catalog');
+      history.replaceState(null, '', cleaned);
+    }
 
     let draggedKey = null;
     byId('te-tree').querySelectorAll('.te-tree-row[draggable="true"]').forEach(function(row) {
