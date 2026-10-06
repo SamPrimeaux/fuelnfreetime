@@ -399,6 +399,7 @@ export async function getPageAdmin(env, slug) {
       ...resolvePageAuthority(slug, CMS_STOREFRONT_ROUTES, {
         seeded: true,
         cmsPublished: page.status === "published",
+        cmsDraftLinked: hasLiveImport,
       }),
     },
   };
