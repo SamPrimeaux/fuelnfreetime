@@ -1142,6 +1142,7 @@
 
     renderTree();
     renderInspector();
+    if (window.matchMedia('(max-width: 900px)').matches) setMobilePane('settings');
     const prefix = activeSectionOwner === 'site' ? 'Global' : slug;
     byId('te-selected-path').textContent = fieldKey ? prefix + ' / ' + sectionKey + ' / ' + fieldKey : prefix + ' / ' + sectionKey;
 
@@ -1177,6 +1178,7 @@
 
     renderTree();
     renderInspector();
+    if (window.matchMedia('(max-width: 900px)').matches) setMobilePane('settings');
     const prefix = activeSectionOwner === 'site' ? 'Global' : slug;
     byId('te-selected-path').textContent = activeFieldKey
       ? prefix + ' / ' + sectionKey + ' / ' + blockId + ' / ' + activeFieldKey.replace(blockId + '.', '')
@@ -1750,6 +1752,10 @@
   });
 
   byId('te-page-search').addEventListener('input', function(event) { renderPageOptions(event.target.value); });
+  byId('te-mobile-pane-switch').querySelectorAll('[data-mobile-pane]').forEach(function(button) {
+    button.addEventListener('click', function() { setMobilePane(button.dataset.mobilePane); });
+  });
+  setMobilePane('preview');
   byId('te-refresh').addEventListener('click', refreshPreview);
   byId('te-import-live').addEventListener('click', importLiveSource);
   byId('te-save').addEventListener('click', saveDraft);
