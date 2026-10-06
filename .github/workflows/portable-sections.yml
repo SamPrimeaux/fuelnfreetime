@@ -11,6 +11,7 @@ on:
       - scripts/sync-app-frontend.mjs
       - tests/portable-sections.test.mjs
       - tests/portable-sections-browser-smoke.mjs
+      - tests/launch/portable-editor-browser-smoke.mjs
       - tests/theme-studio-universal.test.mjs
       - .github/workflows/portable-sections.yml
 permissions:
@@ -35,3 +36,5 @@ jobs:
         run: node --test tests/portable-sections.test.mjs tests/theme-studio-universal.test.mjs
       - name: Actual Chrome public DOM and live editor preview proof
         run: node tests/portable-sections-browser-smoke.mjs
+      - name: Real editor preview browser proof
+        run: node tests/launch/portable-editor-browser-smoke.mjs
