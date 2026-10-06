@@ -379,9 +379,12 @@
     const data = event.data;
     if (!data || data.type !== "fnf-cms-preview" || data.slug !== pageSlug) return;
     if (!Array.isArray(data.sections)) return;
-    void portableReady.then(() => applySections([
+    const sections = [
       ...(Array.isArray(data.siteSections) ? data.siteSections : []), ...data.sections,
-    ]));
+    ];
+    void ensureSectionRuntime(sections).then(() => applySections(sections)).catch((error) => {
+      console.error('[CMS] Draft section renderer failed to load', error);
+    });
   });
 
   if (document.readyState === "loading") {
