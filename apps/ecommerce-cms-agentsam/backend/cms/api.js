@@ -17,6 +17,7 @@ import {
   publishSectionToR2,
   loadSectionsFromR2,
   readR2Json,
+  writeR2Json,
   readSectionContent,
   D1_CONTENT_PLACEHOLDER,
 } from "./r2-store.js";
@@ -411,8 +412,11 @@ export async function importLivePageDraft(env, slug, body = {}) {
   const route = CMS_STOREFRONT_ROUTES.find((item) => item.page === slug);
   const definition = PAGE_REGISTRY[slug];
   if (!route || !definition) return { error: "Unknown storefront page", status: 404 };
-  if (await loadPageRow(env, slug)) {
-    return { error: "This page has a CMS record. Reload before editing.", status: 409 };
+
+  const existing = await loadPageRow(env, slug);
+  const replacing = Boolean(existing);
+  if (replacing && (existing.status === "published" || body.mode !== "reconcile")) {
+    return { error: "An existing CMS page must be explicitly reconciled from its live source.", status: 409 };
   }
   const sections = body?.sections;
   if (!Array.isArray(sections) || sections.length === 0 || sections.length > 50) {
@@ -429,24 +433,64 @@ export async function importLivePageDraft(env, slug, body = {}) {
     seen.add(section.key);
   }
 
-  await env.DB.prepare(
-    "INSERT INTO pages (slug, title, status, updated_at) VALUES (?, ?, 'draft', datetime('now'))"
-  ).bind(slug, definition.title).run();
-  const page = await loadPageRow(env, slug);
+  let page = existing;
+  let archiveKey = null;
+  let rows = [];
+  if (existing) {
+    const previous = await loadSectionsFromDb(env, slug, existing.id);
+    const priorVersions = await env.DB.prepare(
+      "SELECT section_key, content_version, status FROM page_sections WHERE page_id = ?"
+    ).bind(existing.id).all();
+    rows = priorVersions.results || [];
+    const byKey = new Map(rows.map((row) => [row.section_key, row]));
+    for (const section of sections) {
+      const actual = Number(byKey.get(section.key)?.content_version ?? 0);
+      if (!Number.isInteger(section.expected_version) || section.expected_version !== actual) {
+        return { error: "A section changed while importing. Reload first.", status: 409 };
+      }
+    }
+    archiveKey = "cms/pages/" + slug + "/imports/before-live-" + crypto.randomUUID() + ".json";
+    const archived = await writeR2Json(env, archiveKey, {
+      slug, source: "pre-live-reconciliation", saved_at: new Date().toISOString(),
+      sections: previous,
+    });
+    if (!archived) return { error: "Cannot archive previous CMS draft; import aborted.", status: 503 };
+  } else {
+    await env.DB.prepare(
+      "INSERT INTO pages (slug, title, status, updated_at) VALUES (?, ?, 'draft', datetime('now'))"
+    ).bind(slug, definition.title).run();
+    page = await loadPageRow(env, slug);
+  }
+
   for (const section of sections) {
     const content = structuredClone(section.content);
     content.__editor = { ...(content.__editor || {}), source: "live-storefront" };
-    const sortOrder = definition.sections[section.key].sortOrder;
-    const result = await persistSectionDraft(env, slug, page.id, section.key, content, sortOrder);
+    const order = definition.sections[section.key].sortOrder;
+    const result = await persistSectionDraft(env, slug, page.id, section.key, content, order, {
+      expectedVersion: replacing ? section.expected_version : null,
+    });
     if (result.error) return result;
   }
+
+  // Explicit reconciliation retires unseen legacy sections without deleting
+  // immutable history. The previous composition is backed up in R2.
+  let retired = 0;
+  if (replacing) {
+    for (const row of rows) {
+      if (seen.has(row.section_key) || row.status === "removed") continue;
+      const result = await env.DB.prepare(
+        "UPDATE page_sections SET status = 'removed', updated_at = datetime('now') WHERE page_id = ? AND section_key = ? AND content_version = ?"
+      ).bind(page.id, row.section_key, row.content_version).run();
+      if (d1Changes(result) !== 1) return { error: "Concurrent CMS edit detected. Reload before continuing.", status: 409 };
+      retired += 1;
+    }
+  }
+  await env.DB.prepare("UPDATE pages SET status = 'draft', updated_at = datetime('now') WHERE id = ?")
+    .bind(page.id).run();
   return {
-    ok: true,
-    slug,
-    status: "draft",
-    imported_sections: sections.length,
-    live_route: route.path,
-    published: false,
+    ok: true, slug, status: "draft", imported_sections: sections.length,
+    retired_sections: retired, archive_key: archiveKey,
+    live_route: route.path, published: false,
   };
 }
 
