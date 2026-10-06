@@ -276,6 +276,20 @@
     }
   }
 
+  // Resolve merchant-authored destinations without admitting script/data URLs.
+  // Shared runtime uses one policy for both draft previews and published pages.
+  function safeCmsUrl(value, { media = false } = {}) {
+    if (typeof value !== "string") return null;
+    const url = value.trim();
+    if (!url || /[\\u0000-\\u001f\\u007f]/.test(url)) return null;
+    try {
+      const scheme = new URL(url, document.baseURI).protocol;
+      if (scheme === "http:" || scheme === "https:") return url;
+      if (!media && (scheme === "mailto:" || scheme === "tel:")) return url;
+    } catch { /* invalid URL */ }
+    return null;
+  }
+
   function applySections(sections) {
     editorStyle();
     const byKey = Object.fromEntries(sections.map((section) => [section.key, section.content || {}]));
