@@ -488,279 +488,548 @@ export const PAGE_REGISTRY = {
         },
       },
       community: {
-        sortOrder: 4,
-        fields: [
-          { key: "title", label: "Title", type: "text" },
-          { key: "subtitle", label: "Subtitle", type: "textarea" },
-          { key: "f1.title", label: "Feature 1 title", type: "text" },
-          { key: "f1.text", label: "Feature 1 text", type: "text" },
-          { key: "f2.title", label: "Feature 2 title", type: "text" },
-          { key: "f2.text", label: "Feature 2 text", type: "text" },
-          { key: "f3.title", label: "Feature 3 title", type: "text" },
-          { key: "f3.text", label: "Feature 3 text", type: "text" },
-          { key: "f4.title", label: "Feature 4 title", type: "text" },
-          { key: "f4.text", label: "Feature 4 text", type: "text" },
-        ],
-        defaultContent: {
-          title: "Join the Movement",
-          subtitle: "Where every mile has a story and every hour is earned",
-          f1: { title: "Hunt Drops", text: "Exclusive scavenger hunts for limited gear" },
-          f2: { title: "Garage Nights", text: "Monthly meetups in Lafayette and beyond" },
-          f3: { title: "Fuel Stops", text: "Pop-ups where stories meet the road" },
-          f4: { title: "Early Access", text: "First dibs on every limited release" },
-        },
-      },
-      newsletter: {
-        sortOrder: 6,
-        fields: [
-          { key: "title", label: "Title", type: "text" },
-          { key: "text", label: "Description", type: "textarea" },
-          { key: "buttonLabel", label: "Button label", type: "text" },
-        ],
-        defaultContent: {
-          title: "Stay Fueled Up",
-          text: "Get first access to drops, event invites, and the stories that matter.",
-          buttonLabel: "Join",
-        },
-      },
-    },
-  },
-  shop: {
-    title: "Shop",
-    sections: {
-      hero: {
-        sortOrder: 0,
-        fields: [
-          { key: "eyebrow", label: "Eyebrow", type: "text" },
-          { key: "headline", label: "Headline", type: "text" },
-          { key: "subheadline", label: "Subheadline", type: "textarea" },
-          { key: "imageUrl", label: "Hero image", type: "media" },
-          { key: "ctaPrimary.label", label: "Primary CTA label", type: "text" },
-          { key: "ctaPrimary.href", label: "Primary CTA link", type: "link" },
-          { key: "ctaSecondary.label", label: "Secondary CTA label", type: "text" },
-          { key: "ctaSecondary.href", label: "Secondary CTA link", type: "link" },
-        ],
-        defaultContent: {
-          eyebrow: "Collections",
-          headline: "A lifestyle built from grit — and time.",
-          subheadline:
-            "Shop High Octane, Masters, and Essentials. Clean grid. Real stories. Fire-orange attitude.",
-          imageUrl: "/assets/presets/fuel-free-time/earned-hours-hero.webp",
-          ctaPrimary: { label: "Shop the Drop", href: "#catalog" },
-          ctaSecondary: { label: "Browse Collections", href: "/shop/collections" },
-        },
-      },
-      collections: {
-        sortOrder: 1,
-        settings: [
-          {
-            key: "__editor.layout.columns",
-            label: "Columns",
-            type: "range",
-            group: "layout",
-            default: 3,
-            min: 1,
-            max: 6,
-            step: 1,
-          },
-          {
-            key: "__editor.responsive.carouselMobile",
-            label: "Carousel on mobile",
-            type: "boolean",
-            group: "responsive",
-            default: true,
-            help: "Use horizontal snap scrolling on narrow screens.",
-          },
-        ],
-        fields: [
-          { key: "title", label: "Section title", type: "text" },
-        ],
-        blocks: [
-          {
-            key: "collection-card",
-            label: "Collection card",
-            repeatable: true,
-            min: 1,
-            max: 12,
-            fields: [
-              { key: "name", label: "Name", type: "text" },
-              { key: "imageUrl", label: "Image", type: "media" },
-              { key: "href", label: "Link", type: "link" },
-            ],
-            defaultContent: {
-              name: "New collection",
-              imageUrl: "/assets/presets/fuel-free-time/earned-hours-hero.webp",
-              href: "/shop/collections",
-            },
-          },
-        ],
-        defaultContent: {
-          title: "Collections",
-          card1: { name: "High Octane Collection", imageUrl: "/assets/presets/fuel-free-time/earned-hours-hero.webp", href: "/shop/collections/high-octane-performance-gear" },
-          card2: { name: "Masters Collection", imageUrl: "/assets/presets/fuel-free-time/masters.webp", href: "/shop/collections/masters" },
-          card3: { name: "Everyday Essentials", imageUrl: "/assets/presets/fuel-free-time/essentials.webp", href: "/shop/collections/essentials" },
-          __editor: {
-            blocks: [
-              { id: "card1", templateKey: "collection-card", enabled: true },
-              { id: "card2", templateKey: "collection-card", enabled: true },
-              { id: "card3", templateKey: "collection-card", enabled: true },
-            ],
-          },
-        },
-      },
-      stories: {
-        sortOrder: 2,
-        fields: [
-          { key: "title", label: "Title", type: "text" },
-          { key: "body", label: "Body", type: "textarea" },
-          { key: "imageUrl", label: "Image", type: "url", media: true },
-        ],
-        defaultContent: {
-          title: "Built for the long haul",
-          body: "Every piece is designed for people who've earned their hours — not given them.",
-          imageUrl: M.fuelUp,
-        },
-      },
-      newsletter: {
-        sortOrder: 3,
-        fields: [
-          { key: "title", label: "Title", type: "text" },
-          { key: "buttonLabel", label: "Button label", type: "text" },
-        ],
-        defaultContent: {
-          title: "Stay fueled. Don't miss drops, meetups, or giveaways.",
-          buttonLabel: "Join the Movement",
-        },
-      },
-    },
-  },
-  about: {
-    title: "About",
-    sections: {
-      hero: {
-        sortOrder: 0,
-        fields: [
-          { key: "meta1", label: "Meta line 1", type: "text" },
-          { key: "meta2", label: "Meta line 2", type: "text" },
-          { key: "headline", label: "Headline", type: "text" },
-          { key: "subheadline", label: "Subheadline", type: "textarea" },
-        ],
-        defaultContent: {
-          meta1: "Est. 2025",
-          meta2: "Made in Lafayette, Louisiana",
-          headline: "Built in the Garage",
-          subheadline:
-            "Born from blood, sweat, and years of earning our freedom. This is more than a brand — it's a brotherhood.",
-        },
-      },
-      moment: {
-        sortOrder: 1,
-        fields: [
-          { key: "headline", label: "Headline", type: "text" },
-          { key: "body", label: "Body", type: "textarea" },
-          { key: "videoUrl", label: "Video URL", type: "url", media: true },
-        ],
-        defaultContent: {
-          headline: "The Moment That Started It All",
-          body: "Late nights in the garage. Engines cooling. Stories flowing. That's where Fuel & Free Time was born.",
-          videoUrl: M.videoAbout1,
-        },
-      },
-      collections: {
-        sortOrder: 2,
-        fields: [
-          { key: "title", label: "Section title", type: "text" },
-          { key: "card1.title", label: "Card 1 title", type: "text" },
-          { key: "card1.imageUrl", label: "Card 1 image", type: "url", media: true },
-          { key: "card2.title", label: "Card 2 title", type: "text" },
-          { key: "card2.imageUrl", label: "Card 2 image", type: "url", media: true },
-          { key: "card3.title", label: "Card 3 title", type: "text" },
-          { key: "card3.imageUrl", label: "Card 3 image", type: "url", media: true },
-        ],
-        defaultContent: {
-          title: "Three Collections. One Brotherhood.",
-          card1: { title: "Fuel & Free Time Core Collection", imageUrl: M.coreCollection },
-          card2: { title: "High Octane Performance Collection", imageUrl: M.vette },
-          card3: { title: "Masters Series Limited Edition", imageUrl: M.fuelUp },
-        },
-      },
-      origins: {
-        sortOrder: 3,
-        fields: [
-          { key: "headline", label: "Headline", type: "text" },
-          { key: "body", label: "Body", type: "textarea" },
-          { key: "imageUrl", label: "Image", type: "url", media: true },
-          { key: "videoUrl", label: "Video URL", type: "url", media: true },
-        ],
-        defaultContent: {
-          headline: "Fuel & Free Time Origins",
-          body: "From Lafayette garages to open roads — every design starts with a story worth wearing.",
-          imageUrl: M.coreCollection,
-          videoUrl: M.videoAbout2,
-        },
-      },
-      lifestyle: {
-        sortOrder: 4,
-        fields: [
-          { key: "headline", label: "Headline", type: "text" },
-          { key: "imageUrl", label: "Image", type: "url", media: true },
-        ],
-        defaultContent: {
-          headline: "High Octane Lifestyle",
-          imageUrl: M.highOctane,
-        },
-      },
-    },
-  },
-  community: {
     title: "Community",
+    // Section fields are sourced from the authentic Heuristic page, not a parallel demo.
     sections: {
-      hero: {
-        sortOrder: 0,
-        fields: [
-          { key: "headline", label: "Headline (before accent)", type: "text" },
-          { key: "headlineAccent", label: "Headline accent", type: "text" },
-          { key: "subheadline", label: "Subheadline", type: "textarea" },
-          { key: "stat1Value", label: "Stat 1 value", type: "text" },
-          { key: "stat1Label", label: "Stat 1 label", type: "text" },
-          { key: "stat2Value", label: "Stat 2 value", type: "text" },
-          { key: "stat2Label", label: "Stat 2 label", type: "text" },
-          { key: "stat3Value", label: "Stat 3 value", type: "text" },
-          { key: "stat3Label", label: "Stat 3 label", type: "text" },
-          { key: "stat4Value", label: "Stat 4 value", type: "text" },
-          { key: "stat4Label", label: "Stat 4 label", type: "text" },
+      "hero": {
+        "label": "Hero",
+        "sortOrder": 0,
+        "sourceSection": "fnf.community.hero",
+        "fields": [
+          {
+            "key": "headline",
+            "label": "Headline",
+            "type": "text"
+          },
+          {
+            "key": "headlineAccent",
+            "label": "Headline Accent",
+            "type": "text"
+          },
+          {
+            "key": "subheadline",
+            "label": "Subheadline",
+            "type": "textarea"
+          },
+          {
+            "key": "stat1Value",
+            "label": "Stat1 Value",
+            "type": "text"
+          },
+          {
+            "key": "stat1Label",
+            "label": "Stat1 Label",
+            "type": "text"
+          },
+          {
+            "key": "stat2Value",
+            "label": "Stat2 Value",
+            "type": "text"
+          },
+          {
+            "key": "stat2Label",
+            "label": "Stat2 Label",
+            "type": "text"
+          },
+          {
+            "key": "stat3Value",
+            "label": "Stat3 Value",
+            "type": "text"
+          },
+          {
+            "key": "stat3Label",
+            "label": "Stat3 Label",
+            "type": "text"
+          },
+          {
+            "key": "stat4Value",
+            "label": "Stat4 Value",
+            "type": "text"
+          },
+          {
+            "key": "stat4Label",
+            "label": "Stat4 Label",
+            "type": "text"
+          }
         ],
-        defaultContent: {
-          headline: "Join the",
-          headlineAccent: "Movement",
-          subheadline:
-            "Where every mile has a story, every hour is earned, and every member is family. This is more than a brand — it's a brotherhood of freedom seekers.",
-          stat1Value: "5K+",
-          stat1Label: "Members Strong",
-          stat2Value: "23",
-          stat2Label: "Cities Connected",
-          stat3Value: "150+",
-          stat3Label: "Events Hosted",
-          stat4Value: "∞",
-          stat4Label: "Stories Shared",
-        },
+        "defaultContent": {
+          "headline": "Join the",
+          "headlineAccent": "Movement",
+          "subheadline": "From the garage floor to the open road—and an aircraft restoration still taking shape—this is a place for the projects and people that make free time worth chasing.",
+          "stat1Value": "BUILD",
+          "stat1Label": "Hands-On",
+          "stat2Value": "RIDE",
+          "stat2Label": "Open Roads",
+          "stat3Value": "FLY",
+          "stat3Label": "Restoration",
+          "stat4Value": "LIVE",
+          "stat4Label": "The Hours"
+        }
       },
-      join: {
-        sortOrder: 1,
-        fields: [
-          { key: "headline", label: "Headline", type: "text" },
-          { key: "body", label: "Body", type: "textarea" },
-          { key: "ctaLabel", label: "CTA label", type: "text" },
-          { key: "ctaHref", label: "CTA link", type: "text" },
+      "events": {
+        "label": "Events",
+        "sortOrder": 1,
+        "sourceSection": "fnf.community.events",
+        "fields": [
+          {
+            "key": "heading",
+            "label": "Heading",
+            "type": "text"
+          },
+          {
+            "key": "intro",
+            "label": "Intro",
+            "type": "textarea"
+          }
         ],
-        defaultContent: {
-          headline: "Ready to Ride With Us?",
-          body: "Join the movement. Get early access to drops, event invites, and the stories that matter.",
-          ctaLabel: "Join the Movement",
-          ctaHref: "#newsletter",
-        },
+        "blocks": [
+          {
+            "key": "event-card",
+            "label": "Event idea",
+            "max": 12,
+            "fields": [
+              {
+                "key": "badge",
+                "label": "Badge",
+                "type": "text"
+              },
+              {
+                "key": "date",
+                "label": "Date",
+                "type": "text"
+              },
+              {
+                "key": "title",
+                "label": "Title",
+                "type": "text"
+              },
+              {
+                "key": "location",
+                "label": "Location",
+                "type": "text"
+              },
+              {
+                "key": "description",
+                "label": "Description",
+                "type": "text"
+              },
+              {
+                "key": "cta.href",
+                "label": "Cta Href",
+                "type": "link"
+              },
+              {
+                "key": "cta.label",
+                "label": "Cta Label",
+                "type": "text"
+              }
+            ],
+            "defaultContent": {
+              "badge": "Concept",
+              "date": "Date to be confirmed",
+              "title": "Garage Night LA",
+              "location": "📍 Downtown Los Angeles",
+              "description": "Talk shop, trade build stories, and meet the people behind the projects.",
+              "cta": {
+                "href": "/collaborate",
+                "label": "Help Plan It →"
+              }
+            }
+          }
+        ],
+        "defaultContent": {
+          "heading": "On the Drawing Board",
+          "intro": "These are gathering ideas, not confirmed events. Help shape what we build next—dates and locations come after plans are real.",
+          "event1": {
+            "badge": "Concept",
+            "date": "Date to be confirmed",
+            "title": "Garage Night LA",
+            "location": "📍 Downtown Los Angeles",
+            "description": "Talk shop, trade build stories, and meet the people behind the projects.",
+            "cta": {
+              "href": "/collaborate",
+              "label": "Help Plan It →"
+            }
+          },
+          "event2": {
+            "badge": "Idea in Progress",
+            "date": "Not yet scheduled",
+            "title": "Miami Scavenger Hunt",
+            "location": "📍 Miami, FL",
+            "description": "A scavenger-hunt concept for a future gathering—no drop or event has been scheduled.",
+            "cta": {
+              "href": "/collaborate",
+              "label": "Share An Idea →"
+            }
+          },
+          "event3": {
+            "badge": "Community Proposal",
+            "date": "Schedule to be decided",
+            "title": "Fuel Stop ATX",
+            "location": "📍 Austin, TX",
+            "description": "Coffee, machines and conversation. A meetup idea looking for a local host.",
+            "cta": {
+              "href": "/collaborate",
+              "label": "Become A Host →"
+            }
+          },
+          "event4": {
+            "badge": "Long-Range Idea",
+            "date": "Route still being imagined",
+            "title": "Coast to Coast Run",
+            "location": "📍 Nationwide",
+            "description": "A coast-to-coast adventure worth dreaming about. The route is not yet planned.",
+            "cta": {
+              "href": "/collaborate",
+              "label": "Talk Routes →"
+            }
+          },
+          "__editor": {
+            "blocks": [
+              {
+                "id": "event1",
+                "templateKey": "event-card",
+                "enabled": true
+              },
+              {
+                "id": "event2",
+                "templateKey": "event-card",
+                "enabled": true
+              },
+              {
+                "id": "event3",
+                "templateKey": "event-card",
+                "enabled": true
+              },
+              {
+                "id": "event4",
+                "templateKey": "event-card",
+                "enabled": true
+              }
+            ]
+          }
+        }
       },
-    },
+      "gallery": {
+        "label": "Gallery",
+        "sortOrder": 2,
+        "sourceSection": "fnf.community.gallery",
+        "fields": [
+          {
+            "key": "heading",
+            "label": "Heading",
+            "type": "text"
+          }
+        ],
+        "blocks": [
+          {
+            "key": "gallery-item",
+            "label": "Media tile",
+            "max": 18,
+            "fields": [
+              {
+                "key": "imageUrl",
+                "label": "Image Url",
+                "type": "media"
+              },
+              {
+                "key": "caption",
+                "label": "Caption",
+                "type": "text"
+              }
+            ],
+            "defaultContent": {
+              "imageUrl": "/media/archive/shopify-import/graphics/50C9CEB5.png",
+              "caption": "Hours outside the ordinary"
+            }
+          }
+        ],
+        "defaultContent": {
+          "heading": "Living the Life",
+          "item1": {
+            "imageUrl": "/media/archive/shopify-import/graphics/50C9CEB5.png",
+            "caption": "Hours outside the ordinary"
+          },
+          "item2": {
+            "imageUrl": "/media/archive/shopify-import/graphics/Vette.png",
+            "caption": "On the road, for the ride"
+          },
+          "item3": {
+            "imageUrl": "/media/archive/shopify-import/graphics/high_octane.jpg",
+            "caption": "High Octane · Garage inspiration"
+          },
+          "item4": {
+            "imageUrl": "/media/archive/shopify-import/graphics/Masters.png",
+            "caption": "Masters · In the making"
+          },
+          "item5": {
+            "imageUrl": "/media/archive/shopify-import/graphics/fuel_up.png",
+            "caption": "Fueled by the little things"
+          },
+          "item6": {
+            "imageUrl": "/media/archive/shopify-import/graphics/Gone_Fishing.png",
+            "caption": "The weekend is worth earning"
+          },
+          "__editor": {
+            "blocks": [
+              {
+                "id": "item1",
+                "templateKey": "gallery-item",
+                "enabled": true
+              },
+              {
+                "id": "item2",
+                "templateKey": "gallery-item",
+                "enabled": true
+              },
+              {
+                "id": "item3",
+                "templateKey": "gallery-item",
+                "enabled": true
+              },
+              {
+                "id": "item4",
+                "templateKey": "gallery-item",
+                "enabled": true
+              },
+              {
+                "id": "item5",
+                "templateKey": "gallery-item",
+                "enabled": true
+              },
+              {
+                "id": "item6",
+                "templateKey": "gallery-item",
+                "enabled": true
+              }
+            ]
+          }
+        }
+      },
+      "join": {
+        "label": "Join",
+        "sortOrder": 3,
+        "sourceSection": "fnf.community.join",
+        "fields": [
+          {
+            "key": "headline",
+            "label": "Headline",
+            "type": "text"
+          },
+          {
+            "key": "body",
+            "label": "Body",
+            "type": "textarea"
+          }
+        ],
+        "blocks": [
+          {
+            "key": "join-card",
+            "label": "Connection pathway",
+            "max": 6,
+            "fields": [
+              {
+                "key": "icon",
+                "label": "Icon",
+                "type": "text"
+              },
+              {
+                "key": "title",
+                "label": "Title",
+                "type": "text"
+              },
+              {
+                "key": "description",
+                "label": "Description",
+                "type": "text"
+              },
+              {
+                "key": "cta.href",
+                "label": "Cta Href",
+                "type": "link"
+              },
+              {
+                "key": "cta.label",
+                "label": "Cta Label",
+                "type": "text"
+              }
+            ],
+            "defaultContent": {
+              "icon": "📱",
+              "title": "Follow the Feed",
+              "description": "Daily inspiration, event updates, and member spotlights. Stay connected to the culture.",
+              "cta": {
+                "href": "#member-stories",
+                "label": "Follow Us"
+              }
+            }
+          }
+        ],
+        "defaultContent": {
+          "headline": "Get Connected",
+          "body": "Choose your path. Whether you're here for the gear, the gatherings, or the grind, there's a place for you in the movement.",
+          "card1": {
+            "icon": "📱",
+            "title": "Follow the Feed",
+            "description": "Daily inspiration, event updates, and member spotlights. Stay connected to the culture.",
+            "cta": {
+              "href": "#member-stories",
+              "label": "Follow Us"
+            }
+          },
+          "card2": {
+            "icon": "🎯",
+            "title": "Join Exclusive Drops",
+            "description": "Get early access to limited releases, scavenger hunt clues, and member-only gear.",
+            "cta": {
+              "href": "/shop",
+              "label": "Get Access"
+            }
+          },
+          "card3": {
+            "icon": "🤝",
+            "title": "Host an Event",
+            "description": "Want to bring Fuel & Free Time to your city? Let's build the movement together.",
+            "cta": {
+              "href": "/collaborate",
+              "label": "Collaborate"
+            }
+          },
+          "__editor": {
+            "blocks": [
+              {
+                "id": "card1",
+                "templateKey": "join-card",
+                "enabled": true
+              },
+              {
+                "id": "card2",
+                "templateKey": "join-card",
+                "enabled": true
+              },
+              {
+                "id": "card3",
+                "templateKey": "join-card",
+                "enabled": true
+              }
+            ]
+          }
+        }
+      },
+      "stories": {
+        "label": "Stories",
+        "sortOrder": 4,
+        "sourceSection": "fnf.community.stories",
+        "fields": [
+          {
+            "key": "heading",
+            "label": "Heading",
+            "type": "text"
+          }
+        ],
+        "blocks": [
+          {
+            "key": "member-story",
+            "label": "Member story",
+            "max": 12,
+            "fields": [
+              {
+                "key": "quote",
+                "label": "Quote",
+                "type": "textarea"
+              },
+              {
+                "key": "author",
+                "label": "Author",
+                "type": "text"
+              },
+              {
+                "key": "role",
+                "label": "Role",
+                "type": "text"
+              }
+            ],
+            "defaultContent": {
+              "quote": "\"20 years in the service, now every sunrise ride reminds me what I was fighting for. Time is the only real freedom.\"",
+              "author": "Marcus T.",
+              "role": "Veteran Rider"
+            }
+          }
+        ],
+        "defaultContent": {
+          "heading": "Voices Worth Hearing",
+          "story1": {
+            "quote": "\"20 years in the service, now every sunrise ride reminds me what I was fighting for. Time is the only real freedom.\"",
+            "author": "Marcus T.",
+            "role": "Veteran Rider"
+          },
+          "story2": {
+            "quote": "\"Weekend warrior by necessity, but those Saturday morning garage sessions keep me sane. This community gets it.\"",
+            "author": "Sarah K.",
+            "role": "Weekend Warrior"
+          },
+          "story3": {
+            "quote": "\"Just got my first bike at 22. The old heads here taught me it's not about going fast, it's about going far.\"",
+            "author": "Jake R.",
+            "role": "Young Gun"
+          },
+          "__editor": {
+            "blocks": [
+              {
+                "id": "story1",
+                "templateKey": "member-story",
+                "enabled": true
+              },
+              {
+                "id": "story2",
+                "templateKey": "member-story",
+                "enabled": true
+              },
+              {
+                "id": "story3",
+                "templateKey": "member-story",
+                "enabled": true
+              }
+            ]
+          }
+        }
+      },
+      "social": {
+        "label": "Social",
+        "sortOrder": 5,
+        "sourceSection": "fnf.community.social",
+        "fields": [
+          {
+            "key": "heading",
+            "label": "Heading",
+            "type": "text"
+          },
+          {
+            "key": "hashtag",
+            "label": "Hashtag",
+            "type": "text"
+          },
+          {
+            "key": "cta.href",
+            "label": "Cta Href",
+            "type": "link"
+          },
+          {
+            "key": "cta.label",
+            "label": "Cta Label",
+            "type": "text"
+          }
+        ],
+        "defaultContent": {
+          "heading": "Share Your Story",
+          "hashtag": "#FuelAndFreeTime #TimeIsTheRealFlex",
+          "cta": {
+            "href": "/collaborate",
+            "label": "Tag Us In Your Journey"
+          }
+        }
+      }
+    }
   },
   collaborate: {
     title: "Collaborate",
