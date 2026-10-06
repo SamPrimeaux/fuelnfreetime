@@ -163,4 +163,5 @@ export const reviseAtlas = Object.freeze({
   fromSiteSection: (section, media = {}) => sources.has(section?.preset) ?
     fromData(section.preset, section.data, section.blocks, media) : null,
   validate, render,
+  enhance(root) { return enhanceRevise(root); },
 });
