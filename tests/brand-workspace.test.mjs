@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import {
   buildBrandRolePatch,
   buildClearBrandRolePatch,
@@ -42,4 +43,14 @@ test("clearing a role preserves unrelated company metadata", () => {
   assert.equal(patch.logoUrl, null);
   assert.equal(patch.meta.existing, true);
   assert.equal(patch.meta.brand_assets.logo, undefined);
+});
+
+test("Brand workspace frontend honors the parsed adminFetch transport contract", () => {
+  const source = fs.readFileSync(
+    new URL("../apps/ecommerce-cms-agentsam/frontend/static/js/brand-workspace.js", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /const data = await adminFetch\(path/);
+  assert.doesNotMatch(source, /response\.json\(\)/);
+  assert.doesNotMatch(source, /!response\.ok/);
 });
