@@ -19,6 +19,9 @@ await cp(path.join(root, 'packages/fnf-theme/src/theme/tokens.css'), path.join(o
 await cp(path.join(root, 'packages/fnf-theme/src/layout/layout.css'), path.join(output, 'admin/theme-previews/fnf/layout.css'));
 await cp(path.join(root, 'packages/fnf-theme/src/sections/scene-hero/scene-hero.css'), path.join(output, 'admin/theme-previews/fnf/scene-hero.css'));
 await cp(path.join(frontend, 'static'), path.join(output, 'admin'), { recursive: true });
+await mkdir(path.join(output, 'admin/fixtures'), { recursive: true });
+await cp(path.join(root, 'apps/ecommerce-cms-agentsam/fixtures/fnf-revise-site.json'),
+  path.join(output, 'admin/fixtures/fnf-revise-site.json'));
 // One section renderer and stylesheet are shipped to BOTH the live site and
 // editor. Preview-only renderer copies are not allowed for portable sections.
 for (const ext of ['js', 'css']) {
