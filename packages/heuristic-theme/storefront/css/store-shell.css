@@ -62,8 +62,8 @@ body.fnf-nav-open {
   justify-content: center;
   overflow: hidden;
   padding-inline: 1rem;
-  color: #111;
-  background: var(--fnf-accent);
+  color: var(--fnf-announce-color);
+  background: var(--fnf-announce-bg);
   font-size: 0.7rem;
   font-weight: 900;
   letter-spacing: 0.1em;
