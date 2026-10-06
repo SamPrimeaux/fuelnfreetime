@@ -216,11 +216,14 @@
   function syncPublishCapability() {
     const button = byId('te-publish');
     if (!button) return;
-    const previewOnly = selectedTheme !== 'heuristic';
+    const sceneOnly = slug === 'bridge-fly';
+    const previewOnly = selectedTheme !== 'heuristic' || sceneOnly;
     button.disabled = previewOnly || liveUnimported;
-    button.title = previewOnly
-      ? 'Preview only: this visual theme has not passed the publish/rollback gate.'
-      : liveUnimported ? 'Import the live storefront before publishing.' : 'Publish the current CMS page and changed global sections';
+    button.title = sceneOnly
+      ? 'Scene source preview only. A storefront publication adapter is not approved.'
+      : previewOnly
+        ? 'Preview only: this visual theme has not passed the publish/rollback gate.'
+        : liveUnimported ? 'Import the live storefront before publishing.' : 'Publish the current CMS page and changed global sections';
   }
 
   function currentSection() {
