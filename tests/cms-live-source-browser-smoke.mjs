@@ -111,7 +111,7 @@ await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
 const results=new Map();
 try{
  const url="http://127.0.0.1:"+server.address().port+"/admin/theme-editor?slug=shop";
- for(const width of [1440,744,390]){
+ for(const width of [1440,1000,744,390]){
   const {stdout:dom}=await exec(chrome,["--headless=new","--disable-gpu","--disable-dev-shm-usage","--no-sandbox",
     "--force-device-scale-factor=1","--virtual-time-budget=7000","--window-size="+width+",1000","--dump-dom",url],
     {timeout:60000,encoding:"utf8",maxBuffer:1<<22});
