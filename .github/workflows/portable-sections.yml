@@ -39,3 +39,7 @@ jobs:
         run: node tests/portable-sections-browser-smoke.mjs
       - name: Real editor preview browser proof
         run: node tests/launch/portable-editor-browser-smoke.mjs
+      - name: Install locked app dependencies
+        run: npm ci --ignore-scripts
+      - name: Build admin and assemble public storefront assets
+        run: npm run build:admin
