@@ -7,6 +7,8 @@ on:
       - packages/heuristic-theme/storefront/js/cms-hydrate.js
       - packages/heuristic-theme/storefront/js/page-composer.js
       - apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor.js
+      - apps/ecommerce-cms-agentsam/frontend/static/css/theme-editor.css
+      - tests/storefront-header-presets-editor.test.mjs
       - apps/ecommerce-cms-agentsam/backend/cms/api.js
       - apps/ecommerce-cms-agentsam/backend/cms/page-authority.js
       - packages/theme-contract/runtime/revise-atlas-*
@@ -53,7 +55,7 @@ jobs:
           node --check apps/ecommerce-cms-agentsam/backend/cms/api.js
           node --check apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor.js
       - name: Real renderer and shared catalog checks
-        run: node --test tests/portable-sections.test.mjs tests/revise-atlas-contract.test.mjs tests/theme-studio-universal.test.mjs tests/cms-editor-mutations.test.mjs
+        run: node --test tests/portable-sections.test.mjs tests/revise-atlas-contract.test.mjs tests/theme-studio-universal.test.mjs tests/cms-editor-mutations.test.mjs tests/storefront-header-presets-editor.test.mjs
       - name: Actual Chrome public DOM and live editor preview proof
         run: node tests/portable-sections-browser-smoke.mjs
       - name: Real Home-page composer browser proof
