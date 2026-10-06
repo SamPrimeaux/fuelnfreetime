@@ -67,7 +67,8 @@
         "status": "review",
         "published_to_storefront": false,
         "ingest_method": "scripts/import-fnf-brand-previews.mjs",
-        "delivery_base": "/media/intake/brand/fnf/identity/v1/"
+        "delivery_base": "/media/intake/brand/fnf/identity/v1/",
+        "media_url_access": "public"
       }
     }
   ]

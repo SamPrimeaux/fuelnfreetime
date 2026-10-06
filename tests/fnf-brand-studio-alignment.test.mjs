@@ -13,6 +13,7 @@ test("brand media registry points to six real reviewed preview source files", ()
   assert.ok(family);
   assert.equal(family.production_approved, false);
   assert.equal(family.cms_media.published_to_storefront, false);
+  assert.equal(family.cms_media.media_url_access, "public");
   assert.equal(family.cms_media.album_slug, "fnf-identity-review-v1");
   assert.equal(family.variants.length, 6);
   for (const variant of family.variants) {
