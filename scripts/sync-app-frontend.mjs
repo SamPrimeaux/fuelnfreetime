@@ -1,4 +1,5 @@
 import { cp, mkdir, rm, readFile, writeFile } from 'node:fs/promises';
+import { build as bundle } from 'esbuild';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
