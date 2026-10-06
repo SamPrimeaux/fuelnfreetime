@@ -20,46 +20,15 @@
     },
   ];
 
+  // Heuristic uses its actual native page renderer. Revise/FNF entries are
+  // supplied exclusively by ThemePortableSections' concrete implementations.
+  // Obsolete aliases for 24 unimplemented looks must not masquerade as sections.
   const CATALOG = {
     heuristic: [
       { id: "heuristic/hero", label: "Hero", type: "media-hero", templateKey: "hero", preset: "heuristic/hero" },
       { id: "heuristic/collections", label: "Collection list", type: "collection-list", templateKey: "collections", preset: "heuristic/collections" },
       { id: "heuristic/stories", label: "Stories", type: "editorial", templateKey: "stories", preset: "heuristic/stories" },
       { id: "heuristic/newsletter", label: "Newsletter", type: "cta-band", templateKey: "newsletter", preset: "heuristic/newsletter" },
-    ],
-    revise: [
-      { id: "revise/sticky-curtain", label: "Sticky curtain hero", type: "media-hero", templateKey: "hero", preset: "revise/sticky-curtain" },
-      { id: "revise/wardrobe-rail", label: "Wardrobe rail", type: "media-gallery", templateKey: "collections", preset: "revise/wardrobe-rail" },
-      { id: "revise/dark-promo-grid", label: "Dark promo grid", type: "editorial-grid", templateKey: "collections", preset: "revise/dark-promo-grid" },
-      { id: "revise/editorial-statement", label: "Editorial statement", type: "statement", templateKey: "stories", preset: "revise/editorial-statement" },
-      { id: "revise/story-rings", label: "Story rings", type: "stories", templateKey: "stories", preset: "revise/story-rings" },
-      { id: "revise/tabbed-products", label: "Tabbed products", type: "collection-track", templateKey: "collections", preset: "revise/tabbed-products" },
-      { id: "revise/scroll-text-reveal", label: "Scroll text reveal", type: "fullscreen-media-product", templateKey: "stories", preset: "revise/scroll-text-reveal" },
-      { id: "revise/parallax-diptych", label: "Parallax diptych", type: "split-media", templateKey: "stories", preset: "revise/parallax-diptych" },
-      { id: "revise/hotspot-lookbook", label: "Hotspot lookbook", type: "shop-the-look", templateKey: "collections", preset: "revise/hotspot-lookbook" },
-      { id: "revise/pinned-pdp", label: "Pinned product detail", type: "featured-product", templateKey: "collections", preset: "revise/pinned-pdp" },
-      { id: "revise/commerce-marquee", label: "Commerce marquee", type: "marquee", templateKey: "stories", preset: "revise/commerce-marquee" },
-      { id: "revise/logo-track", label: "Logo track", type: "logo-track", templateKey: "stories", preset: "revise/logo-track" },
-      { id: "revise/testimonials", label: "Testimonials", type: "testimonials", templateKey: "stories", preset: "revise/testimonials" },
-      { id: "revise/newsletter", label: "Newsletter", type: "cta-band", templateKey: "newsletter", preset: "revise/newsletter" },
-      { id: "revise/faq", label: "FAQ", type: "faq", templateKey: "stories", preset: "revise/faq" },
-      { id: "revise/trust-row", label: "Trust row", type: "trust-row", templateKey: "stories", preset: "revise/trust-row" },
-      { id: "revise/merch-lab", label: "Merch lab", type: "commerce-offers", templateKey: "collections", preset: "revise/merch-lab" },
-      { id: "revise/sticky-summary", label: "Sticky summary", type: "bundle-builder", templateKey: "collections", preset: "revise/sticky-summary" },
-      { id: "revise/pinned-media-grid", label: "Pinned media grid", type: "collection-split-media", templateKey: "collections", preset: "revise/pinned-media-grid" },
-      { id: "revise/brand-film", label: "Brand film", type: "brand-film", templateKey: "stories", preset: "revise/brand-film" },
-      { id: "revise/campaign-teaser", label: "Campaign teaser", type: "campaign-teaser", templateKey: "stories", preset: "revise/campaign-teaser" },
-      { id: "revise/before-after", label: "Before / after", type: "before-after", templateKey: "stories", preset: "revise/before-after" },
-      { id: "revise/sticky-card-deck", label: "Sticky card deck", type: "editorial-posts", templateKey: "stories", preset: "revise/sticky-card-deck" },
-      { id: "revise/full-bleed-grid", label: "Full bleed grid", type: "social-gallery", templateKey: "collections", preset: "revise/full-bleed-grid" },
-    ],
-    fnf: [
-      { id: "fnf/scene-hero", label: "Scene hero", type: "scene-hero", templateKey: "hero", preset: "fnf/scene-hero" },
-      { id: "fnf/collection-list", label: "Collection list", type: "collection-list", templateKey: "collections", preset: "fnf/collection-list" },
-      { id: "fnf/manifesto-split", label: "Manifesto split", type: "media-copy-sequence", templateKey: "stories", preset: "fnf/manifesto-split" },
-      { id: "fnf/feature-card-grid", label: "Feature card grid", type: "feature-card-grid", templateKey: "collections", preset: "fnf/feature-card-grid" },
-      { id: "fnf/countdown-banner", label: "Countdown banner", type: "countdown-banner", templateKey: "stories", preset: "fnf/countdown-banner" },
-      { id: "fnf/newsletter", label: "Newsletter CTA", type: "cta-band", templateKey: "newsletter", preset: "fnf/newsletter" },
     ],
   };
 
