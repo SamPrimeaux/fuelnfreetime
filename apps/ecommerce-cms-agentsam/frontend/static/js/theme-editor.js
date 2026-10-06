@@ -104,9 +104,13 @@
   }
 
   function pageRoute(pageSlug) {
+    const authoritative = pages.find(function(page) { return page.slug === pageSlug; });
+    if (authoritative?.live_route) return authoritative.live_route;
     if (window.PAGE_ROUTES && window.PAGE_ROUTES[pageSlug]) return window.PAGE_ROUTES[pageSlug];
-    const found = fallbackPages.find(function(page) { return page.slug === pageSlug; });
-    return found ? found.route : '/';
+    const known = fallbackPages.find(function(page) { return page.slug === pageSlug; });
+    // A CMS record is not necessarily a published storefront route. Never
+    // silently show the homepage as the preview for an unknown customer page.
+    return known ? known.route : null;
   }
 
 
