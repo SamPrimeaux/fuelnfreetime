@@ -975,8 +975,8 @@
     }
     liveSourceCaptured = true;
     byId('te-import-live').hidden = false;
-    byId('te-import-live').textContent = 'Import ' + sections.length + ' sections';
-    byId('te-save').textContent = 'Import & save draft';
+    byId('te-import-live').textContent = liveExistingDraft ? 'Use live layout (' + sections.length + ' sections)' : 'Import ' + sections.length + ' sections';
+    byId('te-save').textContent = liveExistingDraft ? 'Reconcile & save draft' : 'Import & save draft';
     byId('te-preview-label').textContent = 'Live storefront — ' + sections.length + ' editable regions';
     setNote(count + ' real fields found. Import saves a private CMS draft; the storefront remains unchanged.', 'success');
     renderTree();
