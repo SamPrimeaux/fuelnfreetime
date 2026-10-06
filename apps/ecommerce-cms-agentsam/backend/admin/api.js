@@ -31,6 +31,7 @@ import {
 } from "../lib/mail-mailboxes.js";
 import {
   uploadMedia,
+  addMediaReviewComment,
   listMedia,
   listMediaAlbums,
   createMediaAlbum,
@@ -729,6 +730,9 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   m = path.match(/^\/api\/admin\/media\/albums\/(\d+)$/);
   if (m && method === "PATCH") return updateMediaAlbum(request, env, m[1]);
   if (m && method === "DELETE") return deleteMediaAlbum(request, env, m[1]);
+
+  m = path.match(/^\/api\/admin\/media\/(\d+)\/comments$/);
+  if (m && method === "POST") return addMediaReviewComment(request, env, m[1], user);
 
   m = path.match(/^\/api\/admin\/media\/(\d+)$/);
   if (m && method === "PATCH") return updateMedia(request, env, m[1]);

@@ -51,6 +51,7 @@ const server = http.createServer((req,res)=>{
     export function previewStyleForPreset(){return '';}
     export function previewLabel(){return '';}
   `);
+  if(p==='/admin/workbench/media-asset-workbench.js')return res.writeHead(200,{'content-type':'text/javascript'}).end(read('packages/agentsam-workbench/src/media-asset-workbench.js'));
   if(p==='/admin/js/media-library.js'||p==='/admin/js/brand-workspace.js')return res.writeHead(200,{'content-type':'text/javascript'}).end(read('apps/ecommerce-cms-agentsam/frontend/static/js/'+path.basename(p)));
   if(p.startsWith('/admin/css/'))return res.writeHead(200,{'content-type':'text/css'}).end(read('apps/ecommerce-cms-agentsam/frontend/static/css/'+path.basename(p)));
   if(p==='/mock-image.svg')return res.writeHead(200,{'content-type':'image/svg+xml'}).end('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#bbb"/></svg>');
@@ -136,6 +137,21 @@ try{
     }else{
       assert.equal(metrics.filtersToggleVisible,false);
       assert.equal(metrics.filtersHidden,false);
+    }
+    if (width === 1440) {
+      const assistant = await evaluate(`(()=>{
+        document.querySelector('#media-grid .media-item[data-id]').click();
+        const bar=document.querySelector('#media-agent-workbench .media-agent');
+        return { visible:bar&&!bar.hidden, drawer:document.getElementById('media-drawer').classList.contains('is-open'),
+          commentEnabled:!bar.querySelector('[data-media-tool="comment"]').disabled,
+          markupDisabled:bar.querySelector('[data-media-tool="markup"]').disabled,
+          removeBgDisabled:bar.querySelector('[data-media-tool="remove-bg"]').disabled };
+      })()`);
+      assert.equal(assistant.visible,true,'miniAgentSam should appear for every selected image');
+      assert.equal(assistant.drawer,true,'selected media must open in asset inspector');
+      assert.equal(assistant.commentEnabled,true,'SVG images should still support comments');
+      assert.equal(assistant.markupDisabled,true,'vector source cannot silently rasterize into an editable original');
+      assert.equal(assistant.removeBgDisabled,true,'unsupported background removal must remain unavailable');
     }
     console.log('PASS',width+'px','grid at +'+Math.round(metrics.gridOffset)+'px','cards '+metrics.gridCards);
   }

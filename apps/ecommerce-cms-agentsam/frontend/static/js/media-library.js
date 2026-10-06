@@ -4,6 +4,7 @@ import {
   previewStyleForPreset,
   previewLabel,
 } from "/admin/media-kit/index.js";
+import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbench.js";
 
 /**
  * Provider-neutral virtual-folder media library.
@@ -64,6 +65,7 @@ import {
 
   const els = {};
   let lifecycleController = null;
+  let mediaWorkbench = null;
   let mountGeneration = 0;
 
   function mountListener(target, type, handler, options = {}) {
@@ -74,6 +76,8 @@ import {
   }
 
   function destroyMediaLibrary() {
+    mediaWorkbench?.destroy();
+    mediaWorkbench = null;
     lifecycleController?.abort();
     lifecycleController = null;
     clearTimeout(searchTimer);
@@ -1493,6 +1497,7 @@ import {
   function openDrawer(asset) {
     if (!asset) return;
     selected = asset;
+    mediaWorkbench?.setAsset(asset);
     previewPresetId = "original";
     els.drawerPreview.innerHTML = previewHtml(asset);
     if (els.drawerTitle) els.drawerTitle.textContent = asset.filename || "Asset";
@@ -1600,9 +1605,17 @@ import {
         .map((preset) =>
           '<div class="media-version-row is-preview-only"><span>' + escapeHtml(preset.label) + '</span><small>Preview only · not generated</small></div>'
         );
+      const edit = asset.meta?.media_edit;
+      const lineageRow = edit?.source_media_asset_id
+        ? '<div class="media-version-group"><strong>Derivative provenance</strong><div class="media-version-row"><span>Edited from asset #' +
+          escapeHtml(edit.source_media_asset_id) + '</span><small>' + escapeHtml(edit.source_filename || "Source") +
+          ' · ' + escapeHtml((edit.operations || []).map((op) => op.type).filter(Boolean).join(" → ") || "Edit") +
+          '</small></div></div>'
+        : '';
       versions.innerHTML =
-        '<div class="media-version-group"><strong>Original</strong><div class="media-version-row"><span>' +
+        '<div class="media-version-group"><strong>Current asset</strong><div class="media-version-row"><span>' +
         escapeHtml(asset.filename || "Source") + '</span><small>' + escapeHtml(displayLine(asset) || "Source") + '</small></div></div>' +
+        lineageRow +
         (preparedRows.length ? '<div class="media-version-group"><strong>Prepared</strong>' + preparedRows.join("") + '</div>' : '') +
         '<div class="media-version-group"><strong>Preview only</strong>' + previewRows.join("") + '</div>';
     }
@@ -1633,6 +1646,7 @@ import {
 
   function closeDrawer() {
     selected = null;
+    mediaWorkbench?.setAsset(null);
     document.body.classList.remove("media-inspector-open");
     els.backdrop.classList.remove("is-open");
     els.drawer.classList.remove("is-open");
@@ -1693,11 +1707,16 @@ import {
   }
 
   async function uploadFiles(fileList, options = {}) {
-    const { albumId = activeAlbumId, reload = true, throwOnError = false } = options;
+    const { albumId = activeAlbumId, reload = true, throwOnError = false,
+      sourceMediaAssetId = null, editOperations = null, folder = activeFolder } = options;
     const form = new FormData();
     for (const f of fileList) form.append("files", f);
-    form.append("prefix", "intake/");
-    if (activeFolder) form.append("folder", activeFolder);
+    form.append("prefix", sourceMediaAssetId ? "derivatives/media-edit/" : "intake/");
+    if (folder) form.append("folder", folder);
+    if (sourceMediaAssetId != null) {
+      form.append("source_media_asset_id", String(sourceMediaAssetId));
+      form.append("edit_operations_json", JSON.stringify(editOperations || []));
+    }
 
     els.dropLabel.textContent = "Uploading " + fileList.length + " file(s)…";
     els.note.style.display = "none";
@@ -1766,6 +1785,52 @@ import {
       els.fileInput.value = "";
     });
     mountListener(els.uploadBtn, "click", () => els.fileInput.click());
+  }
+
+  function setupMediaWorkbench() {
+    const mount = document.getElementById("media-agent-workbench");
+    if (!mount) return;
+    mediaWorkbench = createMediaAssetWorkbench({
+      mount,
+      // Reuse the existing AgentSam transport, conversation and permissions.
+      // Answers are shown in-place; no unsolicited global chat drawer.
+      ask: async ({ prompt, asset }) => {
+        if (typeof window.sendAgentsamMessage !== "function") {
+          throw new Error("AgentSam is still loading. Try again in a moment.");
+        }
+        return window.sendAgentsamMessage(prompt, {
+          context: { selected_resource: {
+            type: "media_asset", id: asset.id,
+            filename: asset.filename, content_type: asset.content_type,
+            surface: "media-library",
+          } },
+          propagateError: true,
+        });
+      },
+      imageUrl: (asset) => {
+        // Prefer the first-party media route so browser canvas gets same-origin pixels.
+        const path = String(asset.url || "");
+        return path.startsWith("/media/") ? new URL(path, location.origin).href : mediaUrl(asset);
+      },
+      addComment: async ({ asset, text, x, y }) => {
+        const result = await adminFetch(`/api/admin/media/${encodeURIComponent(asset.id)}/comments`, {
+          method: "POST", body: JSON.stringify({ text, x, y }),
+        });
+        const index = assets.findIndex((candidate) => String(candidate.id) === String(asset.id));
+        if (index >= 0 && result.asset) assets[index] = result.asset;
+        if (selected && String(selected.id) === String(asset.id)) selected = result.asset;
+        return result;
+      },
+      saveDerivative: async ({ asset, file, operations }) => {
+        const outcome = await uploadFiles([file], {
+          folder: asset.folder || "images", sourceMediaAssetId: asset.id,
+          editOperations: operations, reload: true, throwOnError: true,
+        });
+        const newAsset = outcome.assets?.[0];
+        if (newAsset) openDrawer(newAsset);
+        return outcome;
+      },
+    });
   }
 
   window.destroyMediaLibrary = destroyMediaLibrary;
@@ -1857,6 +1922,8 @@ import {
       destroyMediaLibrary();
       return false;
     }
+
+    setupMediaWorkbench();
 
     // Core controls mount before optional 3D behavior.
     if (els.albumNew) mountListener(els.albumNew, "click", openAlbumDialog);
