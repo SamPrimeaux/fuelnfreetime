@@ -102,7 +102,7 @@ export async function handleSceneReview(request,env,url) {
     if (!allowed)return form("Too many attempts. Try again later.");
     const data=await request.formData().catch(()=>null);
     const pwd=String(data?.get("password")||"");
-    if (pwd.length>128||!(await verifyPassword(pwd,config.passwordHash,config.passwordSalt)))return form("Incorrect password.");
+    if (!pwd||pwd.length>128||!(await verifyPassword(pwd,config.passwordHash,config.passwordSalt)))return form("Incorrect password.");
     const until=Math.floor(Date.now()/1000)+AGE;
     const out=Response.redirect(new URL(PREFIX,request.url),303);
     out.headers.set("set-cookie",COOKIE+"="+(await makeCookie(config,until))+"; Max-Age="+AGE+"; Path="+PREFIX+"; Secure; HttpOnly; SameSite=Lax");
