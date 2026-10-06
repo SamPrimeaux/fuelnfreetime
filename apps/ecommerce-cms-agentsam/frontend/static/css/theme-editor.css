@@ -308,6 +308,25 @@
   text-transform: uppercase;
 }
 
+.te-live-only { border-top: 1px solid var(--te-border); margin-top: 12px; padding-top: 10px; }
+.te-live-only-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 12px;
+  text-align: left;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--te-muted);
+  cursor: pointer;
+}
+.te-live-only-row:hover { background: #f5f5f2; }
+.te-live-only-row strong, .te-live-only-row small { display: block; font-size: 11px; }
+.te-live-only-row strong { color: var(--te-text); font-weight: 600; }
+.te-live-only-row small { margin-top: 3px; color: var(--te-muted); }
+
 .te-tree-row {
   width: 100%;
   min-height: 38px;
