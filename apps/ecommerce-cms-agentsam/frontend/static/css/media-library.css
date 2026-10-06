@@ -1390,3 +1390,234 @@
     margin-left: auto;
   }
 }
+
+/* Wave 5 — Content Library: assets-first mobile hierarchy.
+   Shared CMS controls and media IDs are unchanged; only their responsive
+   presentation changes. Tablet/desktop keep the existing expanded workflow. */
+.media-label-mobile,
+.media-lib-advanced-toggle { display: none; }
+.media-lib-advanced,
+.media-lib-advanced-controls { display: contents; }
+
+@media (max-width: 900px) {
+  #content-view-library .media-lib {
+    min-width: 0;
+    padding: 7px 0 max(170px, calc(var(--admin-dock-clearance, 116px) + 70px + env(safe-area-inset-bottom, 0px)));
+  }
+  #content-view-library .media-lib-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 7px;
+    margin-bottom: 11px;
+    align-items: stretch;
+  }
+  #content-view-library .media-lib-crumb {
+    min-height: 25px;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  #content-view-library .media-lib-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 7px;
+    width: 100%;
+    min-width: 0;
+    align-items: stretch;
+  }
+  #content-view-library .media-lib-search {
+    grid-column: 1 / -1;
+    min-width: 0;
+    width: 100%;
+  }
+  #content-view-library .media-lib-search input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    padding: 0 13px;
+    border-radius: 9px;
+    font-size: 16px; /* iOS won't zoom the page on focus */
+  }
+  #content-view-library .media-lib-advanced { display: contents; }
+  #content-view-library .media-lib-advanced-toggle {
+    display: inline-flex;
+    grid-column: 1;
+    justify-content: center;
+    align-items: center;
+    min-height: 39px;
+    padding: 0 13px;
+    border: 1px solid var(--c-line);
+    border-radius: 9px;
+    background: var(--c-surface);
+    color: var(--c-ink);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 650;
+    cursor: pointer;
+  }
+  #content-view-library .media-lib-advanced-toggle::after {
+    content: '⌄';
+    font-size: 15px;
+    margin-left: 7px;
+    line-height: 1;
+  }
+  #content-view-library .media-lib-advanced-toggle[aria-expanded="true"]::after { content: '⌃'; }
+  #content-view-library .media-lib-advanced-toggle.has-active-filters {
+    border-color: #597c46;
+    background: #f5f8f0;
+  }
+  #content-view-library .media-lib-advanced-controls { display: none; }
+  #content-view-library .media-lib-advanced.is-open > .media-lib-advanced-controls {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    min-width: 0;
+    gap: 7px;
+    padding: 8px;
+    border-radius: 10px;
+    border: 1px solid var(--c-line);
+    background: var(--c-surface);
+  }
+  #content-view-library .media-lib-advanced-controls .media-lib-filter {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    height: 39px;
+    padding: 0 7px;
+    font-size: 12px;
+  }
+  #content-view-library #media-upload-btn,
+  #content-view-library #media-gallery-new {
+    min-height: 39px;
+    padding: 0 12px;
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 650;
+    white-space: nowrap;
+    align-self: stretch;
+    justify-self: stretch;
+  }
+  #content-view-library #media-upload-btn { grid-column: 2; }
+  #content-view-library #media-gallery-new { grid-column: 3; }
+  #content-view-library .media-label-desktop { display: none; }
+  #content-view-library .media-label-mobile { display: inline; }
+  #content-view-library .media-lib-folders {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-bottom: 11px;
+    min-width: 0;
+  }
+  #content-view-library .media-folder-tile {
+    box-sizing: border-box;
+    min-width: 0;
+    min-height: 43px;
+    padding: 8px 6px;
+    gap: 3px;
+    border-radius: 9px;
+    justify-content: center;
+  }
+  #content-view-library .media-folder-tile svg,
+  #content-view-library .media-folder-tile div > span { display: none; }
+  #content-view-library .media-folder-tile div { min-width: 0; }
+  #content-view-library .media-folder-tile strong {
+    overflow: hidden;
+    font-size: 11px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  #content-view-library .media-folder-badge {
+    flex: 0 0 auto;
+    min-width: 21px;
+    width: auto;
+    height: 22px;
+    padding: 0 3px;
+    margin-left: 3px;
+    font-size: 10px;
+  }
+  #content-view-library .media-albums-head {
+    align-items: center;
+    margin: 4px 0 5px;
+    gap: 8px;
+  }
+  #content-view-library .media-albums-head strong { font-size: 12px; }
+  #content-view-library .media-albums-head > div > span { display: none; }
+  #content-view-library #media-album-new {
+    padding-inline: 10px;
+    min-height: 32px;
+    font-size: 11px;
+  }
+  #content-view-library .media-albums {
+    gap: 6px;
+    padding: 1px 0 8px;
+    margin: 0 0 4px;
+  }
+  #content-view-library .media-album-chip {
+    min-width: 102px;
+    max-width: 165px;
+    gap: 0;
+    padding: 6px 9px;
+    border-radius: 8px;
+  }
+  #content-view-library .media-album-chip span { font-size: 11px; }
+  #content-view-library .media-album-chip small { font-size: 9px; }
+  /* Touch devices upload from the visible Upload control; drop zone stays
+     available on desktop, where drag and drop is actually practical. */
+  #content-view-library .media-lib-drop { display: none; }
+  #content-view-library .media-pagination-top {
+    margin: 0 0 7px;
+    padding: 6px 0;
+    min-height: 27px;
+  }
+  #content-view-library .media-pagination-top .media-pagination {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+  }
+  #content-view-library .media-lib-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  #content-view-library .media-item-thumb { min-height: 0; }
+  #content-view-library .media-item-meta { padding: 7px 8px; }
+  #content-view-library .media-item-name { font-size: 11px; }
+  #content-view-library .media-item-sub { font-size: 10px; }
+}
+
+@media (min-width: 580px) and (max-width: 900px) {
+  #content-view-library .media-lib-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 345px) {
+  #content-view-library .media-lib-actions { grid-template-columns: minmax(0, 1fr) auto auto; gap: 4px; }
+  #content-view-library #media-upload-btn,
+  #content-view-library #media-gallery-new { padding-inline: 7px; }
+  #content-view-library .media-lib-advanced-toggle { padding-inline: 7px; }
+  #content-view-library .media-folder-tile strong { font-size: 10px; }
+  #content-view-library .media-folder-badge { min-width: 18px; padding-inline: 1px; }
+}
+
+/* Prevent the empty batch command bar from reserving vertical space. */
+#content-view-library .media-batch-bar[hidden] { display: none !important; }
+#content-view-library .media-album-create-mobile { display: none; }
+@media (max-width: 900px) {
+  /* Album selection remains available in the compact carousel; its extra
+     heading/description would otherwise sit between visitors and their files. */
+  #content-view-library .media-albums-head { display: none; }
+  #content-view-library .media-album-create-mobile { display: grid; }
+  #content-view-library .media-albums { margin-top: 0; }
+  /* Keep item counts at the top; pagination actions stay at the bottom. */
+  #content-view-library .media-pagination-top .media-pagination-controls { display: none; }
+  #content-view-library .media-pagination-top {
+    min-height: 0;
+    padding: 6px 0;
+    margin-bottom: 6px;
+  }
+  #content-view-library .media-pagination-top .media-pagination-summary {
+    font-size: 11px;
+    line-height: 18px;
+  }
+}
