@@ -173,7 +173,10 @@ async function saveStorePreferences(env, incoming) {
     next.navItems = sanitizeNavItems(incoming.navItems);
     next.navigationAuthority = "preferences";
   }
-  if (incoming.announcementEnabled != null) next.announcementEnabled = incoming.announcementEnabled === true;
+  if (incoming.announcementEnabled != null) {
+    next.announcementEnabled = incoming.announcementEnabled === true;
+    next.announcementAuthority = "preferences";
+  }
   if (incoming.announcementText != null) {
     next.announcementText = String(incoming.announcementText).trim().slice(0, 160);
   }
