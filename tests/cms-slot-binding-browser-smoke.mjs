@@ -32,7 +32,7 @@ const probe="<script>setTimeout(function(){" +
  "image:hero.querySelector('[data-cms=\"imageUrl\"]').getAttribute('src')," +
  "primaryHref:hero.querySelector('[data-cms=\"ctaPrimary.href\"]').getAttribute('href')," +
  "primaryLabel:hero.querySelector('[data-cms=\"ctaPrimary.label\"]').textContent," +
- "arrow:hero.querySelector('[aria-hidden=\"true\"]')?.textContent," +
+ "arrow:hero.querySelector('[data-cms=\"ctaPrimary.href\"] [aria-hidden=\"true\"]')?.textContent," +
  "secondaryHref:hero.querySelector('[data-cms=\"ctaSecondary.href\"]').getAttribute('href')," +
  "collectionTitle:document.querySelector('.collection-lineup [data-cms=\"title\"]').textContent," +
  "cardName:document.querySelector('.collection-lineup [data-cms=\"card1.name\"]').textContent," +
