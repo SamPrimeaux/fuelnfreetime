@@ -1077,6 +1077,46 @@
     return true;
   }
 
+  // A published legacy page can have more real HTML regions than D1 rows.
+  // Stage ONLY absent, registered sections through the existing server API.
+  // No re-seeding, no overwriting legacy rows, and no automatic publish.
+  async function stageMissingSourceSections() {
+    if (!missingSourceSections.length || liveUnimported) return false;
+    if (dirty) {
+      setNote('Save or discard your current edits before staging source sections.', 'error');
+      return false;
+    }
+    const names = missingSourceSections.slice();
+    if (!window.confirm('Stage ' + names.length + ' source-backed section(s) as private CMS drafts? Existing page content and the published storefront will remain unchanged until you explicitly publish.')) return false;
+    const button = byId('te-import-live');
+    button.disabled = true;
+    setSaveState('Staging');
+    try {
+      const schema = window.SECTION_SCHEMAS?.[slug] || {};
+      const ordering = Object.entries(schema)
+        .sort(function(a,b) { return Number(a[1]?.sortOrder ?? 0) - Number(b[1]?.sortOrder ?? 0); })
+        .map(function(item) { return item[0]; });
+      for (const key of names) {
+        if (!Object.prototype.hasOwnProperty.call(schema, key)) throw new Error('Unregistered section: ' + key);
+        await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections', {
+          method: 'POST',
+          body: JSON.stringify({ templateKey: key, toIndex: ordering.indexOf(key) })
+        });
+      }
+      missingSourceSections = [];
+      setDirty(false);
+      await loadPage();
+      setNote(names.length + ' real source sections staged in CMS drafts. Review the preview and publish only when ready.', 'success');
+      return true;
+    } catch (error) {
+      setNote('Staging stopped. Refresh to inspect any completed drafts: ' + (error.message || error), 'error');
+      return false;
+    } finally {
+      button.disabled = false;
+      setSaveState('Draft');
+    }
+  }
+
   async function importLiveSource() {
     if (!liveUnimported || !liveSourceCaptured) {
       setNote('Wait for the real storefront preview before importing.', 'error');
