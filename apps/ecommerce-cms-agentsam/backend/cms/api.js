@@ -393,6 +393,10 @@ export async function getPageAdmin(env, slug) {
       status: page.status,
       updated_at: page.updated_at,
       sections: mergeWithRegistry(slug, sections),
+      ...resolvePageAuthority(slug, CMS_STOREFRONT_ROUTES, {
+        seeded: true,
+        cmsPublished: page.status === "published",
+      }),
     },
   };
 }
