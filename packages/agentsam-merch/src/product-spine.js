@@ -6,15 +6,25 @@
 export function resolveProductSource(product, linkedProvider = null) {
   const id = Number(product?.id);
   if (!Number.isSafeInteger(id) || id <= 0) throw new TypeError("Valid merchant product id required");
-  if (linkedProvider?.completeful_store_product_id || linkedProvider?.completeful_catalog_product_id) {
+  // Provider links are optional adapters around the merchant-owned product.
+  // Completeful's existing D1 link shape remains supported, while future
+  // wholesalers can supply a normalized provider/external_id pair without
+  // introducing a parallel products or variants table.
+  const legacyCompleteful = linkedProvider?.completeful_store_product_id || linkedProvider?.completeful_catalog_product_id;
+  const providerId = typeof linkedProvider?.provider === 'string' ? linkedProvider.provider.trim().toLowerCase() : '';
+  const validProvider = /^[a-z0-9][a-z0-9_-]{0,63}$/.test(providerId) && !['none', 'unknown', 'local'].includes(providerId);
+  const linkedCatalog = linkedProvider?.catalog_id ?? linkedProvider?.completeful_catalog_product_id ?? null;
+  const linkedExternal = linkedProvider?.external_id ?? linkedProvider?.completeful_store_product_id ?? null;
+  if (legacyCompleteful || (validProvider && (linkedCatalog != null || linkedExternal != null))) {
+    const provider = legacyCompleteful ? 'completeful' : providerId;
     return Object.freeze({
       product_id: id,
       kind: "connected_provider",
-      provider: "completeful",
-      label: "Completeful",
-      catalog_id: linkedProvider.completeful_catalog_product_id || null,
-      external_id: linkedProvider.completeful_store_product_id || null,
-      sync_status: linkedProvider.sync_status || "pending",
+      provider,
+      label: provider === 'completeful' ? 'Completeful' : providerId,
+      catalog_id: linkedCatalog,
+      external_id: linkedExternal,
+      sync_status: linkedProvider.sync_status || 'pending',
       manages_inventory: true,
     });
   }
@@ -37,10 +47,12 @@ export function groupProductInventory(rows = [], links = []) {
     if (Number.isSafeInteger(id) && id > 0 && !sourceByProduct.has(id)) sourceByProduct.set(id, link);
   }
   const groups = new Map();
+  const seenVariants = new Set();
   for (const row of rows) {
     const id = Number(row?.product_id);
     const variantId = Number(row?.id);
-    if (!Number.isSafeInteger(id) || id <= 0 || !Number.isSafeInteger(variantId) || variantId <= 0) continue;
+    if (!Number.isSafeInteger(id) || id <= 0 || !Number.isSafeInteger(variantId) || variantId <= 0 || seenVariants.has(variantId)) continue;
+    seenVariants.add(variantId);
     let group = groups.get(id);
     if (!group) {
       group = {

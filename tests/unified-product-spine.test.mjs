@@ -33,6 +33,15 @@ test('invalid rows and duplicate provider links cannot duplicate products',()=>{
   },{product_id:2,completeful_catalog_product_id:'old'}]);
   assert.equal(groups.length,2);
   assert.equal(groups.find(g=>g.id===2).source.catalog_id,'new');
+  assert.equal(groups.find(g=>g.id===1).variants.length,2);
+});
+test('other wholesalers reuse the identical merchant product and variant spine',()=>{
+  const provider={product_id:1,provider:'wholesale_partner',catalog_id:'wholesale-123',external_id:'item-07',sync_status:'active'};
+  const groups=groupProductInventory(rows,[provider]);
+  assert.equal(groups.find(g=>g.id===1).source.provider,'wholesale_partner');
+  assert.equal(groups.find(g=>g.id===1).source.external_id,'item-07');
+  assert.equal(groups.find(g=>g.id===1).variants.length,2);
+  assert.equal(resolveProductSource({id:3},{provider:'some_vendor'}).kind,'merchant_managed');
 });
 test('unknown supplier is never invented; owned products remain merchant-managed',()=>{
   assert.equal(resolveProductSource({id:8}).provider,null);
