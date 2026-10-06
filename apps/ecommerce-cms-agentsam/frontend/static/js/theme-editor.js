@@ -777,7 +777,12 @@
     byId('te-section-status').className = 'te-badge' + (section.status === 'published' ? ' is-published' : '');
 
     const panel = byId('te-inspector-body');
-    panel.innerHTML = renderInspectorGroups(section);
+    panel.innerHTML = (blockMeta
+      ? '<button type="button" class="te-inspector-parent" id="te-inspector-parent">← ' + cmsEscapeHtml(sectionLabel) + '</button>'
+      : '') + renderInspectorGroups(section);
+    byId('te-inspector-parent')?.addEventListener('click', function() {
+      selectSection(section.key, null, false, sectionOwner(section));
+    });
     wireFields();
     wireInspectorPreferences();
 
