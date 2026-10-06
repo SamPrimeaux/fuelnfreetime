@@ -42,7 +42,8 @@ const shim = "<script>" +
 const probe = "<script>setTimeout(function(){" +
  "var frame=document.getElementById('theme-preview');" +
  "var before={src:frame.getAttribute('src'),headline:frame.contentDocument?.querySelector('[data-cms-section=\"hero\"] [data-cms=\"headline\"]')?.textContent," +
- "visible:!document.getElementById('te-import-live').hidden,inspector:document.getElementById('te-field-hero-headline')?.value};" +
+ "visible:!document.getElementById('te-import-live').hidden,liveOnly:[...document.querySelectorAll('.te-live-only-row strong')].map(e=>e.textContent)," +
+ "inspector:document.getElementById('te-field-hero-headline')?.value};" +
  "document.getElementById('te-import-live').click();" +
  "setTimeout(function(){var pre=document.createElement('pre');pre.id='browser-result';" +
  "pre.textContent=JSON.stringify({before,imported:window.__submitted,linked:window.__linked});document.body.append(pre);},400);" +
