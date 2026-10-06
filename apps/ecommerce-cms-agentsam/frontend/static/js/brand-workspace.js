@@ -8,6 +8,7 @@
   let pickerQuery = "";
   let loaded = false;
   let loading = false;
+  let dirty = false;
 
   const $ = (id) => document.getElementById(id);
   const esc = (value) =>
@@ -119,6 +120,16 @@
 
   function renderCompany() {
     const company = workspace?.company || {};
+    const source = company.meta?.brand_profile_source;
+    const sourceNote = $("brand-source-note");
+    if (sourceNote) {
+      sourceNote.hidden = !source;
+      sourceNote.textContent = source
+        ? "Working draft from " + String(source.path || "brand documentation").split("/").pop() +
+          " (" + (source.version || "source version unspecified") +
+          "). Review and refine with the customer before publishing."
+        : "";
+    }
     $("brand-name").value = company.name || "";
     $("brand-tagline").value = company.tagline || "";
     $("brand-website").value = company.websiteUrl || "";
@@ -372,7 +383,12 @@
     setSaveStatus("Loading brand…");
     if (grid) grid.innerHTML = '<div class="brand-load-state" role="status">Loading brand identity and assets…</div>';
     try {
-      workspace = await api("/api/admin/brand");
+      const brandRequest = api("/api/admin/brand?include_assets=0");
+      const timeout = new Promise((_, reject) => {
+        const timer = window.setTimeout(() => reject(new Error("Brand request timed out. Check your connection and try again.")), 15000);
+        brandRequest.finally(() => window.clearTimeout(timer)).catch(() => {});
+      });
+      workspace = await Promise.race([brandRequest, timeout]);
       loaded = true;
       renderCompany();
       renderRoles();
@@ -380,6 +396,9 @@
       if (note) note.style.display = "none";
     } catch (error) {
       loaded = false;
+      setSaveStatus("Unable to load — retry", false);
+      const count = $("brand-asset-count");
+      if (count) count.textContent = "Unavailable";
       showNote(error.message || "Brand request failed", "error");
       const tagline = $("brand-preview-tagline");
       if (tagline) tagline.textContent = "Brand data could not be loaded.";
@@ -387,8 +406,11 @@
         grid.innerHTML =
           '<div class="brand-load-state brand-load-error" role="alert">' +
           '<strong>Could not load brand assets</strong>' +
-          '<p>The brand data was not available. Nothing was changed.</p>' +
+          '<p>Your brand data could not be loaded. Check your signed-in session or retry. Nothing was changed.</p>' +
+          '<div class="brand-load-actions">' +
           '<button type="button" class="btn small" id="brand-load-retry">Try again</button>' +
+          '<a class="btn small" href="/admin/login">Sign in</a>' +
+          '</div>' +
           '</div>';
         $("brand-load-retry")?.addEventListener("click", load);
       }
