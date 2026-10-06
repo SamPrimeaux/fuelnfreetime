@@ -18,16 +18,18 @@
       .replaceAll("'", "&#39;");
 
   async function api(path, init = {}) {
-    const response = await adminFetch(path, {
+    // shell.js adminFetch is the shared admin transport: it parses JSON,
+    // redirects on 401, and throws on non-2xx responses. Do not treat its
+    // parsed return value like a native Response.
+    const data = await adminFetch(path, {
       ...init,
       headers: {
         ...(init.body ? { "content-type": "application/json" } : {}),
         ...(init.headers || {}),
       },
     });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || data.ok === false) {
-      throw new Error(data.error || "Brand request failed");
+    if (!data || data.ok === false) {
+      throw new Error(data?.error || "Brand request failed");
     }
     return data;
   }
