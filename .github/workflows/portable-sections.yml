@@ -16,6 +16,7 @@ on:
       - apps/ecommerce-cms-agentsam/frontend/static/js/revise-atlas-view.js
       - tests/revise-atlas-contract.test.mjs
       - tests/revise-atlas-browser-smoke.mjs
+      - tests/revise-atlas-storefront-browser-smoke.mjs
       - scripts/harvest-revise-site.mjs
       - package.json
       - package-lock.json
@@ -67,3 +68,5 @@ jobs:
         run: npm run build:admin
       - name: Original Revise Atlas Chrome preview and real CMS draft contract
         run: node tests/revise-atlas-browser-smoke.mjs
+      - name: Real Heuristic storefront lazily hosts genuine Revise sections
+        run: node tests/revise-atlas-storefront-browser-smoke.mjs
