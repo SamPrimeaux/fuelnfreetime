@@ -248,9 +248,12 @@
 
   scope.ThemePortableSections = Object.freeze({
     definitions,
-    get: (id) => byId.get(id) || null,
-    catalog: () => definitions.map(({ id, label, family, source, templateKey, preset }) =>
-      ({ id, label, type: family, source, templateKey, preset })),
+    get: (id) => byId.get(id) || scope.ThemeReviseAtlas?.get(id) || null,
+    catalog: () => [
+      ...definitions.map(({ id, label, family, source, templateKey, preset }) =>
+        ({ id, label, type: family, source, templateKey, preset })),
+      ...(scope.ThemeReviseAtlas?.catalog() || []),
+    ],
     defaults, render, validate,
     schema(id) {
       const definition = byId.get(id);
