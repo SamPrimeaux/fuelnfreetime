@@ -6,12 +6,26 @@
   const pageSlug = document.documentElement.dataset.cmsPage;
   if (!pageSlug) return;
 
-  const portableReady = Promise.all([
-    import('/js/portable-sections.js'),
-    import('/js/revise-atlas.js'),
-  ]).catch((error) => {
+  const portableReady = import('/js/portable-sections.js').catch((error) => {
     console.error('[CMS] Shared section runtime failed to load', error);
   });
+  let atlasReady = null;
+  async function ensureSectionRuntime(sections) {
+    await portableReady;
+    if (!sections.some((section) => String(section?.content?.__editor?.themePreset || '').startsWith('revise-atlas/'))) return;
+    if (!atlasReady) {
+      atlasReady = import('/js/revise-atlas.js').then(() => {
+        if (!document.querySelector('link[data-revise-atlas]')) {
+          const stylesheet = document.createElement('link');
+          stylesheet.rel = 'stylesheet';
+          stylesheet.href = '/js/revise-atlas.css';
+          stylesheet.dataset.reviseAtlas = 'true';
+          document.head.appendChild(stylesheet);
+        }
+      });
+    }
+    await atlasReady;
+  }
   if (!document.querySelector('link[data-portable-sections]')) {
     const css = document.createElement('link');
     css.rel = 'stylesheet';
