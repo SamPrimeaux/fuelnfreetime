@@ -384,6 +384,9 @@ export async function getPageAdmin(env, slug) {
   }
 
   const sections = await loadSectionsFromDb(env, slug, page.id);
+  // Imported storefront pages only expose sections actually present in their source.
+  // Re-inventing absent newsletter/hero defaults would produce a false editor tree.
+  const hasLiveImport = sections.some((section) => section.content?.__editor?.source === "live-storefront");
   return {
     ok: true,
     seeded: true,
@@ -392,12 +395,62 @@ export async function getPageAdmin(env, slug) {
       title: page.title,
       status: page.status,
       updated_at: page.updated_at,
-      sections: mergeWithRegistry(slug, sections),
+      sections: hasLiveImport ? sections.filter((section) => section.status !== "removed") : mergeWithRegistry(slug, sections),
       ...resolvePageAuthority(slug, CMS_STOREFRONT_ROUTES, {
         seeded: true,
         cmsPublished: page.status === "published",
       }),
     },
+  };
+}
+
+/**
+ * Explicitly create a non-published CMS draft from the actual, same-origin
+ * storefront markup. No registry seeding, KV update, or live publication.
+ *
+ * A consuming editor sends only its discovered, CMS-addressable sections;
+ * sections without a real renderer stay in the storefront untouched.
+ */
+export async function importLivePageDraft(env, slug, body = {}) {
+  const route = CMS_STOREFRONT_ROUTES.find((item) => item.page === slug);
+  const definition = PAGE_REGISTRY[slug];
+  if (!route || !definition) return { error: "Unknown storefront page", status: 404 };
+  if (await loadPageRow(env, slug)) {
+    return { error: "This page has a CMS record. Reload before editing.", status: 409 };
+  }
+  const sections = body?.sections;
+  if (!Array.isArray(sections) || sections.length === 0 || sections.length > 50) {
+    return { error: "At least one live section is required", status: 400 };
+  }
+  const known = new Set(Object.keys(definition.sections));
+  const seen = new Set();
+  for (const section of sections) {
+    if (!section || !known.has(section.key) || seen.has(section.key) ||
+        !section.content || Array.isArray(section.content) || typeof section.content !== "object" ||
+        JSON.stringify(section.content).length > 100_000) {
+      return { error: "Invalid or duplicate source section", status: 400 };
+    }
+    seen.add(section.key);
+  }
+
+  await env.DB.prepare(
+    "INSERT INTO pages (slug, title, status, updated_at) VALUES (?, ?, 'draft', datetime('now'))"
+  ).bind(slug, definition.title).run();
+  const page = await loadPageRow(env, slug);
+  for (const section of sections) {
+    const content = structuredClone(section.content);
+    content.__editor = { ...(content.__editor || {}), source: "live-storefront" };
+    const sortOrder = definition.sections[section.key].sortOrder;
+    const result = await persistSectionDraft(env, slug, page.id, section.key, content, sortOrder);
+    if (result.error) return result;
+  }
+  return {
+    ok: true,
+    slug,
+    status: "draft",
+    imported_sections: sections.length,
+    live_route: route.path,
+    published: false,
   };
 }
 
@@ -1094,6 +1147,16 @@ export async function handleAdminCmsApi(request, env, url) {
   m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/seed$/);
   if (m && method === "POST") {
     const result = await seedPageFromRegistry(env, m[1]);
+    if (result.error) return json({ error: result.error }, { status: result.status });
+    return json(result);
+  }
+
+  m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/import-live$/);
+  if (m && method === "POST") {
+    let body;
+    try { body = await request.json(); }
+    catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
+    const result = await importLivePageDraft(env, m[1], body);
     if (result.error) return json({ error: result.error }, { status: result.status });
     return json(result);
   }
