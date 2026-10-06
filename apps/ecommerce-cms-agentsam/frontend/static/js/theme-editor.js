@@ -53,19 +53,30 @@
       '<div class="theme-studio">',
         '<header class="theme-studio-toolbar">',
           '<div class="theme-studio-toolbar__left">',
-            '<span class="te-editor-label">Theme editor</span>',
-            '<div class="te-page-menu">',
-              '<button type="button" class="te-page-trigger" id="te-page-trigger" aria-expanded="false"><span style="display:flex;align-items:center;gap:8px;min-width:0">', icon.page, '<strong id="te-page-title">Loading…</strong></span><span>⌄</span></button>',
-              '<div class="te-page-popover" id="te-page-popover" hidden><input class="te-page-search" id="te-page-search" placeholder="Search online store" autocomplete="off"><div class="te-page-options" id="te-page-options"></div></div>',
+            '<div class="te-theme-menu">',
+              '<button type="button" class="te-theme-trigger" id="te-theme-trigger" aria-expanded="false" aria-controls="te-theme-popover" aria-label="Choose theme to preview">',
+                '<span class="te-theme-mark" aria-hidden="true">F</span>',
+                '<span class="te-theme-identity"><small>Theme preview</small><strong id="te-theme-name">' + cmsEscapeHtml(humanize(selectedTheme)) + '</strong></span>',
+                '<span class="te-theme-chevron" aria-hidden="true">⌄</span>',
+              '</button>',
+              '<div class="te-theme-popover" id="te-theme-popover" hidden>',
+                '<div class="te-theme-popover__title">Preview a theme</div>',
+                ((window.ThemeStudioPreview && window.ThemeStudioPreview.themes) || []).map(function(theme) {
+                  return '<button type="button" class="te-theme-option' + (theme.id === selectedTheme ? ' is-active' : '') +
+                    '" data-theme-preview="' + cmsEscapeAttr(theme.id) + '" aria-pressed="' + String(theme.id === selectedTheme) + '">' +
+                    '<strong>' + cmsEscapeHtml(theme.name) + '</strong><small>' +
+                      cmsEscapeHtml(theme.id === 'heuristic' ? 'Current storefront renderer' : 'Visual preview only · not publishable') +
+                    '</small></button>';
+                }).join('') +
+              '</div>',
             '</div>',
-            '<span class="te-save-state" id="te-save-state">Loading</span>',
           '</div>',
           '<div class="theme-studio-toolbar__center">',
-            '<div class="te-theme-switch" id="te-theme-switch" aria-label="Visual theme">' +
-              ((window.ThemeStudioPreview && window.ThemeStudioPreview.themes) || []).map(function(theme) {
-                return '<button type="button" class="te-theme-btn" data-theme-preview="' + cmsEscapeAttr(theme.id) + '" title="' + cmsEscapeAttr(theme.description || theme.name) + '">' + cmsEscapeHtml(theme.name) + '</button>';
-              }).join('') +
+            '<div class="te-page-menu">',
+              '<button type="button" class="te-page-trigger" id="te-page-trigger" aria-expanded="false"><span class="te-page-trigger__content">', icon.page, '<strong id="te-page-title">Loading…</strong></span><span aria-hidden="true">⌄</span></button>',
+              '<div class="te-page-popover" id="te-page-popover" hidden><input class="te-page-search" id="te-page-search" placeholder="Search online store pages" autocomplete="off" aria-label="Search pages"><div class="te-page-options" id="te-page-options"></div></div>',
             '</div>',
+            '<span class="te-save-state" id="te-save-state">Loading</span>',
             '<div class="te-device-switch" aria-label="Preview device">',
               '<button type="button" class="te-device-btn" data-device="desktop" title="Desktop">', icon.desktop, '</button>',
               '<button type="button" class="te-device-btn" data-device="tablet" title="Tablet">', icon.tablet, '</button>',
@@ -88,7 +99,6 @@
           '</main>',
           '<aside class="theme-editor-panel">',
             '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><span class="te-badge" id="te-section-status">draft</span></div>',
-            '<div class="te-tabs" id="te-tabs"><button type="button" class="te-tab is-active" data-tab="content">Content</button><button type="button" class="te-tab" data-tab="media">Media</button><button type="button" class="te-tab" data-tab="links">Links</button><button type="button" class="te-tab" data-tab="settings">Layout</button></div>',
             '<div class="te-inspector-body" id="te-inspector-body"></div>',
             '<div class="te-inspector-save"><button type="button" class="te-toolbar-btn is-primary" id="te-save">Save draft</button><p class="te-note" id="te-note"></p></div>',
           '</aside>',
