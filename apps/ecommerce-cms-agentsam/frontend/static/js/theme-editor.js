@@ -9,6 +9,8 @@
   let selectedTheme = localStorage.getItem('theme-studio:selected-theme') || 'heuristic';
   let previewBlobUrl = null;
   let siteDraftTouched = false;
+  let liveUnimported = false;
+  let liveSourceCaptured = false;
   let activeBlockId = null;
   let activeFieldKey = null;
   let activeTab = 'content';
@@ -72,7 +74,7 @@
         '<div class="theme-studio-workspace">',
           '<aside class="theme-studio-tree"><div class="te-panel-title"><span class="te-panel-kicker">Page structure</span><h2 id="te-tree-title">Page</h2><p id="te-tree-path">/</p></div><div id="te-tree"></div><div class="te-tree-footer"><a id="te-manage-page" href="#">Page content &amp; settings →</a></div></aside>',
           '<main class="theme-studio-canvas">',
-            '<div class="te-preview-bar"><span id="te-preview-label">Storefront preview</span><div class="te-preview-bar__actions"><button class="te-icon-btn" type="button" id="te-refresh" title="Refresh preview">', icon.refresh, '</button><a class="te-icon-btn" id="te-open-tab" href="#" target="_blank" rel="noopener" title="Open in new tab">', icon.external, '</a></div></div>',
+            '<div class="te-preview-bar"><span id="te-preview-label">Storefront preview</span><div class="te-preview-bar__actions"><button class="te-import-live" type="button" id="te-import-live" hidden>Import live page</button><button class="te-icon-btn" type="button" id="te-refresh" title="Refresh preview">', icon.refresh, '</button><a class="te-icon-btn" id="te-open-tab" href="#" target="_blank" rel="noopener" title="Open in new tab">', icon.external, '</a></div></div>',
             '<div class="te-preview-stage"><div class="te-preview-device" id="te-preview-device" data-device="desktop"><iframe id="theme-preview" title="Storefront preview" class="theme-editor-preview"></iframe></div></div>',
             '<div class="te-preview-status"><span class="te-preview-mode">Local draft preview</span><span class="te-selected-path" id="te-selected-path">Select a section in the preview or tree</span></div>',
           '</main>',
@@ -174,10 +176,10 @@
     const button = byId('te-publish');
     if (!button) return;
     const previewOnly = selectedTheme !== 'heuristic';
-    button.disabled = previewOnly;
+    button.disabled = previewOnly || liveUnimported;
     button.title = previewOnly
       ? 'Preview only: this visual theme has not passed the publish/rollback gate.'
-      : 'Publish the current CMS page and changed global sections';
+      : liveUnimported ? 'Import the live storefront before publishing.' : 'Publish the current CMS page and changed global sections';
   }
 
   function currentSection() {
@@ -912,6 +914,106 @@
     closeMediaPicker();
   }
 
+  // The live HTML is the source of truth for a route not yet imported into CMS.
+  // Never replace it with registry fixtures before extracting real fields.
+  function captureLiveSource() {
+    if (!liveUnimported || !pageData) return false;
+    let doc;
+    try { doc = byId('theme-preview').contentDocument; } catch { return false; }
+    if (!doc || doc.documentElement?.getAttribute('data-cms-page') !== slug) {
+      setNote('The live preview identity does not match this page; import cancelled.', 'error');
+      return false;
+    }
+    const sections = [];
+    let count = 0;
+    for (const section of pageData.sections || []) {
+      const region = Array.from(doc.querySelectorAll('[data-cms-section]')).find(function(node) {
+        return node.dataset.cmsSection === section.key && !node.closest('[data-cms-scope="site"]');
+      });
+      const schema = window.SECTION_SCHEMAS?.[slug]?.[section.key];
+      if (!region || !schema) continue;
+      const controls = Array.from(region.querySelectorAll('[data-cms]'));
+      const content = structuredClone(section.content || {});
+      let matched = 0;
+      for (const field of schema.fields || []) {
+        let el = controls.find(function(node) { return node.dataset.cms === field.key; });
+        if (!el && field.key.endsWith('.href')) {
+          const alias = field.key.slice(0, -5) + '.label';
+          el = controls.find(function(node) { return node.dataset.cms === alias; });
+        }
+        if (!el) continue;
+        let value = '';
+        if (field.key.endsWith('.href') || field.type === 'link') {
+          value = el.getAttribute('href') || el.closest('a')?.getAttribute('href') || '';
+        } else if (field.type === 'media' || field.type === 'video' || field.media) {
+          value = el.getAttribute('src') || el.querySelector('img,video,source')?.getAttribute('src') || '';
+        } else {
+          const clone = el.cloneNode(true);
+          clone.querySelectorAll('[aria-hidden="true"],svg').forEach(function(node) { node.remove(); });
+          clone.querySelectorAll('br').forEach(function(node) { node.replaceWith('\n'); });
+          value = String(clone.textContent || '').replace(/[ \t]+/g, ' ').replace(/ *\n */g, '\n').trim();
+        }
+        if (!value) continue;
+        cmsSetPath(content, field.key, value);
+        matched += 1;
+      }
+      if (matched) {
+        content.__editor = { ...(content.__editor || {}), source: 'live-storefront' };
+        sections.push({ ...section, content, status: 'draft', __ownerSlug: slug });
+        count += matched;
+      }
+    }
+    if (!sections.length) {
+      setNote('This live route has no CMS-marked editable sections; nothing was imported.', 'error');
+      return false;
+    }
+    pageData.sections = sections; // no synthetic newsletter or other missing regions
+    if (!sections.some(function(section) { return section.key === activeSectionKey; })) {
+      activeSectionKey = sections[0].key;
+      activeSectionOwner = slug;
+    }
+    liveSourceCaptured = true;
+    byId('te-import-live').hidden = false;
+    byId('te-import-live').textContent = 'Import ' + sections.length + ' sections';
+    byId('te-save').textContent = 'Import & save draft';
+    byId('te-preview-label').textContent = 'Live storefront — ' + sections.length + ' editable regions';
+    setNote(count + ' real fields found. Import saves a private CMS draft; the storefront remains unchanged.', 'success');
+    renderTree();
+    renderInspector();
+    return true;
+  }
+
+  async function importLiveSource() {
+    if (!liveUnimported || !liveSourceCaptured) {
+      setNote('Wait for the real storefront preview before importing.', 'error');
+      return false;
+    }
+    const button = byId('te-import-live');
+    button.disabled = true;
+    setSaveState('Importing');
+    try {
+      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/import-live', {
+        method: 'POST',
+        body: JSON.stringify({ sections: pageData.sections.map(function(section) {
+          return { key: section.key, content: section.content };
+        }) })
+      });
+      liveUnimported = false;
+      liveSourceCaptured = false;
+      dirtySections.clear();
+      setDirty(false);
+      await loadPage();
+      setNote('Existing storefront content imported into an unpublished CMS draft.', 'success');
+      return true;
+    } catch (error) {
+      setNote(error.message || String(error), 'error');
+      setSaveState('Import failed', 'error');
+      return false;
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   function pushLocalPreview() {
     const iframe = byId('theme-preview');
     if (!iframe?.contentWindow || !pageData) return;
@@ -1119,9 +1221,9 @@
     const route = pageRoute(slug);
     const separator = route.indexOf('?') >= 0 ? '&' : '?';
     byId('theme-preview').removeAttribute('srcdoc');
-    byId('theme-preview').src = route + separator + 'preview=1&_=' + Date.now();
-    byId('te-open-tab').href = route + separator + 'preview=1';
-    byId('te-preview-label').textContent = 'Heuristic preview — ' + ((pageData && pageData.title) || humanize(slug));
+    byId('theme-preview').src = route + separator + (liveUnimported ? '_=' : 'preview=1&_=' ) + Date.now();
+    byId('te-open-tab').href = liveUnimported ? route : route + separator + 'preview=1';
+    byId('te-preview-label').textContent = liveUnimported ? 'Live storefront — source inspection' : 'Heuristic draft preview — ' + ((pageData && pageData.title) || humanize(slug));
   }
 
   function schedulePreview() {
@@ -1141,6 +1243,11 @@
         adminFetch('/api/admin/cms/pages/site')
       ]);
       pageData = results[0].page;
+      liveUnimported = !results[0].seeded && pageData.content_authority === 'storefront-html';
+      liveSourceCaptured = false;
+      if (liveUnimported) selectedTheme = 'heuristic';
+      byId('te-import-live').hidden = true;
+      byId('te-save').textContent = liveUnimported ? 'Import & save draft' : 'Save draft';
       siteData = results[2].page;
       pages = (results[1].pages || []).filter(function(page) { return page.slug !== 'site'; });
 
@@ -1187,6 +1294,7 @@
   }
 
   async function saveDraft() {
+    if (liveUnimported) return importLiveSource();
     const refs = dirtySections.size ? Array.from(dirtySections) : (activeSectionKey ? [activeSectionOwner + ':' + activeSectionKey] : []);
     if (!refs.length) return true;
     const button = byId('te-save');
@@ -1228,6 +1336,10 @@
   }
 
   async function publishPage() {
+    if (liveUnimported) {
+      setNote('Import the existing live page before publishing any CMS draft.', 'error');
+      return;
+    }
     if (selectedTheme !== 'heuristic') {
       setNote('This theme is visual-preview only. Publication is disabled until its renderer and rollback pass acceptance.', 'error');
       return;
@@ -1559,6 +1671,7 @@
 
   byId('te-page-search').addEventListener('input', function(event) { renderPageOptions(event.target.value); });
   byId('te-refresh').addEventListener('click', refreshPreview);
+  byId('te-import-live').addEventListener('click', importLiveSource);
   byId('te-save').addEventListener('click', saveDraft);
   byId('te-publish').addEventListener('click', publishPage);
   byId('theme-preview').addEventListener('load', function() {
@@ -1566,7 +1679,12 @@
     // Reposting draft data is only needed for the live Heuristic iframe.
     // Alternate previews use srcdoc. Reassigning srcdoc on every iframe
     // load triggers an infinite navigation loop and leaves a blank canvas.
-    if (selectedTheme === 'heuristic') pushLocalPreview();
+    if (selectedTheme === 'heuristic') {
+      if (liveUnimported) {
+        if (!dirty) captureLiveSource();
+        else pushLocalPreview();
+      } else pushLocalPreview();
+    }
   });
   byId('te-media-close').addEventListener('click', closeMediaPicker);
   byId('te-media-search').addEventListener('input', function(event) { renderMediaGrid(event.target.value); });
