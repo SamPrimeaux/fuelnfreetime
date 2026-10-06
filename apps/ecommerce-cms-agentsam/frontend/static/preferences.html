@@ -253,10 +253,47 @@ function updateCounters() {
     meta || "Enter a description to be shown on search engines like Google.";
 }
 
+function setChosenAsset(kind, url, { notify = true } = {}) {
+  const input = document.getElementById(kind === "nav" ? "nav-logo-url" : "social-image-url");
+  const preview = document.getElementById(kind === "nav" ? "nav-asset-thumb" : "social-asset-thumb");
+  const name = document.getElementById(kind === "nav" ? "nav-asset-name" : "social-asset-name");
+  const advanced = document.getElementById(kind === "nav" ? "nav-logo-url-advanced" : "social-image-url-advanced");
+  input.value = url || "";
+  advanced.value = url || "";
+  preview.hidden = !url;
+  if (url) preview.src = url;
+  else preview.removeAttribute("src");
+  name.textContent = url ? decodeURIComponent(url.split("/").pop().split("?")[0] || "Selected asset") :
+    (kind === "nav" ? "Use current logo" : "No image selected");
+  if (kind === "social") updateSocialImage();
+  if (notify) setDirty(true);
+}
+
 function updateSocialImage() {
   const url = document.getElementById("social-image-url").value.trim();
   const img = document.getElementById("social-image");
+  img.hidden = !url;
+  document.getElementById("social-placeholder").hidden = !!url;
   if (url) img.src = url;
+  else img.removeAttribute("src");
+}
+
+function updateAnnouncementPreview() {
+  const element = document.getElementById("announcement-preview");
+  const value = document.getElementById("announcement-text").value.trim() || "Your announcement will appear here";
+  const marquee = document.getElementById("announcement-style").value === "marquee";
+  element.style.backgroundColor = document.getElementById("announcement-bg").value;
+  element.style.color = document.getElementById("announcement-color").value;
+  element.dataset.style = marquee ? "marquee" : "static";
+  element.replaceChildren();
+  const track = document.createElement("span");
+  track.className = "prefs-announcement-preview__track";
+  for (let i = 0; i < (marquee ? 4 : 1); i++) {
+    const segment = document.createElement("span");
+    segment.textContent = value;
+    track.appendChild(segment);
+  }
+  element.appendChild(track);
 }
 
 function togglePasswordField() {
@@ -346,17 +383,21 @@ function applySettings(data) {
 
   document.getElementById("home-title").value = settings.homeTitle || "";
   document.getElementById("meta-description").value = settings.metaDescription || "";
-  document.getElementById("social-image-url").value = settings.socialImageUrl || "";
+  setChosenAsset("social", settings.socialImageUrl || "", { notify: false });
   document.getElementById("store-password").value = settings.storePassword || "";
 
-  document.getElementById("nav-logo-url").value = data.nav?.logoUrl || settings.navLogoUrl || "";
+  setChosenAsset("nav", settings.navLogoUrl || data.nav?.logoUrl || "", { notify: false });
   document.getElementById("nav-logo-height").value = data.nav?.logoHeight || settings.navLogoHeight || 68;
   document.getElementById("nav-brand-accent").value = data.nav?.brandAccent || settings.navBrandAccent || "#ff4500";
   document.getElementById("nav-brand-accent-light").value =
     data.nav?.brandAccentLight || settings.navBrandAccentLight || "#E5A558";
   document.getElementById("announcement-enabled").checked = data.nav?.announcement?.enabled === true;
   document.getElementById("announcement-text").value = data.nav?.announcement?.text || "";
-  document.getElementById("announcement-href").value = data.nav?.announcement?.href || "";
+  document.getElementById("announcement-href").value = settings.announcementHref || data.nav?.announcement?.href || "";
+  document.getElementById("announcement-style").value = settings.announcementStyle === "marquee" ? "marquee" : "static";
+  document.getElementById("announcement-bg").value = /^#[0-9a-f]{6}$/i.test(settings.announcementBgColor || "") ? settings.announcementBgColor : "#161616";
+  document.getElementById("announcement-color").value = /^#[0-9a-f]{6}$/i.test(settings.announcementTextColor || "") ? settings.announcementTextColor : "#ffffff";
+  updateAnnouncementPreview();
 
   renderNavItems();
   togglePasswordField();
@@ -385,6 +426,9 @@ function collectSettings() {
     announcementEnabled: document.getElementById("announcement-enabled").checked,
     announcementText: document.getElementById("announcement-text").value.trim(),
     announcementHref: document.getElementById("announcement-href").value.trim(),
+    announcementStyle: document.getElementById("announcement-style").value,
+    announcementBgColor: document.getElementById("announcement-bg").value,
+    announcementTextColor: document.getElementById("announcement-color").value,
   };
 }
 
@@ -405,9 +449,9 @@ document.getElementById("nav-add-item")?.addEventListener("click", () => {
   document.getElementById(id)?.addEventListener("change", () => setDirty(true));
 });
 
-["announcement-enabled", "announcement-text", "announcement-href"].forEach((id) => {
-  document.getElementById(id)?.addEventListener("input", () => setDirty(true));
-  document.getElementById(id)?.addEventListener("change", () => setDirty(true));
+["announcement-enabled", "announcement-text", "announcement-href", "announcement-style", "announcement-bg", "announcement-color"].forEach((id) => {
+  document.getElementById(id)?.addEventListener("input", () => { setDirty(true); updateAnnouncementPreview(); });
+  document.getElementById(id)?.addEventListener("change", () => { setDirty(true); updateAnnouncementPreview(); });
 });
 
 document.querySelectorAll("[data-pref]").forEach((el) => {
@@ -439,17 +483,100 @@ document.getElementById("save-prefs-btn").addEventListener("click", async () => 
   }
 });
 
-document.getElementById("create-signature-btn").addEventListener("click", () => {
-  alert("Crawler signature creation is coming soon.");
-});
+// Crawler and challenge verification need real server-side integration. No
+// misleading 'create signature' action is exposed before the service exists.
 
-document.querySelectorAll(".prefs-tab").forEach((tab) => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll(".prefs-tab").forEach((t) => t.classList.remove("is-active"));
-    tab.classList.add("is-active");
+
+
+const assetDialog = document.getElementById("prefs-assets-dialog");
+let pickerKind = "social";
+let availableAssets = [];
+
+function showAssetStatus(message) {
+  document.getElementById("prefs-assets-status").textContent = message || "";
+}
+function renderAvailableAssets(query = "") {
+  const list = document.getElementById("prefs-assets-grid");
+  const needle = query.trim().toLowerCase();
+  const assets = availableAssets.filter((asset) =>
+    String(asset.content_type || "").startsWith("image/") &&
+    ((asset.filename || "") + " " + (asset.folder || "")).toLowerCase().includes(needle));
+  list.replaceChildren();
+  if (!assets.length) {
+    const empty = document.createElement("p");
+    empty.className = "prefs-assets-empty";
+    empty.textContent = availableAssets.length ? "No matching images." : "No images in the library yet. Upload one to begin.";
+    list.appendChild(empty);
+    return;
+  }
+  for (const asset of assets) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "prefs-asset-tile";
+    button.setAttribute("role", "listitem");
+    const img = document.createElement("img");
+    img.src = asset.url;
+    img.loading = "lazy";
+    img.alt = "";
+    const label = document.createElement("span");
+    label.textContent = asset.filename || "Uploaded asset";
+    button.append(img, label);
+    button.addEventListener("click", () => {
+      setChosenAsset(pickerKind, asset.url);
+      assetDialog.close();
+    });
+    list.append(button);
+  }
+}
+async function loadAvailableAssets() {
+  showAssetStatus("Loading your uploaded media…");
+  const data = await adminFetch("/api/admin/media?limit=120");
+  availableAssets = data.assets || data.items || [];
+  renderAvailableAssets(document.getElementById("prefs-assets-search").value);
+  showAssetStatus(availableAssets.length + " assets available.");
+}
+document.querySelectorAll("[data-pick-asset]").forEach((button) => button.addEventListener("click", async () => {
+  pickerKind = button.dataset.pickAsset;
+  document.getElementById("prefs-assets-title").textContent = pickerKind === "nav" ? "Choose a storefront logo" : "Choose a social sharing image";
+  assetDialog.showModal();
+  try { await loadAvailableAssets(); } catch (error) { showAssetStatus(error.message || "Unable to load media."); }
+}));
+document.getElementById("prefs-assets-close").addEventListener("click", () => assetDialog.close());
+document.getElementById("prefs-assets-search").addEventListener("input", (event) => renderAvailableAssets(event.target.value));
+document.querySelectorAll("[data-clear-asset]").forEach((button) => button.addEventListener("click", () => {
+  setChosenAsset(button.dataset.clearAsset, "");
+}));
+["social", "nav"].forEach((kind) => {
+  const id = kind === "social" ? "social-image-url-advanced" : "nav-logo-url-advanced";
+  document.getElementById(id).addEventListener("change", (event) => {
+    const value = event.target.value.trim();
+    if (value && !value.startsWith("/") && !/^https:\/\//i.test(value)) {
+      showNote("Image URL must be an internal path or an HTTPS address.", "error");
+      return;
+    }
+    setChosenAsset(kind, value);
   });
 });
-
+document.getElementById("prefs-assets-upload").addEventListener("change", async (event) => {
+  const files = Array.from(event.target.files || []);
+  if (!files.length) return;
+  if (files.some((file) => !file.type.startsWith("image/"))) {
+    showAssetStatus("Please choose image files only."); return;
+  }
+  const form = new FormData();
+  for (const file of files) form.append("files", file);
+  form.append("prefix", "uploads/store-preferences/");
+  showAssetStatus("Uploading your image…");
+  try {
+    const response = await fetch("/api/admin/media", { method: "POST", credentials: "include", body: form });
+    if (!response.ok) throw new Error("Upload failed (" + response.status + ")");
+    const data = await response.json();
+    availableAssets = (data.assets || []).concat(availableAssets);
+    renderAvailableAssets();
+    showAssetStatus("Uploaded. Select the image to use it.");
+  } catch (error) { showAssetStatus(error.message || "Upload failed."); }
+  finally { event.target.value = ""; }
+});
 (async function () {
   try {
     const d = await adminFetch("/api/admin/store/preferences");
