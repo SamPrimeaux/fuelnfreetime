@@ -356,6 +356,20 @@ export async function postStorePreferences(request, env) {
   }
 
   const incoming = body?.settings || body;
+  // The picker normally supplies these URLs. The server must enforce safe
+  // destinations independently of the admin browser.
+  const validAssetUrl = (value) => {
+    const s = String(value ?? "").trim();
+    return !s || (/^\/(?!\/)[^\s\\]+$/.test(s) && !/[\u0000-\u001f]/.test(s)) || /^https:\/\/[^\s]+$/i.test(s);
+  };
+  if (!validAssetUrl(incoming.socialImageUrl) || !validAssetUrl(incoming.navLogoUrl)) {
+    return json({ error: "Images must use a local path or HTTPS URL." }, { status: 400 });
+  }
+  for (const key of ["announcementBgColor", "announcementTextColor"]) {
+    if (incoming[key] != null && !/^#[0-9a-f]{6}$/i.test(String(incoming[key]))) {
+      return json({ error: "Announcement colors must use a six-digit hex value." }, { status: 400 });
+    }
+  }
   if (incoming.announcementEnabled === true) {
     const announcementText = String(incoming.announcementText ?? "").trim();
     const announcementHref = String(incoming.announcementHref ?? "").trim();
