@@ -52,6 +52,7 @@ const PACKAGE_STORE_DEFAULTS = {
   announcementStyle: "static",
   announcementAuthority: "cms",
   navigationAuthority: "cms",
+  logoAuthority: "cms",
   announcementBgColor: "#161616",
   announcementTextColor: "#ffffff",
   storePasswordHash: null,
