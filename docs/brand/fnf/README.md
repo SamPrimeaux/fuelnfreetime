@@ -44,3 +44,9 @@ Older brand materials in `docs/brand/` also exist; they are background reference
 6. Preserve originals, decisions and versions. Never replace a master in place.
 
 **Naming:** Prefer stable identifiers (e.g. `fnf-aviation-smoke-show-01`), descriptive filenames, and version suffixes. Keep collection labels descriptive; no fake SKU or inventory until a real product record exists.
+
+## Working identity gallery (admin only)
+
+The six transparent PNG previews from the manufacturer-review pack are registered in the existing FNF Content library album **FNF Identity — Review v1**. Open [FNF Content](https://fuelnfreetime.com/admin/content), then choose the album. These remain **review-stage assets**: the import does not approve, publish, or manufacture any design.
+
+The versioned asset registry records the preview keys. To audit or repeat the import without creating duplicates, run `node scripts/import-fnf-brand-previews.mjs` (dry-run) and explicitly pass `--apply` for R2/D1 writes. Keep source vectors and manufacturing masters in Git, never only in the media library.

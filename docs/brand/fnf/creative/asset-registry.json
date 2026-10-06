@@ -18,27 +18,39 @@
       "variants": [
         {
           "name": "Heritage white/red",
-          "svg": "identity/artwork/v1/extracted/FNF_Logo_Masters_v1/01_Vector_Masters/01_Heritage_White_Red.svg"
+          "svg": "identity/artwork/v1/extracted/FNF_Logo_Masters_v1/01_Vector_Masters/01_Heritage_White_Red.svg",
+          "preview_r2_key": "intake/brand/fnf/identity/v1/01_Heritage_White_Red_3000px.png",
+          "preview_url": "/media/intake/brand/fnf/identity/v1/01_Heritage_White_Red_3000px.png"
         },
         {
           "name": "Heritage one-ink white",
-          "svg": "identity/artwork/v1/extracted/FNF_Logo_Masters_v1/01_Vector_Masters/02_Heritage_One_Ink_White.svg"
+          "svg": "identity/artwork/v1/extracted/FNF_Logo_Masters_v1/01_Vector_Masters/02_Heritage_One_Ink_White.svg",
+          "preview_r2_key": "intake/brand/fnf/identity/v1/02_Heritage_One_Ink_White_3000px.png",
+          "preview_url": "/media/intake/brand/fnf/identity/v1/02_Heritage_One_Ink_White_3000px.png"
         },
         {
           "name": "Outline racing red",
-          "svg": "identity/artwork/v1/extracted/FNF_Logo_Masters_v1/01_Vector_Masters/03_Outline_Racing_Red.svg"
+          "svg": "identity/artwork/v1/extracted/FNF_Logo_Masters_v1/01_Vector_Masters/03_Outline_Racing_Red.svg",
+          "preview_r2_key": "intake/brand/fnf/identity/v1/03_Outline_Racing_Red_3000px.png",
+          "preview_url": "/media/intake/brand/fnf/identity/v1/03_Outline_Racing_Red_3000px.png"
         },
         {
           "name": "Clean shield white",
-          "svg": "identity/artwork/v1/extracted/FNF_Logo_Masters_v1/01_Vector_Masters/04_Clean_Shield_White.svg"
+          "svg": "identity/artwork/v1/extracted/FNF_Logo_Masters_v1/01_Vector_Masters/04_Clean_Shield_White.svg",
+          "preview_r2_key": "intake/brand/fnf/identity/v1/04_Clean_Shield_White_3000px.png",
+          "preview_url": "/media/intake/brand/fnf/identity/v1/04_Clean_Shield_White_3000px.png"
         },
         {
           "name": "Clean shield black",
-          "svg": "identity/artwork/v1/extracted/FNF_Logo_Masters_v1/01_Vector_Masters/05_Clean_Shield_Black.svg"
+          "svg": "identity/artwork/v1/extracted/FNF_Logo_Masters_v1/01_Vector_Masters/05_Clean_Shield_Black.svg",
+          "preview_r2_key": "intake/brand/fnf/identity/v1/05_Clean_Shield_Black_3000px.png",
+          "preview_url": "/media/intake/brand/fnf/identity/v1/05_Clean_Shield_Black_3000px.png"
         },
         {
           "name": "Clean shield gold",
-          "svg": "identity/artwork/v1/extracted/FNF_Logo_Masters_v1/01_Vector_Masters/06_Clean_Shield_Gold.svg"
+          "svg": "identity/artwork/v1/extracted/FNF_Logo_Masters_v1/01_Vector_Masters/06_Clean_Shield_Gold.svg",
+          "preview_r2_key": "intake/brand/fnf/identity/v1/06_Clean_Shield_Gold_3000px.png",
+          "preview_url": "/media/intake/brand/fnf/identity/v1/06_Clean_Shield_Gold_3000px.png"
         }
       ],
       "rights_review": "Source/usage authorization and any font/trademark clearance to be confirmed with brand owner",
@@ -47,7 +59,16 @@
         "Confirm public brand spelling FNF vs F&FT usage",
         "Justin approve final outline/letterforms",
         "Vendor proof per manufacturing process"
-      ]
+      ],
+      "cms_media": {
+        "album_name": "FNF Identity — Review v1",
+        "album_slug": "fnf-identity-review-v1",
+        "admin_url": "https://fuelnfreetime.com/admin/content",
+        "status": "review",
+        "published_to_storefront": false,
+        "ingest_method": "scripts/import-fnf-brand-previews.mjs",
+        "delivery_base": "/media/intake/brand/fnf/identity/v1/"
+      }
     }
   ]
 }
