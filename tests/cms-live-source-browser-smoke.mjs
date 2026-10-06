@@ -47,7 +47,8 @@ const probe = "<script>setTimeout(function(){" +
  "var themeTrigger=document.getElementById('te-theme-trigger');" +
  "before.toolbar={theme:document.getElementById('te-theme-name')?.textContent," +
  "themeTrigger:!!themeTrigger,legacyTabs:document.querySelectorAll('#te-tabs,.te-theme-switch').length," +
- "pageVisible:getComputedStyle(document.getElementById('te-page-trigger')).display!=='none'};" +
+ "pageVisible:getComputedStyle(document.getElementById('te-page-trigger')).display!=='none'," +
+ "noOverflow:document.documentElement.scrollWidth<=window.innerWidth+1};" +
  "themeTrigger?.click();" +
  "before.toolbar.menuOpened=!document.getElementById('te-theme-popover').hidden;" +
  "before.toolbar.options=document.querySelectorAll('[data-theme-preview]').length;" +
