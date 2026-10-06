@@ -28,7 +28,7 @@
 
 .theme-studio-toolbar {
   display: grid;
-  grid-template-columns: minmax(300px, 1fr) auto minmax(240px, 1fr);
+  grid-template-columns: minmax(172px, 1fr) auto minmax(190px, 1fr);
   align-items: center;
   gap: 12px;
   padding: 8px 14px;
@@ -71,7 +71,6 @@
 .te-page-trigger,
 .te-toolbar-btn,
 .te-tree-row,
-.te-tab,
 .te-media-button,
 .te-media-card,
 .te-page-option {
@@ -578,33 +577,29 @@
   color: #176b3d;
 }
 
-.te-tabs {
-  display: flex;
-  gap: 3px;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--te-border);
-  position: sticky;
-  top: 51px;
-  z-index: 4;
-  background: #fff;
-}
 
-.te-tab {
-  flex: 1;
-  height: 30px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: #666661;
-  font-size: 11px;
-  cursor: pointer;
+.te-inspector-group { margin-bottom: 20px; padding: 1px 0 18px; border-bottom: 1px solid var(--te-border); }
+.te-inspector-group__head { margin-bottom: 17px; }
+.te-inspector-group__head h3 { margin: 0; color: #252522; font-size: 13px; font-weight: 680; }
+.te-inspector-group__head p { margin: 4px 0 0; color: var(--te-muted); font-size: 11px; line-height: 1.5; }
+.te-inspector-group .te-field:last-child { margin-bottom: 0; }
+.te-inspector-disclosure { margin: 0 0 11px; border: 1px solid var(--te-border); border-radius: 11px; background: #fff; overflow: hidden; }
+.te-inspector-disclosure summary {
+  min-height: 48px; padding: 12px; display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; font-weight: 650; cursor: pointer; list-style: none;
 }
-
-.te-tab.is-active {
-  background: #f0f0ed;
-  color: #222;
-  font-weight: 600;
+.te-inspector-disclosure summary::-webkit-details-marker { display: none; }
+.te-inspector-disclosure summary:hover { background: #fafaf8; }
+.te-inspector-disclosure summary:focus-visible,.te-theme-trigger:focus-visible,.te-theme-option:focus-visible {
+  outline: 2px solid var(--te-accent); outline-offset: -2px;
 }
+.te-inspector-disclosure__body { padding: 3px 12px 12px; border-top: 1px solid #f1f1ee; }
+.te-inspector-disclosure .te-setting-group { margin: 11px 0 16px; }
+.te-inspector-disclosure--tools { margin-top: 15px; }
+.te-inspector-disclosure--tools .te-setting-card { margin: 10px 0 0; }
+.te-disclosure-chevron { color: #777771; font-size: 16px; transition: transform .18s ease; }
+.te-inspector-disclosure[open] .te-disclosure-chevron { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .te-disclosure-chevron { transition: none; } }
 
 .te-inspector-body {
   padding: 13px 13px 90px;
@@ -1296,7 +1291,7 @@
     top: 0;
     grid-template-columns: 1fr auto;
   }
-  .theme-studio-toolbar__center { display: none; }
+  .theme-studio-toolbar__center { display: flex; }
   .theme-studio-workspace {
     grid-template-columns: minmax(0, 1fr);
     overflow: visible;
@@ -1315,40 +1310,40 @@
   }
 }
 
-/* Visual theme switcher + real section catalog. */
-.te-theme-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 3px;
-  border: 1px solid var(--te-border);
-  border-radius: 10px;
-  background: #f5f5f2;
+/* One theme identity. Alternate visual renderers are accessible from its preview menu. */
+.te-theme-menu { position: relative; min-width: 0; }
+.te-theme-trigger {
+  display: inline-flex; align-items: center; gap: 9px; padding: 4px 7px;
+  min-width: 155px; max-width: 230px; border: 1px solid transparent; border-radius: 9px;
+  background: transparent; color: var(--te-text); text-align: left; cursor: pointer; font: inherit;
 }
-
-.te-theme-btn {
-  height: 28px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: #6e6e69;
-  font: inherit;
-  font-size: 11px;
-  font-weight: 650;
-  cursor: pointer;
+.te-theme-trigger:hover,.te-theme-trigger[aria-expanded="true"] { border-color: var(--te-border); background: #f6f6f4; }
+.te-theme-mark {
+  display: inline-grid; place-items: center; flex: 0 0 32px; width: 32px; height: 32px;
+  border-radius: 8px; background: #1c1c1b; color: #f7f2e7; font-weight: 750; font-size: 15px;
 }
-
-.te-theme-btn:hover {
-  background: rgba(255,255,255,.72);
-  color: var(--te-text);
+.te-theme-identity { min-width: 0; display: grid; gap: 2px; }
+.te-theme-identity small { font-size: 10px; font-weight: 500; color: var(--te-muted); }
+.te-theme-identity strong { font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.te-theme-chevron { color: var(--te-muted); }
+.te-theme-popover {
+  position: absolute; z-index: 30; top: calc(100% + 9px); left: 0; width: 260px; padding: 7px;
+  border: 1px solid var(--te-border); border-radius: 13px; background: #fff; box-shadow: 0 16px 46px rgba(0,0,0,.13);
 }
-
-.te-theme-btn.is-active {
-  background: #fff;
-  color: #1f1f1e;
-  box-shadow: 0 1px 2px rgba(0,0,0,.09);
+.te-theme-popover[hidden] { display: none; }
+.te-theme-popover__title {
+  padding: 9px 11px; font-size: 10px; color: var(--te-muted); font-weight: 700;
+  letter-spacing: .045em; text-transform: uppercase;
 }
+.te-theme-option {
+  display: grid; gap: 3px; width: 100%; padding: 10px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--te-text); text-align: left; cursor: pointer; font: inherit;
+}
+.te-theme-option strong { font-size: 12px; font-weight: 650; }
+.te-theme-option small { font-size: 10px; color: var(--te-muted); }
+.te-theme-option:hover,.te-theme-option.is-active { background: var(--te-soft); }
+.te-theme-option.is-active strong { color: #4e35bb; }
+.te-page-trigger__content { display: inline-flex; align-items: center; min-width: 0; gap: 8px; }
 
 .te-tree-group--global {
   padding-block: 2px 6px;
@@ -1456,20 +1451,25 @@
 
 @media (max-width: 1080px) {
   .theme-studio-toolbar {
-    grid-template-columns: minmax(250px, 1fr) auto minmax(190px, 1fr);
+    grid-template-columns: minmax(155px, 1fr) auto minmax(170px, 1fr);
   }
-  .te-theme-btn {
-    padding-inline: 7px;
-  }
+  .te-theme-trigger { min-width: 0; }
 }
 
 @media (max-width: 900px) {
-  .te-theme-switch {
-    order: 2;
+  .theme-studio { grid-template-rows: auto minmax(0, 1fr); }
+  .theme-studio-toolbar {
+    grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; row-gap: 4px;
   }
   .theme-studio-toolbar__center {
-    gap: 5px;
+    display: flex; grid-column: 1 / -1; grid-row: 2;
+    justify-content: space-between; min-width: 0; gap: 8px;
   }
+  .te-page-trigger { min-width: 0; width: min(56vw, 280px); }
+  .te-theme-identity small { display: none; }
+  .te-theme-trigger { padding-inline: 4px; }
+  .te-theme-popover { width: min(260px, 85vw); }
+  .te-save-state { display: none; }
 }
 
 
