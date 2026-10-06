@@ -1,0 +1,81 @@
+{
+  "created": "2026-10-06",
+  "purpose": "FNF creative brand + launch + async ChatGPT collaboration handoff",
+  "audience": [
+    "Justin",
+    "Sam"
+  ],
+  "source_status": "discussion drafts; not approved production/publication",
+  "documents": [
+    {
+      "name": "00_START_HERE.md",
+      "words": 944
+    },
+    {
+      "name": "01_Brand_Foundation_and_Positioning.md",
+      "words": 939
+    },
+    {
+      "name": "02_Voice_Messaging_and_Manifesto.md",
+      "words": 1043
+    },
+    {
+      "name": "03_Brand_Identity_Logos_and_Production.md",
+      "words": 944
+    },
+    {
+      "name": "04_Collections_and_Real_Products.md",
+      "words": 907
+    },
+    {
+      "name": "05_Inspiration_and_Visual_Art_Direction.md",
+      "words": 909
+    },
+    {
+      "name": "06_Video_Content_and_Social_Ideas.md",
+      "words": 1343
+    },
+    {
+      "name": "07_Dirt_Bike_Project_and_Masters824.md",
+      "words": 1046
+    },
+    {
+      "name": "08_Community_Events_and_Promotion_Guardrails.md",
+      "words": 729
+    },
+    {
+      "name": "09_Website_CMS_Content_and_SEO.md",
+      "words": 1301
+    },
+    {
+      "name": "10_Launch_Roadmap_and_Responsibilities.md",
+      "words": 1013
+    },
+    {
+      "name": "11_Justin_Review_Questions_and_Decisions.md",
+      "words": 829
+    },
+    {
+      "name": "12_ChatGPT_Shared_Project_Setup.md",
+      "words": 1261
+    },
+    {
+      "name": "13_Copy_Paste_Project_Instructions.md",
+      "words": 956
+    },
+    {
+      "name": "14_Prompt_Library_for_Justin.md",
+      "words": 1360
+    },
+    {
+      "name": "15_Source_Inventory_and_Verification.md",
+      "words": 989
+    },
+    {
+      "name": "MESSAGE_TO_JUSTIN.md",
+      "words": 396
+    }
+  ],
+  "optional_combined": "OPTIONAL_Combined_Reading_Copy.md",
+  "note": "Original images and FNF logo master pack are separate files; ZIP contains Markdown documents only."
+}

@@ -1,0 +1,69 @@
+{
+  "brand": "Fuel N Free Time",
+  "artwork": "F&FT shield",
+  "version": "review-v1",
+  "ready_for_production": false,
+  "variants": [
+    {
+      "name": "01_Heritage_White_Red",
+      "source": "heritage-two-color",
+      "colors": [
+        "#FFFDF4",
+        "#CF1F2B"
+      ],
+      "width_to_height": 1.417,
+      "svg_path_count": 10,
+      "use": "Two-color identity mark for print / vinyl"
+    },
+    {
+      "name": "02_Heritage_One_Ink_White",
+      "source": "heritage-two-color",
+      "colors": [
+        "#FFFFFF"
+      ],
+      "width_to_height": 1.417,
+      "svg_path_count": 8,
+      "use": "White silhouette; omits red inset"
+    },
+    {
+      "name": "03_Outline_Racing_Red",
+      "source": "red-outline",
+      "colors": [
+        "#CF1F2B"
+      ],
+      "width_to_height": 1.4296,
+      "svg_path_count": 12,
+      "use": "Outlined mark for print / larger-scale graphics"
+    },
+    {
+      "name": "04_Clean_Shield_White",
+      "source": "clean-ivory-reference",
+      "colors": [
+        "#FFFFFF"
+      ],
+      "width_to_height": 1.4261,
+      "svg_path_count": 8,
+      "use": "Polished solid mark on dark substrates"
+    },
+    {
+      "name": "05_Clean_Shield_Black",
+      "source": "clean-ivory-reference",
+      "colors": [
+        "#111111"
+      ],
+      "width_to_height": 1.4261,
+      "svg_path_count": 8,
+      "use": "Polished solid mark for engraving, etching, print"
+    },
+    {
+      "name": "06_Clean_Shield_Gold",
+      "source": "clean-ivory-reference",
+      "colors": [
+        "#D2A951"
+      ],
+      "width_to_height": 1.4261,
+      "svg_path_count": 8,
+      "use": "Single-color gold preview; metallic outcome substrate dependent"
+    }
+  ]
+}
