@@ -996,8 +996,8 @@
     try {
       await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/import-live', {
         method: 'POST',
-        body: JSON.stringify({ sections: pageData.sections.map(function(section) {
-          return { key: section.key, content: section.content };
+        body: JSON.stringify({ mode: liveExistingDraft ? 'reconcile' : 'create', sections: pageData.sections.map(function(section) {
+          return { key: section.key, content: section.content, expected_version: Number(section.version ?? 0) };
         }) })
       });
       liveUnimported = false;
