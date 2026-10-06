@@ -1248,3 +1248,145 @@
 .media-version-row.is-preview-only {
   opacity: .72;
 }
+
+/* Wave 2: selection is a compact command bar, not a horizontally scrolling form. */
+#content-view-library .media-batch-bar {
+  top: 8px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 12px;
+  overflow: visible;
+}
+
+#content-view-library .media-batch-summary {
+  flex: 0 0 auto;
+  font-weight: 500;
+}
+
+#content-view-library .media-batch-actions {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+  overflow: visible;
+}
+
+#content-view-library .media-batch-actions > * {
+  flex: 0 0 auto;
+}
+
+#content-view-library .media-batch-album {
+  width: min(180px, 100%);
+  min-width: 0;
+}
+
+#content-view-library .media-batch-album select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+#content-view-library .media-batch-more {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+#content-view-library .media-batch-more > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+#content-view-library .media-batch-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+#content-view-library .media-batch-more > summary:focus-visible,
+#content-view-library .media-batch-menu button:focus-visible {
+  outline: 2px solid #2c6ecb;
+  outline-offset: 2px;
+}
+
+#content-view-library .media-batch-more[open] > summary {
+  background: #f1f3f6;
+}
+
+#content-view-library .media-batch-menu {
+  position: absolute;
+  z-index: 65;
+  right: 0;
+  top: calc(100% + 9px);
+  width: min(275px, calc(100vw - 32px));
+  padding: 7px;
+  box-sizing: border-box;
+  display: grid;
+  gap: 2px;
+  border: 1px solid var(--c-line);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .16);
+}
+
+#content-view-library .media-batch-menu button {
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  padding: 10px 11px;
+  color: var(--c-ink);
+  text-align: left;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#content-view-library .media-batch-menu button:hover {
+  background: #f3f4f5;
+}
+
+#content-view-library .media-batch-menu-label {
+  padding: 8px 10px 4px;
+  display: grid;
+  gap: 7px;
+  color: var(--c-muted);
+  font-size: 11px;
+}
+
+#content-view-library .media-batch-menu-label select {
+  min-width: 0;
+  width: 100%;
+}
+
+@media (max-width: 760px) {
+  #content-view-library .media-batch-bar {
+    align-items: stretch;
+    gap: 9px;
+    position: sticky;
+  }
+  #content-view-library .media-batch-actions {
+    width: 100%;
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    gap: 7px;
+  }
+  #content-view-library .media-batch-album {
+    flex: 1 1 130px;
+    max-width: 100%;
+  }
+  #content-view-library .media-batch-more {
+    margin-left: auto;
+  }
+}

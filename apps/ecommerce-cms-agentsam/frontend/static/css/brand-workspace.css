@@ -384,3 +384,25 @@
     inset: 4vh 10px;
   }
 }
+
+/* Loading failures remain actionable rather than leaving an inert brand form. */
+.brand-load-state {
+  width: 100%;
+  padding: 22px;
+  border: 1px solid var(--c-line);
+  border-radius: 10px;
+  background: var(--c-surface, #fff);
+  color: var(--c-muted);
+  line-height: 1.5;
+  font-size: 13px;
+}
+.brand-load-state strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--c-ink);
+  font-size: 14px;
+}
+.brand-load-state p {
+  margin: 0 0 14px;
+  max-width: 56ch;
+}
