@@ -471,3 +471,23 @@ test("reconciling a seeded legacy draft archives old sections and preserves the 
     assert.equal(await getPublishedPage(fx.env, "shop"), null);
   } finally { fx.db.close(); }
 });
+
+test("a cached public CMS publication cannot be replaced by an HTML-source reconciliation", async () => {
+  const fx = fixture();
+  try {
+    fx.db.exec("UPDATE pages SET status='draft' WHERE slug='shop'");
+    await fx.env.CMS_CACHE.put("cms:page:shop:v1", JSON.stringify({
+      slug: "shop", status: "published",
+      sections: [{ key: "hero", status: "published", content: { headline: "Customer content" } }]
+    }));
+    const result = await importLivePageDraft(fx.env, "shop", {
+      mode: "reconcile", sections: [{
+        key: "hero", expected_version: 1, content: { headline: "Static source" }
+      }]
+    });
+    assert.equal(result.status, 409);
+    const admin = await getPageAdmin(fx.env, "shop");
+    assert.notEqual(admin.page.sections[0].content.headline, "Static source");
+    assert.equal(fx.db.prepare("SELECT COUNT(*) AS n FROM page_sections").get().n, 3);
+  } finally { fx.db.close(); }
+});
