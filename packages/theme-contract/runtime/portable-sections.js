@@ -156,6 +156,7 @@
     newsletter: { title: "Stay in the loop", text: "Get updates on new releases.", buttonLabel: "Join" },
   };
   function defaults(id) {
+    if (!byId.has(id) && scope.ThemeReviseAtlas?.get(id)) return scope.ThemeReviseAtlas.defaults(id);
     const definition = byId.get(id);
     if (!definition) return null;
     const content = JSON.parse(JSON.stringify(genericDefaults[definition.family] || {}));
