@@ -1001,6 +1001,7 @@
         }) })
       });
       liveUnimported = false;
+      liveExistingDraft = false;
       liveSourceCaptured = false;
       dirtySections.clear();
       setDirty(false);
