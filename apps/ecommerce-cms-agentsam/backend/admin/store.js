@@ -294,6 +294,18 @@ async function resolveStorePerformance(env) {
 
 export { loadStorePreferences, resolveNavConfig, PACKAGE_STORE_DEFAULTS };
 
+/** Update only the scene review key without rewriting merchant preferences. */
+export async function saveSceneReviewSettings(env, sceneReview) {
+  if (!env.DB) throw new Error("Store database unavailable");
+  const result = await env.DB.prepare(
+    "UPDATE store_settings SET settings_json = json_set(COALESCE(settings_json, '{}'), '$.sceneReview', json(?)), updated_at = datetime('now') WHERE id = 1"
+  ).bind(JSON.stringify(sceneReview)).run();
+  if (!(result.meta?.changes > 0)) throw new Error("Store settings not initialized");
+  if (env.CMS_CACHE) await env.CMS_CACHE.delete(KV_PREFS_KEY);
+  return true;
+}
+
+
 export async function getStoreNav(env) {
   const loaded = await loadStorePreferences(env);
   if (!loaded.ok) return json({ ok: false, error: loaded.error }, { status: 503 });
