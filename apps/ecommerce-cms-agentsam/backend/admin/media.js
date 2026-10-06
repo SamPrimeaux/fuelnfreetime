@@ -429,7 +429,31 @@ export async function uploadMedia(request, env, executionCtx = null) {
 
   const category = form.get("category") ? form.get("category").toString() : null;
   const folderHint = form.get("folder") ? normalizeFolder(form.get("folder").toString()) : null;
-  let prefix = (form.get("prefix") || "intake/").toString();
+  // An edited image is still ingested through the existing R2/D1 pipeline.
+  // Its source is verified server-side; source bytes are never overwritten.
+  const originParam = form.get("source_media_asset_id");
+  let editedSource = null;
+  let editOperations = [];
+  if (originParam != null) {
+    const originId = Number(originParam);
+    if (!Number.isSafeInteger(originId) || originId < 1 || files.length !== 1 ||
+        String(files[0].type || "") !== "image/png") {
+      return json({ error: "Invalid image derivative request" }, { status: 400 });
+    }
+    editedSource = await env.DB.prepare("SELECT id, filename, content_type FROM media_assets WHERE id = ?")
+      .bind(originId).first();
+    if (!editedSource || !String(editedSource.content_type || "").startsWith("image/")) {
+      return json({ error: "Original media asset not found" }, { status: 404 });
+    }
+    try { editOperations = JSON.parse(String(form.get("edit_operations_json") || "[]")); }
+    catch { return json({ error: "Invalid image edit history" }, { status: 400 }); }
+    const allowed = new Set(["markup", "erase", "resize", "undo"]);
+    if (!Array.isArray(editOperations) || editOperations.length > 40 ||
+        editOperations.some((op) => !op || !allowed.has(op.type) || JSON.stringify(op).length > 300)) {
+      return json({ error: "Unsupported image edit operations" }, { status: 400 });
+    }
+  }
+  let prefix = editedSource ? "derivatives/media-edit/" : (form.get("prefix") || "intake/").toString();
   if (!prefix.endsWith("/")) prefix += "/";
   prefix = prefix.replace(/^\/+/, "");
 
@@ -455,6 +479,13 @@ export async function uploadMedia(request, env, executionCtx = null) {
     const urls = publicUrlFields(intakeKey);
     const meta = {
       ...plan.meta,
+      ...(editedSource ? { media_edit: {
+        source_media_asset_id: Number(editedSource.id),
+        source_filename: editedSource.filename,
+        method: "browser_canvas",
+        operations: editOperations,
+        created_at: new Date().toISOString(),
+      } } : {}),
       lifecycle: "processing",
       intelligence: plan.intelligence,
       tags: plan.tags,
@@ -1090,6 +1121,43 @@ export async function updateMedia(request, env, id) {
 
   const updated = await env.DB.prepare(`SELECT * FROM media_assets WHERE id = ?`).bind(id).first();
   return json({ ok: true, asset: rowToAsset(updated) });
+}
+
+/** Append a resource-bound review comment without replacing unrelated media metadata. */
+export async function addMediaReviewComment(request, env, id, actor = null) {
+  const body = await readJson(request);
+  const note = String(body?.text || "").trim();
+  const x = Number(body?.x);
+  const y = Number(body?.y);
+  if (!note || note.length > 1200 || !Number.isFinite(x) || !Number.isFinite(y) ||
+      x < 0 || x > 1 || y < 0 || y > 1) {
+    return json({ error: "Comment must be 1–1200 characters with a valid image position" }, { status: 400 });
+  }
+  const comment = {
+    id: crypto.randomUUID(), text: note, x, y,
+    actor_id: actor?.id ?? null, created_at: new Date().toISOString(),
+  };
+  // Optimistic compare-and-swap avoids losing another editor's concurrent notes.
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const row = await env.DB.prepare("SELECT * FROM media_assets WHERE id = ?").bind(id).first();
+    if (!row) return json({ error: "Asset not found" }, { status: 404 });
+    if (!String(row.content_type || "").startsWith("image/")) {
+      return json({ error: "Comments require an image" }, { status: 400 });
+    }
+    const meta = parseMeta(row.meta_json) || {};
+    const notes = Array.isArray(meta.review_notes) ? meta.review_notes : [];
+    if (notes.length >= 100) return json({ error: "Comment limit reached for this asset" }, { status: 409 });
+    const oldJson = row.meta_json || "";
+    const nextJson = JSON.stringify({ ...meta, review_notes: [...notes, comment] });
+    const outcome = await env.DB.prepare(
+      `UPDATE media_assets SET meta_json = ?, updated_at = datetime('now')
+       WHERE id = ? AND COALESCE(meta_json, '') = ?`
+    ).bind(nextJson, id, oldJson).run();
+    if (Number(outcome?.meta?.changes || 0) === 1) {
+      return json({ ok: true, comment, asset: rowToAsset({ ...row, meta_json: nextJson }) });
+    }
+  }
+  return json({ error: "Asset changed while commenting; retry" }, { status: 409 });
 }
 
 export async function reorderMedia(request, env) {

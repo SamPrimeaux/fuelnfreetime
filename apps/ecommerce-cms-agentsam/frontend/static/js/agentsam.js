@@ -119,7 +119,8 @@ function buildAgentsamContext(extra = {}) {
   };
   if (
     location.pathname === "/admin/content" &&
-    typeof window.getSelectedMediaAssetIds === "function"
+    typeof window.getSelectedMediaAssetIds === "function" &&
+    !extra.selected_resource
   ) {
     const ids = window.getSelectedMediaAssetIds();
     if (Array.isArray(ids) && ids.length) {
