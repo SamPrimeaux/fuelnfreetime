@@ -691,7 +691,12 @@
   function renderInspectorGroups(section) {
     const groups = { content: [], media: [], links: [] };
     currentSchema().forEach(function(field) {
-      groups[fieldKind(field)].push(field);
+      const kind = fieldKind(field);
+      const semanticKey = String(field.blockRelativeKey || field.key);
+      // Label and destination are one merchant action, even when the old
+      // section schema exposes the label as a plain text field.
+      const isActionLabel = kind === 'content' && /cta|button|linkLabel|action/i.test(semanticKey);
+      groups[isActionLabel ? 'links' : kind].push(field);
     });
     const titles = { content: 'Content', media: 'Media', links: 'Buttons and links' };
     const descriptions = {
