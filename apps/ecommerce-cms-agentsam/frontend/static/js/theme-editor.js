@@ -16,7 +16,6 @@
   let unmanagedLiveSections = [];
   let activeBlockId = null;
   let activeFieldKey = null;
-  let activeTab = 'content';
   let patchTimer = null;
   let refreshTimer = null;
   let mediaLibrary = [];
@@ -53,19 +52,30 @@
       '<div class="theme-studio">',
         '<header class="theme-studio-toolbar">',
           '<div class="theme-studio-toolbar__left">',
-            '<span class="te-editor-label">Theme editor</span>',
-            '<div class="te-page-menu">',
-              '<button type="button" class="te-page-trigger" id="te-page-trigger" aria-expanded="false"><span style="display:flex;align-items:center;gap:8px;min-width:0">', icon.page, '<strong id="te-page-title">Loading…</strong></span><span>⌄</span></button>',
-              '<div class="te-page-popover" id="te-page-popover" hidden><input class="te-page-search" id="te-page-search" placeholder="Search online store" autocomplete="off"><div class="te-page-options" id="te-page-options"></div></div>',
+            '<div class="te-theme-menu">',
+              '<button type="button" class="te-theme-trigger" id="te-theme-trigger" aria-expanded="false" aria-controls="te-theme-popover" aria-label="Choose theme to preview">',
+                '<span class="te-theme-mark" aria-hidden="true">F</span>',
+                '<span class="te-theme-identity"><small>Theme preview</small><strong id="te-theme-name">' + cmsEscapeHtml(humanize(selectedTheme)) + '</strong></span>',
+                '<span class="te-theme-chevron" aria-hidden="true">⌄</span>',
+              '</button>',
+              '<div class="te-theme-popover" id="te-theme-popover" hidden>',
+                '<div class="te-theme-popover__title">Preview a theme</div>',
+                ((window.ThemeStudioPreview && window.ThemeStudioPreview.themes) || []).map(function(theme) {
+                  return '<button type="button" class="te-theme-option' + (theme.id === selectedTheme ? ' is-active' : '') +
+                    '" data-theme-preview="' + cmsEscapeAttr(theme.id) + '" aria-pressed="' + String(theme.id === selectedTheme) + '">' +
+                    '<strong>' + cmsEscapeHtml(theme.name) + '</strong><small>' +
+                      cmsEscapeHtml(theme.id === 'heuristic' ? 'Current storefront renderer' : 'Visual preview only · not publishable') +
+                    '</small></button>';
+                }).join('') +
+              '</div>',
             '</div>',
-            '<span class="te-save-state" id="te-save-state">Loading</span>',
           '</div>',
           '<div class="theme-studio-toolbar__center">',
-            '<div class="te-theme-switch" id="te-theme-switch" aria-label="Visual theme">' +
-              ((window.ThemeStudioPreview && window.ThemeStudioPreview.themes) || []).map(function(theme) {
-                return '<button type="button" class="te-theme-btn" data-theme-preview="' + cmsEscapeAttr(theme.id) + '" title="' + cmsEscapeAttr(theme.description || theme.name) + '">' + cmsEscapeHtml(theme.name) + '</button>';
-              }).join('') +
+            '<div class="te-page-menu">',
+              '<button type="button" class="te-page-trigger" id="te-page-trigger" aria-expanded="false"><span class="te-page-trigger__content">', icon.page, '<strong id="te-page-title">Loading…</strong></span><span aria-hidden="true">⌄</span></button>',
+              '<div class="te-page-popover" id="te-page-popover" hidden><input class="te-page-search" id="te-page-search" placeholder="Search online store pages" autocomplete="off" aria-label="Search pages"><div class="te-page-options" id="te-page-options"></div></div>',
             '</div>',
+            '<span class="te-save-state" id="te-save-state">Loading</span>',
             '<div class="te-device-switch" aria-label="Preview device">',
               '<button type="button" class="te-device-btn" data-device="desktop" title="Desktop">', icon.desktop, '</button>',
               '<button type="button" class="te-device-btn" data-device="tablet" title="Tablet">', icon.tablet, '</button>',
@@ -88,7 +98,6 @@
           '</main>',
           '<aside class="theme-editor-panel">',
             '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><span class="te-badge" id="te-section-status">draft</span></div>',
-            '<div class="te-tabs" id="te-tabs"><button type="button" class="te-tab is-active" data-tab="content">Content</button><button type="button" class="te-tab" data-tab="media">Media</button><button type="button" class="te-tab" data-tab="links">Links</button><button type="button" class="te-tab" data-tab="settings">Layout</button></div>',
             '<div class="te-inspector-body" id="te-inspector-body"></div>',
             '<div class="te-inspector-save"><button type="button" class="te-toolbar-btn is-primary" id="te-save">Save draft</button><p class="te-note" id="te-note"></p></div>',
           '</aside>',
@@ -190,8 +199,12 @@
     selectedTheme = nextTheme;
     localStorage.setItem('theme-studio:selected-theme', selectedTheme);
     document.querySelectorAll('[data-theme-preview]').forEach(function(button) {
-      button.classList.toggle('is-active', button.dataset.themePreview === selectedTheme);
+      const current = button.dataset.themePreview === selectedTheme;
+      button.classList.toggle('is-active', current);
+      button.setAttribute('aria-pressed', String(current));
     });
+    byId('te-theme-name').textContent = humanize(selectedTheme);
+    closeThemeMenu();
     syncPublishCapability();
     renderTree();
     refreshPreview();
@@ -610,7 +623,7 @@
       let preview = '<div class="te-media-empty">' + (value ? cmsEscapeHtml(String(value).split('/').pop()) : 'Drop media here or choose from library') + '</div>';
       if (value && isImage) preview = '<img src="' + safeValue + '" alt="">';
       if (value && isVideo) preview = '<video src="' + safeValue + '" muted playsinline></video>';
-      return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label>' + cmsEscapeHtml(field.label) + '<span>' + (field.type === 'video' ? 'Video' : 'Media') + '</span></label>' +
+      return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label>' + cmsEscapeHtml(field.label) + '</label>' +
         '<div class="te-media-drop" data-media-drop="' + cmsEscapeAttr(field.key) + '"><div class="te-media-preview">' + preview +
         '</div><div class="te-media-actions"><button type="button" class="te-media-button" data-pick-media="' + cmsEscapeAttr(field.key) + '">Choose</button>' +
         '<label class="te-media-button" style="display:inline-flex;align-items:center">Upload<input type="file" hidden data-upload-media="' + cmsEscapeAttr(field.key) + '" accept="' + (field.type === 'video' ? 'video/*' : 'image/*,video/*,.glb,.gltf,.usdz') + '"></label></div></div>' +
@@ -625,7 +638,7 @@
 
     if (field.type === 'select') {
       const options = Array.isArray(field.options) ? field.options : [];
-      return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label for="' + id + '">' + cmsEscapeHtml(field.label) + '<span>' + cmsEscapeHtml(field.group || 'Select') + '</span></label>' +
+      return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label for="' + id + '">' + cmsEscapeHtml(field.label) + '</label>' +
         '<select id="' + id + '" data-field-input="' + cmsEscapeAttr(field.key) + '">' +
         options.map(function(option) {
           return '<option value="' + cmsEscapeAttr(option.value) + '"' + (String(option.value) === String(value) ? ' selected' : '') + '>' + cmsEscapeHtml(option.label) + '</option>';
@@ -643,12 +656,12 @@
 
     if (field.type === 'color') {
       const colorValue = /^#[0-9a-f]{6}$/i.test(String(value)) ? String(value) : '#ffffff';
-      return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label for="' + id + '">' + cmsEscapeHtml(field.label) + '<span>Color</span></label>' +
+      return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label for="' + id + '">' + cmsEscapeHtml(field.label) + '</label>' +
         '<div class="te-color-control"><input id="' + id + '" type="color" value="' + cmsEscapeAttr(colorValue) + '" data-color-field="' + cmsEscapeAttr(field.key) + '"><input type="text" value="' + safeValue + '" data-color-text="' + cmsEscapeAttr(field.key) + '"></div>' + help + '</div>';
     }
 
     if (field.type === 'rich_text') {
-      return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label>' + cmsEscapeHtml(field.label) + '<span>Rich text</span></label>' +
+      return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label>' + cmsEscapeHtml(field.label) + '</label>' +
         '<div class="te-rich-toolbar" data-rich-toolbar="' + cmsEscapeAttr(field.key) + '">' +
           '<button type="button" data-rich-command="bold"><strong>B</strong></button>' +
           '<button type="button" data-rich-command="italic"><em>I</em></button>' +
@@ -659,7 +672,7 @@
     }
 
     if (field.type === 'product' || field.type === 'collection' || field.type === 'variant') {
-      return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label for="' + id + '">' + cmsEscapeHtml(field.label) + '<span>' + cmsEscapeHtml(humanize(field.type)) + '</span></label>' +
+      return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label for="' + id + '">' + cmsEscapeHtml(field.label) + '</label>' +
         '<select id="' + id + '" data-resource-field="' + cmsEscapeAttr(field.key) + '" data-resource-type="' + cmsEscapeAttr(field.type) + '"><option value="' + safeValue + '">' + cmsEscapeHtml(value ? String(value) : 'Loading…') + '</option></select>' + help + '</div>';
     }
 
@@ -670,32 +683,65 @@
       : '<input id="' + id + '" type="' + inputType + '" data-field-input="' + cmsEscapeAttr(field.key) + '" value="' + safeValue + '" placeholder="' + cmsEscapeAttr(field.placeholder || '') + '"' +
         (field.min !== undefined ? ' min="' + field.min + '"' : '') + (field.max !== undefined ? ' max="' + field.max + '"' : '') + (field.step !== undefined ? ' step="' + field.step + '"' : '') + '>';
 
-    return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label for="' + id + '">' + cmsEscapeHtml(field.label) + '<span>' + cmsEscapeHtml(field.type || field.key) + '</span></label>' + input + help + '</div>';
+    return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label for="' + id + '">' + cmsEscapeHtml(field.label) + '</label>' + input + help + '</div>';
   }
 
-  function renderSettings() {
-    const section = currentSection();
-    const settings = currentSettings();
-    const grouped = {};
-    settings.forEach(function(field) {
-      const group = field.group || 'settings';
-      if (!grouped[group]) grouped[group] = [];
-      grouped[group].push(field);
+  // One contextual inspector for the selected section or block. Field types
+  // determine visual grouping, not competing editor tabs or stored schemas.
+  function renderInspectorGroups(section) {
+    const groups = { content: [], media: [], links: [] };
+    currentSchema().forEach(function(field) {
+      const kind = fieldKind(field);
+      const semanticKey = String(field.blockRelativeKey || field.key);
+      // Label and destination are one merchant action, even when the old
+      // section schema exposes the label as a plain text field.
+      const isActionLabel = kind === 'content' && /cta|button|linkLabel|action/i.test(semanticKey);
+      groups[isActionLabel ? 'links' : kind].push(field);
     });
-
-    let html = Object.keys(grouped).map(function(group) {
-      return '<div class="te-setting-group"><div class="te-setting-group__title">' + cmsEscapeHtml(humanize(group)) + '</div>' +
-        grouped[group].map(function(field) { return renderField(section, field); }).join('') + '</div>';
+    const titles = { content: 'Content', media: 'Media', links: 'Buttons and links' };
+    const descriptions = {
+      content: 'Edit the copy and values for this selection.',
+      media: 'Use the existing media library or upload a file.',
+      links: 'Choose where visitors go when they click.'
+    };
+    let html = Object.keys(groups).filter(function(kind) {
+      return groups[kind].length > 0;
+    }).map(function(kind) {
+      return '<section class="te-inspector-group" aria-label="' + titles[kind] + '">' +
+        '<div class="te-inspector-group__head"><h3>' + titles[kind] + '</h3><p>' + descriptions[kind] + '</p></div>' +
+        groups[kind].map(function(field) { return renderField(section, field); }).join('') +
+        '</section>';
     }).join('');
 
-    html += '<div class="te-setting-group"><div class="te-setting-group__title">Editor view</div><div class="te-setting-card">' +
-      '<div class="te-setting-row"><div><strong>Editable outlines</strong><span>Show CMS boundaries in the live preview.</span></div><button type="button" class="te-switch" id="te-outline-switch" role="switch" aria-checked="' + showOutlines + '"></button></div>' +
-      '<div class="te-setting-row"><div><strong>Auto-refresh preview</strong><span>Refresh after live draft updates.</span></div><button type="button" class="te-switch" id="te-auto-switch" role="switch" aria-checked="' + autoPreview + '"></button></div>' +
-      '</div></div>';
+    const settings = currentSettings();
+    if (settings.length) {
+      const byGroup = {};
+      settings.forEach(function(field) {
+        const group = field.group || 'layout';
+        if (!byGroup[group]) byGroup[group] = [];
+        byGroup[group].push(field);
+      });
+      const focusedSetting = settings.some(function(field) { return field.key === activeFieldKey; });
+      html += '<details class="te-inspector-disclosure" data-inspector-advanced' + (focusedSetting ? ' open' : '') + '>' +
+        '<summary>Appearance and layout<span class="te-disclosure-chevron" aria-hidden="true">⌄</span></summary>' +
+        '<div class="te-inspector-disclosure__body">' +
+        Object.keys(byGroup).map(function(group) {
+          return '<div class="te-setting-group"><div class="te-setting-group__title">' + cmsEscapeHtml(humanize(group)) + '</div>' +
+            byGroup[group].map(function(field) { return renderField(section, field); }).join('') + '</div>';
+        }).join('') + '</div></details>';
+    }
 
-    byId('te-inspector-body').innerHTML = html || '<div class="te-empty">No section settings registered.</div>';
-    wireFields();
+    html += '<details class="te-inspector-disclosure te-inspector-disclosure--tools">' +
+      '<summary>Preview preferences<span class="te-disclosure-chevron" aria-hidden="true">⌄</span></summary>' +
+      '<div class="te-inspector-disclosure__body"><div class="te-setting-card">' +
+        '<div class="te-setting-row"><div><strong>Editable outlines</strong><span>Highlight CMS boundaries in the preview.</span></div><button type="button" class="te-switch" id="te-outline-switch" role="switch" aria-label="Editable outlines" aria-checked="' + showOutlines + '"></button></div>' +
+        '<div class="te-setting-row"><div><strong>Auto-refresh preview</strong><span>Update the preview after saved changes.</span></div><button type="button" class="te-switch" id="te-auto-switch" role="switch" aria-label="Auto-refresh preview" aria-checked="' + autoPreview + '"></button></div>' +
+      '</div></div></details>';
 
+    return html;
+  }
+
+  function wireInspectorPreferences() {
     const outlineSwitch = byId('te-outline-switch');
     if (outlineSwitch) outlineSwitch.addEventListener('click', function(event) {
       showOutlines = event.currentTarget.getAttribute('aria-checked') !== 'true';
@@ -703,7 +749,6 @@
       event.currentTarget.setAttribute('aria-checked', String(showOutlines));
       bindPreviewSelection();
     });
-
     const autoSwitch = byId('te-auto-switch');
     if (autoSwitch) autoSwitch.addEventListener('click', function(event) {
       autoPreview = event.currentTarget.getAttribute('aria-checked') !== 'true';
@@ -715,10 +760,9 @@
   function renderInspector() {
     const section = currentSection();
     if (!section) {
-      byId('te-inspector-body').innerHTML = '<div class="te-empty">Choose a section to edit it.</div>';
+      byId('te-inspector-body').innerHTML = '<div class="te-empty">Choose a section or block in the page structure to begin editing.</div>';
       return;
     }
-
     const sectionSchema = currentSectionSchema();
     const blockMeta = currentBlockMeta();
     const blockSchema = currentBlockSchema();
@@ -732,31 +776,24 @@
     byId('te-section-status').textContent = section.status || 'draft';
     byId('te-section-status').className = 'te-badge' + (section.status === 'published' ? ' is-published' : '');
 
-    byId('te-tabs').querySelectorAll('[data-tab]').forEach(function(tab) {
-      tab.classList.toggle('is-active', tab.dataset.tab === activeTab);
+    const panel = byId('te-inspector-body');
+    panel.innerHTML = (blockMeta
+      ? '<button type="button" class="te-inspector-parent" id="te-inspector-parent">← ' + cmsEscapeHtml(sectionLabel) + '</button>'
+      : '') + renderInspectorGroups(section);
+    byId('te-inspector-parent')?.addEventListener('click', function() {
+      selectSection(section.key, null, false, sectionOwner(section));
     });
-
-    if (activeTab === 'settings') {
-      renderSettings();
-      return;
-    }
-
-    const fields = currentSchema().filter(function(field) { return fieldKind(field) === activeTab; });
-    if (!fields.length) {
-      byId('te-inspector-body').innerHTML = '<div class="te-empty">No ' + cmsEscapeHtml(activeTab) + ' controls are registered for this section.</div>';
-      return;
-    }
-
-    byId('te-inspector-body').innerHTML = fields.map(function(field) { return renderField(section, field); }).join('');
     wireFields();
+    wireInspectorPreferences();
 
     if (activeFieldKey) {
       requestAnimationFrame(function() {
-        const node = document.querySelector('[data-field-key="' + CSS.escape(activeFieldKey) + '"]');
-        if (node) {
-          node.classList.add('is-selected');
-          node.scrollIntoView({ block: 'nearest' });
-        }
+        const node = panel.querySelector('[data-field-key="' + CSS.escape(activeFieldKey) + '"]');
+        if (!node) return;
+        const disclosure = node.closest('details');
+        if (disclosure) disclosure.open = true;
+        node.classList.add('is-selected');
+        node.scrollIntoView({ block: 'nearest' });
       });
     }
   }
@@ -1199,11 +1236,6 @@
     activeBlockId = null;
     activeFieldKey = fieldKey || null;
 
-    if (fieldKey) {
-      const field = currentSchema().find(function(item) { return item.key === fieldKey; });
-      activeTab = field ? fieldKind(field) : 'content';
-    }
-
     renderTree();
     renderInspector();
     if (window.matchMedia('(max-width: 900px)').matches) setMobilePane('settings');
@@ -1232,13 +1264,6 @@
     activeFieldKey = fieldKey || null;
 
     if (activeFieldKey && activeFieldKey.indexOf(blockId + '.') !== 0) activeFieldKey = blockId + '.' + activeFieldKey;
-
-    if (activeFieldKey) {
-      const field = currentSchema().find(function(item) { return item.key === activeFieldKey; });
-      activeTab = field ? fieldKind(field) : 'content';
-    } else if (!currentSchema().some(function(field) { return fieldKind(field) === activeTab; }) && activeTab !== 'settings') {
-      activeTab = 'content';
-    }
 
     renderTree();
     renderInspector();
@@ -1430,9 +1455,6 @@
       byId('te-page-title').textContent = pageData.title || humanize(slug);
       byId('te-page-settings').href = '/admin/page-edit?slug=' + encodeURIComponent(slug);
       byId('te-manage-page').href = '/admin/page-edit?slug=' + encodeURIComponent(slug);
-      document.querySelectorAll('[data-theme-preview]').forEach(function(button) {
-        button.classList.toggle('is-active', button.dataset.themePreview === selectedTheme);
-      });
       syncPublishCapability();
       renderPageOptions('');
       renderTree();
@@ -1724,7 +1746,21 @@
     await loadPage();
   }
 
+  function closeThemeMenu() {
+    const popover = byId('te-theme-popover');
+    if (!popover) return;
+    popover.hidden = true;
+    byId('te-theme-trigger').setAttribute('aria-expanded', 'false');
+  }
+
+  function openThemeMenu() {
+    closePageMenu();
+    byId('te-theme-popover').hidden = false;
+    byId('te-theme-trigger').setAttribute('aria-expanded', 'true');
+  }
+
   function openPageMenu() {
+    closeThemeMenu();
     byId('te-page-popover').hidden = false;
     byId('te-page-trigger').setAttribute('aria-expanded', 'true');
     byId('te-page-search').value = '';
@@ -1811,11 +1847,9 @@
     button.addEventListener('click', function() { setDevice(button.dataset.device); });
   });
 
-  byId('te-tabs').querySelectorAll('[data-tab]').forEach(function(button) {
-    button.addEventListener('click', function() {
-      activeTab = button.dataset.tab;
-      renderInspector();
-    });
+  byId('te-theme-trigger').addEventListener('click', function() {
+    if (byId('te-theme-popover').hidden) openThemeMenu();
+    else closeThemeMenu();
   });
 
   byId('te-page-trigger').addEventListener('click', function() {
@@ -1860,11 +1894,13 @@
 
   document.addEventListener('click', function(event) {
     if (!byId('te-page-popover').hidden && !event.target.closest('.te-page-menu')) closePageMenu();
+    if (!byId('te-theme-popover').hidden && !event.target.closest('.te-theme-menu')) closeThemeMenu();
   });
 
   document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') {
       closePageMenu();
+      closeThemeMenu();
       closeMediaPicker();
     }
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
