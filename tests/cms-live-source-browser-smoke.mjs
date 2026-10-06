@@ -59,7 +59,10 @@ const probe = "<script>setTimeout(function(){" +
  "before.blockInspector={title:document.getElementById('te-inspector-title').textContent," +
  "groups:[...document.querySelectorAll('.te-inspector-group__head h3')].map(e=>e.textContent)," +
  "advancedClosed:!document.querySelector('[data-inspector-advanced]')?.open," +
+ "parentButton:!!document.getElementById('te-inspector-parent')," +
  "fieldKeys:[...document.querySelectorAll('#te-inspector-body [data-field-key]')].map(e=>e.dataset.fieldKey)};" +
+ "document.getElementById('te-inspector-parent')?.click();" +
+ "before.blockInspector.parentTitle=document.getElementById('te-inspector-title')?.textContent;" +
  "}}" +
  "if(window.innerWidth<=900){" +
  "var nav=document.getElementById('te-mobile-pane-switch');" +
