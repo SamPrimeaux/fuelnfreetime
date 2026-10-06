@@ -6,6 +6,7 @@ import {
   duplicateBlock,
   getPageAdmin,
   getPublishedPage,
+  importLivePageDraft,
   publishPage,
   duplicateSection,
   insertBlock,
@@ -387,4 +388,50 @@ test("merchant can add Revise/FNF sections, edit, reload draft, and publish one 
   } finally {
     fx.db.close();
   }
+});
+
+test("a real storefront imports into a private draft without publishing synthetic registry sections", async () => {
+  const fx = fixture();
+  try {
+    fx.db.exec("DELETE FROM page_sections; DELETE FROM pages;");
+    const before = await getPageAdmin(fx.env, "shop");
+    assert.equal(before.seeded, false);
+    assert.equal(before.page.content_authority, "storefront-html");
+
+    const invalid = await importLivePageDraft(fx.env, "shop", {
+      sections: [{ key: "fictional", content: { headline: "Not on the site" } }]
+    });
+    assert.equal(invalid.status, 400);
+    assert.equal(fx.db.prepare("SELECT COUNT(*) AS n FROM pages").get().n, 0);
+
+    const liveHero = structuredClone(PAGE_REGISTRY.shop.sections.hero.defaultContent);
+    liveHero.eyebrow = "The earned hours collection";
+    liveHero.headline = "Time is the\nreal horsepower.";
+    liveHero.subheadline = "Hard-wearing essentials for garage nights";
+    const imported = await importLivePageDraft(fx.env, "shop", {
+      sections: [{ key: "hero", content: liveHero }]
+    });
+    assert.equal(imported.ok, true);
+    assert.equal(imported.published, false);
+    assert.equal(imported.imported_sections, 1);
+    assert.equal(fx.db.prepare("SELECT status FROM pages WHERE slug='shop'").get().status, "draft");
+    assert.equal(fx.db.prepare("SELECT COUNT(*) AS n FROM page_sections").get().n, 1);
+
+    const draft = await getPageAdmin(fx.env, "shop");
+    assert.equal(draft.seeded, true);
+    assert.equal(draft.page.sections.length, 1, "missing HTML sections are never fabricated");
+    assert.equal(draft.page.sections[0].content.headline, liveHero.headline);
+    assert.equal(draft.page.sections[0].content.__editor.source, "live-storefront");
+    assert.equal(await getPublishedPage(fx.env, "shop"), null);
+    const again = await importLivePageDraft(fx.env, "shop", {
+      sections: [{ key: "hero", content: liveHero }]
+    });
+    assert.equal(again.status, 409, "repeat import must not overwrite customer drafts");
+
+    const published = await publishPage(fx.env, "shop");
+    assert.equal(published.ok, true);
+    const publicPage = await getPublishedPage(fx.env, "shop");
+    assert.equal(publicPage.sections.length, 1);
+    assert.equal(publicPage.sections[0].content.headline, liveHero.headline);
+  } finally { fx.db.close(); }
 });
