@@ -142,7 +142,8 @@ function render(entry) {
     if (safeUrl(key, true)) return key;
     return safeUrl(media[key], true) ? media[key] : null;
   } }, presets: library });
-  return '<section class="ps-section ps-revise-atlas" data-cms-section="' + esc(entry.key || def.id) +
+  return '<section class="ps-section ps-revise-atlas" id="' + esc(entry.key || def.id) +
+    '" data-cms-section="' + esc(entry.key || def.id) +
     '" data-portable-preset="' + esc(def.id) + '" data-source-renderer="' +
     esc(def.sourcePreset) + '"><div class="iam-site-section" data-surface="canvas" data-site-preset="' +
     esc(def.sourcePreset) + '">' + html + '</div></section>';
