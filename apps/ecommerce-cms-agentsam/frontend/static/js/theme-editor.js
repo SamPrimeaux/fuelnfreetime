@@ -599,7 +599,7 @@
 
   function renderField(section, field) {
     const value = valueForField(section, field);
-    const safeValue = cmsEscapeAttr(String(value));
+    const safeValue = cmsEscapeAttr(typeof value === 'object' ? JSON.stringify(value) : String(value));
     const id = 'te-field-' + section.key + '-' + field.key.replace(/[^a-zA-Z0-9_-]/g, '-');
     const help = field.help ? '<div class="te-field-help">' + cmsEscapeHtml(field.help) + '</div>' : '';
 
