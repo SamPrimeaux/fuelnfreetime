@@ -355,11 +355,14 @@
     if (content.preset && headerPresetContract.presets?.[content.preset]) {
       document.documentElement.dataset.headerPreset = content.preset;
     }
-    navConfig.announcement = {
-      enabled: content.announcementEnabled === true,
-      text: String(content.announcementText || ""),
-      href: String(content.announcementHref || ""),
-    };
+    if (previewOverride || navConfig.announcementAuthority !== "preferences") {
+      navConfig.announcement = {
+        ...navConfig.announcement,
+        enabled: content.announcementEnabled === true,
+        text: String(content.announcementText || ""),
+        href: String(content.announcementHref || ""),
+      };
+    }
     const blockMeta = content.__editor?.blocks;
     if (Array.isArray(blockMeta) && blockMeta.length) {
       const items = blockMeta
