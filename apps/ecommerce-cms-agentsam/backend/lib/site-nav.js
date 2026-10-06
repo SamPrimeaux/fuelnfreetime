@@ -98,6 +98,8 @@ export function sanitizeNavItems(items) {
 export function resolveNavConfig(settings = {}) {
   return {
     logoUrl: settings.navLogoUrl || DEFAULT_NAV_CONFIG.logoUrl,
+    navigationAuthority: settings.navigationAuthority === "preferences" ? "preferences" : "cms",
+    announcementAuthority: settings.announcementAuthority === "preferences" ? "preferences" : "cms",
     logoHeight: settings.navLogoHeight || DEFAULT_NAV_CONFIG.logoHeight,
     brandAccent: settings.navBrandAccent || DEFAULT_NAV_CONFIG.brandAccent,
     brandAccentLight: settings.navBrandAccentLight || DEFAULT_NAV_CONFIG.brandAccentLight,
