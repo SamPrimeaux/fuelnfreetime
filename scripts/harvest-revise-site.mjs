@@ -42,6 +42,7 @@ try {
     throw Error("Donor changed: review the section count before replacing the 24/23-section baseline");
   }
   const output = path.join(root, "apps/ecommerce-cms-agentsam/fixtures/fnf-revise-site.json");
+  await mkdir(path.dirname(output), { recursive: true });
   await writeFile(output, JSON.stringify(data, null, 2) + "\n");
   console.log("Harvested " + data.catalog.length + " real presets and " + pages.length +
     " pages (" + instances + " instances) from " + data.source.commit.slice(0, 8) +
