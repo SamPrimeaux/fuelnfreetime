@@ -32,6 +32,20 @@ export async function loadEdgeHydrationContext(env, pageSlug) {
   };
 }
 
+// Same protocol guard as client-side CMS hydration. The HTMLRewriter is
+// a publishing surface: a draft-provided link or media field is untrusted.
+function safeCmsUrl(value, media = false) {
+  if (typeof value !== "string") return null;
+  const url = value.trim();
+  if (!url || /[\u0000-\u001f\u007f]/.test(url)) return null;
+  try {
+    const scheme = new URL(url, "https://storefront.invalid").protocol;
+    if (scheme === "https:" || scheme === "http:") return url;
+    if (!media && (scheme === "mailto:" || scheme === "tel:")) return url;
+  } catch { /* invalid protocol or URL */ }
+  return null;
+}
+
 export function applyCmsSlotValue(el, path, sectionsByKey) {
   if (!path) return false;
   const dot = path.indexOf(".");
