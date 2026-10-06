@@ -6,6 +6,17 @@
   const pageSlug = document.documentElement.dataset.cmsPage;
   if (!pageSlug) return;
 
+  const portableReady = import('/js/portable-sections.js').catch((error) => {
+    console.error('[CMS] Native section runtime failed to load', error);
+  });
+  if (!document.querySelector('link[data-portable-sections]')) {
+    const css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = '/js/portable-sections.css';
+    css.dataset.portableSections = 'true';
+    document.head.appendChild(css);
+  }
+
   function getPath(obj, path) {
     return path.split(".").reduce((acc, key) => (acc == null ? acc : acc[key]), obj);
   }
@@ -123,6 +134,37 @@
     return node;
   }
 
+  function mountPortableSections(sections) {
+    const runtime = window.ThemePortableSections;
+    if (!runtime) return;
+    const active = new Set();
+    for (const entry of sections) {
+      if (entry.content?.__editor?.templateKey !== 'portable') continue;
+      const markup = runtime.render(entry);
+      if (markup === null) {
+        console.error('[CMS] Unsupported preset:', entry.content?.__editor?.themePreset);
+        continue;
+      }
+      active.add(entry.key);
+      const old = Array.from(document.querySelectorAll('[data-cms-section]'))
+        .find((node) => node.dataset.cmsSection === entry.key);
+      if (!markup) {
+        old?.remove();
+        continue;
+      }
+      const template = document.createElement('template');
+      template.innerHTML = markup;
+      const node = template.content.firstElementChild;
+      if (!node) continue;
+      node.dataset.cmsPortable = 'true';
+      if (old) old.replaceWith(node);
+      else (document.querySelector('main') || document.body).appendChild(node);
+    }
+    document.querySelectorAll('[data-cms-portable="true"]').forEach((node) => {
+      if (!active.has(node.dataset.cmsSection)) node.remove();
+    });
+  }
+
   function ensureDynamicSections(sections) {
     const existing = new Map(
       Array.from(document.querySelectorAll("[data-cms-section]")).map((el) => [el.dataset.cmsSection, el])
@@ -238,6 +280,7 @@
     editorStyle();
     const byKey = Object.fromEntries(sections.map((section) => [section.key, section.content || {}]));
 
+    mountPortableSections(sections);
     ensureDynamicSections(sections);
     applySectionOrder(sections);
 
@@ -286,6 +329,7 @@
     try {
       const pages = await Promise.all(slugs.map((entry) => fetchPage(entry, preview)));
       const sections = pages.filter(Boolean).flatMap((page) => page.sections || []);
+      await portableReady;
       if (sections.length) applySections(sections);
     } catch {
       /* static HTML fallback */
@@ -297,7 +341,9 @@
     const data = event.data;
     if (!data || data.type !== "fnf-cms-preview" || data.slug !== pageSlug) return;
     if (!Array.isArray(data.sections)) return;
-    applySections(data.sections);
+    void portableReady.then(() => applySections([
+      ...(Array.isArray(data.siteSections) ? data.siteSections : []), ...data.sections,
+    ]));
   });
 
   if (document.readyState === "loading") {

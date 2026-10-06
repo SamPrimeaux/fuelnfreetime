@@ -136,8 +136,26 @@
   }
 
   function themeCatalog() {
-    const runtime = window.ThemeStudioPreview;
-    return runtime && runtime.catalog && runtime.catalog[selectedTheme] || [];
+    // Section ownership is independent of the theme preview selector.
+    // Every supported implementation is reusable on every CMS page.
+    const portable = window.ThemePortableSections?.catalog() || [];
+    const registry = window.SECTION_SCHEMAS?.[slug] || {};
+    const native = Object.entries(registry)
+      .filter(function([key]) {
+        // Do not offer native sections unless the storefront actually has
+        // an insertable renderer/template for this page. Cross-theme portable
+        // sections below remain available on every merchant-editable page.
+        const supported = {
+          home: ['hero', 'manifesto', 'collections', 'values', 'community', 'newsletter'],
+          shop: ['hero', 'collections', 'stories'],
+        };
+        return (supported[slug] || []).includes(key);
+      })
+      .map(function([key, definition]) {
+        return { id: 'heuristic/' + key, label: definition.label || humanize(key),
+          type: key, templateKey: key, source: 'heuristic', preset: 'heuristic/' + key };
+      });
+    return [...native, ...portable];
   }
 
   function setTheme(nextTheme) {
@@ -168,6 +186,9 @@
 
   function schemaForSection(section) {
     if (!section) return null;
+    if (section.content?.__editor?.templateKey === 'portable') {
+      return window.ThemePortableSections?.schema(section.content.__editor.themePreset) || null;
+    }
     const owner = section.__ownerSlug || slug;
     const schemas = window.SECTION_SCHEMAS && window.SECTION_SCHEMAS[owner];
     if (!schemas) return null;
@@ -369,7 +390,7 @@
       '<div class="te-tree-group"><div class="te-tree-group__label">Template</div>' + pageRows + '</div>' +
       '<button type="button" class="te-add-section" id="te-add-section">+ Add section</button>' +
       '<div class="te-section-menu" id="te-section-menu" hidden>' +
-        '<div class="te-section-menu__head"><strong>Add section · ' + cmsEscapeHtml(humanize(selectedTheme)) + '</strong><button type="button" class="te-tree-mini" id="te-section-cancel" aria-label="Close">×</button></div>' +
+        '<div class="te-section-menu__head"><strong>Add section · Shared library</strong><button type="button" class="te-tree-mini" id="te-section-cancel" aria-label="Close">×</button></div>' +
         '<input class="te-section-search" id="te-section-search" placeholder="Search sections" autocomplete="off">' +
         '<div class="te-section-catalog" id="te-section-catalog"></div>' +
       '</div>' +
@@ -388,7 +409,7 @@
       });
       byId('te-section-catalog').innerHTML = filtered.length ? filtered.map(function(entry) {
         return '<button type="button" class="te-section-catalog-item" data-catalog-template="' + cmsEscapeAttr(entry.templateKey) + '" data-catalog-preset="' + cmsEscapeAttr(entry.preset || entry.id) + '">' +
-          '<span class="te-section-catalog-item__icon">' + icon.section + '</span><span><strong>' + cmsEscapeHtml(entry.label) + '</strong><small>' + cmsEscapeHtml(entry.type || entry.templateKey) + '</small></span>' +
+          '<span class="te-section-catalog-item__icon">' + icon.section + '</span><span><strong>' + cmsEscapeHtml(entry.label) + '</strong><small>' + cmsEscapeHtml(humanize(entry.source || 'heuristic')) + ' · ' + cmsEscapeHtml(entry.type || entry.templateKey) + '</small></span>' +
         '</button>';
       }).join('') : '<div class="te-empty">No sections match that search.</div>';
 
@@ -898,8 +919,15 @@
     if (selectedTheme !== 'heuristic') {
       const runtime = window.ThemeStudioPreview;
       if (!runtime || !runtime.render) return;
-      const html = runtime.render(selectedTheme, pageData, siteData);
-      if (!html) return;
+      let html;
+      try {
+        html = runtime.render(selectedTheme, pageData, siteData);
+        if (!html || !html.includes('<main>')) throw new Error('Theme renderer returned no page');
+      } catch (error) {
+        setNote('This theme preview could not render: ' + (error.message || String(error)), 'error');
+        iframe.srcdoc = '<!doctype html><html><body style="font:16px system-ui;padding:40px;color:#333"><h2>Preview unavailable</h2><p>The selected theme did not provide a valid page renderer.</p></body></html>';
+        return;
+      }
       iframe.srcdoc = html;
       if (previewBlobUrl) URL.revokeObjectURL(previewBlobUrl);
       previewBlobUrl = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
@@ -1535,7 +1563,10 @@
   byId('te-publish').addEventListener('click', publishPage);
   byId('theme-preview').addEventListener('load', function() {
     bindPreviewSelection();
-    pushLocalPreview();
+    // Reposting draft data is only needed for the live Heuristic iframe.
+    // Alternate previews use srcdoc. Reassigning srcdoc on every iframe
+    // load triggers an infinite navigation loop and leaves a blank canvas.
+    if (selectedTheme === 'heuristic') pushLocalPreview();
   });
   byId('te-media-close').addEventListener('click', closeMediaPicker);
   byId('te-media-search').addEventListener('input', function(event) { renderMediaGrid(event.target.value); });
