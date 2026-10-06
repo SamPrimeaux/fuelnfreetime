@@ -134,10 +134,10 @@ function render(entry) {
   const def = byId.get(content?.__editor?.themePreset);
   if (!def) return null;
   const media = content.__editor?.media || {};
-  const html = renderSiteSection({
+  const html = renderPage({
     id: String(entry.key || def.id).replace(/[^a-z0-9_-]/gi, "-"),
-    type: def.type, preset: def.sourcePreset,
-    settings: { surface: "canvas" }, data: sanitize(sectionData(content)),
+    type: "page-preset", theme: "revise",
+    sections: [{ type: def.type, preset: def.sourcePreset, data: sanitize(sectionData(content)) }],
   }, { context: { theme: "revise", resolveMedia(key) {
     if (safeUrl(key, true)) return key;
     return safeUrl(media[key], true) ? media[key] : null;
