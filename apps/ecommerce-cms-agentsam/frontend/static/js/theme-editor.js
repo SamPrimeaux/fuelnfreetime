@@ -105,6 +105,19 @@
 
   const byId = function(id) { return document.getElementById(id); };
 
+  function setMobilePane(pane) {
+    if (!['sections', 'preview', 'settings'].includes(pane)) return;
+    const studio = document.querySelector('.theme-studio');
+    if (!studio) return;
+    studio.dataset.mobilePane = pane;
+    byId('te-mobile-pane-switch')?.querySelectorAll('[data-mobile-pane]').forEach(function(button) {
+      const selected = button.dataset.mobilePane === pane;
+      button.classList.toggle('is-active', selected);
+      if (selected) button.setAttribute('aria-current', 'true');
+      else button.removeAttribute('aria-current');
+    });
+  }
+
   function humanize(value) {
     return String(value || '').replace(/[_-]+/g, ' ').replace(/\b\w/g, function(m) { return m.toUpperCase(); });
   }
