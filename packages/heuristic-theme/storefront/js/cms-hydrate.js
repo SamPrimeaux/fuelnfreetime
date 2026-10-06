@@ -322,9 +322,13 @@
       } else if (attr === "innerHTML") {
         el.innerHTML = value;
       } else if (attr === "style.backgroundImage" && typeof value === "string") {
-        el.style.backgroundImage = `url('${value.replace(/'/g, "\\'")}')`;
-      } else {
-        el.setAttribute(attr, value);
+        const safe = safeCmsUrl(value, { media: true });
+        if (safe) el.style.backgroundImage = `url("${safe.replace(/"/g, "%22")}")`;
+      } else if (attr === "href" || attr === "src") {
+        const safe = safeCmsUrl(value, { media: attr === "src" });
+        if (safe) el.setAttribute(attr, safe);
+      } else if (attr === "alt" || attr === "title" || attr === "aria-label") {
+        el.setAttribute(attr, String(value));
       }
     });
 
