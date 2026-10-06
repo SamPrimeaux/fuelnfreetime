@@ -89,9 +89,24 @@ function sanitize(value, key = "") {
   return value;
 }
 
+// The published showcase leaves some real renderer fields blank. Include
+// those authored in the multipage donor without duplicating renderer markup.
+const optionalFields = Object.freeze({
+  "revise/wardrobe-rail": ["eyebrow"],
+  "revise/campaign-teaser": ["anchor"],
+  "revise/brand-film": ["posterKey"],
+  "revise/tabbed-products": ["anchor"],
+  "revise/dark-promo-grid": ["anchor"],
+  "revise/merch-lab": ["anchor"],
+});
 const definitions = Object.freeze(reviseShowcasePresets.map((preset) => {
   const sample = sectionData(defaultsFor(preset.id));
   const fields = fieldsOf(Object.fromEntries(Object.entries(sample).filter(([key]) => key !== "items")));
+  for (const key of optionalFields[preset.id] || []) {
+    if (!fields.some((f) => f.key === key)) {
+      fields.push({ key, label: title(key), type: isMedia(key) ? "media" : "text" });
+    }
+  }
   const items = sample.items || [];
   const itemFields = items.length ? fieldsOf(Object.assign({}, ...items)) : [];
   return Object.freeze({
