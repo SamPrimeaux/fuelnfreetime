@@ -732,6 +732,9 @@
         '</section>';
     }).join('');
 
+    if (section.key === 'header' && sectionOwner(section) === 'site') {
+      html = '<div class="te-managed-preferences"><strong>Shared storefront settings</strong><p>Storefront logo, navigation and announcements are managed in Online Store Preferences. This Header inspector can still preview theme-draft changes.</p><a href="/admin/preferences">Open Store Preferences →</a></div>' + html;
+    }
     const settings = currentSettings();
     if (settings.length) {
       const byGroup = {};
