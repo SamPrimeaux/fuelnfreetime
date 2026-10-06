@@ -1639,3 +1639,14 @@
   .ps-artwork-toolbar { margin-inline: 12px; }
   .ps-artwork-toolbar button { font-size: 10px; }
 }
+
+/* Creative-to-commerce progression: distinct Save Design and Next Step actions. */
+.ps-workflow-note { display: grid; gap: 10px; justify-items: start; }
+.ps-workflow-note p { margin: 0; }
+.ps-workspace-actions .ps-primary { white-space: nowrap; }
+.ps-toolpanel .ps-field input:not([type="checkbox"]):not([type="range"]) { display: block; width: 100%; margin-top: 8px; min-height: 40px; border: 1px solid var(--ps-line); border-radius: 8px; padding: 9px 10px; background: #fff; color: var(--ps-ink); }
+@media (max-width: 760px) {
+ .ps-workspace-header { flex-wrap: wrap; }
+ .ps-workspace-actions { flex-wrap: wrap; min-width: 0 !important; }
+ .ps-workspace-actions .ps-primary { flex: 1; }
+}

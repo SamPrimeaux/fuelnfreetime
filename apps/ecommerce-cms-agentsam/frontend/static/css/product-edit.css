@@ -636,3 +636,35 @@
     width: 100%;
   }
 }
+
+/* Commercial editing lives at the top of the page, not in a viewport-covering footer. */
+.product-editor-top { padding: 10px 0 16px; border-bottom: 1px solid #e3e5e0; }
+.product-editor-save-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-right: 4px; }
+.product-editor-save-actions .btn { min-height: 36px; }
+.product-editor-save-actions .btn:disabled { opacity: .45; cursor: not-allowed; }
+.product-editor-bar-hint.is-error { color: #b1272b; font-weight: 650; }
+#studio-design-card[hidden] { display: none !important; }
+.product-design-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 12px 0; }
+.product-design-status { background: #e6f4eb; color: #145d32; border-radius: 7px; padding: 8px 10px; font-size: 12px; }
+#studio-design-card .product-card-hint { line-height: 1.55; }
+@media (max-width: 900px) {
+  .product-editor-top { align-items: flex-start; }
+  .product-editor-top-actions { width: 100%; }
+  .product-editor-save-actions { width: 100%; margin-right: 0; justify-content: flex-end; }
+  .product-editor-bar-hint { margin-right: auto; }
+}
+
+.product-seo-field { display: block; font-size: 12px; font-weight: 650; margin: 16px 0 8px; }
+.product-seo-field small { float: right; color: #777; font-weight: 400; }
+.product-seo-field input, .product-seo-field textarea { display: block; width: 100%; margin-top: 7px; border: 1px solid #dedede; border-radius: 7px; padding: 10px; font: inherit; background: white; }
+.product-seo-field textarea { resize: vertical; min-height: 76px; }
+
+.product-collection-list { display: grid; gap: 6px; margin: 12px 0; }
+.product-collection-option { display: flex; gap: 10px; align-items: center; border: 1px solid #e5e5e5; border-radius: 8px; padding: 11px; font-size: 13px; cursor: pointer; }
+.product-collection-option input { accent-color: #4c6a36; flex: 0 0 auto; }
+.product-collection-option span { flex: 1; }
+.product-collection-option small { color: #777; font-size: 11px; }
+.product-collection-create { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-top: 16px; }
+.product-collection-create label { width: 100%; font-weight: 600; font-size: 12px; }
+.product-collection-create input { flex: 1 1 170px; min-width: 0; border: 1px solid #ddd; border-radius: 7px; padding: 10px; }
+.product-collection-create select { min-height: 39px; border: 1px solid #ddd; border-radius: 7px; padding: 7px; }

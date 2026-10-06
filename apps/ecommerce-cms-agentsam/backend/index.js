@@ -14,6 +14,7 @@ import { serveCatalogImage } from "./completeful/images.js";
 import { runAgentsamCompaction } from "./agentsam/compaction.js";
 import { drainAssetJobs, processAssetJobById } from "./assets/product-optimize.js";
 import { handleStoreApi } from "./store/api.js";
+import { decorateProductPage } from "./store/product-seo.js";
 import { handleAttributionApi } from "./attribution/api.js";
 import { handlePublicCmsApi } from "./cms/api.js";
 import { handleStudioCmsBridge } from "./cms/studio-bridge.js";
@@ -427,10 +428,30 @@ export default {
 
     const productMatch = path.match(/^\/products\/([^/]+)\/?$/);
     if (productMatch) {
+      let requestedSlug;
+      try {
+        requestedSlug = decodeURIComponent(productMatch[1]);
+      } catch {
+        return new Response("Invalid product handle", { status: 400 });
+      }
+      const product = await env.DB.prepare(
+        "SELECT slug, title, description, seo_title, seo_description, image_url FROM products WHERE slug = ? AND status = 'active' LIMIT 1"
+      ).bind(requestedSlug).first();
+      if (!product) {
+        const redirect = await env.DB.prepare(
+          "SELECT p.slug FROM product_slug_redirects r JOIN products p ON p.id = r.product_id WHERE r.old_slug = ? AND p.status = 'active' LIMIT 1"
+        ).bind(requestedSlug).first();
+        if (redirect?.slug) {
+          const destination = new URL(request.url);
+          destination.pathname = "/products/" + encodeURIComponent(redirect.slug);
+          return Response.redirect(destination.toString(), 301);
+        }
+      }
       const productUrl = new URL(request.url);
       productUrl.pathname = "/product.html";
       productUrl.searchParams.set("slug", productMatch[1]);
-      return env.ASSETS.fetch(new Request(productUrl, request));
+      const page = await env.ASSETS.fetch(new Request(productUrl, request));
+      return product && page.ok ? decorateProductPage(page, product, request.url) : page;
     }
 
     if (path === "/shop/collections" || path === "/shop/collections/") {

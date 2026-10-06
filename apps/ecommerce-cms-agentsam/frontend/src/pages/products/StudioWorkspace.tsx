@@ -160,8 +160,6 @@ export default function StudioWorkspace({
   const [previewAsset, setPreviewAsset] = useState<MediaAsset | null>(null);
   const [draft, setDraft] = useState<StudioDraft | null>(null);
   const [title, setTitle] = useState(detail.product.default_title || detail.product.name);
-  const [description, setDescription] = useState(detail.product.default_description || "");
-  const [retailPrice, setRetailPrice] = useState("");
   const [providerRenderUrl, setProviderRenderUrl] = useState<string | null>(null);
   const [trimTransparent, setTrimTransparent] = useState(false);
   const [removeFlatBackground, setRemoveFlatBackground] = useState(false);
@@ -226,7 +224,8 @@ export default function StudioWorkspace({
     const next = selectVariantForAxis(detail.variants, variant, axis, value);
     if (next && catalogVariantId(next) !== variantId) {
       setVariantId(catalogVariantId(next));
-      setProviderRenderUrl(null); // A provider render belongs to its original variant.
+      setProviderRenderUrl(null); // A render and composite belong to the previous variant.
+      setPreviewAsset(null);
     }
   }
   const printPixels = printPixelSize(location);
@@ -262,8 +261,6 @@ export default function StudioWorkspace({
         if (!saved || controller.signal.aborted) return;
         setDraft(saved);
         setTitle(saved.title || detail.product.default_title || detail.product.name);
-        setDescription(saved.description || "");
-        setRetailPrice(saved.retail_price_cents ? (saved.retail_price_cents / 100).toFixed(2) : "");
         if (saved.selected_variant_ids?.[0]) setVariantId(saved.selected_variant_ids[0]);
         if (saved.print_location_ids?.[0]) setLocationId(saved.print_location_ids[0]);
         if (saved.placement) {
@@ -448,11 +445,6 @@ export default function StudioWorkspace({
       setBusy("");
     }
   }
-  function currentRetailPriceCents() {
-    const value = Number(retailPrice);
-    return Number.isFinite(value) && value > 0 ? Math.round(value * 100) : 0;
-  }
-
   async function saveDraft(nextPrepared: MediaAsset | null = preparedAsset, nextPreview: MediaAsset | null = previewAsset) {
     if (!variantId || !locationId) {
       setError("Choose a product option and print area before saving.");
@@ -475,8 +467,6 @@ export default function StudioWorkspace({
           placement: { x, y, scale, rotation },
           notes,
           title: title.trim() || detail.product.name,
-          description: description.trim() || null,
-          retail_price_cents: currentRetailPriceCents(),
         }),
       });
       setDraft(result.draft);
@@ -489,6 +479,18 @@ export default function StudioWorkspace({
     } finally {
       setBusy("");
     }
+  }
+
+  async function continueToProductDetails() {
+    const saved = await saveDraft();
+    if (!saved) return;
+    const productId = Number(saved.product_id);
+    if (!Number.isSafeInteger(productId) || productId <= 0) {
+      setError("The design was saved, but no storefront draft product was returned. Reopen the design before continuing.");
+      return;
+    }
+    // Local draft product, NOT a fulfillment-provider product or public listing.
+    window.location.assign("/admin/product-edit?id=" + encodeURIComponent(String(productId)));
   }
 
   async function buildPreparedArtworkBlob() {
@@ -664,55 +666,6 @@ export default function StudioWorkspace({
     }
   }
 
-  async function createProduct() {
-    const saved = await saveDraft();
-    if (!saved) return;
-    if (!preparedAsset) {
-      setError("Prepare the artwork before creating the fulfillment product.");
-      return;
-    }
-    if (currentRetailPriceCents() <= 0) {
-      setError("Set a retail price above $0 before creating the product.");
-      return;
-    }
-    setBusy("create-product");
-    setError("");
-    try {
-      const result = await adminFetch<{
-        product_id: number;
-        completeful_store_product_id: string;
-        mapped_variants: number;
-        draft: StudioDraft;
-      }>(`/api/admin/product-studio/drafts/${encodeURIComponent(saved.id)}/create-product`, { method: "POST" });
-      setDraft(result.draft);
-      setNotice(
-        `Created Completeful + storefront draft together. ${result.mapped_variants} variant${result.mapped_variants === 1 ? "" : "s"} mapped.`,
-      );
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Product creation failed");
-    } finally {
-      setBusy("");
-    }
-  }
-
-  async function publishProduct() {
-    if (!draft) return;
-    setBusy("publish");
-    setError("");
-    try {
-      const result = await adminFetch<{ draft: StudioDraft; product_id: number }>(
-        `/api/admin/product-studio/drafts/${encodeURIComponent(draft.id)}/publish`,
-        { method: "POST" },
-      );
-      setDraft(result.draft);
-      setNotice(`Published product ${result.product_id} to the storefront.`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Publish failed");
-    } finally {
-      setBusy("");
-    }
-  }
-
   const quality =
     dimensions && printPixels
       ? dimensions.width / ((printPixels.width * scale) / 100)
@@ -738,7 +691,10 @@ export default function StudioWorkspace({
             <span>Artwork help</span>
           </a>
           <button className="ps-button" disabled={Boolean(busy)} onClick={() => void saveDraft()}>
-            {busy === "save" ? "Saving…" : "Save draft"}
+            {busy === "save" ? "Saving…" : "Save design"}
+          </button>
+          <button className="ps-button ps-primary" disabled={Boolean(busy)} onClick={() => void continueToProductDetails()}>
+            {busy === "save" ? "Saving design…" : "Next step · Product details →"}
           </button>
         </div>
       </header>
@@ -846,7 +802,10 @@ export default function StudioWorkspace({
                             : ""
                         }
                         onClick={() => {
+                          if (candidate.print_location_id === locationId) return;
                           setLocationId(candidate.print_location_id);
+                          setPreparedAsset(null); // Production dimensions are print-area specific.
+                          setPreviewAsset(null);
                           setProviderRenderUrl(null);
                         }}
                         aria-pressed={
@@ -870,32 +829,12 @@ export default function StudioWorkspace({
                   . Keep important elements inside the safe area.
                 </small>
               </div>
-              <div className="ps-merch-fields">
-                <label className="ps-field">
-                  Storefront title
-                  <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={180} />
-                </label>
-                <label className="ps-field">
-                  Retail price (USD)
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    inputMode="decimal"
-                    value={retailPrice}
-                    onChange={(e) => setRetailPrice(e.target.value)}
-                    placeholder="29.00"
-                  />
-                </label>
-                <label className="ps-field">
-                  Storefront description
-                  <textarea
-                    rows={5}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Describe the finished product…"
-                  />
-                </label>
+              <div className="ps-paper-note ps-workflow-note">
+                <strong>Design first. Sell when you're ready.</strong>
+                <p>Finish your artwork here. Continue to Product Details for pricing, description, SEO, collections, and publishing.</p>
+                <button type="button" className="ps-button" disabled={Boolean(busy)} onClick={() => void continueToProductDetails()}>
+                  Next step · Product details →
+                </button>
               </div>
               <button
                 className="ps-button ps-wide"
@@ -1066,6 +1005,10 @@ export default function StudioWorkspace({
           {tab === "tools" && (
             <>
               <label className="ps-field">
+                Working design name
+                <input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={180} />
+              </label>
+              <label className="ps-field">
                 Design notes
                 <textarea
                   rows={5}
@@ -1143,22 +1086,12 @@ export default function StudioWorkspace({
               >
                 Save product draft
               </button>
-              <button
-                className="ps-button ps-wide ps-primary"
-                disabled={!preparedAsset || currentRetailPriceCents() <= 0 || Boolean(busy)}
-                onClick={() => void createProduct()}
-              >
-                {busy === "create-product" ? "Creating product…" : "Create Completeful + store product"}
-              </button>
-              {draft?.state === "created" && (
-                <button
-                  className="ps-button ps-wide"
-                  disabled={Boolean(busy)}
-                  onClick={() => void publishProduct()}
-                >
-                  {busy === "publish" ? "Publishing…" : "Publish to store"}
+              <div className="ps-workflow-note">
+                <p>Completeful fulfillment setup and publishing are managed from Product Details. This design remains an unpublished draft.</p>
+                <button type="button" className="ps-button ps-wide ps-primary" disabled={Boolean(busy)} onClick={() => void continueToProductDetails()}>
+                  Next step · Product details →
                 </button>
-              )}
+              </div>
               <div className="ps-paper-note">
                 <strong>Draft status</strong>
                 <p>{draft?.state || "Not saved yet"}</p>

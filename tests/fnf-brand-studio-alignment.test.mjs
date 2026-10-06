@@ -29,7 +29,7 @@ test("Product Studio canvas starts expanded and is variant-aware", () => {
   assert.match(studio, /ps-mini-map/);
   assert.match(studio, /ps-artwork-toolbar/);
   assert.match(studio, /variantImage\(variant\) \|\| location\?\.artboard_image_url/);
-  assert.match(studio, /setProviderRenderUrl\(null\).*provider render belongs/s);
+  assert.match(studio, /setProviderRenderUrl\(null\);[^\n]*\n\s*setPreviewAsset\(null\)/);
   assert.match(css, /ps-workspace-body\.is-panel-collapsed/);
   assert.match(css, /@media \(max-width: 760px\)/);
 });
