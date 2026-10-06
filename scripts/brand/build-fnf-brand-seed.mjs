@@ -51,7 +51,5 @@ for (const [role, asset] of Object.entries(source.assetRoles)) {
     "'), json(" + quote(entry) + ")))";
 }
 console.log("-- Working-draft brand source; preserve merchant overrides. No new brand database.");
-console.log("BEGIN TRANSACTION;");
 console.log("UPDATE company SET meta_json = " + metadata +
   ", updated_at=unixepoch() WHERE slug='fuelnfreetime' AND id='co_fuelnfreetime';");
-console.log("COMMIT;");
