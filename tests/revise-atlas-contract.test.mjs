@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
+import { adminHtmlFile, isAdminPublicPath } from "../apps/ecommerce-cms-agentsam/backend/lib/admin-routes.js";
 import { reviseAtlas } from "../packages/theme-contract/runtime/revise-atlas-source.js";
 import "../packages/theme-contract/runtime/portable-sections.js";
 
@@ -50,4 +52,19 @@ test("repeatable source items remain merchant blocks, not a fixed group of card1
   content[key].title = "Customer-owned garment";
   assert.match(portable.render({ key: "wardrobe", content }), /Customer-owned garment/);
   assert.deepEqual(portable.validate("revise-atlas/wardrobe-rail", content), { ok: true });
+});
+
+test("aviation lab is a session-gated CMS review page with a cross-origin isolated real R2 scene", () => {
+  assert.equal(adminHtmlFile("/admin/scene-lab"), "/admin/scene-lab.html");
+  assert.equal(isAdminPublicPath("/admin/scene-lab"), false);
+  assert.equal(adminHtmlFile("/admin/revise-atlas"), "/admin/revise-atlas.html");
+  assert.equal(isAdminPublicPath("/admin/revise-atlas"), false);
+  const page = readFileSync(new URL(
+    "../apps/ecommerce-cms-agentsam/frontend/static/scene-lab.html", import.meta.url), "utf8");
+  assert.match(page, /<iframe id="scene-preview"/);
+  assert.match(page, /src="https:\/\/assets\.fuelnfreetime\.com\/media\/cms\/pages\/bridge-fly\/index\.html"/);
+  assert.match(page, /sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-fullscreen"/);
+  assert.match(page, /Golden Gate bridge flyover prototype/);
+  assert.match(page, /No publishing action is available/);
+  assert.doesNotMatch(page, /<button[^>]*id="publish"/);
 });
