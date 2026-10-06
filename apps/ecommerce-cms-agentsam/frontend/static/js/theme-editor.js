@@ -12,6 +12,7 @@
   let liveUnimported = false;
   let liveSourceCaptured = false;
   let liveExistingDraft = false;
+  let unmanagedLiveSections = [];
   let activeBlockId = null;
   let activeFieldKey = null;
   let activeTab = 'content';
@@ -326,6 +327,24 @@
     return schema.blocks.find(function(block) { return block.key === meta.templateKey; }) || null;
   }
 
+  function discoverUnmanagedSections() {
+    if (selectedTheme !== 'heuristic') return;
+    let doc;
+    try { doc = byId('theme-preview').contentDocument; } catch { return; }
+    if (!doc || doc.documentElement?.getAttribute('data-cms-page') !== slug) return;
+    const managed = new Set((pageData?.sections || []).map(function(section) { return section.key; }));
+    unmanagedLiveSections = Array.from(doc.querySelectorAll('main > section'))
+      .filter(function(node) { return !managed.has(node.dataset.cmsSection); })
+      .map(function(node, index) {
+        return {
+          id: node.id || node.dataset.hSectionId || '',
+          sectionId: node.dataset.hSectionId || '',
+          label: node.dataset.hSection || node.getAttribute('aria-label') || node.classList[0] || 'Section ' + (index + 1)
+        };
+      });
+    renderTree();
+  }
+
   function renderTree() {
     const pageSections = ownerSections(slug);
     const siteSections = ownerSections('site');
@@ -395,6 +414,10 @@
     byId('te-tree').innerHTML =
       '<div class="te-tree-group te-tree-group--global"><div class="te-tree-group__label">Header</div>' + headerRow + '</div>' +
       '<div class="te-tree-group"><div class="te-tree-group__label">Template</div>' + pageRows + '</div>' +
+      (unmanagedLiveSections.length ? '<div class="te-tree-group te-live-only"><div class="te-tree-group__label">Live-only sections · not editable yet</div>' +
+        unmanagedLiveSections.map(function(region, index) {
+          return '<button type="button" class="te-live-only-row" data-scroll-live="' + index + '"><span>' + icon.section + '</span><span><strong>' + cmsEscapeHtml(humanize(region.label.replaceAll('.', ' '))) + '</strong><small>Existing storefront · adapter needed</small></span></button>';
+        }).join('') + '</div>' : '') +
       '<button type="button" class="te-add-section" id="te-add-section">+ Add section</button>' +
       '<div class="te-section-menu" id="te-section-menu" hidden>' +
         '<div class="te-section-menu__head"><strong>Add section · Shared library</strong><button type="button" class="te-tree-mini" id="te-section-cancel" aria-label="Close">×</button></div>' +
@@ -427,6 +450,18 @@
       });
     }
 
+    byId('te-tree').querySelectorAll('[data-scroll-live]').forEach(function(button) {
+      button.addEventListener('click', function() {
+        const region = unmanagedLiveSections[Number(button.dataset.scrollLive)];
+        if (!region) return;
+        const doc = byId('theme-preview').contentDocument;
+        const target = Array.from(doc?.querySelectorAll('main > section') || []).find(function(node) {
+          return (node.id && node.id === region.id) || (node.dataset.hSectionId && node.dataset.hSectionId === region.sectionId);
+        });
+        target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setNote('This real storefront section is visible but not yet CMS-editable. Its renderer must be registered before authoring.', 'error');
+      });
+    });
     byId('te-tree').querySelectorAll('[data-select-section]').forEach(function(button) {
       button.addEventListener('click', function() {
         selectSection(button.dataset.selectSection, null, true, button.dataset.sectionOwner);
@@ -989,6 +1024,7 @@
       activeSectionOwner = slug;
     }
     liveSourceCaptured = true;
+    discoverUnmanagedSections();
     byId('te-import-live').hidden = false;
     byId('te-import-live').textContent = liveExistingDraft ? 'Use live layout (' + sections.length + ' sections)' : 'Import ' + sections.length + ' sections';
     byId('te-save').textContent = liveExistingDraft ? 'Reconcile & save draft' : 'Import & save draft';
@@ -1270,6 +1306,7 @@
       liveUnimported = pageData.content_authority === 'storefront-html';
       liveExistingDraft = Boolean(results[0].seeded) && liveUnimported;
       liveSourceCaptured = false;
+      unmanagedLiveSections = [];
       if (liveUnimported) selectedTheme = 'heuristic';
       byId('te-import-live').hidden = true;
       byId('te-save').textContent = liveUnimported ? (liveExistingDraft ? 'Reconcile & save draft' : 'Import & save draft') : 'Save draft';
@@ -1708,7 +1745,10 @@
       if (liveUnimported) {
         if (!dirty) captureLiveSource();
         else pushLocalPreview();
-      } else pushLocalPreview();
+      } else {
+        discoverUnmanagedSections();
+        pushLocalPreview();
+      }
     }
   });
   byId('te-media-close').addEventListener('click', closeMediaPicker);
