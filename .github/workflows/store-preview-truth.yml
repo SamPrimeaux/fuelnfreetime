@@ -5,6 +5,7 @@ on:
       - apps/ecommerce-cms-agentsam/frontend/static/store.html
       - apps/ecommerce-cms-agentsam/frontend/static/css/console.css
       - tests/store-preview-truth.test.mjs
+      - tests/store-preview-browser-smoke.mjs
       - .github/workflows/store-preview-truth.yml
 
 permissions:
@@ -20,3 +21,5 @@ jobs:
           node-version: '22'
       - name: Verify published preview and metrics behavior
         run: node --test tests/store-preview-truth.test.mjs
+      - name: Verify actual same-origin storefront preview frames in Chrome
+        run: node tests/store-preview-browser-smoke.mjs
