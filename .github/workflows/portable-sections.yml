@@ -8,6 +8,11 @@ on:
       - packages/heuristic-theme/storefront/js/page-composer.js
       - apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor.js
       - apps/ecommerce-cms-agentsam/backend/cms/api.js
+      - apps/ecommerce-cms-agentsam/backend/cms/page-authority.js
+      - apps/ecommerce-cms-agentsam/frontend/static/pages.html
+      - packages/heuristic-theme/storefront/shop.html
+      - tests/cms-live-source-browser-smoke.mjs
+      - tests/cms-slot-binding-browser-smoke.mjs
       - scripts/sync-app-frontend.mjs
       - tests/portable-sections.test.mjs
       - tests/cms-editor-mutations.test.mjs
@@ -42,6 +47,10 @@ jobs:
         run: node tests/portable-home-composer-browser-smoke.mjs
       - name: Real editor preview browser proof
         run: node tests/launch/portable-editor-browser-smoke.mjs
+      - name: Real live Shop content and safe CMS draft import in Chrome
+        run: node tests/cms-live-source-browser-smoke.mjs
+      - name: Actual storefront media and CTA edits in Chrome
+        run: node tests/cms-slot-binding-browser-smoke.mjs
       - name: Install locked app dependencies
         run: npm ci --ignore-scripts
       - name: Build admin and assemble public storefront assets
