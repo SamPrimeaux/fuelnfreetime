@@ -142,10 +142,14 @@
     const registry = window.SECTION_SCHEMAS?.[slug] || {};
     const native = Object.entries(registry)
       .filter(function([key]) {
-        // These legacy pages do not yet expose section-level clone/reorder anchors.
-        if (!['home', 'shop'].includes(slug)) return false;
-        if (slug === 'shop' && key === 'newsletter') return false;
-        return true;
+        // Do not offer native sections unless the storefront actually has
+        // an insertable renderer/template for this page. Cross-theme portable
+        // sections below remain available on every merchant-editable page.
+        const supported = {
+          home: ['hero', 'manifesto', 'collections', 'values', 'community', 'newsletter'],
+          shop: ['hero', 'collections', 'stories'],
+        };
+        return (supported[slug] || []).includes(key);
       })
       .map(function([key, definition]) {
         return { id: 'heuristic/' + key, label: definition.label || humanize(key),
