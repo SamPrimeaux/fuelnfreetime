@@ -37,7 +37,7 @@ const probe = "<script>window.confirm=()=>true;setTimeout(function(){" +
   "var edit=!!document.getElementById('campaigns-before-after-3')?.textContent.includes('A REAL REVISED CAMPAIGN');" +
   "document.getElementById('atlas-import').click();" +
   "setTimeout(function(){var result={start,campaignCount,before,edit," +
-  "status:document.getElementById('atlas-message').textContent," +
+  "actualStyle,status:document.getElementById('atlas-message').textContent," +
   "source:document.getElementById('atlas-origin').textContent};" +
   "var node=document.createElement('pre');node.id='browser-result';node.textContent=JSON.stringify(result);document.body.append(node);" +
   "},550);" +
