@@ -196,6 +196,7 @@
       + '" data-portable-family="' + esc(definition.family) + '">' + markup + '</section>';
   }
   function validate(id, content) {
+    if (!byId.has(id) && scope.ThemeReviseAtlas?.get(id)) return scope.ThemeReviseAtlas.validate(id, content);
     const definition = byId.get(id);
     if (!definition) return { ok: false, error: "Unsupported section preset" };
     if (!content || Array.isArray(content) || typeof content !== "object")
