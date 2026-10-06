@@ -360,6 +360,8 @@ import {
     mountListener(els.batchBar, "click", (event) => {
       const action = event.target.closest("[data-media-batch]")?.dataset.mediaBatch;
       if (!action) return;
+      const moreMenu = event.target.closest(".media-batch-more");
+      if (moreMenu) moreMenu.open = false;
       if (action === "page") selectCurrentPage();
       else if (action === "clear") clearSelection();
       else if (action === "gallery") openGalleryDialog();
@@ -722,30 +724,34 @@ import {
       escapeHtml(album.name) + ' (' + Number(album.asset_count || 0) + ')</option>'
     ).join("");
 
+    // Keep the merchant's primary selection actions in view at every width.
+    // Secondary commands stay discoverable, without an invisible horizontal scrollbar.
     const parts = [
-      '<div class="media-batch-summary"><strong>' + count + '</strong> selected</div>',
+      '<div class="media-batch-summary" role="status" aria-live="polite"><strong>' + count + '</strong> asset' + (count === 1 ? '' : 's') + ' selected</div>',
       '<div class="media-batch-actions">',
-      '<button type="button" class="btn small" data-media-batch="page">Select this page</button>',
-      '<button type="button" class="btn small" data-media-batch="clear">Clear</button>',
       '<button type="button" class="btn primary small" data-media-batch="gallery">Create gallery</button>',
-      mediaCapabilities.can_materialize_derivatives ? '<button type="button" class="btn small" data-media-batch="optimize">Optimize</button>' : '',
-      '<button type="button" class="btn small" data-media-batch="seo">Review SEO</button>',
-      '<label class="media-batch-move"><span class="sr-only">Add selected assets to album</span>',
-      '<select class="media-lib-filter" data-media-batch-album>',
-      '<option value="">Add to album...</option>',
+      '<label class="media-batch-move media-batch-album"><span class="sr-only">Add selected assets to album</span>',
+      '<select class="media-lib-filter" data-media-batch-album ' + (albumOptions ? '' : 'disabled') + '>',
+      '<option value="">Add to album…</option>',
       albumOptions,
       '</select></label>',
-      '<button type="button" class="btn small" data-media-batch="new-album">+ Album</button>',
-      activeAlbumId
-        ? '<button type="button" class="btn small" data-media-batch="remove-album">Remove from this album</button>'
-        : '',
-      '<label class="media-batch-move"><span class="sr-only">Move selected assets</span>',
+      '<button type="button" class="btn small media-batch-clear" data-media-batch="clear" aria-label="Clear selection">Clear</button>',
+      '<details class="media-batch-more">',
+      '<summary class="btn small" aria-label="More selection actions">More actions <span aria-hidden="true">⌄</span></summary>',
+      '<div class="media-batch-menu" aria-label="More selection actions">',
+      '<button type="button" data-media-batch="page">Select current page</button>',
+      '<button type="button" data-media-batch="seo">Review SEO</button>',
+      mediaCapabilities.can_materialize_derivatives ? '<button type="button" data-media-batch="optimize">Optimize selected</button>' : '',
+      '<button type="button" data-media-batch="new-album">New album</button>',
+      activeAlbumId ? '<button type="button" data-media-batch="remove-album">Remove from current album</button>' : '',
+      '<label class="media-batch-menu-label">Move to folder',
       '<select class="media-lib-filter" data-media-batch-move>',
-      '<option value="">Move folder...</option>',
+      '<option value="">Choose folder…</option>',
       '<option value="images">Images</option>',
       '<option value="videos">Videos</option>',
       '<option value="products">Products</option>',
       '</select></label>',
+      '</div></details>',
       '</div>',
     ];
 

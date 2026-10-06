@@ -7,6 +7,7 @@
   let pickerRole = null;
   let pickerQuery = "";
   let loaded = false;
+  let loading = false;
 
   const $ = (id) => document.getElementById(id);
   const esc = (value) =>
@@ -230,16 +231,36 @@
   }
 
   async function load() {
-    if (loaded) return;
-    loaded = true;
+    if (loaded || loading) return;
+    loading = true;
+    const grid = $("brand-role-grid");
+    const save = $("brand-save");
+    if (save) save.disabled = true;
+    if (grid) grid.innerHTML = '<div class="brand-load-state" role="status">Loading brand identity and assets…</div>';
     try {
       workspace = await api("/api/admin/brand");
+      loaded = true;
       renderCompany();
       renderRoles();
+      const note = $("brand-note");
+      if (note) note.style.display = "none";
     } catch (error) {
       loaded = false;
-      showNote(error.message, "error");
-      $("brand-role-grid").innerHTML = '<div class="admin-empty">Brand workspace unavailable.</div>';
+      showNote(error.message || "Brand request failed", "error");
+      const tagline = $("brand-preview-tagline");
+      if (tagline) tagline.textContent = "Brand data could not be loaded.";
+      if (grid) {
+        grid.innerHTML =
+          '<div class="brand-load-state brand-load-error" role="alert">' +
+          '<strong>Could not load brand assets</strong>' +
+          '<p>The brand data was not available. Nothing was changed.</p>' +
+          '<button type="button" class="btn small" id="brand-load-retry">Try again</button>' +
+          '</div>';
+        $("brand-load-retry")?.addEventListener("click", load);
+      }
+    } finally {
+      loading = false;
+      if (save) save.disabled = !loaded;
     }
   }
 
