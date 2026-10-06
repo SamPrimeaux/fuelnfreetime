@@ -663,9 +663,9 @@
     }
 
     const inputType = field.type === 'number' ? 'number' : (field.type === 'link' || field.type === 'url' ? 'url' : 'text');
-    const multiline = field.type === 'textarea' || (field.type === 'text' && String(value).includes('\n'));
+    const multiline = field.type === 'json' || field.type === 'textarea' || (field.type === 'text' && String(value).includes('\n'));
     const input = multiline
-      ? '<textarea id="' + id + '" rows="' + (field.type === 'textarea' ? 4 : 2) + '" data-field-input="' + cmsEscapeAttr(field.key) + '" placeholder="' + cmsEscapeAttr(field.placeholder || '') + '">' + cmsEscapeHtml(String(value)) + '</textarea>'
+      ? '<textarea id="' + id + '" rows="' + (field.type === 'json' ? 10 : field.type === 'textarea' ? 4 : 2) + '" data-field-input="' + cmsEscapeAttr(field.key) + '"' + (field.type === 'json' ? ' data-json-editor="true" spellcheck="false" class="te-json-editor"' : '') + ' placeholder="' + cmsEscapeAttr(field.placeholder || '') + '">' + cmsEscapeHtml(field.type === 'json' ? JSON.stringify(value, null, 2) : String(value)) + '</textarea>'
       : '<input id="' + id + '" type="' + inputType + '" data-field-input="' + cmsEscapeAttr(field.key) + '" value="' + safeValue + '" placeholder="' + cmsEscapeAttr(field.placeholder || '') + '"' +
         (field.min !== undefined ? ' min="' + field.min + '"' : '') + (field.max !== undefined ? ' max="' + field.max + '"' : '') + (field.step !== undefined ? ' step="' + field.step + '"' : '') + '>';
 
