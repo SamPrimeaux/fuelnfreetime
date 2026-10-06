@@ -387,6 +387,12 @@ export async function getPageAdmin(env, slug) {
   }
 
   const sections = await loadSectionsFromDb(env, slug, page.id);
+  // This is factual D1 inventory, not synthetic registry content. An editor may
+  // explicitly stage missing source-backed sections as private drafts without
+  // replacing the already published snapshot or modifying existing rows.
+  const actualKeys = new Set(sections.map((section) => section.key));
+  const missingSourceSections = Object.keys(PAGE_REGISTRY[slug]?.sections || {})
+    .filter((key) => !actualKeys.has(key));
   // Imported storefront pages only expose sections actually present in their source.
   // Re-inventing absent newsletter/hero defaults would produce a false editor tree.
   const hasLiveImport = sections.some((section) => section.content?.__editor?.source === "live-storefront");
