@@ -169,7 +169,10 @@ async function saveStorePreferences(env, incoming) {
   if (incoming.navBrandAccentLight != null) {
     next.navBrandAccentLight = String(incoming.navBrandAccentLight).slice(0, 32);
   }
-  if (incoming.navItems != null) next.navItems = sanitizeNavItems(incoming.navItems);
+  if (incoming.navItems != null) {
+    next.navItems = sanitizeNavItems(incoming.navItems);
+    next.navigationAuthority = "preferences";
+  }
   if (incoming.announcementEnabled != null) next.announcementEnabled = incoming.announcementEnabled === true;
   if (incoming.announcementText != null) {
     next.announcementText = String(incoming.announcementText).trim().slice(0, 160);
