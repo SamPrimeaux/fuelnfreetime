@@ -936,8 +936,18 @@
       if (!region || !schema) continue;
       const controls = Array.from(region.querySelectorAll('[data-cms]'));
       const content = structuredClone(section.content || {});
+      const editableFields = [...(schema.fields || [])];
+      // Repeatable card/block content belongs to the same section document.
+      // Extract the live cards instead of preserving stale registry fixtures.
+      for (const block of content.__editor?.blocks || []) {
+        const template = (schema.blocks || []).find(function(item) { return item.key === block.templateKey; });
+        if (!template) continue;
+        for (const field of template.fields || []) {
+          editableFields.push({ ...field, key: block.id + '.' + field.key });
+        }
+      }
       let matched = 0;
-      for (const field of schema.fields || []) {
+      for (const field of editableFields) {
         let el = controls.find(function(node) { return node.dataset.cms === field.key; });
         if (!el && field.key.endsWith('.href')) {
           const alias = field.key.slice(0, -5) + '.label';
