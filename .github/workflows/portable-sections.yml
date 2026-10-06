@@ -10,6 +10,7 @@ on:
       - apps/ecommerce-cms-agentsam/backend/cms/api.js
       - scripts/sync-app-frontend.mjs
       - tests/portable-sections.test.mjs
+      - tests/cms-editor-mutations.test.mjs
       - tests/portable-sections-browser-smoke.mjs
       - tests/launch/portable-editor-browser-smoke.mjs
       - tests/theme-studio-universal.test.mjs
@@ -33,7 +34,7 @@ jobs:
           node --check apps/ecommerce-cms-agentsam/backend/cms/api.js
           node --check apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor.js
       - name: Real renderer and shared catalog checks
-        run: node --test tests/portable-sections.test.mjs tests/theme-studio-universal.test.mjs
+        run: node --test tests/portable-sections.test.mjs tests/theme-studio-universal.test.mjs tests/cms-editor-mutations.test.mjs
       - name: Actual Chrome public DOM and live editor preview proof
         run: node tests/portable-sections-browser-smoke.mjs
       - name: Real editor preview browser proof
