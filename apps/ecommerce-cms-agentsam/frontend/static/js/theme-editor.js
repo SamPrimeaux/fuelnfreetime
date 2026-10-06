@@ -133,6 +133,9 @@
   }
 
   function pageRoute(pageSlug) {
+    // Bridge Fly is a real authored R2 scene, not a publishable storefront
+    // route. Its authenticated canvas can still be previewed in this editor.
+    if (pageSlug === 'bridge-fly') return '/admin/bridge-fly-preview';
     const authoritative = pages.find(function(page) { return page.slug === pageSlug; });
     if (authoritative?.live_route) return authoritative.live_route;
     if (window.PAGE_ROUTES && window.PAGE_ROUTES[pageSlug]) return window.PAGE_ROUTES[pageSlug];
