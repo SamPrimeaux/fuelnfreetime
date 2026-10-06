@@ -435,3 +435,39 @@ test("a real storefront imports into a private draft without publishing syntheti
     assert.equal(publicPage.sections[0].content.headline, liveHero.headline);
   } finally { fx.db.close(); }
 });
+
+test("reconciling a seeded legacy draft archives old sections and preserves the live site", async () => {
+  const fx = fixture();
+  try {
+    fx.db.exec("UPDATE pages SET status = 'draft' WHERE slug = 'shop'");
+    const original = structuredClone(PAGE_REGISTRY.shop.sections.hero.defaultContent);
+    original.headline = "Time is the\nreal horsepower.";
+
+    const stale = await importLivePageDraft(fx.env, "shop", {
+      mode: "reconcile",
+      sections: [{ key: "hero", expected_version: 0, content: original }]
+    });
+    assert.equal(stale.status, 409, "stale writes are refused");
+
+    const replaced = await importLivePageDraft(fx.env, "shop", {
+      mode: "reconcile",
+      sections: [{ key: "hero", expected_version: 1, content: original }]
+    });
+    assert.equal(replaced.ok, true);
+    assert.equal(replaced.imported_sections, 1);
+    assert.equal(replaced.retired_sections, 2);
+    assert.equal(replaced.published, false);
+    assert.ok(replaced.archive_key);
+    const archive = JSON.parse(fx.objects.get(replaced.archive_key));
+    assert.equal(archive.sections.length, 3);
+    const rowStates = fx.db.prepare(
+      "SELECT section_key, status FROM page_sections ORDER BY sort_order"
+    ).all();
+    assert.deepEqual(rowStates.map((r) => r.status), ["draft", "removed", "removed"]);
+    const admin = await getPageAdmin(fx.env, "shop");
+    assert.equal(admin.page.content_authority, "cms-draft-linked");
+    assert.deepEqual(admin.page.sections.map((r) => r.key), ["hero"]);
+    assert.equal(admin.page.sections[0].content.headline, original.headline);
+    assert.equal(await getPublishedPage(fx.env, "shop"), null);
+  } finally { fx.db.close(); }
+});
