@@ -1246,7 +1246,8 @@
         adminFetch('/api/admin/cms/pages/site')
       ]);
       pageData = results[0].page;
-      liveUnimported = !results[0].seeded && pageData.content_authority === 'storefront-html';
+      liveUnimported = pageData.content_authority === 'storefront-html';
+      liveExistingDraft = Boolean(results[0].seeded) && liveUnimported;
       liveSourceCaptured = false;
       if (liveUnimported) selectedTheme = 'heuristic';
       byId('te-import-live').hidden = true;
