@@ -1,3 +1,5 @@
+import { ROUTE_MANIFEST } from "../lib/route-manifest.js";
+import { cmsStorefrontRoutes, resolvePageAuthority } from "./page-authority.js";
 import {
   getRegistryPage,
   listRegistryPages,
