@@ -1,0 +1,25 @@
+name: Online Store preview truth
+on:
+  pull_request:
+    paths:
+      - apps/ecommerce-cms-agentsam/frontend/static/store.html
+      - apps/ecommerce-cms-agentsam/frontend/static/css/console.css
+      - tests/store-preview-truth.test.mjs
+      - tests/store-preview-browser-smoke.mjs
+      - .github/workflows/store-preview-truth.yml
+
+permissions:
+  contents: read
+
+jobs:
+  preview-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify published preview and metrics behavior
+        run: node --test tests/store-preview-truth.test.mjs
+      - name: Verify actual same-origin storefront preview frames in Chrome
+        run: node tests/store-preview-browser-smoke.mjs
