@@ -5,6 +5,9 @@ import {
   registryForAdmin,
   PAGE_REGISTRY,
 } from "./registry.js";
+// The same concrete section definitions are loaded by the browser and Worker.
+import "../../../../packages/theme-contract/runtime/portable-sections.js";
+const PORTABLE = globalThis.ThemePortableSections;
 import {
   draftKey,
   publishedKey,
@@ -119,6 +122,10 @@ async function persistSectionDraft(
   sortOrder = 0,
   { expectedVersion = null } = {}
 ) {
+  if (content?.__editor?.templateKey === "portable") {
+    const check = PORTABLE.validate(content.__editor.themePreset, content);
+    if (!check.ok) return { error: check.error, status: 400 };
+  }
   const hasExpected =
     expectedVersion !== null && expectedVersion !== undefined && expectedVersion !== "";
   const parsedExpected = hasExpected ? Number(expectedVersion) : null;
@@ -420,7 +427,7 @@ export async function updateSection(env, slug, sectionKey, body) {
   }
 
   const content = body?.content;
-  if (!content || typeof content !== "object") {
+  if (!content || typeof content !== "object" || Array.isArray(content)) {
     return { error: "content object required", status: 400 };
   }
 
@@ -498,7 +505,13 @@ export async function insertSection(env, slug, body = {}) {
   if (!def) return { error: "Unknown page", status: 404 };
 
   const templateKey = String(body.templateKey || body.template_key || "").trim();
-  const template = def.sections?.[templateKey];
+  const themePreset = String(body.themePreset || body.theme_preset || "").trim();
+  const portable = PORTABLE.get(themePreset);
+  if (templateKey === "portable" && !portable)
+    return { error: "Section preset is not implemented", status: 400 };
+  if (portable && templateKey !== "portable")
+    return { error: "Section preset/template mismatch", status: 400 };
+  const template = portable ? { defaultContent: PORTABLE.defaults(themePreset) } : def.sections?.[templateKey];
   if (!template) return { error: "Unknown section template", status: 400 };
 
   const ensured = await ensurePage(env, slug);
@@ -518,7 +531,6 @@ export async function insertSection(env, slug, body = {}) {
   }
 
   const content = structuredClone(template.defaultContent || {});
-  const themePreset = String(body.themePreset || body.theme_preset || "").trim();
   content.__editor = {
     ...(content.__editor || {}),
     templateKey,
@@ -528,6 +540,7 @@ export async function insertSection(env, slug, body = {}) {
 
   const existing = rows.find((row) => row.section_key === sectionKey);
   const meta = await persistSectionDraft(env, slug, page.id, sectionKey, content, sortOrder);
+  if (meta.error) return meta;
   if (existing?.status === "removed") {
     await env.DB.prepare(
       `UPDATE page_sections SET status = 'draft', updated_at = datetime('now') WHERE page_id = ? AND section_key = ?`
@@ -557,8 +570,9 @@ export async function duplicateSection(env, slug, sectionKey, body = {}) {
   if (!sourceRow) return { error: "Section not found", status: 404 };
 
   const source = await sectionContentForRow(env, slug, sourceRow);
-  const templateKey = source.__editor?.templateKey || (PAGE_REGISTRY[slug]?.sections?.[sectionKey] ? sectionKey : null);
-  if (!templateKey || !PAGE_REGISTRY[slug]?.sections?.[templateKey]) {
+  const portable = source.__editor?.templateKey === "portable" ? PORTABLE.get(source.__editor?.themePreset) : null;
+  const templateKey = portable ? "portable" : (source.__editor?.templateKey || (PAGE_REGISTRY[slug]?.sections?.[sectionKey] ? sectionKey : null));
+  if (!templateKey || (!portable && !PAGE_REGISTRY[slug]?.sections?.[templateKey])) {
     return { error: "Section template is not registered", status: 409 };
   }
 
@@ -570,7 +584,8 @@ export async function duplicateSection(env, slug, sectionKey, body = {}) {
     visibility: { ...(content.__editor?.visibility || {}), enabled: true },
   };
 
-  await persistSectionDraft(env, slug, page.id, newKey, content, Number(sourceRow.sort_order || 0) + 5);
+  const saved = await persistSectionDraft(env, slug, page.id, newKey, content, Number(sourceRow.sort_order || 0) + 5);
+  if (saved.error) return saved;
   const activeKeys = (await orderedSectionRows(env, page.id))
     .filter((row) => row.status !== "removed")
     .map((row) => row.section_key);
