@@ -18,6 +18,7 @@ import { handleAttributionApi } from "./attribution/api.js";
 import { handlePublicCmsApi } from "./cms/api.js";
 import { handleStudioCmsBridge } from "./cms/studio-bridge.js";
 import { handleCmsWarmInternal } from "./cms/deploy.js";
+import { handleSceneReview } from "./admin/scene-review.js";
 import {
   serveStorefrontPage,
   slugForAssetPath,
