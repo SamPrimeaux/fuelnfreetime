@@ -174,8 +174,22 @@
       const node = template.content.firstElementChild;
       if (!node) continue;
       node.dataset.cmsPortable = 'true';
-      if (old) old.replaceWith(node);
-      else (document.querySelector('main') || document.body).appendChild(node);
+      if (old) {
+        old.replaceWith(node);
+      } else {
+        // These original Heuristic pages render global header/footer outside
+        // their editorial root. Portable sections must join the same ordered
+        // page composition, never appear after the shared storefront footer.
+        const root = document.querySelector('[data-cms-page-content]') ||
+          document.querySelector('main') || document.body;
+        if (root === document.body) {
+          const footer = document.querySelector('#fnf-footer-mount');
+          if (footer?.parentNode === root) root.insertBefore(node, footer);
+          else root.appendChild(node);
+        } else {
+          root.appendChild(node);
+        }
+      }
     }
     document.querySelectorAll('[data-cms-portable="true"]').forEach((node) => {
       if (!active.has(node.dataset.cmsSection)) node.remove();
