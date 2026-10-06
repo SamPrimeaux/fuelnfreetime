@@ -291,6 +291,9 @@ export default {
     if (path === "/api/admin/scene-review") {
       const user = await getSessionUser(request, env);
       if (!user) return noStore(Response.json({ error: "Unauthorized" }, { status: 401 }));
+      if (request.method !== "GET" && !["admin", "owner"].includes(user.role)) {
+        return noStore(Response.json({ error: "Not authorized to change review access" }, { status: 403 }));
+      }
       return noStore(await handleSceneReview(request, env, url));
     }
     if (path.startsWith("/api/admin/")) {
