@@ -44,7 +44,7 @@ async function loadConfig(env){
   } catch {return null;}
 }
 async function signingKey(config) {
-  return crypto.subtle.importKey("raw",enc.encode(config.passwordHash),{name:"HMAC",hash:"SHA-256"},false,["sign","verify"]);
+  return crypto.subtle.importKey("raw",enc.encode(config.passwordHash+":"+config.updatedAt),{name:"HMAC",hash:"SHA-256"},false,["sign","verify"]);
 }
 async function makeCookie(config,until) {
   const body="v1:"+until;
