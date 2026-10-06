@@ -59,10 +59,10 @@ renderShell("/admin/preferences", `
     </section>
 
     <section class="prefs-card">
-      <h2>Social sharing image and SEO</h2>
+      <h2>Search appearance and social sharing</h2><p>Set the page title and description search engines receive, and choose a real image from your media library. The preview is a guide, not a guarantee of how a platform displays your page.</p>
       <div class="prefs-seo-grid">
         <div class="prefs-social-preview">
-          <img id="social-image" src="" alt="">
+          <img id="social-image" src="" alt="Chosen social sharing graphic" hidden><div class="prefs-social-placeholder" id="social-placeholder">Choose a sharing image to preview your store’s social card.</div>
           <div class="prefs-social-meta">
             <div class="prefs-social-domain" id="social-domain">FUELNFREETIME.COM</div>
             <div class="prefs-social-title" id="social-preview-title">Fuel &amp; Free Time</div>
@@ -81,8 +81,15 @@ renderShell("/admin/preferences", `
             <div class="prefs-counter"><span id="meta-count">0</span> of 320 characters used</div>
           </div>
           <div class="prefs-field">
-            <label for="social-image-url">Social sharing image URL</label>
-            <input type="url" id="social-image-url" data-pref="socialImageUrl">
+            <label>Sharing image <span class="prefs-optional">Recommended 1200 × 630 px (1.91:1)</span></label>
+            <div class="prefs-media-choice">
+              <img id="social-asset-thumb" alt="" hidden>
+              <div class="prefs-media-choice__info"><strong id="social-asset-name">No image selected</strong><span>Use an existing logo, cover artwork, or upload a new image.</span></div>
+              <button type="button" class="btn ghost small" data-pick-asset="social">Choose image</button>
+              <button type="button" class="btn ghost small" data-clear-asset="social" aria-label="Remove sharing image">Remove</button>
+            </div>
+            <input type="hidden" id="social-image-url" data-pref="socialImageUrl">
+            <details class="prefs-advanced"><summary>Advanced image URL</summary><label for="social-image-url-advanced">Image address</label><input type="text" id="social-image-url-advanced" placeholder="/media/…" autocomplete="off"><p>Usually you won't need this. Use Choose image above.</p></details>
           </div>
         </div>
       </div>
@@ -90,11 +97,13 @@ renderShell("/admin/preferences", `
 
     <section class="prefs-card">
       <h2>Site navigation</h2>
-      <p>Header and footer use this same ordered route list. Add, hide, move, or remove a page here and both public shell surfaces update together.</p>
+      <p>Manage the pages visitors see in your header and footer. Choose your logo above, then rename, reorder or hide navigation links below.</p>
       <div class="prefs-seo-grid" style="grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
         <div class="prefs-field">
-          <label for="nav-logo-url">Logo URL</label>
-          <input type="url" id="nav-logo-url" placeholder="https://…">
+          <label>Storefront logo</label>
+          <div class="prefs-media-choice prefs-media-choice--logo"><img id="nav-asset-thumb" alt="Storefront logo preview" hidden><div class="prefs-media-choice__info"><strong id="nav-asset-name">Use current logo</strong><span>PNG, SVG, WEBP or transparent artwork</span></div><button type="button" class="btn ghost small" data-pick-asset="nav">Choose logo</button><button type="button" class="btn ghost small" data-clear-asset="nav" aria-label="Remove custom logo">Remove</button></div>
+          <input type="hidden" id="nav-logo-url">
+          <details class="prefs-advanced"><summary>Advanced logo URL</summary><label for="nav-logo-url-advanced">Logo address</label><input type="text" id="nav-logo-url-advanced" placeholder="/media/…" autocomplete="off"></details>
         </div>
         <div class="prefs-field">
           <label for="nav-logo-height">Logo height (px)</label>
@@ -116,12 +125,16 @@ renderShell("/admin/preferences", `
     <section class="prefs-card">
       <h2>Announcement banner</h2>
       <div class="prefs-row">
-        <div class="prefs-row-copy"><div><div class="prefs-row-title">Show announcement</div><div class="prefs-row-desc">Displays a compact orange banner above the public header.</div></div></div>
+        <div class="prefs-row-copy"><div><div class="prefs-row-title">Show announcement</div><div class="prefs-row-desc">Use a calm fixed message or a seamless scrolling announcement. Preview the appearance before saving.</div></div></div>
         <label class="prefs-switch"><input type="checkbox" id="announcement-enabled"><span class="prefs-switch-slider"></span></label>
       </div>
+      <div class="prefs-announcement-preview" id="announcement-preview" aria-label="Announcement preview"><span id="announcement-preview-copy">Your announcement will appear here</span></div>
       <div class="prefs-seo-grid prefs-seo-grid--equal">
-        <div class="prefs-field"><label for="announcement-text">Message</label><input type="text" id="announcement-text" maxlength="160" placeholder="Free shipping on orders over $100"></div>
-        <div class="prefs-field"><label for="announcement-href">Link</label><input type="text" id="announcement-href" placeholder="/shop"></div>
+        <div class="prefs-field"><label for="announcement-text">Announcement message</label><input type="text" id="announcement-text" maxlength="160" placeholder="Built in Lafayette · Fuel hard. Live free."></div>
+        <div class="prefs-field"><label for="announcement-href">Where it links</label><input type="text" id="announcement-href" placeholder="/shop"></div>
+        <div class="prefs-field"><label for="announcement-style">Display</label><select id="announcement-style"><option value="static">Simple banner</option><option value="marquee">Subtle scrolling marquee</option></select></div>
+        <div class="prefs-field prefs-color-field"><label for="announcement-bg">Background color</label><input type="color" id="announcement-bg" value="#161616"></div>
+        <div class="prefs-field prefs-color-field"><label for="announcement-color">Text color</label><input type="color" id="announcement-color" value="#ffffff"></div>
       </div>
     </section>
 
@@ -151,7 +164,7 @@ renderShell("/admin/preferences", `
 
     <section class="prefs-card">
       <h2>Spam protection</h2>
-      <p>Enabling hCaptcha can protect your store from spam. Some customers may need to complete the hCaptcha task.</p>
+      <p>This screen currently stores protection preferences, but does not yet verify challenge responses. These options are not active security defenses until server-side verification is connected. <strong>Do not treat an enabled switch as protection.</strong></p><div class="prefs-warning">Status: verification integration required. Existing choices are shown for planning only.</div>
       <div class="prefs-row">
         <div class="prefs-row-copy">
           <svg class="prefs-row-icon" viewBox="0 0 24 24" fill="none"><path d="M4 6h16v12H4z" stroke="currentColor" stroke-width="1.6"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.6"/></svg>
@@ -175,21 +188,26 @@ renderShell("/admin/preferences", `
     <section class="prefs-card">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
         <div>
-          <h2 style="margin-bottom:6px;">Crawler access</h2>
-          <p style="margin:0;">Authorize external tools to crawl your store. Copy the full values for Signature, Signature-Input, and Signature-Agent, then paste them into your HTTP crawler requests.</p>
+          <h2 style="margin-bottom:6px;">Crawler access</h2><p style="margin:0;">Crawler authorization is not enabled. The signature request and verification service have not been implemented yet. This will require short-lived credentials, signed requests, scope limits and audit logs before merchants can issue access.</p>
         </div>
-        <button type="button" class="btn ghost small" id="create-signature-btn">Create signature</button>
+        <span class="prefs-status-pill">Not configured</span>
       </div>
       <div class="prefs-tabs" role="tablist">
         <button type="button" class="prefs-tab is-active" data-tab="all">All</button>
         <button type="button" class="prefs-tab" data-tab="active">Active</button>
         <button type="button" class="prefs-tab" data-tab="expired">Expired</button>
       </div>
-      <div class="prefs-empty" id="crawler-empty">No crawler signatures yet.</div>
+      <div class="prefs-empty" id="crawler-empty">No crawler credentials issued. This feature is not active.</div>
     </section>
 
     <div class="prefs-note" id="prefs-note"></div>
   </div>
+  <dialog class="prefs-assets-dialog" id="prefs-assets-dialog" aria-labelledby="prefs-assets-title">
+    <div class="prefs-assets-header"><div><small>FNF media library</small><h2 id="prefs-assets-title">Choose an image</h2></div><button type="button" id="prefs-assets-close" class="btn ghost small" aria-label="Close media library">Close</button></div>
+    <div class="prefs-assets-tools"><input type="search" id="prefs-assets-search" placeholder="Search uploaded graphics, logos, and artwork" aria-label="Search media"><label class="btn ghost small prefs-upload-button">Upload new image<input type="file" id="prefs-assets-upload" accept="image/*" multiple hidden></label></div>
+    <div class="prefs-assets-grid" id="prefs-assets-grid" role="list"></div>
+    <p class="prefs-assets-status" id="prefs-assets-status" role="status"></p>
+  </dialog>
 
   <footer class="prefs-savebar">
     <button type="button" class="btn primary" id="save-prefs-btn" disabled>Save</button>
@@ -266,13 +284,10 @@ function renderNavItems() {
         <input type="text" class="nav-label" value="${escapeAttr(item.label)}" maxlength="40">
       </div>
       <div class="prefs-field" style="margin:0">
-        <label>Link (href)</label>
+        <label>Destination</label>
         <input type="text" class="nav-href" value="${escapeAttr(item.href)}" placeholder="/about">
       </div>
-      <div class="prefs-field" style="margin:0">
-        <label>Match prefixes (comma-separated)</label>
-        <input type="text" class="nav-prefixes" value="${escapeAttr((item.matchPrefixes || []).join(", "))}" placeholder="/about">
-      </div>
+      <details class="prefs-nav-advanced"><summary>Advanced: active menu paths</summary><label>Additional matching paths</label><input type="text" class="nav-prefixes" value="${escapeAttr((item.matchPrefixes || []).join(", "))}" placeholder="/about"><span>Only needed when several URLs share one navigation item.</span></details>
       <label class="prefs-switch" title="Visible in menu" style="margin-bottom:.35rem"><input type="checkbox" class="nav-visible" ${item.visible !== false ? "checked" : ""}><span class="prefs-switch-slider"></span></label>
       <div class="prefs-nav-actions"><button type="button" class="btn ghost small nav-up" aria-label="Move up" ${idx === 0 ? "disabled" : ""}>↑</button><button type="button" class="btn ghost small nav-down" aria-label="Move down" ${idx === navItems.length - 1 ? "disabled" : ""}>↓</button><button type="button" class="btn ghost small nav-remove" aria-label="Remove">×</button></div>
     </div>`
