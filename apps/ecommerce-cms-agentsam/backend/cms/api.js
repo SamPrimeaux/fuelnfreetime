@@ -398,7 +398,7 @@ export async function getPageAdmin(env, slug) {
       sections: hasLiveImport ? sections.filter((section) => section.status !== "removed") : mergeWithRegistry(slug, sections),
       ...resolvePageAuthority(slug, CMS_STOREFRONT_ROUTES, {
         seeded: true,
-        cmsPublished: page.status === "published",
+        cmsPublished: Boolean(await getPublishedPage(env, slug)),
         cmsDraftLinked: hasLiveImport,
       }),
     },
