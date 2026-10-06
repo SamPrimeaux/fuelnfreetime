@@ -90,7 +90,7 @@ import { handleGrowthApi } from "./growth.js";
 import { handleDiscountsApi } from "./discounts.js";
 import { handleCompletefulAdminApi } from "./completeful.js";
 import { handleProductStudioAdminApi } from "./product-studio.js";
-import { getBrandWorkspace, patchBrandWorkspace } from "./brand.js";
+import { getBrandWorkspace, patchBrandWorkspace, searchBrandAssets } from "./brand.js";
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -573,6 +573,7 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   if (path === "/api/admin/subscribers" && method === "GET") return listSubscribers(request, env);
 
   if (path === "/api/admin/brand" && method === "GET") return getBrandWorkspace(env);
+  if (path === "/api/admin/brand/assets" && method === "GET") return searchBrandAssets(request, env);
   if (path === "/api/admin/brand" && method === "PATCH") return patchBrandWorkspace(request, env);
 
   if (path === "/api/admin/media" && method === "POST") return uploadMedia(request, env, executionCtx);

@@ -12,7 +12,8 @@ test('Brand has explicit loading and an actionable retry instead of a dead end',
 });
 test('Save is disabled until authoritative brand data has loaded', () => {
   assert.match(source, /if \(save\) save\.disabled = true;/);
-  assert.match(source, /if \(save\) save\.disabled = !loaded;/);
+  assert.match(source, /if \(save\) save\.disabled = !loaded \|\| !dirty;/);
+  assert.match(source, /brand-save-bottom/);
 });
 test('Brand reuses the shared parsed admin transport without treating it as native fetch', () => {
   assert.match(source, /const data = await adminFetch/);
