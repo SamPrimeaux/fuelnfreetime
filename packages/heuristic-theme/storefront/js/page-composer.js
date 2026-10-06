@@ -245,11 +245,22 @@ async function compose() {
   const pagePath = preset.pages?.[pageId];
   if (!pagePath) fail(`page ${pageId} is not declared by preset ${presetId}`);
 
+  // The same native section code renders selected donor designs on Home and
+  // every other storefront page. No alternate preview markup path.
+  await import('/js/portable-sections.js');
+  if (!document.querySelector('link[data-portable-sections]')) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = '/js/portable-sections.css';
+    link.dataset.portableSections = 'true';
+    document.head.appendChild(link);
+  }
+  const cmsPreview = new URLSearchParams(location.search).has('preview') ? '?preview=1' : '';
   const [tokens, assets, page, cmsResponse] = await Promise.all([
     requiredJson(`${base}/${preset.tokens.replace(/^\.\//, "")}`),
     requiredJson(`${base}/${preset.assets.replace(/^\.\//, "")}`),
     requiredJson(`${base}/${pagePath.replace(/^\.\//, "")}`),
-    requiredJson(`/api/cms/pages/${encodeURIComponent(pageId)}`),
+    requiredJson(`/api/cms/pages/${encodeURIComponent(pageId)}${cmsPreview}`),
   ]);
 
   if (!cmsResponse?.ok || !cmsResponse.page) fail(`CMS page ${pageId} is required`);
@@ -263,15 +274,33 @@ async function compose() {
       );
     },
   });
-  root.innerHTML = composedSections
-    .filter((section) => section.visibility?.enabled !== false)
+  const native = new Map(composedSections.map((section) => [section.cmsKey, section]));
+  const seen = new Set();
+  const renderNative = (section) => {
+    if (section.visibility?.enabled === false) return "";
+    applyCmsContent(section, section.cmsContent);
+    const renderer = renderers.get(section.type);
+    if (!renderer) fail(`renderer ${section.type} is not registered`);
+    return renderer(section, assets);
+  };
+  const body = cmsResponse.page.sections.slice()
+    .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0))
     .map((section) => {
-      applyCmsContent(section, section.cmsContent);
-      const renderer = renderers.get(section.type);
-      if (!renderer) fail(`renderer ${section.type} is not registered`);
-      return renderer(section, assets);
-    })
-    .join("");
+      if (section.status === 'removed') return '';
+      if (section.content?.__editor?.templateKey === 'portable') {
+        // The registered portable implementation is rendered from live CMS content,
+        // not cloned into a fake local preview.
+        return globalThis.ThemePortableSections.render(section) || '';
+      }
+      const def = native.get(section.key);
+      if (!def) return '';
+      seen.add(section.key);
+      return renderNative(def);
+    });
+  for (const section of composedSections) {
+    if (!seen.has(section.cmsKey)) body.push(renderNative(section));
+  }
+  root.innerHTML = body.join("");
   document.dispatchEvent(new CustomEvent("heuristic:page-composed", { detail: { presetId, pageId } }));
 }
 
