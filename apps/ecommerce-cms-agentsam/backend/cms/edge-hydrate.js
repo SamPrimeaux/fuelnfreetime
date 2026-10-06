@@ -65,7 +65,9 @@ export function applyCmsSlotValue(el, path, sectionsByKey) {
   } else if (attr === "innerHTML") {
     el.setInnerContent(String(value), { html: true });
   } else if (attr === "style.backgroundImage") {
-    const safe = String(value).replace(/'/g, "\\'");
+    const url = safeCmsUrl(value, true);
+    if (!url) return false;
+    const safe = url.replace(/['"()\\]/g, (part) => encodeURIComponent(part));
     const existing = el.getAttribute("style") || "";
     const withoutBg = existing.replace(/background-image\s*:\s*[^;]+;?/gi, "").trim();
     const next = `${withoutBg}${withoutBg ? "; " : ""}background-image: url('${safe}')`.trim();
