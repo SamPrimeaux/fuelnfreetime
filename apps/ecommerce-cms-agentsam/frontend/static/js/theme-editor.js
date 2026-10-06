@@ -1237,6 +1237,12 @@
       previewBlobUrl = null;
     }
     const route = pageRoute(slug);
+    if (!route) {
+      byId('theme-preview').srcdoc = '<!doctype html><html><body style="font:16px system-ui;padding:32px"><h2>No storefront route connected</h2><p>This CMS page exists, but needs a public rendering/publishing adapter before it can be previewed.</p></body></html>';
+      byId('te-open-tab').removeAttribute('href');
+      byId('te-preview-label').textContent = 'CMS document — no public route';
+      return;
+    }
     const separator = route.indexOf('?') >= 0 ? '&' : '?';
     byId('theme-preview').removeAttribute('srcdoc');
     byId('theme-preview').src = route + separator + (liveUnimported ? '_=' : 'preview=1&_=' ) + Date.now();
