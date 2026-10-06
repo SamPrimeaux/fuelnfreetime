@@ -615,6 +615,12 @@
             .gallery-item,.gallery-item .gallery-media,.join-card { transition:none!important; transform:none!important; }
             .community-stats .stat-number { animation:none!important; }
         }
+
+        .event-image { overflow:hidden; position:relative; }
+        .event-media { display:block; width:100%; height:100%; object-fit:cover; filter:brightness(.7); }
+        .event-image .event-badge { position:absolute; z-index:1; top:1rem; left:1rem; }
+        .stories-disclaimer { max-width:60ch; margin:0 auto 2rem; text-align:center;
+            color:#b6b3ad; font-size:.875rem; line-height:1.6; }
     </style>
     <link rel="stylesheet" href="/css/store-shell.css">
     <link rel="stylesheet" href="/css/global-footer.css">
@@ -662,7 +668,7 @@
             </div>
             <div class="events-grid">
                 <div class="event-card" data-cms-block="event1" data-cms-block-template="event-card">
-                    <div class="event-image">
+                    <div class="event-image"><img class="event-media" src="/media/archive/shopify-import/graphics/Vette.png" alt="Fuel & Free Time archive artwork for an event idea" loading="lazy" decoding="async" data-cms="events.event1.imageUrl" data-cms-attr="src">
                         <div class="event-badge" data-cms="events.event1.badge">Concept</div>
                     </div>
                     <div class="event-content">
@@ -676,7 +682,7 @@
                     </div>
                 </div>
                 <div class="event-card" data-cms-block="event2" data-cms-block-template="event-card">
-                    <div class="event-image">
+                    <div class="event-image"><img class="event-media" src="/media/archive/shopify-import/graphics/high_octane.jpg" alt="Fuel & Free Time archive artwork for an event idea" loading="lazy" decoding="async" data-cms="events.event2.imageUrl" data-cms-attr="src">
                         <div class="event-badge" data-cms="events.event2.badge">Idea in Progress</div>
                     </div>
                     <div class="event-content">
@@ -690,7 +696,7 @@
                     </div>
                 </div>
                 <div class="event-card" data-cms-block="event3" data-cms-block-template="event-card">
-                    <div class="event-image">
+                    <div class="event-image"><img class="event-media" src="/media/archive/shopify-import/graphics/50C9CEB5.png" alt="Fuel & Free Time archive artwork for an event idea" loading="lazy" decoding="async" data-cms="events.event3.imageUrl" data-cms-attr="src">
                         <div class="event-badge" data-cms="events.event3.badge">Community Proposal</div>
                     </div>
                     <div class="event-content">
@@ -704,7 +710,7 @@
                     </div>
                 </div>
                 <div class="event-card" data-cms-block="event4" data-cms-block-template="event-card">
-                    <div class="event-image">
+                    <div class="event-image"><img class="event-media" src="/media/archive/shopify-import/graphics/fuel_up.png" alt="Fuel & Free Time archive artwork for an event idea" loading="lazy" decoding="async" data-cms="events.event4.imageUrl" data-cms-attr="src">
                         <div class="event-badge" data-cms="events.event4.badge">Long-Range Idea</div>
                     </div>
                     <div class="event-content">
