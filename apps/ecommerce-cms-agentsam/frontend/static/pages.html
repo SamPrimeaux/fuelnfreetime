@@ -100,7 +100,12 @@ document.getElementById("pages-select-all")?.addEventListener("change", (e) => {
 });
 
 document.getElementById("add-page-btn")?.addEventListener("click", () => {
-  alert("Custom page creation is coming soon. Edit Home, Shop, About, Community, or Site (global) for now.");
+  const draftOnly = allPages.filter((page) => page.has_live_storefront && !page.draft_exists);
+  if (draftOnly.length) {
+    window.location.href = `/admin/theme-editor?slug=${encodeURIComponent(draftOnly[0].slug)}`;
+    return;
+  }
+  alert("All current storefront routes are represented. New routes require the CMS route/publishing adapter; no placeholder page was created.");
 });
 
 document.getElementById("cms-bootstrap-btn")?.addEventListener("click", async () => {
