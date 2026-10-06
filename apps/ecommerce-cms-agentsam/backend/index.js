@@ -314,6 +314,12 @@ export default {
       return noStore(Response.redirect(new URL("/admin/discounts", request.url), 301));
     }
 
+    // The donor atlas is now a catalog in the canonical Theme Editor, not a
+    // second merchant editor. Keep old links working with a clean redirect.
+    if (path === "/admin/revise-atlas") {
+      return noStore(Response.redirect(new URL("/admin/theme-editor?slug=home&catalog=revise", request.url), 302));
+    }
+
     // Clean admin URLs — /admin/login, /admin/home, …
     const adminAsset = adminHtmlFile(path);
     if (adminAsset) {
