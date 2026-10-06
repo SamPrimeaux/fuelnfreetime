@@ -770,6 +770,16 @@
         const field = fieldByKey(input.dataset.fieldInput);
         if (!field) return;
         activeFieldKey = field.key;
+        if (field.type === 'json') {
+          try {
+            setFieldValue(field, JSON.parse(input.value));
+            input.removeAttribute('aria-invalid');
+          } catch {
+            input.setAttribute('aria-invalid', 'true');
+            setNote('Enter valid structured data before saving this field.', 'error');
+          }
+          return;
+        }
         setFieldValue(field, input.value);
         syncMediaPreview(field.key, input.value);
       });
