@@ -5,7 +5,7 @@
  * The distinct revise-atlas namespace protects existing revise/* CMS v1
  * documents from silent content-contract upgrades.
  */
-import { renderSiteSection, presetLibraryFrom } from "@inneranimalmedia/section-library";
+import { renderPage, presetLibraryFrom } from "@inneranimalmedia/section-library";
 import { reviseShowcaseHome, reviseShowcasePresets } from "@inneranimalmedia/revise-theme";
 
 const prefix = "revise-atlas/";
