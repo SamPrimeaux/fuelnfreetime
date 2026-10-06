@@ -167,11 +167,11 @@
       : "";
 
     return `
-      <header class="fnf-header fnf-header--${escapeHtml(headerPreset)}" id="fnfHeader" data-header-preset="${escapeHtml(headerPreset)}" data-header-tone="${headerPreset === "frost-pill" ? "light" : "dark"}">
+      <header class="fnf-header fnf-header--${escapeHtml(headerPreset)}" id="fnfHeader" data-cms-scope="site" data-cms-section="header" data-header-preset="${escapeHtml(headerPreset)}" data-header-tone="${headerPreset === "frost-pill" ? "light" : "dark"}">
         ${announcement}
         <div class="fnf-row">
           <a class="fnf-logo" href="/" aria-label="Fuel & Free Time">
-            <img src="${escapeHtml(navConfig.logoUrl)}" alt="Fuel & Free Time" width="256" height="${navConfig.logoHeight}">
+            <img data-cms="logoUrl" data-cms-attr="src" src="${escapeHtml(navConfig.logoUrl)}" alt="Fuel & Free Time" width="256" height="${navConfig.logoHeight}">
           </a>
           <nav class="fnf-primary" aria-label="Primary">
             <ul class="fnf-nav">${navItems}</ul>
@@ -330,6 +330,55 @@
     updateCartBadge();
   }
 
+  function cmsSection(page, key) {
+    return page?.sections?.find?.((section) => section.key === key)?.content || null;
+  }
+
+  function applyCmsHeader(content) {
+    if (!content || typeof content !== "object" || !navConfig) return;
+    if (content.logoUrl) navConfig.logoUrl = content.logoUrl;
+    if (Number.isFinite(Number(content.logoHeight))) navConfig.logoHeight = Number(content.logoHeight);
+    if (content.preset && headerPresetContract.presets?.[content.preset]) {
+      document.documentElement.dataset.headerPreset = content.preset;
+    }
+    navConfig.announcement = {
+      enabled: content.announcementEnabled === true,
+      text: String(content.announcementText || ""),
+      href: String(content.announcementHref || ""),
+    };
+    const blockMeta = content.__editor?.blocks;
+    if (Array.isArray(blockMeta) && blockMeta.length) {
+      const items = blockMeta
+        .filter((block) => block.enabled !== false)
+        .map((block, index) => {
+          const value = content[block.id] || {};
+          const href = String(value.href || "").trim();
+          const label = String(value.label || "").trim();
+          if (!href || !label) return null;
+          return {
+            id: block.id || ("nav_" + index),
+            label,
+            href,
+            visible: value.visible !== false,
+            matchPrefixes: [href],
+          };
+        })
+        .filter(Boolean);
+      if (items.length) navConfig.items = items;
+    }
+  }
+
+  async function loadCmsHeader() {
+    const preview = new URLSearchParams(location.search).has("preview");
+    const res = await fetch("/api/cms/pages/site" + (preview ? "?preview=1" : ""), {
+      credentials: preview ? "include" : "same-origin",
+      headers: { accept: "application/json" },
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    applyCmsHeader(cmsSection(data?.page, "header"));
+  }
+
   async function loadNavConfig() {
     const res = await fetch("/api/store/nav", { headers: { accept: "application/json" } });
     if (!res.ok) throw new Error(`Store shell config request failed (${res.status})`);
@@ -338,6 +387,7 @@
       throw new Error("Store shell config is missing or invalid");
     }
     navConfig = data.nav;
+    await loadCmsHeader().catch(() => {});
   }
 
   async function mount() {
@@ -358,6 +408,19 @@
     if (storeMount) renderInto(storeMount, !document.documentElement.hasAttribute("data-header-overlay"));
     if (headerMount) renderInto(headerMount, false);
   }
+
+  window.addEventListener("message", (event) => {
+    if (event.origin !== location.origin) return;
+    const data = event.data;
+    if (!data || data.type !== "fnf-cms-preview" || !Array.isArray(data.siteSections)) return;
+    const header = data.siteSections.find((section) => section.key === "header");
+    if (!header) return;
+    applyCmsHeader(header.content || {});
+    const storeMount = document.getElementById("fnf-store-mount");
+    const headerMount = document.getElementById("fnf-header-mount");
+    if (storeMount) renderInto(storeMount, !document.documentElement.hasAttribute("data-header-overlay"));
+    if (headerMount) renderInto(headerMount, false);
+  });
 
   window.FNF_SHELL = {
     updateCartBadge,

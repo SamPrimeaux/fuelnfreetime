@@ -11,7 +11,15 @@ await cp(path.join(root, 'packages/heuristic-theme/storefront'), output, { recur
 await cp(path.join(root, 'packages/heuristic-theme/contracts'), path.join(output, 'theme/contracts'), { recursive: true });
 await cp(path.join(root, 'packages/heuristic-theme/presets'), path.join(output, 'theme/presets'), { recursive: true });
 await cp(path.join(root, 'packages/heuristic-theme/theme.json'), path.join(output, 'theme/theme.json'));
+await cp(path.join(root, 'node_modules/@inneranimalmedia/revise-theme/dist'), path.join(output, 'admin/theme-previews/revise'), { recursive: true });
+await cp(path.join(root, 'node_modules/@inneranimalmedia/section-library/dist/layout.css'), path.join(output, 'admin/theme-previews/revise/layout.css'));
+await mkdir(path.join(output, 'admin/theme-previews/fnf'), { recursive: true });
+await cp(path.join(root, 'packages/fnf-theme/src/theme/tokens.css'), path.join(output, 'admin/theme-previews/fnf/tokens.css'));
+await cp(path.join(root, 'packages/fnf-theme/src/layout/layout.css'), path.join(output, 'admin/theme-previews/fnf/layout.css'));
+await cp(path.join(root, 'packages/fnf-theme/src/sections/scene-hero/scene-hero.css'), path.join(output, 'admin/theme-previews/fnf/scene-hero.css'));
 await cp(path.join(frontend, 'static'), path.join(output, 'admin'), { recursive: true });
+await cp(path.join(root, 'packages/theme-contract/runtime/theme-preview-registry.js'), path.join(output, 'admin/js/theme-preview-registry.js'));
+await cp(path.join(root, 'packages/fnf-theme/src/editor/preview-adapter.js'), path.join(output, 'admin/js/theme-preview-runtime.js'));
 await cp(path.join(frontend, 'dist'), path.join(output, 'admin/_spa'), { recursive: true });
 await cp(path.join(root, 'packages/agentsam-workbench/src'), path.join(output, 'admin/workbench'), { recursive: true });
 await cp(path.join(root, 'packages/admin-profile-popup/src'), path.join(output, 'admin/profile-popup'), { recursive: true });
@@ -31,4 +39,4 @@ const template = `<template id="mail-app-template">\n${partial}\n</template>\n`;
 await writeFile(emailPath, email.includes('id="mail-app-template"')
   ? email.replace(/<template id="mail-app-template">[\s\S]*?<\/template>\n?/, template)
   : email.replace('<body>', `<body>\n${template}`));
-console.log('Assembled Heuristic + commerce dashboard into dist/assets');
+console.log('Assembled Heuristic + Revise/FNF preview assets + commerce dashboard into dist/assets');

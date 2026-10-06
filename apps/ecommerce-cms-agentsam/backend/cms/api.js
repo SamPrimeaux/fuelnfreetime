@@ -518,9 +518,11 @@ export async function insertSection(env, slug, body = {}) {
   }
 
   const content = structuredClone(template.defaultContent || {});
+  const themePreset = String(body.themePreset || body.theme_preset || "").trim();
   content.__editor = {
     ...(content.__editor || {}),
     templateKey,
+    ...(themePreset ? { themePreset } : {}),
     visibility: { ...(content.__editor?.visibility || {}), enabled: true },
   };
 

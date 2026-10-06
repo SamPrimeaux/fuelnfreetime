@@ -1,0 +1,11 @@
+{
+  "name": "@inneranimalmedia/theme-contract",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "README.md",
+    "*.schema.json",
+    "examples"
+  ]
+}
