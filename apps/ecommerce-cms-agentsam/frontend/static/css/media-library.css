@@ -1621,3 +1621,10 @@
     line-height: 18px;
   }
 }
+
+/* Explicit album controls, with separate navigation and destructive actions. */
+.media-album-item { display: flex; flex: 0 0 auto; position: relative; align-items: stretch; min-width: 136px; }
+.media-album-item .media-album-chip { min-width: 136px; padding-right: 29px; }
+.media-album-delete { position: absolute; top: 5px; right: 5px; width: 24px; height: 24px; padding: 0; border: 1px solid transparent; border-radius: 7px; background: transparent; color: var(--c-muted); font-size: 19px; cursor: pointer; }
+.media-album-delete:hover, .media-album-delete:focus-visible { color: #a53535; border-color: #d5a6a6; background: #fff1f1; }
+.media-batch-danger { color: #b12d2d !important; }

@@ -151,6 +151,9 @@ export default function StudioWorkspace({
   onBack: () => void;
 }) {
   const [tab, setTab] = useState("options");
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [miniMapOpen, setMiniMapOpen] = useState(true);
+  const [canvasZoom, setCanvasZoom] = useState(100);
   const [media, setMedia] = useState<MediaAsset[]>([]);
   const [asset, setAsset] = useState<MediaAsset | null>(null);
   const [preparedAsset, setPreparedAsset] = useState<MediaAsset | null>(null);
@@ -193,6 +196,7 @@ export default function StudioWorkspace({
   const panel = useRef<HTMLElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   function openTab(next: string) {
+    setPanelOpen((current) => next === tab ? !current : true);
     setTab(next);
     if (window.matchMedia("(max-width: 760px)").matches)
       requestAnimationFrame(() =>
@@ -213,11 +217,17 @@ export default function StudioWorkspace({
     detail.images[0]?.url ||
     detail.mockups.find((mockup) => mockup.active && mockup.preview_url)
       ?.preview_url;
+  // Prefer the chosen variant over an artboard supplied for another color.
+  // This image is a placement approximation, not a production mockup.
+  const designImage = variantImage(variant) || location?.artboard_image_url || baseImage;
   const catalogId = catalogProductId(detail.product);
 
   function chooseVariantOption(axis: string, value: string) {
     const next = selectVariantForAxis(detail.variants, variant, axis, value);
-    if (next) setVariantId(catalogVariantId(next));
+    if (next && catalogVariantId(next) !== variantId) {
+      setVariantId(catalogVariantId(next));
+      setProviderRenderUrl(null); // A provider render belongs to its original variant.
+    }
   }
   const printPixels = printPixelSize(location);
   const ratio =
@@ -351,7 +361,14 @@ export default function StudioWorkspace({
       window.location.href = "/admin/login";
       throw new Error("Sign in again to continue");
     }
-    const result = await response.json();
+    const responseBody = await response.text();
+    let result: { error?: string; assets?: MediaAsset[] };
+    try {
+      result = JSON.parse(responseBody);
+    } catch {
+      if (response.status === 413) throw new Error("Image exceeds the server upload limit. Use a smaller file.");
+      throw new Error("The media server returned an unexpected response (HTTP " + response.status + "). Try again or check the admin upload route.");
+    }
     if (!response.ok) throw new Error(result.error || "Upload failed");
     return result.assets?.[0] as MediaAsset | undefined;
   }
@@ -725,24 +742,28 @@ export default function StudioWorkspace({
           </button>
         </div>
       </header>
-      <div className="ps-workspace-body">
+      <div className={`ps-workspace-body ${panelOpen ? "" : "is-panel-collapsed"}`}>
         <nav className="ps-toolrail" aria-label="Design tools">
           {tabs.map((t) => (
             <button
               key={t.id}
-              className={tab === t.id ? "is-active" : ""}
+              className={panelOpen && tab === t.id ? "is-active" : ""}
               onClick={() => openTab(t.id)}
-              aria-pressed={tab === t.id}
+              aria-pressed={panelOpen && tab === t.id}
+              aria-expanded={panelOpen && tab === t.id}
             >
               <StudioIcon name={t.icon} />
               <span>{t.label}</span>
             </button>
           ))}
         </nav>
-        <aside className="ps-toolpanel" ref={panel}>
+        <aside className="ps-toolpanel" ref={panel} hidden={!panelOpen} aria-label="Selected design tool">
           <div className="ps-panel-heading">
-            <span className="ps-eyebrow">MAKE IT YOURS</span>
-            <h2>{tabs.find((t) => t.id === tab)?.label}</h2>
+            <div>
+              <span className="ps-eyebrow">MAKE IT YOURS</span>
+              <h2>{tabs.find((t) => t.id === tab)?.label}</h2>
+            </div>
+            <button type="button" className="ps-panel-dismiss" onClick={() => setPanelOpen(false)} aria-label="Collapse tool panel">×</button>
           </div>
           {tab === "options" && (
             <>
@@ -824,7 +845,10 @@ export default function StudioWorkspace({
                             ? "is-active"
                             : ""
                         }
-                        onClick={() => setLocationId(candidate.print_location_id)}
+                        onClick={() => {
+                          setLocationId(candidate.print_location_id);
+                          setProviderRenderUrl(null);
+                        }}
                         aria-pressed={
                           locationId === candidate.print_location_id
                         }
@@ -1158,8 +1182,19 @@ export default function StudioWorkspace({
             </div>
             <span>{providerRenderUrl ? "Completeful render" : "Placement preview · provider render comes next"}</span>
           </div>
+          {asset && !providerRenderUrl && (
+            <div className="ps-artwork-toolbar" role="toolbar" aria-label="Artwork placement controls">
+              <button type="button" onClick={() => { setTab("layers"); setPanelOpen(true); }}>Edit placement</button>
+              <button type="button" onClick={() => { setTab("tools"); setPanelOpen(true); setRemoveFlatBackground(true); }} title="Configure background removal before preparing a derivative">Cutout setup</button>
+              <button type="button" onClick={() => setScale((value) => Math.max(5, value - 10))} aria-label="Make artwork smaller">−</button>
+              <span aria-live="polite">{scale}%</span>
+              <button type="button" onClick={() => setScale((value) => Math.min(150, value + 10))} aria-label="Make artwork larger">+</button>
+              <button type="button" onClick={() => { setX(50); setY(50); }}>Center</button>
+              <button type="button" onClick={() => setRotation((value) => ((value + 270) % 360) - 180)}>Rotate 90°</button>
+            </div>
+          )}
           <div className="ps-stage" data-agentsam-resource="product-design-stage">
-            <div className="ps-product-design-preview">
+            <div className="ps-product-design-preview" style={{ transform: `scale(${canvasZoom / 100})` }}>
               <div className="ps-product-design-image">
                 {providerRenderUrl ? (
                   <>
@@ -1172,11 +1207,13 @@ export default function StudioWorkspace({
                   </>
                 ) : (
                   <>
-                    {baseImage ? (
+                    {designImage ? (
                       <ProductImage
+                        key={variantId}
                         sources={[
-                          location?.artboard_image_url,
+                          designImage,
                           baseImage,
+                          location?.artboard_image_url,
                           variant?.cover_image_url,
                           detail.product.realistic_image_url,
                           detail.product.cover_image_url,
@@ -1240,6 +1277,30 @@ export default function StudioWorkspace({
                 </span>
               </div>
             </div>
+            <div className="ps-mini-map">
+              <div className="ps-mini-head">
+                <strong>Product preview</strong>
+                <button type="button" onClick={() => setMiniMapOpen((value) => !value)} aria-expanded={miniMapOpen} aria-label={miniMapOpen ? "Hide product preview" : "Show product preview"}>{miniMapOpen ? "Hide" : "Show"}</button>
+              </div>
+              {miniMapOpen && (
+                <>
+                  <div className="ps-mini-image" aria-label="Live placement approximation for the selected variant">
+                    <ProductImage key={variantId} sources={providerRenderUrl ? [providerRenderUrl] : [designImage, baseImage]} alt={`Selected garment variant: ${variant?.variant_title || variant?.name || detail.product.name}`} />
+                    {!providerRenderUrl && asset && showArtwork && (
+                      <div className="ps-mini-placement" style={placementFrameStyle}>
+                        <img src={asset.url} alt="" style={{ width: `${scale}%`, left: `${x}%`, top: `${y}%`, transform: `translate(-50%, -50%) rotate(${rotation}deg)` }} />
+                      </div>
+                    )}
+                  </div>
+                  <small>{providerRenderUrl ? "Completeful render" : "Placement approximation"} · {variant?.variant_title || variant?.name || "Selected color"}</small>
+                </>
+              )}
+            </div>
+          </div>
+          <div className="ps-canvas-controls">
+            <button type="button" onClick={() => setCanvasZoom(100)}>Fit · 100%</button>
+            <label>Canvas zoom <input type="range" min="75" max="160" step="5" value={canvasZoom} onChange={(event) => setCanvasZoom(Number(event.target.value))} /></label>
+            <span>{canvasZoom}%</span>
           </div>
           <details className="ps-reference-drawer">
             <summary>Provider references ({detail.mockups.filter((m) => m.active && m.preview_url).length})</summary>
