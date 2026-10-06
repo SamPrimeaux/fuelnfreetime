@@ -56,8 +56,10 @@ function renderRows(pages) {
 
   body.innerHTML = pages
     .map((p) => {
-      const badge = visibilityBadge(p.status || "draft");
-      const editHref = `/admin/page-edit?slug=${encodeURIComponent(p.slug)}`;
+      const badge = p.has_live_storefront && !p.cms_published
+        ? { label: "Live site · CMS not imported", cls: "pages-badge pages-badge--visible" }
+        : visibilityBadge(p.status || "draft");
+      const editHref = `/admin/theme-editor?slug=${encodeURIComponent(p.slug)}`;
       return `
         <tr data-href="${editHref}" data-slug="${p.slug}">
           <td><input type="checkbox" aria-label="Select ${cmsEscapeHtml(p.title)}" onclick="event.stopPropagation()"></td>
