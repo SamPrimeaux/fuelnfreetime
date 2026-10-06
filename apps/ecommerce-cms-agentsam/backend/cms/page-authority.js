@@ -6,7 +6,7 @@
  *
  * This classifier is pure and portable: the host supplies its route catalog.
  */
-export function resolvePageAuthority(slug, routes, { seeded = false, cmsPublished = false } = {}) {
+export function resolvePageAuthority(slug, routes, { seeded = false, cmsPublished = false, cmsDraftLinked = false } = {}) {
   const match = (routes || []).find((route) => route.page === slug && route.handler === "cms-page");
   const liveRoute = match?.path || null;
   return {
