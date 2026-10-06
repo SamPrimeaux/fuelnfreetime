@@ -131,8 +131,17 @@ accessSave.addEventListener('click',async()=>{
 });
 accessCopy.addEventListener('click',async()=>{
   const url=new URL(reviewUrl,location.origin).href;
-  try{await navigator.clipboard.writeText(url);setReviewStatus('Review link copied. Send the password separately.');}
-  catch{setReviewStatus('Share this link: '+url);}
+  try {
+    if (navigator.share) {
+      await navigator.share({title:'FNF · Aviation concept review',text:'A first look at the FNF aviation direction. I will send the access password separately.',url});
+      setReviewStatus('Share opened. Send the password separately.');
+    } else {
+      await navigator.clipboard.writeText(url);
+      setReviewStatus('Review link copied. Send the password separately.');
+    }
+  } catch(error) {
+    if (error?.name !== 'AbortError') setReviewStatus('Share this link: '+url);
+  }
 });
 loadAccess();
 </script>
