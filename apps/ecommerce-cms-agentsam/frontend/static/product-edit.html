@@ -217,8 +217,8 @@ renderShell("/admin/products", `
 
         <div class="product-card" id="studio-design-card" hidden>
           <div class="product-card-head">
-            <label>Product design</label>
-            <span class="product-card-hint">Studio source artwork and fulfillment</span>
+            <label>Product source &amp; design</label>
+            <span class="product-card-hint">One product record for every fulfillment method</span>
           </div>
           <div id="studio-design-content"></div>
         </div>
@@ -755,14 +755,28 @@ async function loadCollections() {
   }
 }
 
-function renderStudioDesign(draft, fulfillment) {
+function renderStudioDesign(draft, fulfillment, source = null) {
   const card = document.getElementById("studio-design-card");
   const root = document.getElementById("studio-design-content");
   if (!card || !root) return;
   designContext = draft ? { draft, fulfillment } : null;
-  card.hidden = !draft;
+  card.hidden = isNew;
   root.replaceChildren();
-  if (!draft) return;
+  const sourceLabel = document.createElement("p");
+  sourceLabel.className = "product-card-hint";
+  sourceLabel.textContent = source?.kind === "connected_provider"
+    ? "Supplier: Completeful · " + (source.sync_status || "not yet connected") +
+      ". Product, variants, and storefront publishing remain in this editor."
+    : "Source: Store-managed · local, manual, or independently sourced inventory. " +
+      "Product, variants, and storefront publishing remain in this editor.";
+  root.append(sourceLabel);
+  if (!draft) {
+    const guidance = document.createElement("p");
+    guidance.className = "product-card-hint";
+    guidance.textContent = "Use Media above to attach artwork. The product can be edited and published without a supplier connector.";
+    root.append(guidance);
+    return;
+  }
 
   const text = document.createElement("p");
   text.className = "product-card-hint";
@@ -852,7 +866,7 @@ async function loadProduct() {
     renderVariants(d.variants);
     selectedCollectionIds = new Set((d.collection_ids || []).map(Number));
     renderCollections();
-    renderStudioDesign(d.design_draft, d.fulfillment);
+    renderStudioDesign(d.design_draft, d.fulfillment, d.source);
     loadImages();
     saveFailed = false;
     setDirty(false);
@@ -986,7 +1000,7 @@ async function saveProduct() {
     productSlug = stored.slug;
     updateHeaderTitle(stored.title);
     updateSeoPreview();
-    renderStudioDesign(verified.design_draft, verified.fulfillment);
+    renderStudioDesign(verified.design_draft, verified.fulfillment, verified.source);
     const additionalEdits = JSON.stringify(collectPayload()) !== saveSnapshot;
     updateVariantOriginals(payload.variants);
     setDirty(additionalEdits);

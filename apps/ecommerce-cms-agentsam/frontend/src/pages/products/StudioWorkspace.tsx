@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { adminFetch } from "../../lib/api";
+import { adminFetch, adminFormFetch } from "../../lib/api";
+import { evaluateManufacturingCompatibility } from "../../../../../../packages/agentsam-merch/src/index.js";
 import StudioIcon from "./StudioIcon";
 import ProductImage from "./ProductImage";
 import {
@@ -348,26 +349,20 @@ export default function StudioWorkspace({
         stage.current?.scrollIntoView({ block: "start" }),
       );
   }
-  async function uploadMediaFile(file: File, prefix: string) {
+  async function uploadMediaFile(file: File, prefix: string, options: {
+    derivativeRole?: "original/master" | "manufacturing" | "mockup";
+    transformPolicy?: "auto" | "preserve";
+    sourceAsset?: MediaAsset | null;
+  } = {}) {
     const form = new FormData();
     form.append("files", file);
     form.append("folder", "images");
     form.append("prefix", prefix);
-    const response = await fetch("/api/admin/media", { method: "POST", body: form });
-    if (response.status === 401) {
-      window.location.href = "/admin/login";
-      throw new Error("Sign in again to continue");
-    }
-    const responseBody = await response.text();
-    let result: { error?: string; assets?: MediaAsset[] };
-    try {
-      result = JSON.parse(responseBody);
-    } catch {
-      if (response.status === 413) throw new Error("Image exceeds the server upload limit. Use a smaller file.");
-      throw new Error("The media server returned an unexpected response (HTTP " + response.status + "). Try again or check the admin upload route.");
-    }
-    if (!response.ok) throw new Error(result.error || "Upload failed");
-    return result.assets?.[0] as MediaAsset | undefined;
+    if (options.derivativeRole) form.append("derivative_role", options.derivativeRole);
+    if (options.transformPolicy) form.append("transform_policy", options.transformPolicy);
+    if (options.sourceAsset?.id) form.append("source_media_asset_id", String(options.sourceAsset.id));
+    const result = await adminFormFetch<{ assets?: MediaAsset[] }>("/api/admin/media", form);
+    return result.assets?.[0];
   }
 
   async function upload(file?: File) {
@@ -383,7 +378,9 @@ export default function StudioWorkspace({
     setBusy("upload");
     setError("");
     try {
-      const uploaded = await uploadMediaFile(file, "studio/artwork");
+      const uploaded = await uploadMediaFile(file, "studio/artwork", {
+        derivativeRole: "original/master", transformPolicy: "preserve",
+      });
       if (file.type === "application/pdf") {
         setNotice(
           "Original PDF saved to the media library. Add a PNG preview to position it in the Studio; the PDF remains untouched.",
@@ -563,7 +560,10 @@ export default function StudioWorkspace({
         canvas.toBlob((value) => (value ? resolve(value) : reject(new Error("Preview export failed"))), "image/png"),
       );
       const filename = `placement-${catalogId.slice(0, 8)}-${locationId.slice(0, 8)}-${Date.now()}.png`;
-      return (await uploadMediaFile(new File([blob], filename, { type: "image/png" }), "studio/previews")) || null;
+      return (await uploadMediaFile(
+        new File([blob], filename, { type: "image/png" }), "studio/previews",
+        { derivativeRole: "mockup", transformPolicy: "preserve", sourceAsset: prepared },
+      )) || null;
     } catch (e) {
       console.warn("Placement preview could not be persisted", e);
       return null;
@@ -574,9 +574,17 @@ export default function StudioWorkspace({
     setBusy("prepare");
     setError("");
     try {
+      // Deterministic source-pixel preflight (not a provider acceptance claim).
+      if (manufacturingPreflight && ["unsupported", "needs_variant"].includes(manufacturingPreflight.status)) {
+        throw new Error(manufacturingPreflight.issues[0]?.message ||
+          "Original artwork requires a different source version for this print area.");
+      }
       const blob = await buildPreparedArtworkBlob();
       const filename = `prepared-${catalogId.slice(0, 8)}-${locationId.slice(0, 8)}-${Date.now()}.png`;
-      const uploaded = await uploadMediaFile(new File([blob], filename, { type: "image/png" }), "studio/prepared");
+      const uploaded = await uploadMediaFile(
+        new File([blob], filename, { type: "image/png" }), "studio/prepared",
+        { derivativeRole: "manufacturing", transformPolicy: "preserve", sourceAsset: asset },
+      );
       if (!uploaded) throw new Error("Prepared artwork was not saved");
       setPreparedAsset(uploaded);
       setProviderRenderUrl(null);
@@ -585,7 +593,7 @@ export default function StudioWorkspace({
       const saved = await saveDraft(uploaded, preview || previewAsset);
       if (saved) {
         setNotice(
-          `Prepared a ${printPixels?.width} × ${printPixels?.height} transparent production PNG. Original artwork is unchanged.`,
+          `Prepared ${printPixels?.width} × ${printPixels?.height} PNG. Original artwork is unchanged; supplier acceptance still requires verification.`,
         );
       }
       return uploaded;
@@ -670,6 +678,20 @@ export default function StudioWorkspace({
     dimensions && printPixels
       ? dimensions.width / ((printPixels.width * scale) / 100)
       : null;
+  const manufacturingPreflight = dimensions && printPixels && asset && location
+    ? evaluateManufacturingCompatibility(
+        { format: asset.filename?.split(".").pop(), widthPx: dimensions.width,
+          heightPx: dimensions.height, bytes: asset.size_bytes },
+        { id: "fnf.catalog-raster", manufacturer: "completeful",
+          process: String(detail.product.print_type || "catalog").toLowerCase(),
+          format: "png", allowRaster: true, allowVector: false,
+          ppi: Number(location.dpi) || 300,
+          source: { kind: "catalog-artboard", verified: false } },
+        { printWidthIn: ((printPixels.width * scale) / 100) / (Number(location.dpi) || 300),
+          printHeightIn: ((printPixels.width * scale) / 100) / (Number(location.dpi) || 300) *
+            dimensions.height / Math.max(1, dimensions.width) },
+      )
+    : null;
   return (
     <div className="ps-workspace" data-agentsam-resource="product-design-workspace">
       <header className="ps-workspace-header">
@@ -1263,11 +1285,14 @@ export default function StudioWorkspace({
             <span
               className={quality != null && quality < 1 ? "needs-review" : ""}
             >
-              {quality == null
-                ? "Check print requirements before production"
-                : quality < 1
-                  ? "Resolution below print-area target at this size"
-                  : "Pixel dimensions meet this print-area target"}
+              {manufacturingPreflight?.status === "unsupported" ||
+                manufacturingPreflight?.status === "needs_variant"
+                ? manufacturingPreflight.issues[0]?.message || "Artwork needs a different source"
+                : quality == null
+                  ? "Check print requirements before production"
+                  : quality < 1
+                    ? "Source resolution below print-area target"
+                    : "Source pixels meet selected artboard; supplier acceptance unverified"}
             </span>
           </div>
           <div className="ps-composer">

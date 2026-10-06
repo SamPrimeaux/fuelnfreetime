@@ -429,31 +429,54 @@ export async function uploadMedia(request, env, executionCtx = null) {
 
   const category = form.get("category") ? form.get("category").toString() : null;
   const folderHint = form.get("folder") ? normalizeFolder(form.get("folder").toString()) : null;
-  // An edited image is still ingested through the existing R2/D1 pipeline.
-  // Its source is verified server-side; source bytes are never overwritten.
+  // Provider-neutral derivative intent: source identity and lineage are always
+  // verified on this store's D1, never accepted as browser-supplied authority.
+  const derivativeRole = String(form.get("derivative_role") || "").trim().toLowerCase() || null;
+  const allowedRoles = new Set(["original/master", "manufacturing", "mockup", "storefront/gallery", "thumbnail", "social"]);
+  if (derivativeRole && !allowedRoles.has(derivativeRole)) {
+    return json({ error: "Unsupported media derivative role" }, { status: 400 });
+  }
+  const requestedTransformPolicy = String(form.get("transform_policy") || "auto").trim().toLowerCase();
+  if (!["auto", "preserve"].includes(requestedTransformPolicy)) {
+    return json({ error: "Transform policy must be auto or preserve" }, { status: 400 });
+  }
+  const transformPolicy = (derivativeRole === "manufacturing" || derivativeRole === "original/master")
+    ? "preserve" : requestedTransformPolicy;
   const originParam = form.get("source_media_asset_id");
+  const editParam = form.get("edit_operations_json");
   let editedSource = null;
   let editOperations = [];
+  const browserEdit = editParam != null;
   if (originParam != null) {
     const originId = Number(originParam);
-    if (!Number.isSafeInteger(originId) || originId < 1 || files.length !== 1 ||
-        String(files[0].type || "") !== "image/png") {
-      return json({ error: "Invalid image derivative request" }, { status: 400 });
+    if (!Number.isSafeInteger(originId) || originId < 1 || files.length !== 1) {
+      return json({ error: "Invalid media source selection" }, { status: 400 });
     }
-    editedSource = await env.DB.prepare("SELECT id, filename, content_type FROM media_assets WHERE id = ?")
-      .bind(originId).first();
-    if (!editedSource || !String(editedSource.content_type || "").startsWith("image/")) {
-      return json({ error: "Original media asset not found" }, { status: 404 });
+    editedSource = await env.DB.prepare(
+      "SELECT id, filename, content_type, r2_key FROM media_assets WHERE id = ?"
+    ).bind(originId).first();
+    if (!editedSource) return json({ error: "Source media asset not found" }, { status: 404 });
+    if (browserEdit && (!String(editedSource.content_type || "").startsWith("image/") ||
+        String(files[0].type || "") !== "image/png")) {
+      return json({ error: "The browser editor must export PNG from an image source" }, { status: 400 });
     }
-    try { editOperations = JSON.parse(String(form.get("edit_operations_json") || "[]")); }
-    catch { return json({ error: "Invalid image edit history" }, { status: 400 }); }
-    const allowed = new Set(["markup", "erase", "resize", "undo"]);
-    if (!Array.isArray(editOperations) || editOperations.length > 40 ||
-        editOperations.some((op) => !op || !allowed.has(op.type) || JSON.stringify(op).length > 300)) {
-      return json({ error: "Unsupported image edit operations" }, { status: 400 });
+    if (browserEdit) {
+      try { editOperations = JSON.parse(String(editParam)); }
+      catch { return json({ error: "Invalid image edit history" }, { status: 400 }); }
+      const allowed = new Set(["markup", "erase", "resize", "undo"]);
+      if (!Array.isArray(editOperations) || editOperations.length > 40 ||
+          editOperations.some((op) => !op || !allowed.has(op.type) || JSON.stringify(op).length > 300)) {
+        return json({ error: "Unsupported image edit operations" }, { status: 400 });
+      }
     }
+  } else if (browserEdit) {
+    return json({ error: "Image edits require an original asset" }, { status: 400 });
   }
-  let prefix = editedSource ? "derivatives/media-edit/" : (form.get("prefix") || "intake/").toString();
+  const claimedSourceKey = String(form.get("source_key") || "").trim();
+  if (claimedSourceKey && (!editedSource || claimedSourceKey !== editedSource.r2_key)) {
+    return json({ error: "Source media key does not match the selected asset" }, { status: 400 });
+  }
+  let prefix = browserEdit ? "derivatives/media-edit/" : (form.get("prefix") || "intake/").toString();
   if (!prefix.endsWith("/")) prefix += "/";
   prefix = prefix.replace(/^\/+/, "");
 
@@ -474,19 +497,25 @@ export async function uploadMedia(request, env, executionCtx = null) {
       bytes: buf.byteLength,
       filename,
       folder,
+      derivativeRole: derivativeRole || (browserEdit ? "mockup" : null),
+      transformPolicy: browserEdit ? "preserve" : transformPolicy,
+      sourceAssetId: editedSource?.id || null,
+      sourceKey: editedSource?.r2_key || null,
+      production: derivativeRole === "manufacturing" || derivativeRole === "original/master"
+        ? { requiresMaster: true } : null,
     });
 
     const urls = publicUrlFields(intakeKey);
     const meta = {
       ...plan.meta,
-      ...(editedSource ? { media_edit: {
+      ...(browserEdit && editedSource ? { media_edit: {
         source_media_asset_id: Number(editedSource.id),
         source_filename: editedSource.filename,
         method: "browser_canvas",
         operations: editOperations,
         created_at: new Date().toISOString(),
       } } : {}),
-      lifecycle: "processing",
+      lifecycle: plan.execution?.mode === "none" ? "ready" : "processing",
       intelligence: plan.intelligence,
       tags: plan.tags,
       // Keep workflow keys in diagnostics only — never operator-facing.
@@ -542,18 +571,20 @@ export async function uploadMedia(request, env, executionCtx = null) {
     const mediaId = result.meta.last_row_id;
     let jobId = null;
     let queued = false;
-    try {
-      jobId = await createAssetJob(env, {
-        mediaAssetId: mediaId,
-        intakeKey,
-        canonicalKey: plan.canonical_key,
-        pipeline: plan.classification?.pipeline,
-        plan,
-      });
-      const enq = await enqueueAssetJob(env, jobId, { media_asset_id: mediaId });
-      queued = !!enq?.queued;
-    } catch (err) {
-      console.error("[media/upload] job create/enqueue failed", err?.message || err);
+    if (plan.execution?.mode !== "none") {
+      try {
+        jobId = await createAssetJob(env, {
+          mediaAssetId: mediaId,
+          intakeKey,
+          canonicalKey: plan.canonical_key,
+          pipeline: plan.classification?.pipeline,
+          plan,
+        });
+        const enq = await enqueueAssetJob(env, jobId, { media_asset_id: mediaId });
+        queued = !!enq?.queued;
+      } catch (err) {
+        console.error("[media/upload] job create/enqueue failed", err?.message || err);
+      }
     }
 
     // Queue is primary. Inline/waitUntil only when ASSET_JOBS binding is absent.

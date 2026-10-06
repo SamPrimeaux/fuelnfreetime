@@ -41,7 +41,8 @@ test("Product Editor has top-right persistence actions, verified saves, design h
   assert.doesNotMatch(productEdit, /<footer class="product-editor-bar">/);
   assert.match(productEdit, /Save did not verify against the stored product/);
   assert.match(productEdit, /const additionalEdits = JSON\.stringify\(collectPayload\(\)\) !== saveSnapshot/);
-  assert.match(productEdit, /renderStudioDesign\(d\.design_draft, d\.fulfillment\)/);
+  assert.match(productEdit, /renderStudioDesign\(d\.design_draft, d\.fulfillment, d\.source\)/);
+  assert.match(productEdit, /Source: Store-managed/);
   assert.match(productEdit, /\/admin\/products\/create\//);
   assert.match(productEdit, /connect-fulfillment-btn/);
   assert.match(productCss, /\.product-editor-save-actions/);

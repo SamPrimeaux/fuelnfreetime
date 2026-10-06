@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { adminFetch } from "../../lib/api";
 import StudioIcon from "./StudioIcon";
 import ProductImage from "./ProductImage";
-import StudioWorkspace from "./StudioWorkspace";
 import {
   catalogProductId,
   catalogVariantId,
@@ -22,6 +21,8 @@ import {
   type ProductDetail,
 } from "./studio-model";
 import "../../styles/product-studio.css";
+
+const StudioWorkspace = lazy(() => import("./StudioWorkspace"));
 
 const collections = [
   { name: "Everything", query: "", caption: "Find your next idea" },
@@ -224,11 +225,13 @@ export default function ProductStudioPage() {
       aria-label="Product Studio"
     >
       {designing && detail ? (
-        <StudioWorkspace
-          detail={detail}
-          initialVariantId={selectedVariantId}
-          onBack={() => setDesigning(false)}
-        />
+        <Suspense fallback={<div className="ps-workspace-loading" role="status">Loading studio…</div>}>
+          <StudioWorkspace
+            detail={detail}
+            initialVariantId={selectedVariantId}
+            onBack={() => setDesigning(false)}
+          />
+        </Suspense>
       ) : (
         <div className="ps-container">
           <div className="ps-topline">

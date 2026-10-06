@@ -49,6 +49,7 @@ import {
   setPrimaryProductImage,
 } from "./media.js";
 import { planProductAssetOptimization } from "../assets/product-optimize.js";
+import { groupProductInventory, resolveProductSource, validateInventoryAdjustment } from "../../../../packages/agentsam-merch/src/product-spine.js";
 import { handleAdminCmsApi } from "../cms/api.js";
 import { getFinanceAnalytics } from "./analytics-finance.js";
 import {
@@ -283,14 +284,23 @@ export async function getProduct(request, env, id) {
   const designDraft = await env.DB.prepare(
     "SELECT id, product_id, completeful_catalog_product_id, state, version, original_media_asset_id, prepared_media_asset_id, preview_media_asset_id, completeful_design_id, completeful_render_status FROM product_studio_drafts WHERE product_id = ?"
   ).bind(id).first();
-  const fulfillment = designDraft ? await env.DB.prepare(
-    "SELECT completeful_store_product_id, sync_status FROM completeful_product_links WHERE product_id = ? ORDER BY id DESC LIMIT 1"
-  ).bind(id).first() : null;
+  let fulfillment = null;
+  try {
+    fulfillment = await env.DB.prepare(
+      "SELECT completeful_store_product_id, completeful_catalog_product_id, sync_status FROM completeful_product_links WHERE product_id = ? ORDER BY id DESC LIMIT 1"
+    ).bind(id).first();
+  } catch {
+    // Manual product editing still works without a connected provider table.
+  }
   const { results: memberships } = await env.DB.prepare(
     "SELECT collection_id FROM store_collection_products WHERE product_id = ? ORDER BY sort_order, collection_id"
   ).bind(id).all();
   return json({ ok: true, product, variants, design_draft: designDraft || null,
-    fulfillment: fulfillment || null, collection_ids: (memberships || []).map((row) => Number(row.collection_id)) });
+    fulfillment: fulfillment || null,
+    source: resolveProductSource(product, fulfillment || (designDraft?.completeful_catalog_product_id
+      ? { completeful_catalog_product_id: designDraft.completeful_catalog_product_id, sync_status: "not_connected" }
+      : null)),
+    collection_ids: (memberships || []).map((row) => Number(row.collection_id)) });
 }
 
 async function createProduct(request, env) {
@@ -585,19 +595,34 @@ async function updateVariant(request, env, id) {
   return json({ ok: true });
 }
 
-async function patchVariantInventory(request, env, id) {
+export async function patchVariantInventory(request, env, id) {
   const body = await readJson(request);
-  if (!body || body.inventory_qty == null) {
-    return json({ error: "inventory_qty required" }, { status: 400 });
+  const variantId = Number(id);
+  if (!Number.isSafeInteger(variantId) || variantId <= 0) {
+    return json({ error: "Invalid variant" }, { status: 400 });
   }
-
-  await env.DB.prepare(
-    `UPDATE product_variants SET inventory_qty = ?, updated_at = datetime('now') WHERE id = ?`
-  )
-    .bind(Math.round(Number(body.inventory_qty)), id)
-    .run();
-
-  return json({ ok: true });
+  let adjustment;
+  try {
+    adjustment = validateInventoryAdjustment(body?.inventory_qty, body?.expected_inventory_qty);
+  } catch (error) {
+    return json({ error: error.message }, { status: 400 });
+  }
+  const { quantity: qty, expected } = adjustment;
+  const sql = expected == null
+    ? "UPDATE product_variants SET inventory_qty = ?, updated_at = datetime('now') WHERE id = ?"
+    : "UPDATE product_variants SET inventory_qty = ?, updated_at = datetime('now') WHERE id = ? AND inventory_qty = ?";
+  const args = expected == null ? [qty, variantId] : [qty, variantId, Number(expected)];
+  const outcome = await env.DB.prepare(sql).bind(...args).run();
+  if (Number(outcome.meta?.changes || 0) !== 1) {
+    const actual = await env.DB.prepare("SELECT id, inventory_qty FROM product_variants WHERE id = ?")
+      .bind(variantId).first();
+    if (!actual) return json({ error: "Variant no longer exists" }, { status: 404 });
+    return json({
+      error: "Inventory changed since you opened this product. Reload the latest quantity before saving.",
+      code: "stale_inventory", inventory_qty: actual.inventory_qty,
+    }, { status: 409 });
+  }
+  return json({ ok: true, id: variantId, inventory_qty: qty });
 }
 
 async function deleteVariant(request, env, id) {
@@ -607,15 +632,29 @@ async function deleteVariant(request, env, id) {
 
 // ----- Inventory (flat view) -----
 
-async function listInventory(request, env) {
+export async function listInventory(request, env) {
   const { results } = await env.DB.prepare(
     `SELECT v.id, v.sku, v.size, v.color, v.inventory_qty, v.price_cents AS variant_price_cents,
             p.id AS product_id, p.title AS product_title, p.price_cents AS product_price_cents, p.status
      FROM product_variants v
      JOIN products p ON p.id = v.product_id
-     ORDER BY v.inventory_qty ASC, p.title ASC`
+     ORDER BY p.title ASC, v.id ASC`
   ).all();
-  return json({ ok: true, inventory: results });
+  // Existing provider linkage is optional; it never becomes product identity.
+  // A local/wholesale product without a connector remains merchant-managed.
+  let links = [];
+  let providerLinksAvailable = true;
+  try {
+    const query = await env.DB.prepare(
+      "SELECT product_id, completeful_store_product_id, completeful_catalog_product_id, sync_status FROM completeful_product_links ORDER BY id DESC"
+    ).all();
+    links = query.results || [];
+  } catch {
+    providerLinksAvailable = false;
+  }
+  return json({ ok: true, inventory: results || [],
+    groups: groupProductInventory(results || [], links),
+    provider_links_available: providerLinksAvailable });
 }
 
 // ----- Orders -----
