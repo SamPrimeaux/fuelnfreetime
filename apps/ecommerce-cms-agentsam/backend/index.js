@@ -288,8 +288,16 @@ export default {
     if (path.startsWith("/api/internal/studio-cms/")) {
       return noStore(await handleStudioCmsBridge(request, env));
     }
+    if (path === "/api/admin/scene-review") {
+      const user = await getSessionUser(request, env);
+      if (!user) return noStore(Response.json({ error: "Unauthorized" }, { status: 401 }));
+      return noStore(await handleSceneReview(request, env, url));
+    }
     if (path.startsWith("/api/admin/")) {
       return noStore(await handleAdminApi(request, env, url, ctx));
+    }
+    if (path === "/review/bridge-fly" || path.startsWith("/review/bridge-fly/")) {
+      return noStore(await handleSceneReview(request, env, url));
     }
 
     if (path.startsWith("/media/")) {
