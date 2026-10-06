@@ -333,6 +333,8 @@ export async function listPagesAdmin(env) {
   const pages = [];
   for (const row of results) {
     const published = await getPublishedPage(env, row.slug);
+    const content = await loadSectionsFromDb(env, row.slug, row.id);
+    const linked = content.some((section) => section.content?.__editor?.source === "live-storefront");
     pages.push({
       id: row.id,
       slug: row.slug,
