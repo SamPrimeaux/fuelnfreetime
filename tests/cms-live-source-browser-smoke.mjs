@@ -44,6 +44,22 @@ const probe = "<script>setTimeout(function(){" +
  "var before={src:frame.getAttribute('src'),headline:frame.contentDocument?.querySelector('[data-cms-section=\"hero\"] [data-cms=\"headline\"]')?.textContent," +
  "visible:!document.getElementById('te-import-live').hidden,liveOnly:[...document.querySelectorAll('.te-live-only-row strong')].map(e=>e.textContent)," +
  "inspector:document.getElementById('te-field-hero-headline')?.value};" +
+ "if(window.innerWidth<=900){" +
+ "var nav=document.getElementById('te-mobile-pane-switch');" +
+ "var modes=nav.querySelectorAll('[data-mobile-pane]');" +
+ "var preview=document.querySelector('.theme-studio-canvas');" +
+ "var tree=document.querySelector('.theme-studio-tree');" +
+ "var inspector=document.querySelector('.theme-editor-panel');" +
+ "var initialPreview=getComputedStyle(preview).display!=='none';" +
+ "modes[0].click();var treeVisible=getComputedStyle(tree).display!=='none';" +
+ "var heroRow=document.querySelector('[data-select-section=hero]');if(heroRow)heroRow.click();" +
+ "var settingsVisible=getComputedStyle(inspector).display!=='none';" +
+ "modes[1].click();var backToPreview=getComputedStyle(preview).display!=='none';" +
+ "before.mobile={viewport:window.innerWidth,navVisible:getComputedStyle(nav).display!=='none'," +
+ "initialPreview,treeVisible,settingsVisible,backToPreview," +
+ "treeHasAdd:!!document.getElementById('te-add-section')," +
+ "noOverflow:document.documentElement.scrollWidth<=window.innerWidth+1};" +
+ "}" +
  "document.getElementById('te-import-live').click();" +
  "setTimeout(function(){var pre=document.createElement('pre');pre.id='browser-result';" +
  "pre.textContent=JSON.stringify({before,imported:window.__submitted,linked:window.__linked});document.body.append(pre);},400);" +
@@ -68,16 +84,19 @@ const server=http.createServer((req,res)=>{
  else res.writeHead(404).end();
 });
 await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
-let dom;
+const results=new Map();
 try{
  const url="http://127.0.0.1:"+server.address().port+"/admin/theme-editor?slug=shop";
- ({stdout:dom}=await exec(chrome,["--headless=new","--disable-gpu","--disable-dev-shm-usage","--no-sandbox",
-   "--virtual-time-budget=7000","--window-size=1440,1000","--dump-dom",url],
-   {timeout:60000,encoding:"utf8",maxBuffer:1<<22}));
+ for(const width of [1440,744,390]){
+  const {stdout:dom}=await exec(chrome,["--headless=new","--disable-gpu","--disable-dev-shm-usage","--no-sandbox",
+    "--force-device-scale-factor=1","--virtual-time-budget=7000","--window-size="+width+",1000","--dump-dom",url],
+    {timeout:60000,encoding:"utf8",maxBuffer:1<<22});
+  const match=dom.match(/<pre id="browser-result">([^<]+)<\/pre>/);
+  assert.ok(match,"Browser did not complete editor test at "+width+"px");
+  results.set(width,JSON.parse(match[1].replaceAll("&quot;",'"').replaceAll("&amp;","&").replaceAll("&lt;","<").replaceAll("&gt;",">")));
+ }
 }finally{server.close()}
-const match=dom.match(/<pre id="browser-result">([^<]+)<\/pre>/);
-assert.ok(match,"Browser never completed source reconciliation");
-const result=JSON.parse(match[1].replaceAll("&quot;",'"').replaceAll("&amp;","&").replaceAll("&lt;","<").replaceAll("&gt;",">"));
+const result=results.get(1440);
 console.log(JSON.stringify(result,null,2));
 assert.match(result.before.src,/^\/shop\?_=/);
 assert.match(result.before.headline,/Time is the\s*real horsepower/i);
@@ -94,3 +113,17 @@ assert.equal(cards.card2.name, "Masters");
 assert.equal(cards.card3.name, "Essentials");
 assert.equal(result.linked,true);
 console.log("PASS: real live Shop content enters the actual CMS editor without production writes");
+
+for(const width of [744,390]){
+ const mobile=results.get(width)?.before?.mobile;
+ assert.ok(mobile, "Mobile navigation missing at "+width+"px");
+ assert.equal(mobile.navVisible,true);
+ assert.equal(mobile.initialPreview,true);
+ assert.equal(mobile.treeVisible,true, "The section tree must be accessible on tablets and phones");
+ assert.equal(mobile.settingsVisible,true, "Selecting a section must open editable settings");
+ assert.equal(mobile.backToPreview,true);
+ assert.equal(mobile.treeHasAdd,true);
+ assert.equal(mobile.noOverflow,true, "Editor must have no horizontal page overflow");
+ assert.equal(results.get(width).linked,true);
+ console.log("PASS: "+width+"px mobile CMS Sections / Preview / Settings editor");
+}
