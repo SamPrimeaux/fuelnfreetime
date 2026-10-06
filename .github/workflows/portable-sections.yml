@@ -1,0 +1,34 @@
+name: Portable theme sections
+on:
+  pull_request:
+    paths:
+      - packages/theme-contract/runtime/portable-sections.*
+      - packages/fnf-theme/src/editor/preview-adapter.js
+      - packages/heuristic-theme/storefront/js/cms-hydrate.js
+      - packages/heuristic-theme/storefront/js/page-composer.js
+      - apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor.js
+      - apps/ecommerce-cms-agentsam/backend/cms/api.js
+      - scripts/sync-app-frontend.mjs
+      - tests/portable-sections.test.mjs
+      - tests/theme-studio-universal.test.mjs
+      - .github/workflows/portable-sections.yml
+permissions:
+  contents: read
+jobs:
+  section-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify syntax
+        run: |
+          node --check packages/theme-contract/runtime/portable-sections.js
+          node --check packages/heuristic-theme/storefront/js/cms-hydrate.js
+          node --check packages/heuristic-theme/storefront/js/page-composer.js
+          node --check packages/fnf-theme/src/editor/preview-adapter.js
+          node --check apps/ecommerce-cms-agentsam/backend/cms/api.js
+          node --check apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor.js
+      - name: Real renderer and shared catalog checks
+        run: node --test tests/portable-sections.test.mjs tests/theme-studio-universal.test.mjs
