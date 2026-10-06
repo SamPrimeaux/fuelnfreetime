@@ -138,6 +138,8 @@ assert.match(result.before.blockInspector.title,/Collection card/i);
 assert.deepEqual(result.before.blockInspector.groups,["Content","Media","Buttons and links"]);
 assert.equal(result.before.blockInspector.advancedClosed,true);
 assert.ok(result.before.blockInspector.fieldKeys.some(k=>k.endsWith(".href")));
+assert.equal(result.before.blockInspector.parentButton,true);
+assert.equal(result.before.blockInspector.parentTitle,"Collections");
 assert.equal(result.imported.mode,"reconcile");
 assert.ok(result.imported.sections.some(s=>s.key==="hero" && /Time is the\s*real horsepower/i.test(s.content.headline)));
 assert.ok(!result.imported.sections.some(s=>s.key==="newsletter"));
