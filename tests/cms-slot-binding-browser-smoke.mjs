@@ -39,7 +39,15 @@ const probe="<script>setTimeout(function(){" +
  "cardImage:document.querySelector('.collection-lineup [data-cms=\"card1.imageUrl\"]').getAttribute('src')," +
  "cardHref:document.querySelector('.collection-lineup [data-cms=\"card1.href\"]').getAttribute('href')," +
  "storyImage:document.querySelector('.brand-story [data-cms=\"imageUrl\"]').getAttribute('src')};" +
- "var out=document.createElement('pre');out.id='browser-result';out.textContent=JSON.stringify(result);document.body.append(out);" +
+ "window.postMessage({type:'fnf-cms-preview',slug:'shop',siteSections:[],sections:[" +
+ "{key:'hero',content:{imageUrl:'data:text/html,unsafe',ctaPrimary:{href:'javascript:alert(1)'},ctaSecondary:{href:'data:text/html,unsafe'}}}," +
+ "{key:'collections',content:{card1:{href:'javascript:alert(1)',imageUrl:'data:text/html,unsafe'}}}" +
+ "]},location.origin);" +
+ "setTimeout(function(){result.invalidHref=hero.querySelector('[data-cms=\"ctaPrimary.href\"]').getAttribute('href');" +
+ "result.invalidImage=hero.querySelector('[data-cms=\"imageUrl\"]').getAttribute('src');" +
+ "result.invalidCardHref=document.querySelector('.collection-lineup [data-cms=\"card1.href\"]').getAttribute('href');" +
+ "result.invalidCardImage=document.querySelector('.collection-lineup [data-cms=\"card1.imageUrl\"]').getAttribute('src');" +
+ "var out=document.createElement('pre');out.id='browser-result';out.textContent=JSON.stringify(result);document.body.append(out);},100);" +
  "},400);},800)</script>";
 const storefront=html.replace("</body>",probe+"</body>");
 const server=http.createServer((req,res)=>{
@@ -73,4 +81,8 @@ assert.equal(result.cardName,"CUSTOM COLLECTION");
 assert.equal(result.cardImage,"/media/customer-card.webp");
 assert.equal(result.cardHref,"/shop/collections/custom");
 assert.equal(result.storyImage,"/media/customer-story.webp");
+assert.equal(result.invalidHref,"/shop/collections/updated","unsafe script links must be rejected");
+assert.equal(result.invalidImage,"/media/customer-hero.webp","unsafe image protocols must be rejected");
+assert.equal(result.invalidCardHref,"/shop/collections/custom");
+assert.equal(result.invalidCardImage,"/media/customer-card.webp");
 console.log("PASS: real Heuristic storefront applies actual CMS content, media and link edits");
