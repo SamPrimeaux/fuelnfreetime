@@ -344,8 +344,14 @@
 
   function applyCmsHeader(content) {
     if (!content || typeof content !== "object" || !navConfig) return;
-    if (content.logoUrl) navConfig.logoUrl = content.logoUrl;
-    if (Number.isFinite(Number(content.logoHeight))) navConfig.logoHeight = Number(content.logoHeight);
+    const previewOverride = new URLSearchParams(location.search).has("preview");
+    // Store Preferences becomes the single live authority once a merchant
+    // explicitly saves it. CMS draft previews can still demonstrate local
+    // header edits without silently overwriting public site settings.
+    if (previewOverride || navConfig.logoAuthority !== "preferences") {
+      if (content.logoUrl) navConfig.logoUrl = content.logoUrl;
+      if (Number.isFinite(Number(content.logoHeight))) navConfig.logoHeight = Number(content.logoHeight);
+    }
     if (content.preset && headerPresetContract.presets?.[content.preset]) {
       document.documentElement.dataset.headerPreset = content.preset;
     }
