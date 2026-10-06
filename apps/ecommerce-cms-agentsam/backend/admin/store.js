@@ -67,6 +67,7 @@ function publicSettings(settings) {
     storePasswordHash: _h,
     storePasswordSalt: _s,
     storePassword: _p,
+    sceneReview: _scene,
     ...rest
   } = settings || {};
   return {
