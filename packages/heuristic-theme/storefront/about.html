@@ -804,7 +804,7 @@
                     <h2 data-cms="collections.title">The Gear That Gets It</h2>
                 </div>
                 <div class="collections-grid">
-                    <a href="/shop" class="collection-card" data-cms="collections.card1.href" data-cms-attr="href">
+                    <a href="/shop" class="collection-card" data-cms="collections.card1.href" data-cms-attr="href" data-cms-block="card1" data-cms-block-template="collection-card">
                         <div class="collection-image">
                             <div class="collection-badge" data-cms="collections.card1.badge">Core Collection</div>
                             <img src="/media/archive/shopify-import/graphics/50C9CEB5.png" alt="Fuel & Free Time Core Collection" data-cms="collections.card1.imageUrl" data-cms-attr="src">
@@ -818,7 +818,7 @@
                             <span class="collection-link" data-cms="collections.card1.ctaLabel">Explore Core →</span>
                         </div>
                     </a>
-                    <a href="/shop" class="collection-card" data-cms="collections.card2.href" data-cms-attr="href">
+                    <a href="/shop" class="collection-card" data-cms="collections.card2.href" data-cms-attr="href" data-cms-block="card2" data-cms-block-template="collection-card">
                         <div class="collection-image">
                             <div class="collection-badge" data-cms="collections.card2.badge">High Octane</div>
                             <img src="/media/archive/shopify-import/graphics/Vette.png" alt="High Octane Performance Collection" data-cms="collections.card2.imageUrl" data-cms-attr="src">
@@ -832,7 +832,7 @@
                             <span class="collection-link" data-cms="collections.card2.ctaLabel">Shop Performance →</span>
                         </div>
                     </a>
-                    <a href="/shop" class="collection-card" data-cms="collections.card3.href" data-cms-attr="href">
+                    <a href="/shop" class="collection-card" data-cms="collections.card3.href" data-cms-attr="href" data-cms-block="card3" data-cms-block-template="collection-card">
                         <div class="collection-image">
                             <div class="collection-badge" data-cms="collections.card3.badge">Limited Drops</div>
                             <img src="/media/archive/shopify-import/graphics/fuel_up.png" alt="Masters Series Limited Edition" data-cms="collections.card3.imageUrl" data-cms-attr="src">
@@ -857,7 +857,7 @@
                     <h2 data-cms="against.headline">What We Stand Against</h2>
                 </div>
                 <div class="against-grid">
-                    <div class="against-item animate-on-scroll">
+                    <div class="against-item animate-on-scroll" data-cms-block="card1" data-cms-block-template="belief-card">
                         <div class="against-icon" data-cms="against.card1.icon">💼</div>
                         <h3 class="against-title strike-title" data-cms="against.card1.title">The 40-Year Plan</h3>
                         <p class="against-description" data-cms="against.card1.description">
@@ -865,7 +865,7 @@
                             not after four decades of postponement.
                         </p>
                     </div>
-                    <div class="against-item animate-on-scroll">
+                    <div class="against-item animate-on-scroll" data-cms-block="card2" data-cms-block-template="belief-card">
                         <div class="against-icon" data-cms="against.card2.icon">⏰</div>
                         <h3 class="against-title strike-title" data-cms="against.card2.title">Time Poverty</h3>
                         <p class="against-description" data-cms="against.card2.description">
@@ -873,7 +873,7 @@
                             if you never have time to play?
                         </p>
                     </div>
-                    <div class="against-item animate-on-scroll">
+                    <div class="against-item animate-on-scroll" data-cms-block="card3" data-cms-block-template="belief-card">
                         <div class="against-icon" data-cms="against.card3.icon">🏢</div>
                         <h3 class="against-title strike-title" data-cms="against.card3.title">Corporate Chains</h3>
                         <p class="against-description" data-cms="against.card3.description">
@@ -905,7 +905,7 @@
                 <h2 class="full-story-title" style="text-align: center;">The <span style="color: var(--fire-orange);" data-cms="origins.titleAccent">Full</span> Story</h2>
             </div>
             
-            <div class="story-section">
+            <div class="story-section" data-cms-block="story1" data-cms-block-template="story-panel">
                 <div class="story-content">
                     <p data-cms="origins.story1.body">
                         Fuel & Free Time isn't backed by investors or focus groups. It started with grease under the 
@@ -913,11 +913,11 @@
                     </p>
                 </div>
                 <div class="story-image">
-                    <img src="/media/archive/shopify-import/graphics/50C9CEB5.png" alt="Fuel & Free Time Origins" data-cms="origins.story1.imageUrl" data-cms-attr="src">
+                    <img src="/media/archive/shopify-import/graphics/50C9CEB5.png" alt="Fuel & Free Time Origins" data-cms="origins.imageUrl" data-cms-attr="src">
                 </div>
             </div>
 
-            <div class="story-section reverse">
+            <div class="story-section reverse" data-cms-block="story2" data-cms-block-template="story-panel">
                 <div class="story-content">
                     <p data-cms="origins.story2.body">
                         Every thread is sewn with purpose in Lafayette — not to save costs, but to build something real 
@@ -926,12 +926,12 @@
                 </div>
                 <div class="story-image">
                     <video autoplay muted loop playsinline>
-                        <source src="/media/archive/shopify-import/videos/video-1-f506d934.mp4" type="video/mp4" data-cms="origins.story2.videoUrl" data-cms-attr="src">
+                        <source src="/media/archive/shopify-import/videos/video-1-f506d934.mp4" type="video/mp4" data-cms="origins.videoUrl" data-cms-attr="src">
                     </video>
                 </div>
             </div>
 
-            <div class="story-section">
+            <div class="story-section" data-cms-block="story3" data-cms-block-template="story-panel">
                 <div class="story-content">
                     <p data-cms="origins.story3.body">
                         From that first sunrise on Highway 90 to every late-night garage session since, we've stayed true 
@@ -950,28 +950,28 @@
                 <h2 style="text-align: center; font-size: clamp(42px, 5vw, 64px); text-transform: uppercase;" data-cms="lifestyle.headline">What Drives Us</h2>
             </div>
             <div class="values-about-grid">
-                <div class="value-about-card">
+                <div class="value-about-card" data-cms-block="card1" data-cms-block-template="value-card">
                     <div style="font-size: 48px; margin-bottom: 24px;">⏱️</div>
                     <h3 style="font-size: 17px; text-transform: uppercase; margin-bottom: 16px;" data-cms="lifestyle.card1.title">Time as Currency</h3>
                     <p style="font-size: 14px; line-height: 1.7;" data-cms="lifestyle.card1.body">
                         The only resource you can't earn back. We measure wealth in free hours, not dollar signs.
                     </p>
                 </div>
-                <div class="value-about-card">
+                <div class="value-about-card" data-cms-block="card2" data-cms-block-template="value-card">
                     <div style="font-size: 48px; margin-bottom: 24px;">⚡</div>
                     <h3 style="font-size: 17px; text-transform: uppercase; margin-bottom: 16px;" data-cms="lifestyle.card2.title">Fuel Everything</h3>
                     <p style="font-size: 14px; line-height: 1.7;" data-cms="lifestyle.card2.body">
                         Gas, diesel, jet fuel, coffee — whatever powers your passion, we celebrate it.
                     </p>
                 </div>
-                <div class="value-about-card">
+                <div class="value-about-card" data-cms-block="card3" data-cms-block-template="value-card">
                     <div style="font-size: 48px; margin-bottom: 24px;">🤝</div>
                     <h3 style="font-size: 17px; text-transform: uppercase; margin-bottom: 16px;" data-cms="lifestyle.card3.title">Cross-Gen Unity</h3>
                     <p style="font-size: 14px; line-height: 1.7;" data-cms="lifestyle.card3.body">
                         Old heads and young bucks united by shared values, not shared birthdays.
                     </p>
                 </div>
-                <div class="value-about-card">
+                <div class="value-about-card" data-cms-block="card4" data-cms-block-template="value-card">
                     <div style="font-size: 48px; margin-bottom: 24px;">🏁</div>
                     <h3 style="font-size: 17px; text-transform: uppercase; margin-bottom: 16px;" data-cms="lifestyle.card4.title">Culture > Commerce</h3>
                     <p style="font-size: 14px; line-height: 1.7;" data-cms="lifestyle.card4.body">

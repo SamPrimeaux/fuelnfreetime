@@ -225,6 +225,12 @@
       const value = el.dataset.cms || "";
       if (value.startsWith(fromId + ".")) {
         el.dataset.cms = toId + value.slice(fromId.length);
+      } else {
+        // Source HTML uses fully qualified section.block.field markers
+        // for edge hydration. Re-key cloned blocks without dropping scope.
+        const scoped = "." + fromId + ".";
+        const i = value.indexOf(scoped);
+        if (i > 0) el.dataset.cms = value.slice(0, i) + "." + toId + value.slice(i + scoped.length - 1);
       }
     });
     if ((node.dataset.cms || "").startsWith(fromId + ".")) {

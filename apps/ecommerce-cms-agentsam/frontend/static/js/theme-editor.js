@@ -1025,7 +1025,10 @@
       }
       let matched = 0;
       for (const field of editableFields) {
-        let el = controls.find(function(node) { return node.dataset.cms === field.key; });
+        let el = controls.find(function(node) {
+          const value = node.dataset.cms || '';
+          return value === field.key || value === section.key + '.' + field.key;
+        });
         if (!el && field.key.endsWith('.href')) {
           const alias = field.key.slice(0, -5) + '.label';
           el = controls.find(function(node) { return node.dataset.cms === alias; });
