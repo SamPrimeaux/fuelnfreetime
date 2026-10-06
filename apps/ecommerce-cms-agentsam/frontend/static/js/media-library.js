@@ -1802,7 +1802,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
           context: { selected_resource: {
             type: "media_asset", id: asset.id,
             filename: asset.filename, content_type: asset.content_type,
-            surface: "media-library",
+            surface: "content-library",
           } },
           propagateError: true,
         });

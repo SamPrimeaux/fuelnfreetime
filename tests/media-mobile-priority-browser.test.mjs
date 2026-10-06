@@ -150,6 +150,7 @@ try{
       assert.equal(assistant.visible,true,'miniAgentSam should appear for every selected image');
       assert.equal(assistant.drawer,true,'selected media must open in asset inspector');
       assert.equal(assistant.commentEnabled,true,'SVG images should still support comments');
+      assert.match(read('apps/ecommerce-cms-agentsam/frontend/static/js/media-library.js'), /surface: "content-library"/);
       assert.equal(assistant.markupDisabled,true,'vector source cannot silently rasterize into an editable original');
       assert.equal(assistant.removeBgDisabled,true,'unsupported background removal must remain unavailable');
     }

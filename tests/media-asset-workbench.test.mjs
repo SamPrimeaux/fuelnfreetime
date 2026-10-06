@@ -63,6 +63,7 @@ test('media editor mounts shared workbench and stores derivative provenance', ()
   const server=readFileSync(new URL('../apps/ecommerce-cms-agentsam/backend/admin/media.js',import.meta.url),'utf8');
   assert.match(html,/id="media-agent-workbench"/);
   assert.match(js,/createMediaAssetWorkbench/);
+  assert.match(js,/surface: "content-library"/);
   assert.match(js,/source_media_asset_id/);
   assert.match(server,/source_media_asset_id: Number\(editedSource.id\)/);
 });
