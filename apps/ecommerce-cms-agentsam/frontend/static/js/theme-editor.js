@@ -10,6 +10,7 @@
   let previewBlobUrl = null;
   let siteDraftTouched = false;
   let liveUnimported = false;
+  let missingSourceSections = [];
   let liveSourceCaptured = false;
   let liveExistingDraft = false;
   let unmanagedLiveSections = [];
@@ -1025,7 +1026,10 @@
       }
       let matched = 0;
       for (const field of editableFields) {
-        let el = controls.find(function(node) { return node.dataset.cms === field.key; });
+        let el = controls.find(function(node) {
+          const value = node.dataset.cms || '';
+          return value === field.key || value === section.key + '.' + field.key;
+        });
         if (!el && field.key.endsWith('.href')) {
           const alias = field.key.slice(0, -5) + '.label';
           el = controls.find(function(node) { return node.dataset.cms === alias; });
@@ -1071,6 +1075,46 @@
     renderTree();
     renderInspector();
     return true;
+  }
+
+  // A published legacy page can have more real HTML regions than D1 rows.
+  // Stage ONLY absent, registered sections through the existing server API.
+  // No re-seeding, no overwriting legacy rows, and no automatic publish.
+  async function stageMissingSourceSections() {
+    if (!missingSourceSections.length || liveUnimported) return false;
+    if (dirty) {
+      setNote('Save or discard your current edits before staging source sections.', 'error');
+      return false;
+    }
+    const names = missingSourceSections.slice();
+    if (!window.confirm('Stage ' + names.length + ' source-backed section(s) as private CMS drafts? Existing page content and the published storefront will remain unchanged until you explicitly publish.')) return false;
+    const button = byId('te-import-live');
+    button.disabled = true;
+    setSaveState('Staging');
+    try {
+      const schema = window.SECTION_SCHEMAS?.[slug] || {};
+      const ordering = Object.entries(schema)
+        .sort(function(a,b) { return Number(a[1]?.sortOrder ?? 0) - Number(b[1]?.sortOrder ?? 0); })
+        .map(function(item) { return item[0]; });
+      for (const key of names) {
+        if (!Object.prototype.hasOwnProperty.call(schema, key)) throw new Error('Unregistered section: ' + key);
+        await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections', {
+          method: 'POST',
+          body: JSON.stringify({ templateKey: key, toIndex: ordering.indexOf(key) })
+        });
+      }
+      missingSourceSections = [];
+      setDirty(false);
+      await loadPage();
+      setNote(names.length + ' real source sections staged in CMS drafts. Review the preview and publish only when ready.', 'success');
+      return true;
+    } catch (error) {
+      setNote('Staging stopped. Refresh to inspect any completed drafts: ' + (error.message || error), 'error');
+      return false;
+    } finally {
+      button.disabled = false;
+      setSaveState('Draft');
+    }
   }
 
   async function importLiveSource() {
@@ -1344,11 +1388,19 @@
       ]);
       pageData = results[0].page;
       liveUnimported = pageData.content_authority === 'storefront-html';
+      missingSourceSections = Array.isArray(pageData.missing_source_sections)
+        ? pageData.missing_source_sections.filter(function(key) {
+          return Object.prototype.hasOwnProperty.call(window.SECTION_SCHEMAS?.[slug] || {}, key);
+        })
+        : [];
       liveExistingDraft = Boolean(results[0].seeded) && liveUnimported;
       liveSourceCaptured = false;
       unmanagedLiveSections = [];
       if (liveUnimported) selectedTheme = 'heuristic';
-      byId('te-import-live').hidden = true;
+      byId('te-import-live').hidden = !missingSourceSections.length && !liveUnimported;
+      if (!liveUnimported && missingSourceSections.length) {
+        byId('te-import-live').textContent = 'Stage ' + missingSourceSections.length + ' missing sections';
+      }
       byId('te-save').textContent = liveUnimported ? (liveExistingDraft ? 'Reconcile & save draft' : 'Import & save draft') : 'Save draft';
       siteData = results[2].page;
       pages = (results[1].pages || []).filter(function(page) { return page.slug !== 'site'; });
@@ -1777,7 +1829,9 @@
   });
   setMobilePane('preview');
   byId('te-refresh').addEventListener('click', refreshPreview);
-  byId('te-import-live').addEventListener('click', importLiveSource);
+  byId('te-import-live').addEventListener('click', function() {
+    return liveUnimported ? importLiveSource() : stageMissingSourceSections();
+  });
   byId('te-save').addEventListener('click', saveDraft);
   byId('te-publish').addEventListener('click', publishPage);
   byId('theme-preview').addEventListener('load', function() {

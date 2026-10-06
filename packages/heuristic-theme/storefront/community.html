@@ -596,6 +596,31 @@
                 grid-row: span 1;
             }
         }
+
+        /* Original grid remains intact; the former blank gray boxes now show
+           real brand assets through the existing CMS media-field picker. */
+        .gallery-item { cursor:default; }
+        .gallery-item .gallery-media {
+            display:block; width:100%; height:100%; object-fit:cover; object-position:center;
+            background:#242424; transition:transform .5s cubic-bezier(.2,.8,.2,1);
+        }
+        .gallery-item:hover .gallery-media { transform:scale(1.045); }
+        .gallery-overlay { opacity:1; transform:none; pointer-events:none; }
+        .community-stats .stat-number { font-size:clamp(1.8rem,3.5vw,3.5rem); letter-spacing:-.045em; }
+        .community-hero-subtitle { max-width:62ch; margin-inline:auto; }
+        .event-image { background:linear-gradient(135deg,#181818,#303030); }
+        .event-card .event-date { color:#b2310f; }
+        .events-section .events-header p { max-width:65ch; margin-inline:auto; }
+        @media(prefers-reduced-motion:reduce){
+            .gallery-item,.gallery-item .gallery-media,.join-card { transition:none!important; transform:none!important; }
+            .community-stats .stat-number { animation:none!important; }
+        }
+
+        .event-image { overflow:hidden; position:relative; }
+        .event-media { display:block; width:100%; height:100%; object-fit:cover; filter:brightness(.7); }
+        .event-image .event-badge { position:absolute; z-index:1; top:1rem; left:1rem; }
+        .stories-disclaimer { max-width:60ch; margin:0 auto 2rem; text-align:center;
+            color:#b6b3ad; font-size:.875rem; line-height:1.6; }
     </style>
     <link rel="stylesheet" href="/css/store-shell.css">
     <link rel="stylesheet" href="/css/global-footer.css">
@@ -604,103 +629,99 @@
     <div id="fnf-store-mount"></div>
 
     <!-- COMMUNITY PAGE CONTENT -->
+    <main class="community-page" data-cms-page-content>
     <!-- Community Hero -->
-    <section class="community-hero">
+    <section class="community-hero" data-cms-section="hero" data-h-section="fnf.community.hero">
         <div class="community-hero-content">
             <h1 class="community-hero-title">
                 <span data-cms="hero.headline">Join the</span> <span data-cms="hero.headlineAccent">Movement</span>
             </h1>
             <p class="community-hero-subtitle" data-cms="hero.subheadline">
-                Where every mile has a story, every hour is earned, and every member is family. 
-                This is more than a brand — it's a brotherhood of freedom seekers.
+                From the garage floor to the open road—and an aircraft restoration still taking shape—this is a place for the projects and people that make free time worth chasing.
             </p>
             <div class="community-stats">
                 <div class="stat-item">
-                    <div class="stat-number" data-cms="hero.stat1Value">5K+</div>
-                    <div class="stat-label" data-cms="hero.stat1Label">Members Strong</div>
+                    <div class="stat-number" data-cms="hero.stat1Value">BUILD</div>
+                    <div class="stat-label" data-cms="hero.stat1Label">Hands-On</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number" data-cms="hero.stat2Value">23</div>
-                    <div class="stat-label" data-cms="hero.stat2Label">Cities Connected</div>
+                    <div class="stat-number" data-cms="hero.stat2Value">RIDE</div>
+                    <div class="stat-label" data-cms="hero.stat2Label">Open Roads</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number" data-cms="hero.stat3Value">150+</div>
-                    <div class="stat-label" data-cms="hero.stat3Label">Events Hosted</div>
+                    <div class="stat-number" data-cms="hero.stat3Value">FLY</div>
+                    <div class="stat-label" data-cms="hero.stat3Label">Restoration</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number" data-cms="hero.stat4Value">∞</div>
-                    <div class="stat-label" data-cms="hero.stat4Label">Stories Shared</div>
+                    <div class="stat-number" data-cms="hero.stat4Value">LIVE</div>
+                    <div class="stat-label" data-cms="hero.stat4Label">The Hours</div>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Events Section -->
-    <section class="events-section">
+    <section class="events-section" data-cms-section="events" data-h-section="fnf.community.events">
         <div class="events-container">
             <div class="events-header">
-                <h2>Upcoming Events</h2>
-                <p>Real connections happen in real life. Pull up and join the family.</p>
+                <h2 data-cms="events.heading">On the Drawing Board</h2>
+                <p data-cms="events.intro">These are gathering ideas, not confirmed events. Help shape what we build next—dates and locations come after plans are real.</p>
             </div>
             <div class="events-grid">
-                <div class="event-card">
-                    <div class="event-image">
-                        <div class="event-badge">Limited Spots</div>
+                <div class="event-card" data-cms-block="event1" data-cms-block-template="event-card">
+                    <div class="event-image"><img class="event-media" src="/media/archive/shopify-import/graphics/Vette.png" alt="Fuel & Free Time archive artwork for an event idea" loading="lazy" decoding="async" data-cms="events.event1.imageUrl" data-cms-attr="src">
+                        <div class="event-badge" data-cms="events.event1.badge">Concept</div>
                     </div>
                     <div class="event-content">
-                        <div class="event-date">Saturday, March 15, 2025</div>
-                        <h3 class="event-title">Garage Night LA</h3>
-                        <p class="event-location">📍 Downtown Los Angeles</p>
-                        <p class="event-description">
-                            Cold drinks, hot engines, real talk. Share your story, check out builds, 
-                            and connect with fellow time-rich rebels.
+                        <div class="event-date" data-cms="events.event1.date">Date to be confirmed</div>
+                        <h3 class="event-title" data-cms="events.event1.title">Garage Night LA</h3>
+                        <p class="event-location" data-cms="events.event1.location">📍 Downtown Los Angeles</p>
+                        <p class="event-description" data-cms="events.event1.description">
+                            Talk shop, trade build stories, and meet the people behind the projects.
                         </p>
-                        <a href="#" class="event-link">Reserve Your Spot →</a>
+                        <a href="/collaborate" class="event-link" data-cms="events.event1.cta.href" data-cms-attr="href"><span data-cms="events.event1.cta.label">Help Plan It →</span></a>
                     </div>
                 </div>
-                <div class="event-card">
-                    <div class="event-image">
-                        <div class="event-badge">Next Week</div>
+                <div class="event-card" data-cms-block="event2" data-cms-block-template="event-card">
+                    <div class="event-image"><img class="event-media" src="/media/archive/shopify-import/graphics/high_octane.jpg" alt="Fuel & Free Time archive artwork for an event idea" loading="lazy" decoding="async" data-cms="events.event2.imageUrl" data-cms-attr="src">
+                        <div class="event-badge" data-cms="events.event2.badge">Idea in Progress</div>
                     </div>
                     <div class="event-content">
-                        <div class="event-date">Sunday, March 9, 2025</div>
-                        <h3 class="event-title">Miami Scavenger Hunt</h3>
-                        <p class="event-location">📍 Miami, FL</p>
-                        <p class="event-description">
-                            First to find our hidden drop wins exclusive gear and bragging rights. 
-                            Follow our socials for clues starting 48 hours before.
+                        <div class="event-date" data-cms="events.event2.date">Not yet scheduled</div>
+                        <h3 class="event-title" data-cms="events.event2.title">Miami Scavenger Hunt</h3>
+                        <p class="event-location" data-cms="events.event2.location">📍 Miami, FL</p>
+                        <p class="event-description" data-cms="events.event2.description">
+                            A scavenger-hunt concept for a future gathering—no drop or event has been scheduled.
                         </p>
-                        <a href="#" class="event-link">Get Notified →</a>
+                        <a href="/collaborate" class="event-link" data-cms="events.event2.cta.href" data-cms-attr="href"><span data-cms="events.event2.cta.label">Share An Idea →</span></a>
                     </div>
                 </div>
-                <div class="event-card">
-                    <div class="event-image">
-                        <div class="event-badge">Monthly</div>
+                <div class="event-card" data-cms-block="event3" data-cms-block-template="event-card">
+                    <div class="event-image"><img class="event-media" src="/media/archive/shopify-import/graphics/50C9CEB5.png" alt="Fuel & Free Time archive artwork for an event idea" loading="lazy" decoding="async" data-cms="events.event3.imageUrl" data-cms-attr="src">
+                        <div class="event-badge" data-cms="events.event3.badge">Community Proposal</div>
                     </div>
                     <div class="event-content">
-                        <div class="event-date">First Sunday Every Month</div>
-                        <h3 class="event-title">Fuel Stop ATX</h3>
-                        <p class="event-location">📍 Austin, TX</p>
-                        <p class="event-description">
-                            Monthly meetup for rides, coffee, and community. Whether you're on two wheels 
-                            or four, all are welcome.
+                        <div class="event-date" data-cms="events.event3.date">Schedule to be decided</div>
+                        <h3 class="event-title" data-cms="events.event3.title">Fuel Stop ATX</h3>
+                        <p class="event-location" data-cms="events.event3.location">📍 Austin, TX</p>
+                        <p class="event-description" data-cms="events.event3.description">
+                            Coffee, machines and conversation. A meetup idea looking for a local host.
                         </p>
-                        <a href="#" class="event-link">Join Next Ride →</a>
+                        <a href="/collaborate" class="event-link" data-cms="events.event3.cta.href" data-cms-attr="href"><span data-cms="events.event3.cta.label">Become A Host →</span></a>
                     </div>
                 </div>
-                <div class="event-card">
-                    <div class="event-image">
-                        <div class="event-badge">Coming Soon</div>
+                <div class="event-card" data-cms-block="event4" data-cms-block-template="event-card">
+                    <div class="event-image"><img class="event-media" src="/media/archive/shopify-import/graphics/fuel_up.png" alt="Fuel & Free Time archive artwork for an event idea" loading="lazy" decoding="async" data-cms="events.event4.imageUrl" data-cms-attr="src">
+                        <div class="event-badge" data-cms="events.event4.badge">Long-Range Idea</div>
                     </div>
                     <div class="event-content">
-                        <div class="event-date">April 2025</div>
-                        <h3 class="event-title">Coast to Coast Run</h3>
-                        <p class="event-location">📍 Nationwide</p>
-                        <p class="event-description">
-                            Our biggest event yet. Multi-city poker run with checkpoints, challenges, 
-                            and the ultimate test of earned freedom.
+                        <div class="event-date" data-cms="events.event4.date">Route still being imagined</div>
+                        <h3 class="event-title" data-cms="events.event4.title">Coast to Coast Run</h3>
+                        <p class="event-location" data-cms="events.event4.location">📍 Nationwide</p>
+                        <p class="event-description" data-cms="events.event4.description">
+                            A coast-to-coast adventure worth dreaming about. The route is not yet planned.
                         </p>
-                        <a href="#" class="event-link">Get Early Access →</a>
+                        <a href="/collaborate" class="event-link" data-cms="events.event4.cta.href" data-cms-attr="href"><span data-cms="events.event4.cta.label">Talk Routes →</span></a>
                     </div>
                 </div>
             </div>
@@ -708,40 +729,40 @@
     </section>
 
     <!-- Gallery Section -->
-    <section class="gallery-section">
+    <section class="gallery-section" data-cms-section="gallery" data-h-section="fnf.community.gallery">
         <div class="gallery-container">
             <div class="gallery-header">
-                <h2>Living the Life</h2>
+                <h2 data-cms="gallery.heading">Living the Life</h2>
             </div>
             <div class="gallery-grid">
-                <div class="gallery-item">
+                <div class="gallery-item" data-cms-block="item1" data-cms-block-template="gallery-item"><img class="gallery-media" src="/media/archive/shopify-import/graphics/50C9CEB5.png" alt="Fuel & Free Time archive artwork" data-cms="gallery.item1.imageUrl" data-cms-attr="src">
                     <div class="gallery-overlay">
-                        <p class="gallery-caption">@rider_mike - Dawn patrol</p>
+                        <p class="gallery-caption" data-cms="gallery.item1.caption">Hours outside the ordinary</p>
                     </div>
                 </div>
-                <div class="gallery-item">
+                <div class="gallery-item" data-cms-block="item2" data-cms-block-template="gallery-item"><img class="gallery-media" src="/media/archive/shopify-import/graphics/Vette.png" alt="Fuel & Free Time archive artwork" data-cms="gallery.item2.imageUrl" data-cms-attr="src">
                     <div class="gallery-overlay">
-                        <p class="gallery-caption">@garage_nights - LA meetup</p>
+                        <p class="gallery-caption" data-cms="gallery.item2.caption">On the road, for the ride</p>
                     </div>
                 </div>
-                <div class="gallery-item">
+                <div class="gallery-item" data-cms-block="item3" data-cms-block-template="gallery-item"><img class="gallery-media" src="/media/archive/shopify-import/graphics/high_octane.jpg" alt="Fuel & Free Time archive artwork" data-cms="gallery.item3.imageUrl" data-cms-attr="src">
                     <div class="gallery-overlay">
-                        <p class="gallery-caption">@fuelnfreetime - Masters Collection drop</p>
+                        <p class="gallery-caption" data-cms="gallery.item3.caption">High Octane · Garage inspiration</p>
                     </div>
                 </div>
-                <div class="gallery-item">
+                <div class="gallery-item" data-cms-block="item4" data-cms-block-template="gallery-item"><img class="gallery-media" src="/media/archive/shopify-import/graphics/Masters.png" alt="Fuel & Free Time archive artwork" data-cms="gallery.item4.imageUrl" data-cms-attr="src">
                     <div class="gallery-overlay">
-                        <p class="gallery-caption">@weekend_warrior - Sunday ritual</p>
+                        <p class="gallery-caption" data-cms="gallery.item4.caption">Masters · In the making</p>
                     </div>
                 </div>
-                <div class="gallery-item">
+                <div class="gallery-item" data-cms-block="item5" data-cms-block-template="gallery-item"><img class="gallery-media" src="/media/archive/shopify-import/graphics/fuel_up.png" alt="Fuel & Free Time archive artwork" data-cms="gallery.item5.imageUrl" data-cms-attr="src">
                     <div class="gallery-overlay">
-                        <p class="gallery-caption">@veteran_rider - 1000 mile day</p>
+                        <p class="gallery-caption" data-cms="gallery.item5.caption">Fueled by the little things</p>
                     </div>
                 </div>
-                <div class="gallery-item">
+                <div class="gallery-item" data-cms-block="item6" data-cms-block-template="gallery-item"><img class="gallery-media" src="/media/archive/shopify-import/graphics/Gone_Fishing.png" alt="Fuel & Free Time archive artwork" data-cms="gallery.item6.imageUrl" data-cms-attr="src">
                     <div class="gallery-overlay">
-                        <p class="gallery-caption">@young_gun - First ride freedom</p>
+                        <p class="gallery-caption" data-cms="gallery.item6.caption">The weekend is worth earning</p>
                     </div>
                 </div>
             </div>
@@ -749,87 +770,87 @@
     </section>
 
     <!-- Join Section -->
-    <section class="join-section">
+    <section class="join-section" data-cms-section="join" data-h-section="fnf.community.join">
         <div class="join-container">
             <div class="join-header">
-                <h2>Get Connected</h2>
-                <p>
+                <h2 data-cms="join.headline">Get Connected</h2>
+                <p data-cms="join.body">
                     Choose your path. Whether you're here for the gear, the gatherings, or the grind, 
                     there's a place for you in the movement.
                 </p>
             </div>
             <div class="join-options">
-                <div class="join-card">
-                    <div class="join-icon">📱</div>
-                    <h3 class="join-title">Follow the Feed</h3>
-                    <p class="join-description">
+                <div class="join-card" data-cms-block="card1" data-cms-block-template="join-card">
+                    <div class="join-icon" data-cms="join.card1.icon">📱</div>
+                    <h3 class="join-title" data-cms="join.card1.title">Follow the Feed</h3>
+                    <p class="join-description" data-cms="join.card1.description">
                         Daily inspiration, event updates, and member spotlights. Stay connected to the culture.
                     </p>
-                    <a href="#" class="join-button">Follow Us</a>
+                    <a href="#member-stories" class="join-button" data-cms="join.card1.cta.href" data-cms-attr="href"><span data-cms="join.card1.cta.label">Follow Us</span></a>
                 </div>
-                <div class="join-card">
-                    <div class="join-icon">🎯</div>
-                    <h3 class="join-title">Join Exclusive Drops</h3>
-                    <p class="join-description">
+                <div class="join-card" data-cms-block="card2" data-cms-block-template="join-card">
+                    <div class="join-icon" data-cms="join.card2.icon">🎯</div>
+                    <h3 class="join-title" data-cms="join.card2.title">Join Exclusive Drops</h3>
+                    <p class="join-description" data-cms="join.card2.description">
                         Get early access to limited releases, scavenger hunt clues, and member-only gear.
                     </p>
-                    <a href="#" class="join-button">Get Access</a>
+                    <a href="/shop" class="join-button" data-cms="join.card2.cta.href" data-cms-attr="href"><span data-cms="join.card2.cta.label">Get Access</span></a>
                 </div>
-                <div class="join-card">
-                    <div class="join-icon">🤝</div>
-                    <h3 class="join-title">Host an Event</h3>
-                    <p class="join-description">
+                <div class="join-card" data-cms-block="card3" data-cms-block-template="join-card">
+                    <div class="join-icon" data-cms="join.card3.icon">🤝</div>
+                    <h3 class="join-title" data-cms="join.card3.title">Host an Event</h3>
+                    <p class="join-description" data-cms="join.card3.description">
                         Want to bring Fuel & Free Time to your city? Let's build the movement together.
                     </p>
-                    <a href="/pages/community" class="join-button">Collaborate</a>
+                    <a href="/collaborate" class="join-button" data-cms="join.card3.cta.href" data-cms-attr="href"><span data-cms="join.card3.cta.label">Collaborate</span></a>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Member Stories -->
-    <section class="stories-section">
-        <div class="stories-container">
+    <section class="stories-section" data-cms-section="stories" data-h-section="fnf.community.stories">
+        <div class="stories-container" id="member-stories">
             <div class="stories-header">
-                <h2>Member Stories</h2>
+                <h2 data-cms="stories.heading">Voices Worth Hearing</h2><p class="stories-disclaimer">Story prompts for the future community archive—not verified member testimonials.</p>
             </div>
             <div class="stories-carousel">
-                <div class="story-card">
-                    <p class="story-quote">
+                <div class="story-card" data-cms-block="story1" data-cms-block-template="member-story">
+                    <p class="story-quote" data-cms="stories.story1.quote">
                         "20 years in the service, now every sunrise ride reminds me what I was fighting for. 
                         Time is the only real freedom."
                     </p>
                     <div class="story-author">
                         <div class="author-avatar">🎖️</div>
                         <div class="author-info">
-                            <div class="author-name">Marcus T.</div>
-                            <div class="author-role">Veteran Rider</div>
+                            <div class="author-name" data-cms="stories.story1.author">Marcus T.</div>
+                            <div class="author-role" data-cms="stories.story1.role">Veteran Rider</div>
                         </div>
                     </div>
                 </div>
-                <div class="story-card">
-                    <p class="story-quote">
+                <div class="story-card" data-cms-block="story2" data-cms-block-template="member-story">
+                    <p class="story-quote" data-cms="stories.story2.quote">
                         "Weekend warrior by necessity, but those Saturday morning garage sessions keep me sane. 
                         This community gets it."
                     </p>
                     <div class="story-author">
                         <div class="author-avatar">🔧</div>
                         <div class="author-info">
-                            <div class="author-name">Sarah K.</div>
-                            <div class="author-role">Weekend Warrior</div>
+                            <div class="author-name" data-cms="stories.story2.author">Sarah K.</div>
+                            <div class="author-role" data-cms="stories.story2.role">Weekend Warrior</div>
                         </div>
                     </div>
                 </div>
-                <div class="story-card">
-                    <p class="story-quote">
+                <div class="story-card" data-cms-block="story3" data-cms-block-template="member-story">
+                    <p class="story-quote" data-cms="stories.story3.quote">
                         "Just got my first bike at 22. The old heads here taught me it's not about going fast, 
                         it's about going far."
                     </p>
                     <div class="story-author">
                         <div class="author-avatar">⚡</div>
                         <div class="author-info">
-                            <div class="author-name">Jake R.</div>
-                            <div class="author-role">Young Gun</div>
+                            <div class="author-name" data-cms="stories.story3.author">Jake R.</div>
+                            <div class="author-role" data-cms="stories.story3.role">Young Gun</div>
                         </div>
                     </div>
                 </div>
@@ -838,15 +859,17 @@
     </section>
 
     <!-- Social Feed CTA -->
-    <section class="social-section">
+    <section class="social-section" data-cms-section="social" data-h-section="fnf.community.social">
         <div class="social-container">
             <div class="social-header">
-                <h2>Share Your Story</h2>
+                <h2 data-cms="social.heading">Share Your Story</h2>
             </div>
-            <p class="social-hashtag">#FuelAndFreeTime #TimeIsTheRealFlex</p>
-            <a href="#" class="social-cta">Tag Us In Your Journey</a>
+            <p class="social-hashtag" data-cms="social.hashtag">#FuelAndFreeTime #TimeIsTheRealFlex</p>
+            <a href="/collaborate" class="social-cta" data-cms="social.cta.href" data-cms-attr="href"><span data-cms="social.cta.label">Tag Us In Your Journey</span></a>
         </div>
     </section>
+
+    </main>
 
     <!-- Global CMS-backed footer -->
     <div id="fnf-footer-mount" data-global-footer></div>

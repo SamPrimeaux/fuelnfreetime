@@ -174,8 +174,22 @@
       const node = template.content.firstElementChild;
       if (!node) continue;
       node.dataset.cmsPortable = 'true';
-      if (old) old.replaceWith(node);
-      else (document.querySelector('main') || document.body).appendChild(node);
+      if (old) {
+        old.replaceWith(node);
+      } else {
+        // These original Heuristic pages render global header/footer outside
+        // their editorial root. Portable sections must join the same ordered
+        // page composition, never appear after the shared storefront footer.
+        const root = document.querySelector('[data-cms-page-content]') ||
+          document.querySelector('main') || document.body;
+        if (root === document.body) {
+          const footer = document.querySelector('#fnf-footer-mount');
+          if (footer?.parentNode === root) root.insertBefore(node, footer);
+          else root.appendChild(node);
+        } else {
+          root.appendChild(node);
+        }
+      }
     }
     document.querySelectorAll('[data-cms-portable="true"]').forEach((node) => {
       if (!active.has(node.dataset.cmsSection)) node.remove();
@@ -225,6 +239,12 @@
       const value = el.dataset.cms || "";
       if (value.startsWith(fromId + ".")) {
         el.dataset.cms = toId + value.slice(fromId.length);
+      } else {
+        // Source HTML uses fully qualified section.block.field markers
+        // for edge hydration. Re-key cloned blocks without dropping scope.
+        const scoped = "." + fromId + ".";
+        const i = value.indexOf(scoped);
+        if (i > 0) el.dataset.cms = value.slice(0, i) + "." + toId + value.slice(i + scoped.length - 1);
       }
     });
     if ((node.dataset.cms || "").startsWith(fromId + ".")) {

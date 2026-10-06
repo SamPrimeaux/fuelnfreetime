@@ -711,6 +711,33 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Contrast and reading rhythm are scoped to this original theme;
+           formerly white inherited body copy disappeared on light panels. */
+        .about-page .moment-section,.about-page .collections-section,.about-page .against-section,
+        .about-page .full-story-section,.about-page .values-about-section { color:#242220; }
+        .about-page .full-story-section .story-content { color:#252320; opacity:1; }
+        .about-page .full-story-section .story-content p {
+            max-width:50ch; font-size:clamp(1.03rem,1.25vw,1.2rem);
+            line-height:1.9; letter-spacing:-.012em; color:#292723; opacity:1;
+        }
+        .about-page .full-story-section .full-story-title,
+        .about-page .values-about-section h2,.about-page .values-about-section h3 { color:#151513; }
+        .about-page .full-story-section .story-image img,
+        .about-page .full-story-section .story-image video { filter:none; opacity:1; }
+        .about-page .about-hero-subtitle { max-width:60ch; line-height:1.75; }
+        @media(max-width:900px){
+            .about-page .story-section,.about-page .story-section.reverse {
+                grid-template-columns:1fr; gap:2rem; direction:ltr;
+            }
+            .about-page .story-image,.about-page .story-image.vertical { height:min(75vw,480px); }
+            .about-page .full-story-section,.about-page .values-about-section { padding:clamp(4rem,10vw,7rem) 5vw; }
+        }
+        @media(prefers-reduced-motion:reduce){
+            .about-page .animate-on-scroll,.about-page .moment-quote {
+                opacity:1!important; transform:none!important; animation:none!important;
+            }
+        }
     </style>
     <link rel="stylesheet" href="/css/store-shell.css">
     <link rel="stylesheet" href="/css/global-footer.css">
@@ -719,9 +746,9 @@
     <div id="fnf-store-mount"></div>
 
     <!-- ABOUT PAGE CONTENT -->
-    <div class="about-page">
+    <main class="about-page" data-cms-page-content>
         <!-- Hero Section -->
-        <section class="about-hero">
+        <section class="about-hero" data-cms-section="hero" data-h-section="fnf.about.hero">
             <div class="about-hero-content">
                 <div class="hero-meta-info">
                     <p class="meta-text-1" data-cms="hero.meta1">Est. 2025</p>
@@ -730,29 +757,29 @@
                 </div>
                 <h1 class="about-hero-title" data-cms="hero.headline">Built in the Garage</h1>
                 <p class="about-hero-subtitle" data-cms="hero.subheadline">
-                    Born from blood, sweat, and years of earning our freedom. This is more than a brand — it's a brotherhood.
+                    Born around garage nights, hands-on projects, and one stubborn idea: the hours we earn should be ours to live. Apparel is part of the story; the machines, makers, and experiences are the rest.
                 </p>
             </div>
         </section>
 
         <!-- Moment Section -->
-        <section class="moment-section">
+        <section class="moment-section" data-cms-section="moment" data-h-section="fnf.about.moment">
             <div class="moment-container animate-on-scroll">
-                <h2 class="moment-title">The Moment Everything Changed</h2>
+                <h2 class="moment-title" data-cms="moment.headline">The Moment Everything Changed</h2>
                 <div class="moment-story">
                     <p>
-                        <strong>3:47 AM. Highway 90. Just outside Lafayette.</strong>
+                        <strong data-cms="moment.lead">3:47 AM. Highway 90. Just outside Lafayette.</strong>
                     </p>
-                    <p>
+                    <p data-cms="moment.body">
                         After pulling a 16-hour shift, watching the sun rise over the Atchafalaya Basin from the seat of my bike, 
                         it hit me. I'd spent 20 years trading time for money, thinking someday I'd have enough to finally live. 
                         But watching those old-timers at the truck stop — guys who'd "made it" but were too broken or too late to 
                         enjoy it — I realized the real luxury wasn't in my bank account.
                     </p>
                     <div class="moment-quote">
-                        <p>"Time isn't money. Time is everything money can't buy back."</p>
+                        <p data-cms="moment.quote">"Time isn't money. Time is everything money can't buy back."</p>
                     </div>
-                    <p>
+                    <p data-cms="moment.closing">
                         That morning, Fuel & Free Time was born. Not as a business plan, but as a middle finger to the lie that 
                         we should wait until retirement to live. Every piece we make is a reminder: the goal isn't to get rich 
                         enough to buy freedom. It's to be free enough to get rich in experiences.
@@ -762,61 +789,61 @@
         </section>
 
         <!-- Video Section -->
-        <section class="video-section">
+        <section class="video-section" data-cms-section="video" data-h-section="fnf.about.video">
             <div class="video-container">
                 <video autoplay muted loop playsinline>
-                    <source src="/media/archive/shopify-import/videos/video-2-48add6d0.mp4" type="video/mp4">
+                    <source src="/media/archive/shopify-import/videos/video-2-48add6d0.mp4" type="video/mp4" data-cms="video.videoUrl" data-cms-attr="src">
                 </video>
             </div>
         </section>
 
         <!-- Collections Section -->
-        <section class="collections-section">
+        <section class="collections-section" data-cms-section="collections" data-h-section="fnf.about.collections">
             <div class="collections-container">
                 <div class="collections-header animate-on-scroll">
-                    <h2>The Gear That Gets It</h2>
+                    <h2 data-cms="collections.title">The Gear That Gets It</h2>
                 </div>
                 <div class="collections-grid">
-                    <a href="/shop" class="collection-card">
+                    <a href="/shop" class="collection-card" data-cms="collections.card1.href" data-cms-attr="href" data-cms-block="card1" data-cms-block-template="collection-card">
                         <div class="collection-image">
-                            <div class="collection-badge">Core Collection</div>
-                            <img src="/media/archive/shopify-import/graphics/50C9CEB5.png" alt="Fuel & Free Time Core Collection">
+                            <div class="collection-badge" data-cms="collections.card1.badge">Core Collection</div>
+                            <img src="/media/archive/shopify-import/graphics/50C9CEB5.png" alt="Fuel & Free Time Core Collection" data-cms="collections.card1.imageUrl" data-cms-attr="src">
                         </div>
                         <div class="collection-content">
-                            <h3 class="collection-title">The Essentials</h3>
-                            <p class="collection-description">
+                            <h3 class="collection-title" data-cms="collections.card1.title">The Essentials</h3>
+                            <p class="collection-description" data-cms="collections.card1.description">
                                 Daily drivers. The tees, hoodies, and gear that remind you why you grind — 
                                 so you don't have to forever.
                             </p>
-                            <span class="collection-link">Explore Core →</span>
+                            <span class="collection-link" data-cms="collections.card1.ctaLabel">Explore Core →</span>
                         </div>
                     </a>
-                    <a href="/shop" class="collection-card">
+                    <a href="/shop" class="collection-card" data-cms="collections.card2.href" data-cms-attr="href" data-cms-block="card2" data-cms-block-template="collection-card">
                         <div class="collection-image">
-                            <div class="collection-badge">High Octane</div>
-                            <img src="/media/archive/shopify-import/graphics/Vette.png" alt="High Octane Performance Collection">
+                            <div class="collection-badge" data-cms="collections.card2.badge">High Octane</div>
+                            <img src="/media/archive/shopify-import/graphics/Vette.png" alt="High Octane Performance Collection" data-cms="collections.card2.imageUrl" data-cms-attr="src">
                         </div>
                         <div class="collection-content">
-                            <h3 class="collection-title">High Octane</h3>
-                            <p class="collection-description">
+                            <h3 class="collection-title" data-cms="collections.card2.title">High Octane</h3>
+                            <p class="collection-description" data-cms="collections.card2.description">
                                 Performance gear for when you're burning rubber, not burning out. 
                                 Technical fabrics meet garage style.
                             </p>
-                            <span class="collection-link">Shop Performance →</span>
+                            <span class="collection-link" data-cms="collections.card2.ctaLabel">Shop Performance →</span>
                         </div>
                     </a>
-                    <a href="/shop" class="collection-card">
+                    <a href="/shop" class="collection-card" data-cms="collections.card3.href" data-cms-attr="href" data-cms-block="card3" data-cms-block-template="collection-card">
                         <div class="collection-image">
-                            <div class="collection-badge">Limited Drops</div>
-                            <img src="/media/archive/shopify-import/graphics/fuel_up.png" alt="Masters Series Limited Edition">
+                            <div class="collection-badge" data-cms="collections.card3.badge">Limited Drops</div>
+                            <img src="/media/archive/shopify-import/graphics/fuel_up.png" alt="Masters Series Limited Edition" data-cms="collections.card3.imageUrl" data-cms-attr="src">
                         </div>
                         <div class="collection-content">
-                            <h3 class="collection-title">Masters Series</h3>
-                            <p class="collection-description">
+                            <h3 class="collection-title" data-cms="collections.card3.title">Masters Series</h3>
+                            <p class="collection-description" data-cms="collections.card3.description">
                                 Small batch. Big stories. Limited pieces honoring those who've mastered 
                                 the art of living on their terms.
                             </p>
-                            <span class="collection-link">View Drops →</span>
+                            <span class="collection-link" data-cms="collections.card3.ctaLabel">View Drops →</span>
                         </div>
                     </a>
                 </div>
@@ -824,32 +851,32 @@
         </section>
 
         <!-- Against Section -->
-        <section class="against-section">
+        <section class="against-section" data-cms-section="against" data-h-section="fnf.about.against">
             <div class="against-container">
                 <div class="against-header animate-on-scroll">
-                    <h2>What We Stand Against</h2>
+                    <h2 data-cms="against.headline">What We Stand Against</h2>
                 </div>
                 <div class="against-grid">
-                    <div class="against-item animate-on-scroll">
-                        <div class="against-icon">💼</div>
-                        <h3 class="against-title strike-title">The 40-Year Plan</h3>
-                        <p class="against-description">
+                    <div class="against-item animate-on-scroll" data-cms-block="card1" data-cms-block-template="belief-card">
+                        <div class="against-icon" data-cms="against.card1.icon">💼</div>
+                        <h3 class="against-title strike-title" data-cms="against.card1.title">The 40-Year Plan</h3>
+                        <p class="against-description" data-cms="against.card1.description">
                             Waiting until 65 to start living. We believe life happens now, 
                             not after four decades of postponement.
                         </p>
                     </div>
-                    <div class="against-item animate-on-scroll">
-                        <div class="against-icon">⏰</div>
-                        <h3 class="against-title strike-title">Time Poverty</h3>
-                        <p class="against-description">
+                    <div class="against-item animate-on-scroll" data-cms-block="card2" data-cms-block-template="belief-card">
+                        <div class="against-icon" data-cms="against.card2.icon">⏰</div>
+                        <h3 class="against-title strike-title" data-cms="against.card2.title">Time Poverty</h3>
+                        <p class="against-description" data-cms="against.card2.description">
                             Being cash rich but time broke. What good is a garage full of toys 
                             if you never have time to play?
                         </p>
                     </div>
-                    <div class="against-item animate-on-scroll">
-                        <div class="against-icon">🏢</div>
-                        <h3 class="against-title strike-title">Corporate Chains</h3>
-                        <p class="against-description">
+                    <div class="against-item animate-on-scroll" data-cms-block="card3" data-cms-block-template="belief-card">
+                        <div class="against-icon" data-cms="against.card3.icon">🏢</div>
+                        <h3 class="against-title strike-title" data-cms="against.card3.title">Corporate Chains</h3>
+                        <p class="against-description" data-cms="against.card3.description">
                             Golden handcuffs and corner offices that become expensive prisons. 
                             Freedom isn't negotiable.
                         </p>
@@ -859,95 +886,93 @@
         </section>
 
         <!-- Lafayette Section -->
-        <section class="lafayette-section">
+        <section class="lafayette-section" data-cms-section="lafayette" data-h-section="fnf.about.lafayette">
             <div class="lafayette-container animate-on-scroll">
-                <div class="lafayette-badge">🔥 Louisiana Made 🔥</div>
-                <h2 class="lafayette-title">Crafted in Lafayette</h2>
+                <div class="lafayette-badge" data-cms="lafayette.badge">🔥 Louisiana Made 🔥</div>
+                <h2 class="lafayette-title" data-cms="lafayette.headline">Crafted in Lafayette</h2>
                 <div class="lafayette-content">
-                    <p>
-                        Every piece is designed, cut, sewn, and shipped from Lafayette, Louisiana. 
-                        Not because it's trendy or marketable, but because this is where the culture lives.
+                    <p data-cms="lafayette.body">
+                        Rooted in Lafayette, Louisiana. Our perspective comes from the garage, the road, and the work happening between them. We're building a brand around what we make, where we go, and who comes along.
                     </p>
                 </div>
             </div>
         </section>
 
         <!-- Story Section -->
-        <section class="full-story-section">
+        <section class="full-story-section" data-cms-section="origins" data-h-section="fnf.about.origins">
             <div class="full-story-header animate-on-scroll">
-                <h2 class="full-story-title" style="text-align: center;">The <span style="color: var(--fire-orange);">Full</span> Story</h2>
+                <h2 class="full-story-title" style="text-align: center;">The <span style="color: var(--fire-orange);" data-cms="origins.titleAccent">Full</span> Story</h2>
             </div>
             
-            <div class="story-section">
+            <div class="story-section" data-cms-block="story1" data-cms-block-template="story-photo">
                 <div class="story-content">
-                    <p>
+                    <p data-cms="origins.story1.body">
                         Fuel & Free Time isn't backed by investors or focus groups. It started with grease under the 
                         fingernails and a realization that hit harder than Louisiana summer heat.
                     </p>
                 </div>
                 <div class="story-image">
-                    <img src="/media/archive/shopify-import/graphics/50C9CEB5.png" alt="Fuel & Free Time Origins">
+                    <img src="/media/archive/shopify-import/graphics/50C9CEB5.png" alt="Fuel & Free Time Origins" data-cms="origins.story1.imageUrl" data-cms-attr="src">
                 </div>
             </div>
 
-            <div class="story-section reverse">
+            <div class="story-section reverse" data-cms-block="story2" data-cms-block-template="story-video">
                 <div class="story-content">
-                    <p>
-                        Every thread is sewn with purpose in Lafayette — not to save costs, but to build something real 
-                        in a world of dropshipped dreams.
+                    <p data-cms="origins.story2.body">
+                        From apparel and artwork to repairs, rides, and the helicopter restoration, each project should say something about the hours we choose to spend. It's more than another product grid.
                     </p>
                 </div>
                 <div class="story-image">
                     <video autoplay muted loop playsinline>
-                        <source src="/media/archive/shopify-import/videos/video-1-f506d934.mp4" type="video/mp4">
+                        <source src="/media/archive/shopify-import/videos/video-1-f506d934.mp4" type="video/mp4" data-cms="origins.story2.videoUrl" data-cms-attr="src">
                     </video>
                 </div>
             </div>
 
-            <div class="story-section">
+            <div class="story-section" data-cms-block="story3" data-cms-block-template="story-photo">
                 <div class="story-content">
-                    <p>
+                    <p data-cms="origins.story3.body">
                         From that first sunrise on Highway 90 to every late-night garage session since, we've stayed true 
                         to one principle: time is the only real currency.
                     </p>
                 </div>
                 <div class="story-image vertical">
-                    <img src="/media/archive/shopify-import/graphics/high_octane.jpg" alt="High Octane Lifestyle">
+                    <img src="/media/archive/shopify-import/graphics/high_octane.jpg" alt="High Octane Lifestyle" data-cms="origins.story3.imageUrl" data-cms-attr="src">
                 </div>
             </div>
         </section>
 
         <!-- Values Section -->
-        <section class="values-about-section">
+        <section class="values-about-section" data-cms-section="lifestyle" data-h-section="fnf.about.lifestyle">
             <div class="values-about-header animate-on-scroll">
-                <h2 style="text-align: center; font-size: clamp(42px, 5vw, 64px); text-transform: uppercase;">What Drives Us</h2>
+                <h2 style="text-align: center; font-size: clamp(42px, 5vw, 64px); text-transform: uppercase;" data-cms="lifestyle.headline">What Drives Us</h2>
             </div>
             <div class="values-about-grid">
-                <div class="value-about-card">
+                <div class="value-about-card" data-cms-block="card1" data-cms-block-template="value-card">
                     <div style="font-size: 48px; margin-bottom: 24px;">⏱️</div>
-                    <h3 style="font-size: 17px; text-transform: uppercase; margin-bottom: 16px;">Time as Currency</h3>
-                    <p style="font-size: 14px; line-height: 1.7;">
+                    <h3 style="font-size: 17px; text-transform: uppercase; margin-bottom: 16px;" data-cms="lifestyle.card1.title">Time as Currency</h3>
+                    <p style="font-size: 14px; line-height: 1.7;" data-cms="lifestyle.card1.body">
                         The only resource you can't earn back. We measure wealth in free hours, not dollar signs.
                     </p>
                 </div>
-                <div class="value-about-card">
+                <div class="value-about-card" data-cms-block="card2" data-cms-block-template="value-card">
                     <div style="font-size: 48px; margin-bottom: 24px;">⚡</div>
-                    <h3 style="font-size: 17px; text-transform: uppercase; margin-bottom: 16px;">Fuel Everything</h3>
-                    <p style="font-size: 14px; line-height: 1.7;">
+                    <h3 style="font-size: 17px; text-transform: uppercase; margin-bottom: 16px;" data-cms="lifestyle.card2.title">Fuel Everything</h3>
+                    <p style="font-size: 14px; line-height: 1.7;" data-cms="lifestyle.card2.body">
                         Gas, diesel, jet fuel, coffee — whatever powers your passion, we celebrate it.
                     </p>
                 </div>
-                <div class="value-about-card">
+                <div class="value-about-card" data-cms-block="card3" data-cms-block-template="value-card">
                     <div style="font-size: 48px; margin-bottom: 24px;">🤝</div>
-                    <h3 style="font-size: 17px; text-transform: uppercase; margin-bottom: 16px;">Cross-Gen Unity</h3>
-                    <p style="font-size: 14px; line-height: 1.7;">
+                    <h3 style="font-size: 17px; text-transform: uppercase; margin-bottom: 16px;" data-cms="lifestyle.card3.title">Cross-Gen Unity</h3>
+                    <p style="font-size: 14px; line-height: 1.7;" data-cms="lifestyle.card3.body">
                         Old heads and young bucks united by shared values, not shared birthdays.
                     </p>
                 </div>
-                <div class="value-about-card">
+                <div class="value-about-card" data-cms-block="card4" data-cms-block-template="value-card">
                     <div style="font-size: 48px; margin-bottom: 24px;">🏁</div>
-                    <h3 style="font-size: 17px; text-transform: uppercase; margin-bottom: 16px;">Culture > Commerce</h3>
-                    <p style="font-size: 14px; line-height: 1.7;">
+                    <h3 style="font-size: 17px; text-transform: uppercase; margin-bottom: 16px;" data-cms="lifestyle.card4.title">Culture > Commerce</h3>
+                    <p style="font-size: 14px; line-height: 1.7;" data-cms="lifestyle.card4.body">
                         Building a movement, not just moving product. Community first, sales second.
                     </p>
                 </div>
@@ -955,23 +980,23 @@
         </section>
 
         <!-- CTA Section -->
-        <section class="about-cta-section">
+        <section class="about-cta-section" data-cms-section="cta" data-h-section="fnf.about.cta">
             <div class="about-cta-container animate-on-scroll">
-                <h2 style="font-size: clamp(42px, 5vw, 64px); color: white; text-transform: uppercase; margin-bottom: 24px;">Ready to Claim Your Time?</h2>
-                <p style="font-size: 18px; color: rgba(255,255,255,0.9); margin-bottom: 48px;">
+                <h2 style="font-size: clamp(42px, 5vw, 64px); color: white; text-transform: uppercase; margin-bottom: 24px;" data-cms="cta.headline">Ready to Claim Your Time?</h2>
+                <p style="font-size: 18px; color: rgba(255,255,255,0.9); margin-bottom: 48px;" data-cms="cta.body">
                     Join a growing tribe that measures success in sunsets, not spreadsheets.
                 </p>
                 <div>
-                    <a href="/shop" class="about-cta-btn">
+                    <a href="/shop" class="about-cta-btn" data-cms="cta.primary.href" data-cms-attr="href"><span data-cms="cta.primary.label">
                         Shop the Collection
-                    </a>
-                    <a href="./community.html" class="about-cta-btn" style="background: transparent; border: 2px solid white; color: white;">
+                    </span></a>
+                    <a href="/community" class="about-cta-btn" style="background: transparent; border: 2px solid white; color: white;" data-cms="cta.secondary.href" data-cms-attr="href"><span data-cms="cta.secondary.label">
                         Join the Movement
-                    </a>
+                    </span></a>
                 </div>
             </div>
         </section>
-    </div>
+    </main>
 
     <!-- Global CMS-backed footer -->
     <div id="fnf-footer-mount" data-global-footer></div>
