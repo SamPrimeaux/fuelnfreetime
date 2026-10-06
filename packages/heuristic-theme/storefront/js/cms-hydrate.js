@@ -367,7 +367,7 @@
     try {
       const pages = await Promise.all(slugs.map((entry) => fetchPage(entry, preview)));
       const sections = pages.filter(Boolean).flatMap((page) => page.sections || []);
-      await portableReady;
+      await ensureSectionRuntime(sections);
       if (sections.length) applySections(sections);
     } catch {
       /* static HTML fallback */
