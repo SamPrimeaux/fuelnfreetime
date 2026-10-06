@@ -54,6 +54,8 @@ body.fnf-nav-open {
 }
 
 .fnf-announcement {
+  --fnf-announce-bg: var(--fnf-accent);
+  --fnf-announce-color: #111;
   height: var(--fnf-announcement-h);
   display: flex;
   align-items: center;
