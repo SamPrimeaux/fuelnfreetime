@@ -6,7 +6,7 @@
  * documents from silent content-contract upgrades.
  */
 import { renderPage, presetLibraryFrom } from "@inneranimalmedia/section-library";
-import { reviseShowcaseHome, reviseShowcasePresets } from "@inneranimalmedia/revise-theme";
+import { reviseShowcaseHome, reviseShowcasePresets, enhanceRevise } from "@inneranimalmedia/revise-theme";
 
 const prefix = "revise-atlas/";
 const library = presetLibraryFrom(reviseShowcasePresets);
