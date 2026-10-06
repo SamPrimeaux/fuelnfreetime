@@ -1357,7 +1357,10 @@
       liveSourceCaptured = false;
       unmanagedLiveSections = [];
       if (liveUnimported) selectedTheme = 'heuristic';
-      byId('te-import-live').hidden = true;
+      byId('te-import-live').hidden = !missingSourceSections.length && !liveUnimported;
+      if (!liveUnimported && missingSourceSections.length) {
+        byId('te-import-live').textContent = 'Stage ' + missingSourceSections.length + ' missing sections';
+      }
       byId('te-save').textContent = liveUnimported ? (liveExistingDraft ? 'Reconcile & save draft' : 'Import & save draft') : 'Save draft';
       siteData = results[2].page;
       pages = (results[1].pages || []).filter(function(page) { return page.slug !== 'site'; });
