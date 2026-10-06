@@ -182,6 +182,10 @@
   }
   function render(entry) {
     const id = preset(entry);
+    if (!byId.has(id) && scope.ThemeReviseAtlas?.get(id)) {
+      if (entry.content?.__editor?.visibility?.enabled === false) return "";
+      return scope.ThemeReviseAtlas.render(entry);
+    }
     const definition = byId.get(id);
     if (!definition) return null;
     const content = entry.content || {};
