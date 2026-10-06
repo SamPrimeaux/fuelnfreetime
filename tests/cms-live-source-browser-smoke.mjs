@@ -82,6 +82,8 @@ console.log(JSON.stringify(result,null,2));
 assert.match(result.before.src,/^\/shop\?_=/);
 assert.match(result.before.headline,/Time is the\s*real horsepower/i);
 assert.equal(result.before.visible,true);
+assert.ok(result.before.liveOnly.some(v => /editorial/i.test(v)), "live editorial scene must appear in the tree");
+assert.ok(result.before.liveOnly.some(v => /products/i.test(v)), "live product grid must appear in the tree");
 assert.match(result.before.inspector,/Time is the\s*real horsepower/i);
 assert.equal(result.imported.mode,"reconcile");
 assert.ok(result.imported.sections.some(s=>s.key==="hero" && /Time is the\s*real horsepower/i.test(s.content.headline)));
