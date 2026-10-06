@@ -26,6 +26,7 @@ import {
 } from "./r2-store.js";
 
 const KV_PREFIX = "cms:page:";
+const CMS_STOREFRONT_ROUTES = cmsStorefrontRoutes(ROUTE_MANIFEST);
 
 /** Phase C — D1 stores pointers only, not section bodies */
 const WRITE_D1_CONTENT_JSON = false;
