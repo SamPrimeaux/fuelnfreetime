@@ -16,6 +16,8 @@ export function resolvePageAuthority(slug, routes, { seeded = false, cmsPublishe
     draft_exists: Boolean(seeded),
     content_authority: cmsPublished
       ? "cms-published"
+      : cmsDraftLinked
+        ? "cms-draft-linked"
       : liveRoute
         ? "storefront-html"
         : seeded
