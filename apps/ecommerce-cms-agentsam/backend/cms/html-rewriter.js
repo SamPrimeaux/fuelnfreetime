@@ -136,7 +136,7 @@ export async function transformStorefrontHtml(response, env, slug, request) {
   if (head.socialImageUrl) {
     try {
       const resolved = new URL(head.socialImageUrl, request?.url || "https://fuelnfreetime.com");
-      head.socialImageUrl = ["https:", "http:"].includes(resolved.protocol) ? resolved.href : "";
+      head.socialImageUrl = resolved.protocol === "https:" ? resolved.href : "";
     } catch { head.socialImageUrl = ""; }
   }
 
