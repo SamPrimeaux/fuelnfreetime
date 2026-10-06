@@ -9,6 +9,16 @@ on:
       - apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor.js
       - apps/ecommerce-cms-agentsam/backend/cms/api.js
       - apps/ecommerce-cms-agentsam/backend/cms/page-authority.js
+      - packages/theme-contract/runtime/revise-atlas-*
+      - apps/ecommerce-cms-agentsam/fixtures/fnf-revise-site.json
+      - apps/ecommerce-cms-agentsam/frontend/static/revise-atlas.html
+      - apps/ecommerce-cms-agentsam/frontend/static/scene-lab.html
+      - apps/ecommerce-cms-agentsam/frontend/static/js/revise-atlas-view.js
+      - tests/revise-atlas-contract.test.mjs
+      - tests/revise-atlas-browser-smoke.mjs
+      - scripts/harvest-revise-site.mjs
+      - package.json
+      - package-lock.json
       - apps/ecommerce-cms-agentsam/frontend/static/pages.html
       - packages/heuristic-theme/storefront/shop.html
       - tests/cms-live-source-browser-smoke.mjs
@@ -31,6 +41,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Install locked runtime and renderer packages
+        run: npm ci --ignore-scripts
       - name: Verify syntax
         run: |
           node --check packages/theme-contract/runtime/portable-sections.js
@@ -40,7 +52,7 @@ jobs:
           node --check apps/ecommerce-cms-agentsam/backend/cms/api.js
           node --check apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor.js
       - name: Real renderer and shared catalog checks
-        run: node --test tests/portable-sections.test.mjs tests/theme-studio-universal.test.mjs tests/cms-editor-mutations.test.mjs
+        run: node --test tests/portable-sections.test.mjs tests/revise-atlas-contract.test.mjs tests/theme-studio-universal.test.mjs tests/cms-editor-mutations.test.mjs
       - name: Actual Chrome public DOM and live editor preview proof
         run: node tests/portable-sections-browser-smoke.mjs
       - name: Real Home-page composer browser proof
@@ -51,7 +63,7 @@ jobs:
         run: node tests/cms-live-source-browser-smoke.mjs
       - name: Actual storefront media and CTA edits in Chrome
         run: node tests/cms-slot-binding-browser-smoke.mjs
-      - name: Install locked app dependencies
-        run: npm ci --ignore-scripts
       - name: Build admin and assemble public storefront assets
         run: npm run build:admin
+      - name: Original Revise Atlas Chrome preview and real CMS draft contract
+        run: node tests/revise-atlas-browser-smoke.mjs
