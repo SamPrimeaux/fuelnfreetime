@@ -422,8 +422,23 @@
 
 .te-preview-bar__actions {
   display: flex;
+  align-items: center;
   gap: 4px;
 }
+
+.te-import-live {
+  border: 1px solid #c6bcff;
+  border-radius: 8px;
+  background: #f2eeff;
+  color: #4935a0;
+  padding: 6px 10px;
+  font: 600 11px/1.2 inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.te-import-live:hover { background: #e8e0ff; }
+.te-import-live:disabled { opacity: .5; cursor: wait; }
+.te-import-live[hidden] { display: none !important; }
 
 .te-preview-bar .te-icon-btn {
   width: 28px;
