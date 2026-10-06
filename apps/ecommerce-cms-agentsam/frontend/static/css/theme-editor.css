@@ -578,6 +578,13 @@
 }
 
 
+.te-inspector-parent {
+  display: inline-flex; align-items: center; margin: 0 0 16px; padding: 7px 9px;
+  border: 1px solid var(--te-border); border-radius: 7px; color: #5140a9;
+  background: var(--te-soft); font: 600 11px/1.25 system-ui,sans-serif; cursor: pointer;
+}
+.te-inspector-parent:hover { background: var(--te-accent-soft); }
+.te-inspector-parent:focus-visible { outline: 2px solid var(--te-accent); outline-offset: 2px; }
 .te-inspector-group { margin-bottom: 20px; padding: 1px 0 18px; border-bottom: 1px solid var(--te-border); }
 .te-inspector-group__head { margin-bottom: 17px; }
 .te-inspector-group__head h3 { margin: 0; color: #252522; font-size: 13px; font-weight: 680; }
