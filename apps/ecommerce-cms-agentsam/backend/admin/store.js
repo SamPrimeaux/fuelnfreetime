@@ -49,6 +49,9 @@ const PACKAGE_STORE_DEFAULTS = {
   announcementEnabled: false,
   announcementText: "",
   announcementHref: "",
+  announcementStyle: "static",
+  announcementBgColor: "#161616",
+  announcementTextColor: "#ffffff",
   storePasswordHash: null,
   storePasswordSalt: null,
 };
