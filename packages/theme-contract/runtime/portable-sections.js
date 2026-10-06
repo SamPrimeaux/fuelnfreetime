@@ -189,8 +189,9 @@
       return { ok: false, error: "Section content must be an object" };
     const allowed = new Set(definition.fields.map((field) => field.key.split(".")[0]));
     allowed.add("__editor");
-    for (const block of definition.blocks) {
-      for (const key of Object.keys(content)) if (/^card\d+$/.test(key)) allowed.add(key);
+    const declaredBlocks = Array.isArray(content.__editor?.blocks) ? content.__editor.blocks : [];
+    for (const block of declaredBlocks) {
+      if (block && typeof block.id === "string") allowed.add(block.id);
     }
     for (const key of Object.keys(content)) {
       if (!allowed.has(key) || ["__proto__", "prototype", "constructor"].includes(key))
