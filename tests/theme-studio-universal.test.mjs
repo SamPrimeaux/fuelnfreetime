@@ -25,20 +25,21 @@ test("Theme Studio loads the visual preview runtime before the editor", () => {
   assert.ok(html.indexOf("/admin/js/theme-preview-registry.js") < runtime);
 });
 
-test("visual theme runtime exposes Heuristic, all 24 Revise presets, and FNF", () => {
-  const core = read("packages/theme-contract/runtime/theme-preview-registry.js");
-  const adapter = read("packages/fnf-theme/src/editor/preview-adapter.js");
+test("theme catalog contains real renderer-backed presets, not 24 aliases", () => {
   const sandbox = { window: {} };
-  vm.runInNewContext(core, sandbox);
-  vm.runInNewContext(adapter, sandbox);
+  sandbox.globalThis = sandbox.window;
+  vm.runInNewContext(read("packages/theme-contract/runtime/portable-sections.js"), sandbox);
+  vm.runInNewContext(read("packages/theme-contract/runtime/theme-preview-registry.js"), sandbox);
+  vm.runInNewContext(read("packages/fnf-theme/src/editor/preview-adapter.js"), sandbox);
   const runtime = sandbox.window.ThemeStudioPreview;
-  assert.deepEqual(Array.from(runtime.themes, (theme) => theme.id), ["heuristic", "revise", "fnf"]);
-  assert.equal(runtime.catalog.revise.length, 24);
-  assert.ok(runtime.catalog.fnf.length >= 5);
-  assert.ok(runtime.catalog.heuristic.length >= 4);
-  for (const entry of runtime.catalog.revise) {
-    assert.ok(entry.templateKey);
-    assert.ok(entry.preset.startsWith("revise/"));
+  assert.deepEqual(Array.from(runtime.themes, item => item.id), ["heuristic","revise","fnf"]);
+  assert.equal(runtime.catalog.revise.length, 7);
+  assert.equal(runtime.catalog.fnf.length, 5);
+  for (const theme of ["revise","fnf"]) for (const item of runtime.catalog[theme]) {
+    const entry = { key: "user-hero", content: sandbox.window.ThemePortableSections.defaults(item.id) };
+    const actual = sandbox.window.ThemePortableSections.render(entry);
+    assert.ok(actual.includes("data-cms-section"));
+    assert.ok(runtime.render(theme, { title: "Shop", sections: [entry] }, { sections: [] }).includes(actual));
   }
 });
 
