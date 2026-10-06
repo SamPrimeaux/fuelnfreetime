@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import { reviseAtlas } from "../packages/theme-contract/runtime/revise-atlas-source.js";
 import { DatabaseSync } from "node:sqlite";
 
 import {
@@ -489,5 +491,44 @@ test("a cached public CMS publication cannot be replaced by an HTML-source recon
     const admin = await getPageAdmin(fx.env, "shop");
     assert.notEqual(admin.page.sections[0].content.headline, "Static source");
     assert.equal(fx.db.prepare("SELECT COUNT(*) AS n FROM page_sections").get().n, 3);
+  } finally { fx.db.close(); }
+});
+
+test("customer imports actual 4319 before/after content through one real CMS draft mutation", async () => {
+  const fx = fixture();
+  try {
+    const donor = JSON.parse(fs.readFileSync(new URL(
+      "../apps/ecommerce-cms-agentsam/fixtures/fnf-revise-site.json", import.meta.url), "utf8"));
+    const section = donor.pages.find((p) => p.id === "campaigns").sections
+      .find((s) => s.preset === "revise/before-after");
+    const content = reviseAtlas.fromSiteSection(section, donor.media);
+    assert.deepEqual(reviseAtlas.validate(content.__editor.themePreset, content), { ok:true });
+    const imported = await insertSection(fx.env, "shop", {
+      templateKey: "portable",
+      themePreset: content.__editor.themePreset,
+      content,
+    });
+    assert.equal(imported.ok, true);
+    assert.equal(imported.template_key, "portable");
+    const stored = fx.readDraft(imported.section_key);
+    assert.equal(stored.content.heading, content.heading);
+    assert.equal(stored.content.__editor.sourcePreset, "revise/before-after");
+    const admin = await getPageAdmin(fx.env, "shop");
+    assert.equal(admin.page.status, "draft");
+    assert.ok(admin.page.sections.some((s) => s.key === imported.section_key));
+    assert.equal(await getPublishedPage(fx.env, "shop"), null,
+      "Adding a section must not automatically publish the site");
+
+    const invalid = structuredClone(content);
+    invalid.beforeKey = "javascript:alert(1)";
+    const rejected = await insertSection(fx.env, "shop", {
+      templateKey: "portable", themePreset: invalid.__editor.themePreset,
+      content: invalid,
+    });
+    assert.equal(rejected.status, 400, "Untrusted sourced media is rejected");
+    const rows = fx.db.prepare(
+      "SELECT COUNT(*) AS n FROM page_sections WHERE page_id = 1"
+    ).get().n;
+    assert.equal(rows, 4, "Failed imports do not create partial sections");
   } finally { fx.db.close(); }
 });

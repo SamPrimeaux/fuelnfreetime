@@ -17,6 +17,8 @@ export const ADMIN_CLEAN_PAGES = new Set([
   "pages",
   "page-edit",
   "theme-editor",
+  "scene-lab",
+  "revise-atlas",
   "store",
   "preferences",
   "email",

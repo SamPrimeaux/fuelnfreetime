@@ -9,6 +9,9 @@ import {
 } from "./registry.js";
 // The same concrete section definitions are loaded by the browser and Worker.
 import "../../../../packages/theme-contract/runtime/portable-sections.js";
+import { reviseAtlas } from "../../../../packages/theme-contract/runtime/revise-atlas-source.js";
+// The Worker validates the exact same Revise section contract the browser renders.
+globalThis.ThemeReviseAtlas = reviseAtlas;
 const PORTABLE = globalThis.ThemePortableSections;
 import {
   draftKey,
@@ -651,7 +654,15 @@ export async function insertSection(env, slug, body = {}) {
       : templateKey;
   }
 
-  const content = structuredClone(template.defaultContent || {});
+  // A donor section can be imported with its real customer data in ONE
+  // draft write. Preview-only fixture content is never silently published.
+  const supplied = body.content !== undefined && body.content !== null;
+  if (supplied) {
+    if (!portable) return { error: "Content import requires a portable renderer", status: 400 };
+    const validation = PORTABLE.validate(themePreset, body.content);
+    if (!validation.ok) return { error: validation.error, status: 400 };
+  }
+  const content = structuredClone(supplied ? body.content : (template.defaultContent || {}));
   content.__editor = {
     ...(content.__editor || {}),
     templateKey,

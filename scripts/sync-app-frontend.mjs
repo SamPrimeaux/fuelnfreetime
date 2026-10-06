@@ -1,4 +1,5 @@
 import { cp, mkdir, rm, readFile, writeFile } from 'node:fs/promises';
+import { build as bundle } from 'esbuild';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -18,12 +19,45 @@ await cp(path.join(root, 'packages/fnf-theme/src/theme/tokens.css'), path.join(o
 await cp(path.join(root, 'packages/fnf-theme/src/layout/layout.css'), path.join(output, 'admin/theme-previews/fnf/layout.css'));
 await cp(path.join(root, 'packages/fnf-theme/src/sections/scene-hero/scene-hero.css'), path.join(output, 'admin/theme-previews/fnf/scene-hero.css'));
 await cp(path.join(frontend, 'static'), path.join(output, 'admin'), { recursive: true });
+await mkdir(path.join(output, 'admin/fixtures'), { recursive: true });
+await cp(path.join(root, 'apps/ecommerce-cms-agentsam/fixtures/fnf-revise-site.json'),
+  path.join(output, 'admin/fixtures/fnf-revise-site.json'));
 // One section renderer and stylesheet are shipped to BOTH the live site and
 // editor. Preview-only renderer copies are not allowed for portable sections.
 for (const ext of ['js', 'css']) {
   const src = path.join(root, `packages/theme-contract/runtime/portable-sections.${ext}`);
   await cp(src, path.join(output, `js/portable-sections.${ext}`));
   await cp(src, path.join(output, `admin/js/portable-sections.${ext}`));
+}
+// Build ONE renderer-backed section runtime from the published Revise/section
+// packages. The same semantic source is imported directly by the Worker.
+const atlasBundle = await bundle({
+  entryPoints: [path.join(root, 'packages/theme-contract/runtime/revise-atlas-browser.js')],
+  bundle: true,
+  platform: 'browser',
+  format: 'iife',
+  target: 'es2022',
+  write: false,
+  minify: false,
+});
+const atlasJs = atlasBundle.outputFiles[0].contents;
+for (const dest of ['js/revise-atlas.js', 'admin/js/revise-atlas.js']) {
+  await writeFile(path.join(output, dest), atlasJs);
+}
+// Real donor layout and theme CSS. @scope prevents header/nav/body token
+// pollution of the consuming Heuristic, FNF, or other merchant theme.
+const layoutCss = await readFile(path.join(root, 'node_modules/@inneranimalmedia/section-library/dist/layout.css'), 'utf8');
+const reviseCss = await readFile(path.join(root, 'node_modules/@inneranimalmedia/revise-theme/dist/theme.css'), 'utf8');
+const atlasCss = [
+  '/* Original Revise CSS, scoped to the selected section only. */',
+  '.ps-revise-atlas { min-width: 0; isolation: isolate; }',
+  '@scope (.ps-revise-atlas) {',
+  layoutCss,
+  reviseCss,
+  '}',
+].join('\n');
+for (const dest of ['js/revise-atlas.css', 'admin/css/revise-atlas.css']) {
+  await writeFile(path.join(output, dest), atlasCss);
 }
 await cp(path.join(root, 'packages/theme-contract/runtime/theme-preview-registry.js'), path.join(output, 'admin/js/theme-preview-registry.js'));
 await cp(path.join(root, 'packages/fnf-theme/src/editor/preview-adapter.js'), path.join(output, 'admin/js/theme-preview-runtime.js'));

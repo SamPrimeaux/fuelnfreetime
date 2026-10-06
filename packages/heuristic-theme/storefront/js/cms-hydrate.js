@@ -7,8 +7,25 @@
   if (!pageSlug) return;
 
   const portableReady = import('/js/portable-sections.js').catch((error) => {
-    console.error('[CMS] Native section runtime failed to load', error);
+    console.error('[CMS] Shared section runtime failed to load', error);
   });
+  let atlasReady = null;
+  async function ensureSectionRuntime(sections) {
+    await portableReady;
+    if (!sections.some((section) => String(section?.content?.__editor?.themePreset || '').startsWith('revise-atlas/'))) return;
+    if (!atlasReady) {
+      atlasReady = import('/js/revise-atlas.js').then(() => {
+        if (!document.querySelector('link[data-revise-atlas]')) {
+          const stylesheet = document.createElement('link');
+          stylesheet.rel = 'stylesheet';
+          stylesheet.href = '/js/revise-atlas.css';
+          stylesheet.dataset.reviseAtlas = 'true';
+          document.head.appendChild(stylesheet);
+        }
+      });
+    }
+    await atlasReady;
+  }
   if (!document.querySelector('link[data-portable-sections]')) {
     const css = document.createElement('link');
     css.rel = 'stylesheet';
@@ -350,7 +367,7 @@
     try {
       const pages = await Promise.all(slugs.map((entry) => fetchPage(entry, preview)));
       const sections = pages.filter(Boolean).flatMap((page) => page.sections || []);
-      await portableReady;
+      await ensureSectionRuntime(sections);
       if (sections.length) applySections(sections);
     } catch {
       /* static HTML fallback */
@@ -362,9 +379,12 @@
     const data = event.data;
     if (!data || data.type !== "fnf-cms-preview" || data.slug !== pageSlug) return;
     if (!Array.isArray(data.sections)) return;
-    void portableReady.then(() => applySections([
+    const sections = [
       ...(Array.isArray(data.siteSections) ? data.siteSections : []), ...data.sections,
-    ]));
+    ];
+    void ensureSectionRuntime(sections).then(() => applySections(sections)).catch((error) => {
+      console.error('[CMS] Draft section renderer failed to load', error);
+    });
   });
 
   if (document.readyState === "loading") {
