@@ -281,7 +281,7 @@
   function safeCmsUrl(value, { media = false } = {}) {
     if (typeof value !== "string") return null;
     const url = value.trim();
-    if (!url || /[\\u0000-\\u001f\\u007f]/.test(url)) return null;
+    if (!url || /[\u0000-\u001f\u007f]/.test(url)) return null;
     try {
       const scheme = new URL(url, document.baseURI).protocol;
       if (scheme === "http:" || scheme === "https:") return url;
