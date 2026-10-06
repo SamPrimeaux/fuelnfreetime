@@ -6,8 +6,11 @@
   const pageSlug = document.documentElement.dataset.cmsPage;
   if (!pageSlug) return;
 
-  const portableReady = import('/js/portable-sections.js').catch((error) => {
-    console.error('[CMS] Native section runtime failed to load', error);
+  const portableReady = Promise.all([
+    import('/js/portable-sections.js'),
+    import('/js/revise-atlas.js'),
+  ]).catch((error) => {
+    console.error('[CMS] Shared section runtime failed to load', error);
   });
   if (!document.querySelector('link[data-portable-sections]')) {
     const css = document.createElement('link');
