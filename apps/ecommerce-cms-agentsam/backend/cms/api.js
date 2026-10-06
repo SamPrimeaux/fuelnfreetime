@@ -404,6 +404,7 @@ export async function getPageAdmin(env, slug) {
       title: page.title,
       status: page.status,
       updated_at: page.updated_at,
+      missing_source_sections: missingSourceSections,
       sections: hasLiveImport ? sections.filter((section) => section.status !== "removed") : mergeWithRegistry(slug, sections),
       ...resolvePageAuthority(slug, CMS_STOREFRONT_ROUTES, {
         seeded: true,
