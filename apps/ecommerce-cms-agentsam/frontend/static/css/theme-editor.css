@@ -1471,3 +1471,66 @@
     gap: 5px;
   }
 }
+
+
+
+/* Customer mobile editor workspace: one usable pane at a time, not a
+   permanent bottom inspector covering the content being edited. */
+@media (max-width: 900px) {
+  .te-mobile-pane-switch {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 4px;
+    background: #fff;
+    border-bottom: 1px solid var(--te-border);
+    padding: 7px 12px;
+    position: sticky;
+    top: 54px;
+    z-index: 7;
+  }
+  .te-mobile-pane-switch button {
+    border: 1px solid transparent;
+    border-radius: 9px;
+    color: #585852;
+    background: #f5f5f2;
+    min-height: 38px;
+    font: 650 12px/1.2 system-ui, sans-serif;
+    cursor: pointer;
+  }
+  .te-mobile-pane-switch button.is-active {
+    color: #3e27a4;
+    border-color: #cec3ff;
+    background: #f0ebff;
+  }
+  .theme-studio[data-mobile-pane="sections"] .theme-studio-tree,
+  .theme-studio[data-mobile-pane="settings"] .theme-editor-panel {
+    display: block;
+    height: auto;
+    min-height: 420px;
+    max-height: min(820px, calc(100dvh - 165px));
+    overflow-y: auto;
+  }
+  .theme-studio[data-mobile-pane="sections"] .theme-studio-canvas,
+  .theme-studio[data-mobile-pane="sections"] .theme-editor-panel,
+  .theme-studio[data-mobile-pane="settings"] .theme-studio-tree,
+  .theme-studio[data-mobile-pane="settings"] .theme-studio-canvas,
+  .theme-studio[data-mobile-pane="preview"] .theme-studio-tree,
+  .theme-studio[data-mobile-pane="preview"] .theme-editor-panel {
+    display: none;
+  }
+  .theme-studio[data-mobile-pane="preview"] .theme-studio-canvas {
+    display: flex;
+    flex-direction: column;
+    height: min(760px, max(430px, calc(100dvh - 170px)));
+    min-height: 430px;
+  }
+  .theme-studio[data-mobile-pane="settings"] .te-inspector-body {
+    min-height: 200px;
+  }
+  .theme-studio .te-import-live {
+    max-width: min(46vw, 205px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
