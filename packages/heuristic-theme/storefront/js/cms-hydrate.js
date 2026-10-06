@@ -276,6 +276,20 @@
     }
   }
 
+  // Resolve merchant-authored destinations without admitting script/data URLs.
+  // Shared runtime uses one policy for both draft previews and published pages.
+  function safeCmsUrl(value, { media = false } = {}) {
+    if (typeof value !== "string") return null;
+    const url = value.trim();
+    if (!url || /[\u0000-\u001f\u007f]/.test(url)) return null;
+    try {
+      const scheme = new URL(url, document.baseURI).protocol;
+      if (scheme === "http:" || scheme === "https:") return url;
+      if (!media && (scheme === "mailto:" || scheme === "tel:")) return url;
+    } catch { /* invalid URL */ }
+    return null;
+  }
+
   function applySections(sections) {
     editorStyle();
     const byKey = Object.fromEntries(sections.map((section) => [section.key, section.content || {}]));
@@ -302,12 +316,19 @@
       const attr = el.dataset.cmsAttr || "textContent";
       if (attr === "textContent") {
         el.textContent = value;
+        // The authored live heading may contain explicit line breaks. Preserve
+        // those when importing it as editable CMS text, without allowing HTML.
+        if (typeof value === "string" && value.includes("\n")) el.style.whiteSpace = "pre-line";
       } else if (attr === "innerHTML") {
         el.innerHTML = value;
       } else if (attr === "style.backgroundImage" && typeof value === "string") {
-        el.style.backgroundImage = `url('${value.replace(/'/g, "\\'")}')`;
-      } else {
-        el.setAttribute(attr, value);
+        const safe = safeCmsUrl(value, { media: true });
+        if (safe) el.style.backgroundImage = `url("${safe.replace(/"/g, "%22")}")`;
+      } else if (attr === "href" || attr === "src") {
+        const safe = safeCmsUrl(value, { media: attr === "src" });
+        if (safe) el.setAttribute(attr, safe);
+      } else if (attr === "alt" || attr === "title" || attr === "aria-label") {
+        el.setAttribute(attr, String(value));
       }
     });
 

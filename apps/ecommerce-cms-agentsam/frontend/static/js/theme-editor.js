@@ -9,6 +9,10 @@
   let selectedTheme = localStorage.getItem('theme-studio:selected-theme') || 'heuristic';
   let previewBlobUrl = null;
   let siteDraftTouched = false;
+  let liveUnimported = false;
+  let liveSourceCaptured = false;
+  let liveExistingDraft = false;
+  let unmanagedLiveSections = [];
   let activeBlockId = null;
   let activeFieldKey = null;
   let activeTab = 'content';
@@ -70,9 +74,14 @@
           '<div class="theme-studio-toolbar__right"><a class="te-toolbar-btn" id="te-page-settings" href="#">Page settings</a><button type="button" class="te-toolbar-btn is-primary" id="te-publish">Publish</button></div>',
         '</header>',
         '<div class="theme-studio-workspace">',
+          '<nav class="te-mobile-pane-switch" id="te-mobile-pane-switch" aria-label="Editor workspace view">',
+            '<button type="button" data-mobile-pane="sections">Sections</button>',
+            '<button type="button" data-mobile-pane="preview" aria-current="true">Preview</button>',
+            '<button type="button" data-mobile-pane="settings">Settings</button>',
+          '</nav>',
           '<aside class="theme-studio-tree"><div class="te-panel-title"><span class="te-panel-kicker">Page structure</span><h2 id="te-tree-title">Page</h2><p id="te-tree-path">/</p></div><div id="te-tree"></div><div class="te-tree-footer"><a id="te-manage-page" href="#">Page content &amp; settings →</a></div></aside>',
           '<main class="theme-studio-canvas">',
-            '<div class="te-preview-bar"><span id="te-preview-label">Storefront preview</span><div class="te-preview-bar__actions"><button class="te-icon-btn" type="button" id="te-refresh" title="Refresh preview">', icon.refresh, '</button><a class="te-icon-btn" id="te-open-tab" href="#" target="_blank" rel="noopener" title="Open in new tab">', icon.external, '</a></div></div>',
+            '<div class="te-preview-bar"><span id="te-preview-label">Storefront preview</span><div class="te-preview-bar__actions"><button class="te-import-live" type="button" id="te-import-live" hidden>Import live page</button><button class="te-icon-btn" type="button" id="te-refresh" title="Refresh preview">', icon.refresh, '</button><a class="te-icon-btn" id="te-open-tab" href="#" target="_blank" rel="noopener" title="Open in new tab">', icon.external, '</a></div></div>',
             '<div class="te-preview-stage"><div class="te-preview-device" id="te-preview-device" data-device="desktop"><iframe id="theme-preview" title="Storefront preview" class="theme-editor-preview"></iframe></div></div>',
             '<div class="te-preview-status"><span class="te-preview-mode">Local draft preview</span><span class="te-selected-path" id="te-selected-path">Select a section in the preview or tree</span></div>',
           '</main>',
@@ -96,14 +105,31 @@
 
   const byId = function(id) { return document.getElementById(id); };
 
+  function setMobilePane(pane) {
+    if (!['sections', 'preview', 'settings'].includes(pane)) return;
+    const studio = document.querySelector('.theme-studio');
+    if (!studio) return;
+    studio.dataset.mobilePane = pane;
+    byId('te-mobile-pane-switch')?.querySelectorAll('[data-mobile-pane]').forEach(function(button) {
+      const selected = button.dataset.mobilePane === pane;
+      button.classList.toggle('is-active', selected);
+      if (selected) button.setAttribute('aria-current', 'true');
+      else button.removeAttribute('aria-current');
+    });
+  }
+
   function humanize(value) {
     return String(value || '').replace(/[_-]+/g, ' ').replace(/\b\w/g, function(m) { return m.toUpperCase(); });
   }
 
   function pageRoute(pageSlug) {
+    const authoritative = pages.find(function(page) { return page.slug === pageSlug; });
+    if (authoritative?.live_route) return authoritative.live_route;
     if (window.PAGE_ROUTES && window.PAGE_ROUTES[pageSlug]) return window.PAGE_ROUTES[pageSlug];
-    const found = fallbackPages.find(function(page) { return page.slug === pageSlug; });
-    return found ? found.route : '/';
+    const known = fallbackPages.find(function(page) { return page.slug === pageSlug; });
+    // A CMS record is not necessarily a published storefront route. Never
+    // silently show the homepage as the preview for an unknown customer page.
+    return known ? known.route : null;
   }
 
 
@@ -174,10 +200,10 @@
     const button = byId('te-publish');
     if (!button) return;
     const previewOnly = selectedTheme !== 'heuristic';
-    button.disabled = previewOnly;
+    button.disabled = previewOnly || liveUnimported;
     button.title = previewOnly
       ? 'Preview only: this visual theme has not passed the publish/rollback gate.'
-      : 'Publish the current CMS page and changed global sections';
+      : liveUnimported ? 'Import the live storefront before publishing.' : 'Publish the current CMS page and changed global sections';
   }
 
   function currentSection() {
@@ -305,7 +331,7 @@
     byId('te-page-options').innerHTML = filtered.length ? filtered.map(function(page) {
       return '<button type="button" class="te-page-option' + (page.slug === slug ? ' is-active' : '') + '" data-page-slug="' + cmsEscapeAttr(page.slug) + '">' +
         icon.page + '<span><strong style="font-size:12px">' + cmsEscapeHtml(page.title || humanize(page.slug)) + '</strong><span style="display:block;font-size:10px;color:#858580;margin-top:2px">' +
-        cmsEscapeHtml(pageRoute(page.slug)) + '</span></span></button>';
+        cmsEscapeHtml(pageRoute(page.slug) || 'No public route connected') + '</span></span></button>';
     }).join('') : '<div class="te-empty">No pages match that search.</div>';
 
     byId('te-page-options').querySelectorAll('[data-page-slug]').forEach(function(button) {
@@ -317,6 +343,24 @@
     const schema = schemaForSection(section);
     if (!schema || !meta || !Array.isArray(schema.blocks)) return null;
     return schema.blocks.find(function(block) { return block.key === meta.templateKey; }) || null;
+  }
+
+  function discoverUnmanagedSections() {
+    if (selectedTheme !== 'heuristic') return;
+    let doc;
+    try { doc = byId('theme-preview').contentDocument; } catch { return; }
+    if (!doc || doc.documentElement?.getAttribute('data-cms-page') !== slug) return;
+    const managed = new Set((pageData?.sections || []).map(function(section) { return section.key; }));
+    unmanagedLiveSections = Array.from(doc.querySelectorAll('main > section'))
+      .filter(function(node) { return !managed.has(node.dataset.cmsSection); })
+      .map(function(node, index) {
+        return {
+          id: node.id || node.dataset.hSectionId || '',
+          sectionId: node.dataset.hSectionId || '',
+          label: node.dataset.hSection || node.getAttribute('aria-label') || node.classList[0] || 'Section ' + (index + 1)
+        };
+      });
+    renderTree();
   }
 
   function renderTree() {
@@ -388,6 +432,10 @@
     byId('te-tree').innerHTML =
       '<div class="te-tree-group te-tree-group--global"><div class="te-tree-group__label">Header</div>' + headerRow + '</div>' +
       '<div class="te-tree-group"><div class="te-tree-group__label">Template</div>' + pageRows + '</div>' +
+      (unmanagedLiveSections.length ? '<div class="te-tree-group te-live-only"><div class="te-tree-group__label">Live-only sections · not editable yet</div>' +
+        unmanagedLiveSections.map(function(region, index) {
+          return '<button type="button" class="te-live-only-row" data-scroll-live="' + index + '"><span>' + icon.section + '</span><span><strong>' + cmsEscapeHtml(humanize(region.label.replaceAll('.', ' '))) + '</strong><small>Existing storefront · adapter needed</small></span></button>';
+        }).join('') + '</div>' : '') +
       '<button type="button" class="te-add-section" id="te-add-section">+ Add section</button>' +
       '<div class="te-section-menu" id="te-section-menu" hidden>' +
         '<div class="te-section-menu__head"><strong>Add section · Shared library</strong><button type="button" class="te-tree-mini" id="te-section-cancel" aria-label="Close">×</button></div>' +
@@ -420,6 +468,18 @@
       });
     }
 
+    byId('te-tree').querySelectorAll('[data-scroll-live]').forEach(function(button) {
+      button.addEventListener('click', function() {
+        const region = unmanagedLiveSections[Number(button.dataset.scrollLive)];
+        if (!region) return;
+        const doc = byId('theme-preview').contentDocument;
+        const target = Array.from(doc?.querySelectorAll('main > section') || []).find(function(node) {
+          return (node.id && node.id === region.id) || (node.dataset.hSectionId && node.dataset.hSectionId === region.sectionId);
+        });
+        target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setNote('This real storefront section is visible but not yet CMS-editable. Its renderer must be registered before authoring.', 'error');
+      });
+    });
     byId('te-tree').querySelectorAll('[data-select-section]').forEach(function(button) {
       button.addEventListener('click', function() {
         selectSection(button.dataset.selectSection, null, true, button.dataset.sectionOwner);
@@ -603,8 +663,9 @@
     }
 
     const inputType = field.type === 'number' ? 'number' : (field.type === 'link' || field.type === 'url' ? 'url' : 'text');
-    const input = field.type === 'textarea'
-      ? '<textarea id="' + id + '" rows="4" data-field-input="' + cmsEscapeAttr(field.key) + '" placeholder="' + cmsEscapeAttr(field.placeholder || '') + '">' + cmsEscapeHtml(String(value)) + '</textarea>'
+    const multiline = field.type === 'textarea' || (field.type === 'text' && String(value).includes('\n'));
+    const input = multiline
+      ? '<textarea id="' + id + '" rows="' + (field.type === 'textarea' ? 4 : 2) + '" data-field-input="' + cmsEscapeAttr(field.key) + '" placeholder="' + cmsEscapeAttr(field.placeholder || '') + '">' + cmsEscapeHtml(String(value)) + '</textarea>'
       : '<input id="' + id + '" type="' + inputType + '" data-field-input="' + cmsEscapeAttr(field.key) + '" value="' + safeValue + '" placeholder="' + cmsEscapeAttr(field.placeholder || '') + '"' +
         (field.min !== undefined ? ' min="' + field.min + '"' : '') + (field.max !== undefined ? ' max="' + field.max + '"' : '') + (field.step !== undefined ? ' step="' + field.step + '"' : '') + '>';
 
@@ -912,6 +973,119 @@
     closeMediaPicker();
   }
 
+  // The live HTML is the source of truth for a route not yet imported into CMS.
+  // Never replace it with registry fixtures before extracting real fields.
+  function captureLiveSource() {
+    if (!liveUnimported || !pageData) return false;
+    let doc;
+    try { doc = byId('theme-preview').contentDocument; } catch { return false; }
+    if (!doc || doc.documentElement?.getAttribute('data-cms-page') !== slug) {
+      setNote('The live preview identity does not match this page; import cancelled.', 'error');
+      return false;
+    }
+    const sections = [];
+    let count = 0;
+    for (const section of pageData.sections || []) {
+      const region = Array.from(doc.querySelectorAll('[data-cms-section]')).find(function(node) {
+        return node.dataset.cmsSection === section.key && !node.closest('[data-cms-scope="site"]');
+      });
+      const schema = window.SECTION_SCHEMAS?.[slug]?.[section.key];
+      if (!region || !schema) continue;
+      const controls = Array.from(region.querySelectorAll('[data-cms]'));
+      const content = structuredClone(section.content || {});
+      const editableFields = [...(schema.fields || [])];
+      // Repeatable card/block content belongs to the same section document.
+      // Extract the live cards instead of preserving stale registry fixtures.
+      for (const block of content.__editor?.blocks || []) {
+        const template = (schema.blocks || []).find(function(item) { return item.key === block.templateKey; });
+        if (!template) continue;
+        for (const field of template.fields || []) {
+          editableFields.push({ ...field, key: block.id + '.' + field.key });
+        }
+      }
+      let matched = 0;
+      for (const field of editableFields) {
+        let el = controls.find(function(node) { return node.dataset.cms === field.key; });
+        if (!el && field.key.endsWith('.href')) {
+          const alias = field.key.slice(0, -5) + '.label';
+          el = controls.find(function(node) { return node.dataset.cms === alias; });
+        }
+        if (!el) continue;
+        let value = '';
+        if (field.key.endsWith('.href') || field.type === 'link') {
+          value = el.getAttribute('href') || el.closest('a')?.getAttribute('href') || '';
+        } else if (field.type === 'media' || field.type === 'video' || field.media) {
+          value = el.getAttribute('src') || el.querySelector('img,video,source')?.getAttribute('src') || '';
+        } else {
+          const clone = el.cloneNode(true);
+          clone.querySelectorAll('[aria-hidden="true"],svg').forEach(function(node) { node.remove(); });
+          clone.querySelectorAll('br').forEach(function(node) { node.replaceWith('\n'); });
+          value = String(clone.textContent || '').replace(/[ \t]+/g, ' ').replace(/ *\n */g, '\n').trim();
+        }
+        if (!value) continue;
+        cmsSetPath(content, field.key, value);
+        matched += 1;
+      }
+      if (matched) {
+        content.__editor = { ...(content.__editor || {}), source: 'live-storefront' };
+        sections.push({ ...section, content, status: 'draft', __ownerSlug: slug });
+        count += matched;
+      }
+    }
+    if (!sections.length) {
+      setNote('This live route has no CMS-marked editable sections; nothing was imported.', 'error');
+      return false;
+    }
+    pageData.sections = sections; // no synthetic newsletter or other missing regions
+    if (!sections.some(function(section) { return section.key === activeSectionKey; })) {
+      activeSectionKey = sections[0].key;
+      activeSectionOwner = slug;
+    }
+    liveSourceCaptured = true;
+    discoverUnmanagedSections();
+    byId('te-import-live').hidden = false;
+    byId('te-import-live').textContent = liveExistingDraft ? 'Use live layout (' + sections.length + ' sections)' : 'Import ' + sections.length + ' sections';
+    byId('te-save').textContent = liveExistingDraft ? 'Reconcile & save draft' : 'Import & save draft';
+    byId('te-preview-label').textContent = 'Live storefront — ' + sections.length + ' editable regions';
+    setNote(count + ' real fields found. Import saves a private CMS draft; the storefront remains unchanged.', 'success');
+    renderTree();
+    renderInspector();
+    return true;
+  }
+
+  async function importLiveSource() {
+    if (!liveUnimported || !liveSourceCaptured) {
+      setNote('Wait for the real storefront preview before importing.', 'error');
+      return false;
+    }
+    if (liveExistingDraft && !window.confirm('Replace this page’s existing CMS draft with the actual live layout? The previous sections will be archived in R2. Your public storefront will not change until you explicitly publish.')) return false;
+    const button = byId('te-import-live');
+    button.disabled = true;
+    setSaveState('Importing');
+    try {
+      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/import-live', {
+        method: 'POST',
+        body: JSON.stringify({ mode: liveExistingDraft ? 'reconcile' : 'create', sections: pageData.sections.map(function(section) {
+          return { key: section.key, content: section.content, expected_version: Number(section.version ?? 0) };
+        }) })
+      });
+      liveUnimported = false;
+      liveExistingDraft = false;
+      liveSourceCaptured = false;
+      dirtySections.clear();
+      setDirty(false);
+      await loadPage();
+      setNote('Existing storefront content imported into an unpublished CMS draft.', 'success');
+      return true;
+    } catch (error) {
+      setNote(error.message || String(error), 'error');
+      setSaveState('Import failed', 'error');
+      return false;
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   function pushLocalPreview() {
     const iframe = byId('theme-preview');
     if (!iframe?.contentWindow || !pageData) return;
@@ -968,6 +1142,7 @@
 
     renderTree();
     renderInspector();
+    if (window.matchMedia('(max-width: 900px)').matches) setMobilePane('settings');
     const prefix = activeSectionOwner === 'site' ? 'Global' : slug;
     byId('te-selected-path').textContent = fieldKey ? prefix + ' / ' + sectionKey + ' / ' + fieldKey : prefix + ' / ' + sectionKey;
 
@@ -1003,6 +1178,7 @@
 
     renderTree();
     renderInspector();
+    if (window.matchMedia('(max-width: 900px)').matches) setMobilePane('settings');
     const prefix = activeSectionOwner === 'site' ? 'Global' : slug;
     byId('te-selected-path').textContent = activeFieldKey
       ? prefix + ' / ' + sectionKey + ' / ' + blockId + ' / ' + activeFieldKey.replace(blockId + '.', '')
@@ -1117,11 +1293,17 @@
       previewBlobUrl = null;
     }
     const route = pageRoute(slug);
+    if (!route) {
+      byId('theme-preview').srcdoc = '<!doctype html><html><body style="font:16px system-ui;padding:32px"><h2>No storefront route connected</h2><p>This CMS page exists, but needs a public rendering/publishing adapter before it can be previewed.</p></body></html>';
+      byId('te-open-tab').removeAttribute('href');
+      byId('te-preview-label').textContent = 'CMS document — no public route';
+      return;
+    }
     const separator = route.indexOf('?') >= 0 ? '&' : '?';
     byId('theme-preview').removeAttribute('srcdoc');
-    byId('theme-preview').src = route + separator + 'preview=1&_=' + Date.now();
-    byId('te-open-tab').href = route + separator + 'preview=1';
-    byId('te-preview-label').textContent = 'Heuristic preview — ' + ((pageData && pageData.title) || humanize(slug));
+    byId('theme-preview').src = route + separator + (liveUnimported ? '_=' : 'preview=1&_=' ) + Date.now();
+    byId('te-open-tab').href = liveUnimported ? route : route + separator + 'preview=1';
+    byId('te-preview-label').textContent = liveUnimported ? 'Live storefront — source inspection' : 'Heuristic draft preview — ' + ((pageData && pageData.title) || humanize(slug));
   }
 
   function schedulePreview() {
@@ -1141,6 +1323,13 @@
         adminFetch('/api/admin/cms/pages/site')
       ]);
       pageData = results[0].page;
+      liveUnimported = pageData.content_authority === 'storefront-html';
+      liveExistingDraft = Boolean(results[0].seeded) && liveUnimported;
+      liveSourceCaptured = false;
+      unmanagedLiveSections = [];
+      if (liveUnimported) selectedTheme = 'heuristic';
+      byId('te-import-live').hidden = true;
+      byId('te-save').textContent = liveUnimported ? (liveExistingDraft ? 'Reconcile & save draft' : 'Import & save draft') : 'Save draft';
       siteData = results[2].page;
       pages = (results[1].pages || []).filter(function(page) { return page.slug !== 'site'; });
 
@@ -1187,6 +1376,7 @@
   }
 
   async function saveDraft() {
+    if (liveUnimported) return importLiveSource();
     const refs = dirtySections.size ? Array.from(dirtySections) : (activeSectionKey ? [activeSectionOwner + ':' + activeSectionKey] : []);
     if (!refs.length) return true;
     const button = byId('te-save');
@@ -1228,6 +1418,10 @@
   }
 
   async function publishPage() {
+    if (liveUnimported) {
+      setNote('Import the existing live page before publishing any CMS draft.', 'error');
+      return;
+    }
     if (selectedTheme !== 'heuristic') {
       setNote('This theme is visual-preview only. Publication is disabled until its renderer and rollback pass acceptance.', 'error');
       return;
@@ -1558,7 +1752,12 @@
   });
 
   byId('te-page-search').addEventListener('input', function(event) { renderPageOptions(event.target.value); });
+  byId('te-mobile-pane-switch').querySelectorAll('[data-mobile-pane]').forEach(function(button) {
+    button.addEventListener('click', function() { setMobilePane(button.dataset.mobilePane); });
+  });
+  setMobilePane('preview');
   byId('te-refresh').addEventListener('click', refreshPreview);
+  byId('te-import-live').addEventListener('click', importLiveSource);
   byId('te-save').addEventListener('click', saveDraft);
   byId('te-publish').addEventListener('click', publishPage);
   byId('theme-preview').addEventListener('load', function() {
@@ -1566,7 +1765,15 @@
     // Reposting draft data is only needed for the live Heuristic iframe.
     // Alternate previews use srcdoc. Reassigning srcdoc on every iframe
     // load triggers an infinite navigation loop and leaves a blank canvas.
-    if (selectedTheme === 'heuristic') pushLocalPreview();
+    if (selectedTheme === 'heuristic') {
+      if (liveUnimported) {
+        if (!dirty) captureLiveSource();
+        else pushLocalPreview();
+      } else {
+        discoverUnmanagedSections();
+        pushLocalPreview();
+      }
+    }
   });
   byId('te-media-close').addEventListener('click', closeMediaPicker);
   byId('te-media-search').addEventListener('input', function(event) { renderMediaGrid(event.target.value); });

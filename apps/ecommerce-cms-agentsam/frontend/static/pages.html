@@ -56,8 +56,12 @@ function renderRows(pages) {
 
   body.innerHTML = pages
     .map((p) => {
-      const badge = visibilityBadge(p.status || "draft");
-      const editHref = `/admin/page-edit?slug=${encodeURIComponent(p.slug)}`;
+      const badge = p.content_authority === "cms-draft-linked"
+        ? { label: "Live site · editable draft", cls: "pages-badge pages-badge--visible" }
+        : p.content_authority === "storefront-html"
+          ? { label: "Live site · sync required", cls: "pages-badge pages-badge--visible" }
+          : visibilityBadge(p.status || "draft");
+      const editHref = `/admin/theme-editor?slug=${encodeURIComponent(p.slug)}`;
       return `
         <tr data-href="${editHref}" data-slug="${p.slug}">
           <td><input type="checkbox" aria-label="Select ${cmsEscapeHtml(p.title)}" onclick="event.stopPropagation()"></td>
@@ -98,7 +102,12 @@ document.getElementById("pages-select-all")?.addEventListener("change", (e) => {
 });
 
 document.getElementById("add-page-btn")?.addEventListener("click", () => {
-  alert("Custom page creation is coming soon. Edit Home, Shop, About, Community, or Site (global) for now.");
+  const draftOnly = allPages.filter((page) => page.has_live_storefront && !page.draft_exists);
+  if (draftOnly.length) {
+    window.location.href = `/admin/theme-editor?slug=${encodeURIComponent(draftOnly[0].slug)}`;
+    return;
+  }
+  alert("All current storefront routes are represented. New routes require the CMS route/publishing adapter; no placeholder page was created.");
 });
 
 document.getElementById("cms-bootstrap-btn")?.addEventListener("click", async () => {

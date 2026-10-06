@@ -1,3 +1,5 @@
+import { ROUTE_MANIFEST } from "../lib/route-manifest.js";
+import { cmsStorefrontRoutes, resolvePageAuthority } from "./page-authority.js";
 import {
   getRegistryPage,
   listRegistryPages,
@@ -15,11 +17,13 @@ import {
   publishSectionToR2,
   loadSectionsFromR2,
   readR2Json,
+  writeR2Json,
   readSectionContent,
   D1_CONTENT_PLACEHOLDER,
 } from "./r2-store.js";
 
 const KV_PREFIX = "cms:page:";
+const CMS_STOREFRONT_ROUTES = cmsStorefrontRoutes(ROUTE_MANIFEST);
 
 /** Phase C — D1 stores pointers only, not section bodies */
 const WRITE_D1_CONTENT_JSON = false;
@@ -328,6 +332,9 @@ export async function listPagesAdmin(env) {
 
   const pages = [];
   for (const row of results) {
+    const published = await getPublishedPage(env, row.slug);
+    const content = await loadSectionsFromDb(env, row.slug, row.id);
+    const linked = content.some((section) => section.content?.__editor?.source === "live-storefront");
     pages.push({
       id: row.id,
       slug: row.slug,
@@ -336,6 +343,11 @@ export async function listPagesAdmin(env) {
       updated_at: row.updated_at,
       section_count: row.section_count,
       preview: await previewForPage(env, row.slug, row.id, row.preview_json),
+      ...resolvePageAuthority(row.slug, CMS_STOREFRONT_ROUTES, {
+        seeded: true,
+        cmsPublished: Boolean(published),
+        cmsDraftLinked: linked,
+      }),
     });
   }
 
@@ -349,8 +361,9 @@ export async function listPagesAdmin(env) {
       status: "draft",
       updated_at: null,
       section_count: registryPage.section_count,
-      preview: previewFromRegistry(registryPage.slug),
+      preview: "Live storefront exists; CMS has not imported this page",
       source: "registry",
+      ...resolvePageAuthority(registryPage.slug, CMS_STOREFRONT_ROUTES),
     });
   }
 
@@ -363,10 +376,17 @@ export async function getPageAdmin(env, slug) {
   if (!page) {
     const reg = getRegistryPage(slug);
     if (!reg) return null;
-    return { ok: true, page: { ...reg, status: "draft" }, seeded: false };
+    return {
+      ok: true,
+      page: { ...reg, status: "draft", ...resolvePageAuthority(slug, CMS_STOREFRONT_ROUTES) },
+      seeded: false,
+    };
   }
 
   const sections = await loadSectionsFromDb(env, slug, page.id);
+  // Imported storefront pages only expose sections actually present in their source.
+  // Re-inventing absent newsletter/hero defaults would produce a false editor tree.
+  const hasLiveImport = sections.some((section) => section.content?.__editor?.source === "live-storefront");
   return {
     ok: true,
     seeded: true,
@@ -375,8 +395,109 @@ export async function getPageAdmin(env, slug) {
       title: page.title,
       status: page.status,
       updated_at: page.updated_at,
-      sections: mergeWithRegistry(slug, sections),
+      sections: hasLiveImport ? sections.filter((section) => section.status !== "removed") : mergeWithRegistry(slug, sections),
+      ...resolvePageAuthority(slug, CMS_STOREFRONT_ROUTES, {
+        seeded: true,
+        cmsPublished: Boolean(await getPublishedPage(env, slug)),
+        cmsDraftLinked: hasLiveImport,
+      }),
     },
+  };
+}
+
+/**
+ * Explicitly create a non-published CMS draft from the actual, same-origin
+ * storefront markup. No registry seeding, KV update, or live publication.
+ *
+ * A consuming editor sends only its discovered, CMS-addressable sections;
+ * sections without a real renderer stay in the storefront untouched.
+ */
+export async function importLivePageDraft(env, slug, body = {}) {
+  const route = CMS_STOREFRONT_ROUTES.find((item) => item.page === slug);
+  const definition = PAGE_REGISTRY[slug];
+  if (!route || !definition) return { error: "Unknown storefront page", status: 404 };
+
+  const existing = await loadPageRow(env, slug);
+  const replacing = Boolean(existing);
+  // A cached published snapshot can remain active even when D1 has newer drafts.
+  // Never replace that live authority through the legacy-source import endpoint.
+  const activePublication = replacing ? await getPublishedPage(env, slug) : null;
+  if (replacing && (existing.status === "published" || activePublication || body.mode !== "reconcile")) {
+    return { error: "This page has published CMS content or requires explicit draft reconciliation.", status: 409 };
+  }
+  const sections = body?.sections;
+  if (!Array.isArray(sections) || sections.length === 0 || sections.length > 50) {
+    return { error: "At least one live section is required", status: 400 };
+  }
+  const known = new Set(Object.keys(definition.sections));
+  const seen = new Set();
+  for (const section of sections) {
+    if (!section || !known.has(section.key) || seen.has(section.key) ||
+        !section.content || Array.isArray(section.content) || typeof section.content !== "object" ||
+        JSON.stringify(section.content).length > 100_000) {
+      return { error: "Invalid or duplicate source section", status: 400 };
+    }
+    seen.add(section.key);
+  }
+
+  let page = existing;
+  let archiveKey = null;
+  let rows = [];
+  if (existing) {
+    const previous = await loadSectionsFromDb(env, slug, existing.id);
+    const priorVersions = await env.DB.prepare(
+      "SELECT section_key, content_version, status FROM page_sections WHERE page_id = ?"
+    ).bind(existing.id).all();
+    rows = priorVersions.results || [];
+    const byKey = new Map(rows.map((row) => [row.section_key, row]));
+    for (const section of sections) {
+      const actual = Number(byKey.get(section.key)?.content_version ?? 0);
+      if (!Number.isInteger(section.expected_version) || section.expected_version !== actual) {
+        return { error: "A section changed while importing. Reload first.", status: 409 };
+      }
+    }
+    archiveKey = "cms/pages/" + slug + "/imports/before-live-" + crypto.randomUUID() + ".json";
+    const archived = await writeR2Json(env, archiveKey, {
+      slug, source: "pre-live-reconciliation", saved_at: new Date().toISOString(),
+      sections: previous,
+    });
+    if (!archived) return { error: "Cannot archive previous CMS draft; import aborted.", status: 503 };
+  } else {
+    await env.DB.prepare(
+      "INSERT INTO pages (slug, title, status, updated_at) VALUES (?, ?, 'draft', datetime('now'))"
+    ).bind(slug, definition.title).run();
+    page = await loadPageRow(env, slug);
+  }
+
+  for (const section of sections) {
+    const content = structuredClone(section.content);
+    content.__editor = { ...(content.__editor || {}), source: "live-storefront" };
+    const order = definition.sections[section.key].sortOrder;
+    const result = await persistSectionDraft(env, slug, page.id, section.key, content, order, {
+      expectedVersion: replacing ? section.expected_version : null,
+    });
+    if (result.error) return result;
+  }
+
+  // Explicit reconciliation retires unseen legacy sections without deleting
+  // immutable history. The previous composition is backed up in R2.
+  let retired = 0;
+  if (replacing) {
+    for (const row of rows) {
+      if (seen.has(row.section_key) || row.status === "removed") continue;
+      const result = await env.DB.prepare(
+        "UPDATE page_sections SET status = 'removed', updated_at = datetime('now') WHERE page_id = ? AND section_key = ? AND content_version = ?"
+      ).bind(page.id, row.section_key, row.content_version).run();
+      if (d1Changes(result) !== 1) return { error: "Concurrent CMS edit detected. Reload before continuing.", status: 409 };
+      retired += 1;
+    }
+  }
+  await env.DB.prepare("UPDATE pages SET status = 'draft', updated_at = datetime('now') WHERE id = ?")
+    .bind(page.id).run();
+  return {
+    ok: true, slug, status: "draft", imported_sections: sections.length,
+    retired_sections: retired, archive_key: archiveKey,
+    live_route: route.path, published: false,
   };
 }
 
@@ -1073,6 +1194,16 @@ export async function handleAdminCmsApi(request, env, url) {
   m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/seed$/);
   if (m && method === "POST") {
     const result = await seedPageFromRegistry(env, m[1]);
+    if (result.error) return json({ error: result.error }, { status: result.status });
+    return json(result);
+  }
+
+  m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/import-live$/);
+  if (m && method === "POST") {
+    let body;
+    try { body = await request.json(); }
+    catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
+    const result = await importLivePageDraft(env, m[1], body);
     if (result.error) return json({ error: result.error }, { status: result.status });
     return json(result);
   }
