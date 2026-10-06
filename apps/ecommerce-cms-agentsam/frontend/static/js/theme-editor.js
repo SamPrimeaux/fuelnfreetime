@@ -1559,7 +1559,10 @@
   byId('te-publish').addEventListener('click', publishPage);
   byId('theme-preview').addEventListener('load', function() {
     bindPreviewSelection();
-    pushLocalPreview();
+    // Reposting draft data is only needed for the live Heuristic iframe.
+    // Alternate previews use srcdoc. Reassigning srcdoc on every iframe
+    // load triggers an infinite navigation loop and leaves a blank canvas.
+    if (selectedTheme === 'heuristic') pushLocalPreview();
   });
   byId('te-media-close').addEventListener('click', closeMediaPicker);
   byId('te-media-search').addEventListener('input', function(event) { renderMediaGrid(event.target.value); });
