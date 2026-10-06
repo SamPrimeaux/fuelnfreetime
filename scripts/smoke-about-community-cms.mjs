@@ -13,7 +13,7 @@ const chrome=["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
 assert(chrome,"Chrome required");
 function probe(){
  setTimeout(function(){
-  const sectionNames=Array.from(document.querySelectorAll("[data-cms-section]"))
+  const sectionNames=Array.from(document.querySelectorAll(".about-page > section[data-cms-section], body > section[data-cms-section]"))
     .map(el=>el.getAttribute("data-cms-section"));
   const story=document.querySelector(".full-story-section .story-content p");
   const gallery=document.querySelector(".gallery-item .gallery-media");
