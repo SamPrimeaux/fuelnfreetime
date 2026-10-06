@@ -302,6 +302,9 @@
       const attr = el.dataset.cmsAttr || "textContent";
       if (attr === "textContent") {
         el.textContent = value;
+        // The authored live heading may contain explicit line breaks. Preserve
+        // those when importing it as editable CMS text, without allowing HTML.
+        if (typeof value === "string" && value.includes("\n")) el.style.whiteSpace = "pre-line";
       } else if (attr === "innerHTML") {
         el.innerHTML = value;
       } else if (attr === "style.backgroundImage" && typeof value === "string") {
