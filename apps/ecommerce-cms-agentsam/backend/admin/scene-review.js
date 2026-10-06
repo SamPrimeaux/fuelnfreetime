@@ -104,8 +104,12 @@ export async function handleSceneReview(request,env,url) {
     const pwd=String(data?.get("password")||"");
     if (!pwd||pwd.length>128||!(await verifyPassword(pwd,config.passwordHash,config.passwordSalt)))return form("Incorrect password.");
     const until=Math.floor(Date.now()/1000)+AGE;
-    const out=Response.redirect(new URL(PREFIX,request.url),303);
-    out.headers.set("set-cookie",COOKIE+"="+(await makeCookie(config,until))+"; Max-Age="+AGE+"; Path="+PREFIX+"; Secure; HttpOnly; SameSite=Lax");
+    // Response.redirect has immutable headers in Workers/Undici. Construct a
+    // mutable response before setting the sealed guest session cookie.
+    const out=new Response(null,{status:303,headers:{
+      location:new URL(PREFIX,request.url).href,
+      "set-cookie":COOKIE+"="+(await makeCookie(config,until))+"; Max-Age="+AGE+"; Path="+PREFIX+"; Secure; HttpOnly; SameSite=Lax"
+    }});
     return secure(out);
   }
   if (path.startsWith(PREFIX+"/assets/")&&(request.method==="GET"||request.method==="HEAD")){
