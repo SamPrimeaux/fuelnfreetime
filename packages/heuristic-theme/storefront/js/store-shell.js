@@ -162,8 +162,16 @@
     )) {
       throw new Error("Store announcement link is invalid");
     }
+    const message = escapeHtml(navConfig.announcement?.text || "");
+    const marquee = navConfig.announcement?.style === "marquee";
+    const color = /^#[0-9a-f]{6}$/i.test(navConfig.announcement?.textColor || "") ? navConfig.announcement.textColor : "#ffffff";
+    const background = /^#[0-9a-f]{6}$/i.test(navConfig.announcement?.backgroundColor || "") ? navConfig.announcement.backgroundColor : "#161616";
     const announcement = announcementEnabled
-      ? `<a class="fnf-announcement" href="${escapeHtml(announcementHref)}">${escapeHtml(navConfig.announcement.text)}</a>`
+      ? `<a class="fnf-announcement${marquee ? " fnf-announcement--marquee" : ""}" href="${escapeHtml(announcementHref)}" style="--fnf-announce-bg:${background};--fnf-announce-color:${color}">
+           ${marquee
+             ? `<span class="fnf-announcement__sr">${message}</span><span class="fnf-announcement__track" aria-hidden="true"><span class="fnf-announcement__group">${Array(4).fill(`<span>${message}</span>`).join("")}</span><span class="fnf-announcement__group">${Array(4).fill(`<span>${message}</span>`).join("")}</span></span>`
+             : `<span>${message}</span>`}
+         </a>`
       : "";
 
     return `
