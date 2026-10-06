@@ -376,7 +376,11 @@ export async function getPageAdmin(env, slug) {
   if (!page) {
     const reg = getRegistryPage(slug);
     if (!reg) return null;
-    return { ok: true, page: { ...reg, status: "draft" }, seeded: false };
+    return {
+      ok: true,
+      page: { ...reg, status: "draft", ...resolvePageAuthority(slug, CMS_STOREFRONT_ROUTES) },
+      seeded: false,
+    };
   }
 
   const sections = await loadSectionsFromDb(env, slug, page.id);
