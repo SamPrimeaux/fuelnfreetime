@@ -58,7 +58,7 @@ const probe = "<script>setTimeout(function(){" +
  "blockButton.click();" +
  "before.blockInspector={title:document.getElementById('te-inspector-title').textContent," +
  "groups:[...document.querySelectorAll('.te-inspector-group__head h3')].map(e=>e.textContent)," +
- "advancedClosed:document.querySelector('[data-inspector-advanced]')?.open===false," +
+ "advancedClosed:!document.querySelector('[data-inspector-advanced]')?.open," +
  "fieldKeys:[...document.querySelectorAll('#te-inspector-body [data-field-key]')].map(e=>e.dataset.fieldKey)};" +
  "}}" +
  "if(window.innerWidth<=900){" +
