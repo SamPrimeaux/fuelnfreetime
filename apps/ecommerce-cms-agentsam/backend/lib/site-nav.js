@@ -101,6 +101,14 @@ export function resolveNavConfig(settings = {}) {
     logoHeight: settings.navLogoHeight || DEFAULT_NAV_CONFIG.logoHeight,
     brandAccent: settings.navBrandAccent || DEFAULT_NAV_CONFIG.brandAccent,
     brandAccentLight: settings.navBrandAccentLight || DEFAULT_NAV_CONFIG.brandAccentLight,
+    announcement: {
+      enabled: settings.announcementEnabled === true,
+      text: String(settings.announcementText || ""),
+      href: String(settings.announcementHref || ""),
+      style: settings.announcementStyle === "marquee" ? "marquee" : "static",
+      backgroundColor: /^#[0-9a-f]{6}$/i.test(settings.announcementBgColor || "") ? settings.announcementBgColor : "#161616",
+      textColor: /^#[0-9a-f]{6}$/i.test(settings.announcementTextColor || "") ? settings.announcementTextColor : "#ffffff",
+    },
     items: Array.isArray(settings.navItems) && settings.navItems.length
       ? sanitizeNavItems(settings.navItems)
       : DEFAULT_NAV_ITEMS,
