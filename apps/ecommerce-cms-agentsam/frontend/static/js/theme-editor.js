@@ -11,6 +11,7 @@
   let siteDraftTouched = false;
   let liveUnimported = false;
   let liveSourceCaptured = false;
+  let liveExistingDraft = false;
   let activeBlockId = null;
   let activeFieldKey = null;
   let activeTab = 'content';
