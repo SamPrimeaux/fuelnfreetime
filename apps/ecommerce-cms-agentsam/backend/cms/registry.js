@@ -488,8 +488,675 @@ export const PAGE_REGISTRY = {
         },
       },
       community: {
+        sortOrder: 4,
+        fields: [
+          { key: "title", label: "Title", type: "text" },
+          { key: "subtitle", label: "Subtitle", type: "textarea" },
+          { key: "f1.title", label: "Feature 1 title", type: "text" },
+          { key: "f1.text", label: "Feature 1 text", type: "text" },
+          { key: "f2.title", label: "Feature 2 title", type: "text" },
+          { key: "f2.text", label: "Feature 2 text", type: "text" },
+          { key: "f3.title", label: "Feature 3 title", type: "text" },
+          { key: "f3.text", label: "Feature 3 text", type: "text" },
+          { key: "f4.title", label: "Feature 4 title", type: "text" },
+          { key: "f4.text", label: "Feature 4 text", type: "text" },
+        ],
+        defaultContent: {
+          title: "Join the Movement",
+          subtitle: "Where every mile has a story and every hour is earned",
+          f1: { title: "Hunt Drops", text: "Exclusive scavenger hunts for limited gear" },
+          f2: { title: "Garage Nights", text: "Monthly meetups in Lafayette and beyond" },
+          f3: { title: "Fuel Stops", text: "Pop-ups where stories meet the road" },
+          f4: { title: "Early Access", text: "First dibs on every limited release" },
+        },
+      },
+      newsletter: {
+        sortOrder: 6,
+        fields: [
+          { key: "title", label: "Title", type: "text" },
+          { key: "text", label: "Description", type: "textarea" },
+          { key: "buttonLabel", label: "Button label", type: "text" },
+        ],
+        defaultContent: {
+          title: "Stay Fueled Up",
+          text: "Get first access to drops, event invites, and the stories that matter.",
+          buttonLabel: "Join",
+        },
+      },
+    },
+  },
+  shop: {
+    title: "Shop",
+    sections: {
+      hero: {
+        sortOrder: 0,
+        fields: [
+          { key: "eyebrow", label: "Eyebrow", type: "text" },
+          { key: "headline", label: "Headline", type: "text" },
+          { key: "subheadline", label: "Subheadline", type: "textarea" },
+          { key: "imageUrl", label: "Hero image", type: "media" },
+          { key: "ctaPrimary.label", label: "Primary CTA label", type: "text" },
+          { key: "ctaPrimary.href", label: "Primary CTA link", type: "link" },
+          { key: "ctaSecondary.label", label: "Secondary CTA label", type: "text" },
+          { key: "ctaSecondary.href", label: "Secondary CTA link", type: "link" },
+        ],
+        defaultContent: {
+          eyebrow: "Collections",
+          headline: "A lifestyle built from grit — and time.",
+          subheadline:
+            "Shop High Octane, Masters, and Essentials. Clean grid. Real stories. Fire-orange attitude.",
+          imageUrl: "/assets/presets/fuel-free-time/earned-hours-hero.webp",
+          ctaPrimary: { label: "Shop the Drop", href: "#catalog" },
+          ctaSecondary: { label: "Browse Collections", href: "/shop/collections" },
+        },
+      },
+      collections: {
+        sortOrder: 1,
+        settings: [
+          {
+            key: "__editor.layout.columns",
+            label: "Columns",
+            type: "range",
+            group: "layout",
+            default: 3,
+            min: 1,
+            max: 6,
+            step: 1,
+          },
+          {
+            key: "__editor.responsive.carouselMobile",
+            label: "Carousel on mobile",
+            type: "boolean",
+            group: "responsive",
+            default: true,
+            help: "Use horizontal snap scrolling on narrow screens.",
+          },
+        ],
+        fields: [
+          { key: "title", label: "Section title", type: "text" },
+        ],
+        blocks: [
+          {
+            key: "collection-card",
+            label: "Collection card",
+            repeatable: true,
+            min: 1,
+            max: 12,
+            fields: [
+              { key: "name", label: "Name", type: "text" },
+              { key: "imageUrl", label: "Image", type: "media" },
+              { key: "href", label: "Link", type: "link" },
+            ],
+            defaultContent: {
+              name: "New collection",
+              imageUrl: "/assets/presets/fuel-free-time/earned-hours-hero.webp",
+              href: "/shop/collections",
+            },
+          },
+        ],
+        defaultContent: {
+          title: "Collections",
+          card1: { name: "High Octane Collection", imageUrl: "/assets/presets/fuel-free-time/earned-hours-hero.webp", href: "/shop/collections/high-octane-performance-gear" },
+          card2: { name: "Masters Collection", imageUrl: "/assets/presets/fuel-free-time/masters.webp", href: "/shop/collections/masters" },
+          card3: { name: "Everyday Essentials", imageUrl: "/assets/presets/fuel-free-time/essentials.webp", href: "/shop/collections/essentials" },
+          __editor: {
+            blocks: [
+              { id: "card1", templateKey: "collection-card", enabled: true },
+              { id: "card2", templateKey: "collection-card", enabled: true },
+              { id: "card3", templateKey: "collection-card", enabled: true },
+            ],
+          },
+        },
+      },
+      stories: {
+        sortOrder: 2,
+        fields: [
+          { key: "title", label: "Title", type: "text" },
+          { key: "body", label: "Body", type: "textarea" },
+          { key: "imageUrl", label: "Image", type: "url", media: true },
+        ],
+        defaultContent: {
+          title: "Built for the long haul",
+          body: "Every piece is designed for people who've earned their hours — not given them.",
+          imageUrl: M.fuelUp,
+        },
+      },
+      newsletter: {
+        sortOrder: 3,
+        fields: [
+          { key: "title", label: "Title", type: "text" },
+          { key: "buttonLabel", label: "Button label", type: "text" },
+        ],
+        defaultContent: {
+          title: "Stay fueled. Don't miss drops, meetups, or giveaways.",
+          buttonLabel: "Join the Movement",
+        },
+      },
+    },
+  },
+  about: {
+    title: "About",
+    // Source-faithful Heuristic sections and field definitions.
+    sections: {
+      "hero": {
+        "label": "Hero",
+        "sortOrder": 0,
+        "sourceSection": "fnf.about.hero",
+        "fields": [
+          {
+            "key": "meta1",
+            "label": "Meta1",
+            "type": "text"
+          },
+          {
+            "key": "meta2",
+            "label": "Meta2",
+            "type": "text"
+          },
+          {
+            "key": "headline",
+            "label": "Headline",
+            "type": "text"
+          },
+          {
+            "key": "subheadline",
+            "label": "Subheadline",
+            "type": "textarea"
+          }
+        ],
+        "defaultContent": {
+          "meta1": "Est. 2025",
+          "meta2": "Made in Lafayette, Louisiana",
+          "headline": "Built in the Garage",
+          "subheadline": "Born around garage nights, hands-on projects, and one stubborn idea: the hours we earn should be ours to live. Apparel is part of the story; the machines, makers, and experiences are the rest."
+        }
+      },
+      "moment": {
+        "label": "Moment",
+        "sortOrder": 1,
+        "sourceSection": "fnf.about.moment",
+        "fields": [
+          {
+            "key": "headline",
+            "label": "Headline",
+            "type": "text"
+          },
+          {
+            "key": "lead",
+            "label": "Lead",
+            "type": "text"
+          },
+          {
+            "key": "body",
+            "label": "Body",
+            "type": "textarea"
+          },
+          {
+            "key": "quote",
+            "label": "Quote",
+            "type": "text"
+          },
+          {
+            "key": "closing",
+            "label": "Closing",
+            "type": "textarea"
+          }
+        ],
+        "defaultContent": {
+          "headline": "The Moment Everything Changed",
+          "lead": "3:47 AM. Highway 90. Just outside Lafayette.",
+          "body": "After pulling a 16-hour shift, watching the sun rise over the Atchafalaya Basin from the seat of my bike, it hit me. I'd spent 20 years trading time for money, thinking someday I'd have enough to finally live. But watching those old-timers at the truck stop — guys who'd \"made it\" but were too broken or too late to enjoy it — I realized the real luxury wasn't in my bank account.",
+          "quote": "\"Time isn't money. Time is everything money can't buy back.\"",
+          "closing": "That morning, Fuel & Free Time was born. Not as a business plan, but as a middle finger to the lie that we should wait until retirement to live. Every piece we make is a reminder: the goal isn't to get rich enough to buy freedom. It's to be free enough to get rich in experiences."
+        }
+      },
+      "video": {
+        "label": "Video",
+        "sortOrder": 2,
+        "sourceSection": "fnf.about.video",
+        "fields": [
+          {
+            "key": "videoUrl",
+            "label": "Video Url",
+            "type": "video"
+          }
+        ],
+        "defaultContent": {
+          "videoUrl": "/media/archive/shopify-import/videos/video-2-48add6d0.mp4"
+        }
+      },
+      "collections": {
+        "label": "Collections",
+        "sortOrder": 3,
+        "sourceSection": "fnf.about.collections",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Title",
+            "type": "text"
+          }
+        ],
+        "blocks": [
+          {
+            "key": "collection-card",
+            "label": "Collection Card",
+            "max": 8,
+            "fields": [
+              {
+                "key": "href",
+                "label": "Href",
+                "type": "link"
+              },
+              {
+                "key": "badge",
+                "label": "Badge",
+                "type": "text"
+              },
+              {
+                "key": "imageUrl",
+                "label": "Image Url",
+                "type": "media"
+              },
+              {
+                "key": "title",
+                "label": "Title",
+                "type": "text"
+              },
+              {
+                "key": "description",
+                "label": "Description",
+                "type": "text"
+              },
+              {
+                "key": "ctaLabel",
+                "label": "Cta Label",
+                "type": "text"
+              }
+            ],
+            "defaultContent": {
+              "href": "/shop",
+              "badge": "Core Collection",
+              "imageUrl": "/media/archive/shopify-import/graphics/50C9CEB5.png",
+              "title": "The Essentials",
+              "description": "Daily drivers. The tees, hoodies, and gear that remind you why you grind — so you don't have to forever.",
+              "ctaLabel": "Explore Core →"
+            }
+          }
+        ],
+        "defaultContent": {
+          "title": "The Gear That Gets It",
+          "card1": {
+            "href": "/shop",
+            "badge": "Core Collection",
+            "imageUrl": "/media/archive/shopify-import/graphics/50C9CEB5.png",
+            "title": "The Essentials",
+            "description": "Daily drivers. The tees, hoodies, and gear that remind you why you grind — so you don't have to forever.",
+            "ctaLabel": "Explore Core →"
+          },
+          "card2": {
+            "href": "/shop",
+            "badge": "High Octane",
+            "imageUrl": "/media/archive/shopify-import/graphics/Vette.png",
+            "title": "High Octane",
+            "description": "Performance gear for when you're burning rubber, not burning out. Technical fabrics meet garage style.",
+            "ctaLabel": "Shop Performance →"
+          },
+          "card3": {
+            "href": "/shop",
+            "badge": "Limited Drops",
+            "imageUrl": "/media/archive/shopify-import/graphics/fuel_up.png",
+            "title": "Masters Series",
+            "description": "Small batch. Big stories. Limited pieces honoring those who've mastered the art of living on their terms.",
+            "ctaLabel": "View Drops →"
+          },
+          "__editor": {
+            "blocks": [
+              {
+                "id": "card1",
+                "templateKey": "collection-card",
+                "enabled": true
+              },
+              {
+                "id": "card2",
+                "templateKey": "collection-card",
+                "enabled": true
+              },
+              {
+                "id": "card3",
+                "templateKey": "collection-card",
+                "enabled": true
+              }
+            ]
+          }
+        }
+      },
+      "against": {
+        "label": "Against",
+        "sortOrder": 4,
+        "sourceSection": "fnf.about.against",
+        "fields": [
+          {
+            "key": "headline",
+            "label": "Headline",
+            "type": "text"
+          }
+        ],
+        "blocks": [
+          {
+            "key": "belief-card",
+            "label": "Belief Card",
+            "max": 6,
+            "fields": [
+              {
+                "key": "icon",
+                "label": "Icon",
+                "type": "text"
+              },
+              {
+                "key": "title",
+                "label": "Title",
+                "type": "text"
+              },
+              {
+                "key": "description",
+                "label": "Description",
+                "type": "text"
+              }
+            ],
+            "defaultContent": {
+              "icon": "💼",
+              "title": "The 40-Year Plan",
+              "description": "Waiting until 65 to start living. We believe life happens now, not after four decades of postponement."
+            }
+          }
+        ],
+        "defaultContent": {
+          "headline": "What We Stand Against",
+          "card1": {
+            "icon": "💼",
+            "title": "The 40-Year Plan",
+            "description": "Waiting until 65 to start living. We believe life happens now, not after four decades of postponement."
+          },
+          "card2": {
+            "icon": "⏰",
+            "title": "Time Poverty",
+            "description": "Being cash rich but time broke. What good is a garage full of toys if you never have time to play?"
+          },
+          "card3": {
+            "icon": "🏢",
+            "title": "Corporate Chains",
+            "description": "Golden handcuffs and corner offices that become expensive prisons. Freedom isn't negotiable."
+          },
+          "__editor": {
+            "blocks": [
+              {
+                "id": "card1",
+                "templateKey": "belief-card",
+                "enabled": true
+              },
+              {
+                "id": "card2",
+                "templateKey": "belief-card",
+                "enabled": true
+              },
+              {
+                "id": "card3",
+                "templateKey": "belief-card",
+                "enabled": true
+              }
+            ]
+          }
+        }
+      },
+      "lafayette": {
+        "label": "Lafayette",
+        "sortOrder": 5,
+        "sourceSection": "fnf.about.lafayette",
+        "fields": [
+          {
+            "key": "badge",
+            "label": "Badge",
+            "type": "text"
+          },
+          {
+            "key": "headline",
+            "label": "Headline",
+            "type": "text"
+          },
+          {
+            "key": "body",
+            "label": "Body",
+            "type": "textarea"
+          }
+        ],
+        "defaultContent": {
+          "badge": "🔥 Louisiana Made 🔥",
+          "headline": "Crafted in Lafayette",
+          "body": "Rooted in Lafayette, Louisiana. Our perspective comes from the garage, the road, and the work happening between them. We're building a brand around what we make, where we go, and who comes along."
+        }
+      },
+      "origins": {
+        "label": "Origins",
+        "sortOrder": 6,
+        "sourceSection": "fnf.about.origins",
+        "fields": [
+          {
+            "key": "titleAccent",
+            "label": "Title Accent",
+            "type": "text"
+          }
+        ],
+        "blocks": [
+          {
+            "key": "story-photo",
+            "label": "Story Photo",
+            "max": 12,
+            "fields": [
+              {
+                "key": "body",
+                "label": "Body",
+                "type": "textarea"
+              },
+              {
+                "key": "imageUrl",
+                "label": "Image Url",
+                "type": "media"
+              }
+            ],
+            "defaultContent": {
+              "body": "Fuel & Free Time isn't backed by investors or focus groups. It started with grease under the fingernails and a realization that hit harder than Louisiana summer heat.",
+              "imageUrl": "/media/archive/shopify-import/graphics/50C9CEB5.png"
+            }
+          },
+          {
+            "key": "story-video",
+            "label": "Story Video",
+            "max": 12,
+            "fields": [
+              {
+                "key": "body",
+                "label": "Body",
+                "type": "textarea"
+              },
+              {
+                "key": "videoUrl",
+                "label": "Video Url",
+                "type": "video"
+              }
+            ],
+            "defaultContent": {
+              "body": "From apparel and artwork to repairs, rides, and the helicopter restoration, each project should say something about the hours we choose to spend. It's more than another product grid.",
+              "videoUrl": "/media/archive/shopify-import/videos/video-1-f506d934.mp4"
+            }
+          }
+        ],
+        "defaultContent": {
+          "titleAccent": "Full",
+          "story1": {
+            "body": "Fuel & Free Time isn't backed by investors or focus groups. It started with grease under the fingernails and a realization that hit harder than Louisiana summer heat.",
+            "imageUrl": "/media/archive/shopify-import/graphics/50C9CEB5.png"
+          },
+          "story2": {
+            "body": "From apparel and artwork to repairs, rides, and the helicopter restoration, each project should say something about the hours we choose to spend. It's more than another product grid.",
+            "videoUrl": "/media/archive/shopify-import/videos/video-1-f506d934.mp4"
+          },
+          "story3": {
+            "body": "From that first sunrise on Highway 90 to every late-night garage session since, we've stayed true to one principle: time is the only real currency.",
+            "imageUrl": "/media/archive/shopify-import/graphics/high_octane.jpg"
+          },
+          "__editor": {
+            "blocks": [
+              {
+                "id": "story1",
+                "templateKey": "story-photo",
+                "enabled": true
+              },
+              {
+                "id": "story2",
+                "templateKey": "story-video",
+                "enabled": true
+              },
+              {
+                "id": "story3",
+                "templateKey": "story-photo",
+                "enabled": true
+              }
+            ]
+          }
+        }
+      },
+      "lifestyle": {
+        "label": "Lifestyle",
+        "sortOrder": 7,
+        "sourceSection": "fnf.about.lifestyle",
+        "fields": [
+          {
+            "key": "headline",
+            "label": "Headline",
+            "type": "text"
+          }
+        ],
+        "blocks": [
+          {
+            "key": "value-card",
+            "label": "Value Card",
+            "max": 8,
+            "fields": [
+              {
+                "key": "title",
+                "label": "Title",
+                "type": "text"
+              },
+              {
+                "key": "body",
+                "label": "Body",
+                "type": "text"
+              }
+            ],
+            "defaultContent": {
+              "title": "Time as Currency",
+              "body": "The only resource you can't earn back. We measure wealth in free hours, not dollar signs."
+            }
+          }
+        ],
+        "defaultContent": {
+          "headline": "What Drives Us",
+          "card1": {
+            "title": "Time as Currency",
+            "body": "The only resource you can't earn back. We measure wealth in free hours, not dollar signs."
+          },
+          "card2": {
+            "title": "Fuel Everything",
+            "body": "Gas, diesel, jet fuel, coffee — whatever powers your passion, we celebrate it."
+          },
+          "card3": {
+            "title": "Cross-Gen Unity",
+            "body": "Old heads and young bucks united by shared values, not shared birthdays."
+          },
+          "card4": {
+            "title": "Culture > Commerce",
+            "body": "Building a movement, not just moving product. Community first, sales second."
+          },
+          "__editor": {
+            "blocks": [
+              {
+                "id": "card1",
+                "templateKey": "value-card",
+                "enabled": true
+              },
+              {
+                "id": "card2",
+                "templateKey": "value-card",
+                "enabled": true
+              },
+              {
+                "id": "card3",
+                "templateKey": "value-card",
+                "enabled": true
+              },
+              {
+                "id": "card4",
+                "templateKey": "value-card",
+                "enabled": true
+              }
+            ]
+          }
+        }
+      },
+      "cta": {
+        "label": "Cta",
+        "sortOrder": 8,
+        "sourceSection": "fnf.about.cta",
+        "fields": [
+          {
+            "key": "headline",
+            "label": "Headline",
+            "type": "text"
+          },
+          {
+            "key": "body",
+            "label": "Body",
+            "type": "text"
+          },
+          {
+            "key": "primary.href",
+            "label": "Primary Href",
+            "type": "link"
+          },
+          {
+            "key": "primary.label",
+            "label": "Primary Label",
+            "type": "text"
+          },
+          {
+            "key": "secondary.href",
+            "label": "Secondary Href",
+            "type": "link"
+          },
+          {
+            "key": "secondary.label",
+            "label": "Secondary Label",
+            "type": "text"
+          }
+        ],
+        "defaultContent": {
+          "headline": "Ready to Claim Your Time?",
+          "body": "Join a growing tribe that measures success in sunsets, not spreadsheets.",
+          "primary": {
+            "href": "/shop",
+            "label": "Shop the Collection"
+          },
+          "secondary": {
+            "href": "/community",
+            "label": "Join the Movement"
+          }
+        }
+      }
+    }
+  },
+  community: {
     title: "Community",
-    // Section fields are sourced from the authentic Heuristic page, not a parallel demo.
+    // Source-faithful Heuristic sections and field definitions.
     sections: {
       "hero": {
         "label": "Hero",
@@ -585,9 +1252,14 @@ export const PAGE_REGISTRY = {
         "blocks": [
           {
             "key": "event-card",
-            "label": "Event idea",
+            "label": "Event Card",
             "max": 12,
             "fields": [
+              {
+                "key": "imageUrl",
+                "label": "Image Url",
+                "type": "media"
+              },
               {
                 "key": "badge",
                 "label": "Badge",
@@ -625,6 +1297,7 @@ export const PAGE_REGISTRY = {
               }
             ],
             "defaultContent": {
+              "imageUrl": "/media/archive/shopify-import/graphics/Vette.png",
               "badge": "Concept",
               "date": "Date to be confirmed",
               "title": "Garage Night LA",
@@ -641,6 +1314,7 @@ export const PAGE_REGISTRY = {
           "heading": "On the Drawing Board",
           "intro": "These are gathering ideas, not confirmed events. Help shape what we build next—dates and locations come after plans are real.",
           "event1": {
+            "imageUrl": "/media/archive/shopify-import/graphics/Vette.png",
             "badge": "Concept",
             "date": "Date to be confirmed",
             "title": "Garage Night LA",
@@ -652,6 +1326,7 @@ export const PAGE_REGISTRY = {
             }
           },
           "event2": {
+            "imageUrl": "/media/archive/shopify-import/graphics/high_octane.jpg",
             "badge": "Idea in Progress",
             "date": "Not yet scheduled",
             "title": "Miami Scavenger Hunt",
@@ -663,6 +1338,7 @@ export const PAGE_REGISTRY = {
             }
           },
           "event3": {
+            "imageUrl": "/media/archive/shopify-import/graphics/50C9CEB5.png",
             "badge": "Community Proposal",
             "date": "Schedule to be decided",
             "title": "Fuel Stop ATX",
@@ -674,6 +1350,7 @@ export const PAGE_REGISTRY = {
             }
           },
           "event4": {
+            "imageUrl": "/media/archive/shopify-import/graphics/fuel_up.png",
             "badge": "Long-Range Idea",
             "date": "Route still being imagined",
             "title": "Coast to Coast Run",
@@ -724,7 +1401,7 @@ export const PAGE_REGISTRY = {
         "blocks": [
           {
             "key": "gallery-item",
-            "label": "Media tile",
+            "label": "Gallery Item",
             "max": 18,
             "fields": [
               {
@@ -825,7 +1502,7 @@ export const PAGE_REGISTRY = {
         "blocks": [
           {
             "key": "join-card",
-            "label": "Connection pathway",
+            "label": "Join Card",
             "max": 6,
             "fields": [
               {
@@ -930,7 +1607,7 @@ export const PAGE_REGISTRY = {
         "blocks": [
           {
             "key": "member-story",
-            "label": "Member story",
+            "label": "Member Story",
             "max": 12,
             "fields": [
               {
