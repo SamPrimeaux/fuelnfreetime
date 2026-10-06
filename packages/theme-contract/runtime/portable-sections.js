@@ -159,6 +159,14 @@
     const definition = byId.get(id);
     if (!definition) return null;
     const content = JSON.parse(JSON.stringify(genericDefaults[definition.family] || {}));
+    // Defaults must obey the exact registered section schema, not a shared
+    // family's superset (e.g. editorial statement has no side image control).
+    const names = new Set(definition.fields.map((field) => field.key.split(".")[0]));
+    for (const key of Object.keys(content)) {
+      if (!names.has(key) && !(definition.blocks.length && /^card\d+$/.test(key))) {
+        delete content[key];
+      }
+    }
     const defaultBlocks = [];
     for (const field of Object.keys(content)) if (/^card\d+$/.test(field)) {
       defaultBlocks.push({ id: field, templateKey: definition.blocks[0]?.key, enabled: true });
