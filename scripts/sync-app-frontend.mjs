@@ -18,6 +18,13 @@ await cp(path.join(root, 'packages/fnf-theme/src/theme/tokens.css'), path.join(o
 await cp(path.join(root, 'packages/fnf-theme/src/layout/layout.css'), path.join(output, 'admin/theme-previews/fnf/layout.css'));
 await cp(path.join(root, 'packages/fnf-theme/src/sections/scene-hero/scene-hero.css'), path.join(output, 'admin/theme-previews/fnf/scene-hero.css'));
 await cp(path.join(frontend, 'static'), path.join(output, 'admin'), { recursive: true });
+// One section renderer and stylesheet are shipped to BOTH the live site and
+// editor. Preview-only renderer copies are not allowed for portable sections.
+for (const ext of ['js', 'css']) {
+  const src = path.join(root, `packages/theme-contract/runtime/portable-sections.${ext}`);
+  await cp(src, path.join(output, `js/portable-sections.${ext}`));
+  await cp(src, path.join(output, `admin/js/portable-sections.${ext}`));
+}
 await cp(path.join(root, 'packages/theme-contract/runtime/theme-preview-registry.js'), path.join(output, 'admin/js/theme-preview-registry.js'));
 await cp(path.join(root, 'packages/fnf-theme/src/editor/preview-adapter.js'), path.join(output, 'admin/js/theme-preview-runtime.js'));
 await cp(path.join(frontend, 'dist'), path.join(output, 'admin/_spa'), { recursive: true });
