@@ -144,7 +144,8 @@ function render(entry) {
   } }, presets: library });
   return '<section class="ps-section ps-revise-atlas" data-cms-section="' + esc(entry.key || def.id) +
     '" data-portable-preset="' + esc(def.id) + '" data-source-renderer="' +
-    esc(def.sourcePreset) + '">' + html + '</section>';
+    esc(def.sourcePreset) + '"><div class="iam-site-section" data-surface="canvas" data-site-preset="' +
+    esc(def.sourcePreset) + '">' + html + '</div></section>';
 }
 export const reviseAtlas = Object.freeze({
   definitions,
