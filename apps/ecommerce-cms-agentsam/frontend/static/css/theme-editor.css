@@ -432,7 +432,7 @@
   background: #f2eeff;
   color: #4935a0;
   padding: 6px 10px;
-  font: 600 11px/1.2 inherit;
+  font: 600 11px/1.2 system-ui, sans-serif;
   cursor: pointer;
   white-space: nowrap;
 }
