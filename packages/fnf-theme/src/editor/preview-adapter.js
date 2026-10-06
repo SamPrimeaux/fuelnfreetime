@@ -214,6 +214,8 @@
 
   function renderRevise(page, site) {
     const body = (page && page.sections || []).filter(visible).map(function (entry) {
+      const native = window.ThemePortableSections?.render(entry);
+      if (native !== null && native !== undefined) return native;
       const templateKey = entry.content && entry.content.__editor && entry.content.__editor.templateKey || entry.key;
       if (templateKey === "hero") return reviseHero(entry);
       if (templateKey === "collections") return reviseCollections(entry);
@@ -232,10 +234,12 @@
       '@media(max-width:760px){.tp-revise-grid{grid-template-columns:1fr}}',
       commonCss(),
     ].join("");
-    return '<!doctype html><html lang="en" data-theme="revise"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/admin/theme-previews/revise/layout.css"><link rel="stylesheet" href="/admin/theme-previews/revise/theme.css"><style>' + css + '</style></head><body>' + shellHeader(site) + '<main>' + body + '</main>' + shellFooter(site) + '</body></html>';
+    return '<!doctype html><html lang="en" data-theme="revise"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/admin/theme-previews/revise/layout.css"><link rel="stylesheet" href="/admin/theme-previews/revise/theme.css"><link rel="stylesheet" href="/js/portable-sections.css"><style>' + css + '</style></head><body>' + shellHeader(site) + '<main>' + body + '</main>' + shellFooter(site) + '</body></html>';
   }
 
   function fnfSection(entry) {
+    const native = window.ThemePortableSections?.render(entry);
+    if (native !== null && native !== undefined) return native;
     const data = entry.content || {};
     const templateKey = data.__editor && data.__editor.templateKey || entry.key;
     if (templateKey === "hero") {
@@ -274,7 +278,7 @@
       '@media(max-width:760px){.fnf-preview-hero-media{inset:35% 0 0 0}.fnf-preview-grid,.fnf-preview-split{grid-template-columns:1fr}}',
       commonCss(),
     ].join("");
-    return '<!doctype html><html lang="en" data-theme="fnf"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/admin/theme-previews/fnf/tokens.css"><link rel="stylesheet" href="/admin/theme-previews/fnf/layout.css"><link rel="stylesheet" href="/admin/theme-previews/fnf/scene-hero.css"><style>' + css + '</style></head><body>' + shellHeader(site) + '<main>' + body + '</main>' + shellFooter(site) + '</body></html>';
+    return '<!doctype html><html lang="en" data-theme="fnf"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/admin/theme-previews/fnf/tokens.css"><link rel="stylesheet" href="/admin/theme-previews/fnf/layout.css"><link rel="stylesheet" href="/admin/theme-previews/fnf/scene-hero.css"><link rel="stylesheet" href="/js/portable-sections.css"><style>' + css + '</style></head><body>' + shellHeader(site) + '<main>' + body + '</main>' + shellFooter(site) + '</body></html>';
   }
 
   function render(themeId, page, site) {
@@ -289,7 +293,9 @@
   THEMES.forEach(function (theme) {
     window.ThemeStudioPreview.register({
       ...theme,
-      catalog: CATALOG[theme.id],
+      // Only genuinely implemented presets appear in the merchant section catalog.
+      catalog: theme.id === "heuristic" ? CATALOG.heuristic :
+        (window.ThemePortableSections?.catalog() || []).filter((entry) => entry.source === theme.id),
       render: theme.id === 'heuristic' ? null : function (page, site) {
         return render(theme.id, page, site);
       },
