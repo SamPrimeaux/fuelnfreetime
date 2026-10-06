@@ -1,0 +1,14 @@
+# Agent Sam project rules
+
+These instructions are committed with fuelnfreetime and apply when Agent Sam works in this repository.
+
+- Prefer repository evidence over assumptions.
+- Prefer structural lookup before semantic retrieval when an exact symbol or relationship can answer the question.
+- Keep retrieval bounded: metadata -> cards -> excerpt -> range -> full object only when required.
+- Keep secrets, account/runtime state, active runs, and machine-local preferences out of committed project configuration.
+- Treat Git as source-control authority and Merkle snapshots as filesystem evidence.
+- Run the smallest relevant validation before reporting a code change as complete.
+
+## Project-specific rules
+
+Add repository-specific conventions, commands, constraints, or architecture notes below this line.
