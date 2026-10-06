@@ -162,7 +162,10 @@ async function saveStorePreferences(env, incoming) {
     socialImageUrl: String(incoming.socialImageUrl ?? current.socialImageUrl).slice(0, 2048),
   };
 
-  if (incoming.navLogoUrl != null) next.navLogoUrl = String(incoming.navLogoUrl).slice(0, 2048);
+  if (incoming.navLogoUrl != null) {
+    next.navLogoUrl = String(incoming.navLogoUrl).slice(0, 2048);
+    next.logoAuthority = "preferences";
+  }
   if (incoming.navLogoHeight != null) {
     next.navLogoHeight = Math.min(120, Math.max(40, Number(incoming.navLogoHeight) || 58));
   }
