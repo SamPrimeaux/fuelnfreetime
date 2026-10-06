@@ -312,7 +312,7 @@
     byId('te-page-options').innerHTML = filtered.length ? filtered.map(function(page) {
       return '<button type="button" class="te-page-option' + (page.slug === slug ? ' is-active' : '') + '" data-page-slug="' + cmsEscapeAttr(page.slug) + '">' +
         icon.page + '<span><strong style="font-size:12px">' + cmsEscapeHtml(page.title || humanize(page.slug)) + '</strong><span style="display:block;font-size:10px;color:#858580;margin-top:2px">' +
-        cmsEscapeHtml(pageRoute(page.slug)) + '</span></span></button>';
+        cmsEscapeHtml(pageRoute(page.slug) || 'No public route connected') + '</span></span></button>';
     }).join('') : '<div class="te-empty">No pages match that search.</div>';
 
     byId('te-page-options').querySelectorAll('[data-page-slug]').forEach(function(button) {
