@@ -37,7 +37,7 @@ For one customer installation per Worker/DB, explicit site_id on every media row
 ## Acceptance and commands
 
 - npm run build:admin — frontend sync and boundary guards
-- node --test tests/cms-editor-mutations.test.mjs tests/cms-about-community-source.test.mjs — 14 passing tests
+- node --test tests/cms-editor-registry.test.mjs tests/cms-editor-mutations.test.mjs tests/cms-about-community-source.test.mjs tests/cms-edge-url-safety.test.mjs — 20 passing tests
 - node scripts/smoke-about-community-cms.mjs — real Chrome tests at 390, 744 and 1280px for each page
 - Before approving a publish: verify all sections in the actual Theme Editor; use Stage missing sections, review first/last section backgrounds and responsive types; approve truthful hero copy and event/story data; reload the saved draft in another browser; confirm public URL and rollback.
 

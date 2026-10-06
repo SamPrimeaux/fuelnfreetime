@@ -33,7 +33,7 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Build existing admin and storefront
         run: npm run build:admin
-      - name: Test source contracts and existing CMS mutations
-        run: node --test tests/cms-editor-mutations.test.mjs tests/cms-about-community-source.test.mjs
+      - name: Test source contracts, existing CMS mutations, and edge URL safety
+        run: node --test tests/cms-editor-registry.test.mjs tests/cms-editor-mutations.test.mjs tests/cms-about-community-source.test.mjs tests/cms-edge-url-safety.test.mjs
       - name: Check actual About and Community browser layouts
         run: node scripts/smoke-about-community-cms.mjs
