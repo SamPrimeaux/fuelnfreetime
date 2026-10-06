@@ -44,6 +44,23 @@ const probe = "<script>setTimeout(function(){" +
  "var before={src:frame.getAttribute('src'),headline:frame.contentDocument?.querySelector('[data-cms-section=\"hero\"] [data-cms=\"headline\"]')?.textContent," +
  "visible:!document.getElementById('te-import-live').hidden,liveOnly:[...document.querySelectorAll('.te-live-only-row strong')].map(e=>e.textContent)," +
  "inspector:document.getElementById('te-field-hero-headline')?.value};" +
+ "var themeTrigger=document.getElementById('te-theme-trigger');" +
+ "before.toolbar={theme:document.getElementById('te-theme-name')?.textContent," +
+ "themeTrigger:!!themeTrigger,legacyTabs:document.querySelectorAll('#te-tabs,.te-theme-switch').length," +
+ "pageVisible:getComputedStyle(document.getElementById('te-page-trigger')).display!=='none'};" +
+ "themeTrigger?.click();" +
+ "before.toolbar.menuOpened=!document.getElementById('te-theme-popover').hidden;" +
+ "before.toolbar.options=document.querySelectorAll('[data-theme-preview]').length;" +
+ "themeTrigger?.click();" +
+ "if(window.innerWidth>900){" +
+ "var blockButton=document.querySelector('[data-select-block=card3][data-block-section=collections]');" +
+ "if(blockButton){" +
+ "blockButton.click();" +
+ "before.blockInspector={title:document.getElementById('te-inspector-title').textContent," +
+ "groups:[...document.querySelectorAll('.te-inspector-group__head h3')].map(e=>e.textContent)," +
+ "advancedClosed:document.querySelector('[data-inspector-advanced]')?.open===false," +
+ "fieldKeys:[...document.querySelectorAll('#te-inspector-body [data-field-key]')].map(e=>e.dataset.fieldKey)};" +
+ "}}" +
  "if(window.innerWidth<=900){" +
  "var nav=document.getElementById('te-mobile-pane-switch');" +
  "var modes=nav.querySelectorAll('[data-mobile-pane]');" +
@@ -69,6 +86,9 @@ const template = file("apps/ecommerce-cms-agentsam/frontend/static/theme-editor.
 const storefront=file("packages/heuristic-theme/storefront/shop.html");
 const assets = {
  "/admin/js/pages-shared.js":"apps/ecommerce-cms-agentsam/frontend/static/js/pages-shared.js",
+ "/admin/js/portable-sections.js":"packages/theme-contract/runtime/portable-sections.js",
+ "/admin/js/theme-preview-registry.js":"packages/theme-contract/runtime/theme-preview-registry.js",
+ "/admin/js/theme-preview-runtime.js":"packages/fnf-theme/src/editor/preview-adapter.js",
  "/admin/js/theme-editor.js":"apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor.js",
  "/admin/css/theme-editor.css":"apps/ecommerce-cms-agentsam/frontend/static/css/theme-editor.css",
  "/admin/css/console.css":"apps/ecommerce-cms-agentsam/frontend/static/css/console.css",
@@ -104,6 +124,17 @@ assert.equal(result.before.visible,true);
 assert.ok(result.before.liveOnly.some(v => /editorial/i.test(v)), "live editorial scene must appear in the tree");
 assert.ok(result.before.liveOnly.some(v => /products/i.test(v)), "live product grid must appear in the tree");
 assert.match(result.before.inspector,/Time is the\s*real horsepower/i);
+assert.equal(result.before.toolbar.theme,"Heuristic");
+assert.equal(result.before.toolbar.legacyTabs,0);
+assert.equal(result.before.toolbar.themeTrigger,true);
+assert.equal(result.before.toolbar.pageVisible,true);
+assert.equal(result.before.toolbar.menuOpened,true);
+assert.equal(result.before.toolbar.options,3);
+assert.ok(result.before.blockInspector,"The real collection card must remain selectable");
+assert.match(result.before.blockInspector.title,/Collection card/i);
+assert.deepEqual(result.before.blockInspector.groups,["Content","Media","Buttons and links"]);
+assert.equal(result.before.blockInspector.advancedClosed,true);
+assert.ok(result.before.blockInspector.fieldKeys.some(k=>k.endsWith(".href")));
 assert.equal(result.imported.mode,"reconcile");
 assert.ok(result.imported.sections.some(s=>s.key==="hero" && /Time is the\s*real horsepower/i.test(s.content.headline)));
 assert.ok(!result.imported.sections.some(s=>s.key==="newsletter"));
@@ -124,6 +155,9 @@ for(const width of [744,390]){
  assert.equal(mobile.backToPreview,true);
  assert.equal(mobile.treeHasAdd,true);
  assert.equal(mobile.noOverflow,true, "Editor must have no horizontal page overflow");
+ assert.equal(results.get(width).before.toolbar.legacyTabs,0);
+ assert.equal(results.get(width).before.toolbar.pageVisible,true);
+ assert.equal(results.get(width).before.toolbar.menuOpened,true);
  assert.equal(results.get(width).linked,true);
  console.log("PASS: "+width+"px mobile CMS Sections / Preview / Settings editor");
 }
