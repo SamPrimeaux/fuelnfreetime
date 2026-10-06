@@ -10,6 +10,7 @@
   let previewBlobUrl = null;
   let siteDraftTouched = false;
   let liveUnimported = false;
+  let missingSourceSections = [];
   let liveSourceCaptured = false;
   let liveExistingDraft = false;
   let unmanagedLiveSections = [];
