@@ -1789,7 +1789,9 @@
   });
   setMobilePane('preview');
   byId('te-refresh').addEventListener('click', refreshPreview);
-  byId('te-import-live').addEventListener('click', importLiveSource);
+  byId('te-import-live').addEventListener('click', function() {
+    return liveUnimported ? importLiveSource() : stageMissingSourceSections();
+  });
   byId('te-save').addEventListener('click', saveDraft);
   byId('te-publish').addEventListener('click', publishPage);
   byId('theme-preview').addEventListener('load', function() {
