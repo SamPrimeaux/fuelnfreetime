@@ -1348,6 +1348,11 @@
       ]);
       pageData = results[0].page;
       liveUnimported = pageData.content_authority === 'storefront-html';
+      missingSourceSections = Array.isArray(pageData.missing_source_sections)
+        ? pageData.missing_source_sections.filter(function(key) {
+          return Object.prototype.hasOwnProperty.call(window.SECTION_SCHEMAS?.[slug] || {}, key);
+        })
+        : [];
       liveExistingDraft = Boolean(results[0].seeded) && liveUnimported;
       liveSourceCaptured = false;
       unmanagedLiveSections = [];
