@@ -128,7 +128,8 @@ function validate(id, content) {
     if (JSON.stringify(content).length > 120000) return { ok: false, error: "Section too large" };
     data = sectionData(content);
   } catch { return { ok: false, error: "Invalid section document" }; }
-  const expected = new Set(Object.keys(sectionData(defaultsFor(def.sourcePreset))));
+  const expected = new Set(Object.keys(sectionData(defaultsFor(def.sourcePreset))).concat(
+    def.fields.map((field) => field.key.split(".")[0])));
   for (const key of Object.keys(data)) if (!expected.has(key)) return { ok: false, error: "Unknown field: " + key };
   const check = (v, key = "") => {
     if (typeof v === "string") return v.length <= 16000 && (!isLink(key) || safeUrl(v)) &&
