@@ -989,6 +989,7 @@
       setNote('Wait for the real storefront preview before importing.', 'error');
       return false;
     }
+    if (liveExistingDraft && !window.confirm('Replace this page’s existing CMS draft with the actual live layout? The previous sections will be archived in R2. Your public storefront will not change until you explicitly publish.')) return false;
     const button = byId('te-import-live');
     button.disabled = true;
     setSaveState('Importing');
