@@ -7,10 +7,6 @@ import {
   registryForAdmin,
   PAGE_REGISTRY,
 } from "./registry.js";
-import { ROUTE_MANIFEST } from "../lib/route-manifest.js";
-import { cmsStorefrontRoutes, resolvePageAuthority } from "./page-authority.js";
-
-const CMS_STOREFRONT_ROUTES = cmsStorefrontRoutes(ROUTE_MANIFEST);
 // The same concrete section definitions are loaded by the browser and Worker.
 import "../../../../packages/theme-contract/runtime/portable-sections.js";
 const PORTABLE = globalThis.ThemePortableSections;
