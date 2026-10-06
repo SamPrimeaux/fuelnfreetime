@@ -67,7 +67,10 @@ export function applyCmsSlotValue(el, path, sectionsByKey) {
   } else if (attr === "style.backgroundImage") {
     const url = safeCmsUrl(value, true);
     if (!url) return false;
-    const safe = url.replace(/['"()\\]/g, (part) => encodeURIComponent(part));
+    // encodeURIComponent deliberately leaves apostrophes and parentheses unchanged;
+    // CSS url('...') requires explicitly escaping those delimiters.
+    const safe = url.replace(/['"()\\]/g, (part) =>
+      "%" + part.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0"));
     const existing = el.getAttribute("style") || "";
     const withoutBg = existing.replace(/background-image\s*:\s*[^;]+;?/gi, "").trim();
     const next = `${withoutBg}${withoutBg ? "; " : ""}background-image: url('${safe}')`.trim();
