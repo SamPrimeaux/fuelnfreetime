@@ -332,6 +332,7 @@ export async function listPagesAdmin(env) {
 
   const pages = [];
   for (const row of results) {
+    const published = await getPublishedPage(env, row.slug);
     pages.push({
       id: row.id,
       slug: row.slug,
@@ -340,6 +341,10 @@ export async function listPagesAdmin(env) {
       updated_at: row.updated_at,
       section_count: row.section_count,
       preview: await previewForPage(env, row.slug, row.id, row.preview_json),
+      ...resolvePageAuthority(row.slug, CMS_STOREFRONT_ROUTES, {
+        seeded: true,
+        cmsPublished: Boolean(published),
+      }),
     });
   }
 
@@ -355,6 +360,7 @@ export async function listPagesAdmin(env) {
       section_count: registryPage.section_count,
       preview: previewFromRegistry(registryPage.slug),
       source: "registry",
+      ...resolvePageAuthority(registryPage.slug, CMS_STOREFRONT_ROUTES),
     });
   }
 
