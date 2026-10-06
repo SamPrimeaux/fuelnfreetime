@@ -19,6 +19,13 @@
     css.dataset.portableSections = 'true';
     document.head.appendChild(css);
   }
+  if (!document.querySelector('link[data-revise-atlas]')) {
+    const atlasCss = document.createElement('link');
+    atlasCss.rel = 'stylesheet';
+    atlasCss.href = '/js/revise-atlas.css';
+    atlasCss.dataset.reviseAtlas = 'true';
+    document.head.appendChild(atlasCss);
+  }
 
   function getPath(obj, path) {
     return path.split(".").reduce((acc, key) => (acc == null ? acc : acc[key]), obj);
