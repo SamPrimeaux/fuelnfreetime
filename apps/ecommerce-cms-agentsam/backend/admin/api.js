@@ -236,7 +236,40 @@ async function listProducts(request, env) {
   return json({ ok: true, products: results });
 }
 
-async function getProduct(request, env, id) {
+// Admin merchandising uses the existing storefront collections and membership tables.
+export async function listAdminCollections(request, env) {
+  const { results } = await env.DB.prepare(
+    "SELECT c.*, COUNT(cp.product_id) AS product_count FROM store_collections c " +
+    "LEFT JOIN store_collection_products cp ON cp.collection_id = c.id " +
+    "GROUP BY c.id ORDER BY c.sort_order ASC, lower(c.title) ASC"
+  ).all();
+  return json({ ok: true, collections: results || [] });
+}
+
+export async function createAdminCollection(request, env) {
+  const body = await readJson(request);
+  const title = String(body?.title || "").trim();
+  if (!title || title.length > 120) return json({ error: "Collection name is required (maximum 120 characters)" }, { status: 400 });
+  const slug = slugify(body?.slug || title);
+  if (!slug || slug.length > 180) return json({ error: "Invalid collection URL handle" }, { status: 400 });
+  const status = body?.status === "active" ? "active" : "draft";
+  try {
+    const result = await env.DB.prepare(
+      "INSERT INTO store_collections(slug,title,description,image_url,seo_title,seo_description,status,updated_at) " +
+      "VALUES (?,?,?,?,?,?,?,datetime('now'))"
+    ).bind(slug, title, String(body.description || ""), body.image_url || null,
+      body.seo_title || null, body.seo_description || null, status).run();
+    const collection = await env.DB.prepare("SELECT * FROM store_collections WHERE id = ?")
+      .bind(result.meta.last_row_id).first();
+    return json({ ok: true, collection }, { status: 201 });
+  } catch (error) {
+    const message = /unique|constraint/i.test(String(error?.message || error))
+      ? "A collection with that URL handle already exists" : "Could not create collection";
+    return json({ error: message }, { status: 409 });
+  }
+}
+
+export async function getProduct(request, env, id) {
   const product = await env.DB.prepare(`SELECT * FROM products WHERE id = ?`).bind(id).first();
   if (!product) return json({ error: "Not found" }, { status: 404 });
 
@@ -246,7 +279,17 @@ async function getProduct(request, env, id) {
     .bind(id)
     .all();
 
-  return json({ ok: true, product, variants });
+  const designDraft = await env.DB.prepare(
+    "SELECT id, product_id, completeful_catalog_product_id, state, version, original_media_asset_id, prepared_media_asset_id, preview_media_asset_id, completeful_design_id, completeful_render_status FROM product_studio_drafts WHERE product_id = ?"
+  ).bind(id).first();
+  const fulfillment = designDraft ? await env.DB.prepare(
+    "SELECT completeful_store_product_id, sync_status FROM completeful_product_links WHERE product_id = ? ORDER BY id DESC LIMIT 1"
+  ).bind(id).first() : null;
+  const { results: memberships } = await env.DB.prepare(
+    "SELECT collection_id FROM store_collection_products WHERE product_id = ? ORDER BY sort_order, collection_id"
+  ).bind(id).all();
+  return json({ ok: true, product, variants, design_draft: designDraft || null,
+    fulfillment: fulfillment || null, collection_ids: (memberships || []).map((row) => Number(row.collection_id)) });
 }
 
 async function createProduct(request, env) {
@@ -260,13 +303,15 @@ async function createProduct(request, env) {
 
   try {
     const result = await env.DB.prepare(
-      `INSERT INTO products (slug, title, description, collection, price_cents, image_url, status, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+      `INSERT INTO products (slug, title, description, seo_title, seo_description, collection, price_cents, image_url, status, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
     )
       .bind(
         slug,
         String(body.title).trim(),
         body.description || null,
+        body.seo_title || null,
+        body.seo_description || null,
         body.collection || null,
         priceCents,
         body.image_url || null,
@@ -340,53 +385,144 @@ function productDbError(err, fallback) {
   return fallback;
 }
 
-async function updateProduct(request, env, id) {
+export async function updateProduct(request, env, id) {
   const body = await readJson(request);
   if (!body) return json({ error: "Invalid body" }, { status: 400 });
-  if (!String(body.title || "").trim()) {
-    return json({ error: "Title required" }, { status: 400 });
-  }
+  const title = String(body.title || "").trim();
+  if (!title) return json({ error: "Title required" }, { status: 400 });
+
+  const previous = await env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(id).first();
+  if (!previous) return json({ error: "Product not found" }, { status: 404 });
 
   const priceCents = parsePriceCents(body.price_cents ?? body.price ?? 0);
-  const slug = body.slug?.trim();
-  const title = String(body.title).trim();
+  const slug = String(body.slug || previous.slug).trim().toLowerCase();
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 180) {
+    return json({ error: "Use a URL handle with letters, numbers and hyphens" }, { status: 400 });
+  }
+  const seoTitle = String(body.seo_title ?? previous.seo_title ?? "").trim();
+  const seoDescription = String(body.seo_description ?? previous.seo_description ?? "").trim();
+  if (seoTitle.length > 180 || seoDescription.length > 320) {
+    return json({ error: "SEO title must be under 180 characters and description under 320" }, { status: 400 });
+  }
+  const status = body.status || previous.status || "draft";
 
   try {
-    if (slug) {
-      await env.DB.prepare(
-        `UPDATE products
-         SET slug = ?, title = ?, description = ?, collection = ?, price_cents = ?, image_url = ?, status = ?, updated_at = datetime('now')
-         WHERE id = ?`
-      )
-        .bind(
-          slug,
-          title,
-          body.description || null,
-          body.collection || null,
-          priceCents,
-          body.image_url || null,
-          body.status || "draft",
-          id
-        )
-        .run();
-    } else {
-      await env.DB.prepare(
-        `UPDATE products
-         SET title = ?, description = ?, collection = ?, price_cents = ?, image_url = ?, status = ?, updated_at = datetime('now')
-         WHERE id = ?`
-      )
-        .bind(
-          title,
-          body.description || null,
-          body.collection || null,
-          priceCents,
-          body.image_url || null,
-          body.status || "draft",
-          id
-        )
-        .run();
+    if (status === "active") {
+      const design = await env.DB.prepare(
+        "SELECT id FROM product_studio_drafts WHERE product_id = ?"
+      ).bind(id).first();
+      if (design) {
+        const link = await env.DB.prepare(
+          "SELECT id FROM completeful_product_links WHERE product_id = ? AND completeful_store_product_id IS NOT NULL LIMIT 1"
+        ).bind(id).first();
+        const count = await env.DB.prepare(
+          "SELECT COUNT(*) AS count FROM product_variants WHERE product_id = ?"
+        ).bind(id).first();
+        const issues = [];
+        if (!link) issues.push("Connect Completeful fulfillment first");
+        if (Number(count?.count || 0) < 1) issues.push("Product needs at least one mapped variant");
+        if (!(previous.image_url || body.image_url)) issues.push("Attach an approved product image");
+        if (priceCents <= 0) issues.push("Retail price must be above zero");
+        if (issues.length) return json({
+          error: "Cannot publish this design yet: " + issues.join("; "), problems: issues
+        }, { status: 409 });
+      }
     }
 
+    const update = env.DB.prepare(
+      `UPDATE products SET slug = ?, title = ?, description = ?, seo_title = ?, seo_description = ?,
+       collection = ?, price_cents = ?, image_url = COALESCE(?, image_url),
+       status = ?, updated_at = datetime('now') WHERE id = ?`
+    ).bind(
+      slug, title, body.description || null, seoTitle || null, seoDescription || null,
+      body.collection || null, priceCents, body.image_url || null, status, id
+    );
+    const changesSlug = previous.status === "active" && previous.slug !== slug;
+    const writes = [update];
+    if (changesSlug) {
+      // D1 batch is a transaction: never break a public URL without its redirect.
+      const redirect = env.DB.prepare(
+        `INSERT INTO product_slug_redirects (old_slug, product_id)
+         VALUES (?, ?)
+         ON CONFLICT(old_slug) DO UPDATE SET product_id = excluded.product_id`
+      ).bind(previous.slug, id);
+      writes.push(redirect);
+    }
+    if (Array.isArray(body.collection_ids)) {
+      const ids = [...new Set(body.collection_ids.map(Number))];
+      if (ids.length > 100 || ids.some((n) => !Number.isSafeInteger(n) || n <= 0)) {
+        return json({ error: "Invalid collection selection" }, { status: 400 });
+      }
+      if (ids.length) {
+        const placeholders = ids.map(() => "?").join(",");
+        const { results: found } = await env.DB.prepare(
+          "SELECT id FROM store_collections WHERE id IN (" + placeholders + ")"
+        ).bind(...ids).all();
+        if ((found || []).length !== ids.length) {
+          return json({ error: "A selected collection no longer exists" }, { status: 400 });
+        }
+      }
+      writes.push(env.DB.prepare("DELETE FROM store_collection_products WHERE product_id = ?").bind(id));
+      ids.forEach((collectionId, index) => writes.push(
+        env.DB.prepare(
+          "INSERT INTO store_collection_products (collection_id, product_id, sort_order) VALUES (?, ?, ?)"
+        ).bind(collectionId, id, index)
+      ));
+    }
+    if (Array.isArray(body.variants)) {
+      if (body.variants.length > 100) {
+        return json({ error: "Too many variant changes" }, { status: 400 });
+      }
+      const seenVariants = new Set();
+      for (const patch of body.variants) {
+        const variantId = Number(patch?.id);
+        if (!Number.isSafeInteger(variantId) || variantId <= 0 || seenVariants.has(variantId)) {
+          return json({ error: "Invalid or duplicate variant ID" }, { status: 400 });
+        }
+        seenVariants.add(variantId);
+        const row = await env.DB.prepare(
+          "SELECT id FROM product_variants WHERE id = ? AND product_id = ?"
+        ).bind(variantId, id).first();
+        if (!row) return json({ error: "Variant does not belong to this product" }, { status: 400 });
+        const updates = [];
+        const values = [];
+        for (const column of ["sku", "size", "color", "price_cents", "inventory_qty"]) {
+          if (!Object.hasOwn(patch, column)) continue;
+          let value = patch[column];
+          if (column === "sku") {
+            value = String(value || "").trim();
+            if (!value || value.length > 160) {
+              return json({ error: "Variant SKU is required (maximum 160 characters)" }, { status: 400 });
+            }
+          } else if (column === "size" || column === "color") {
+            value = String(value || "").trim() || null;
+            if (value && value.length > 120) {
+              return json({ error: "Variant option is too long" }, { status: 400 });
+            }
+          } else if (column === "price_cents") {
+            if (value != null && (!Number.isSafeInteger(Number(value)) || Number(value) < 0)) {
+              return json({ error: "Variant price must be a valid nonnegative cent amount" }, { status: 400 });
+            }
+            value = value == null ? null : Number(value);
+          } else if (column === "inventory_qty") {
+            if (!Number.isSafeInteger(Number(value)) || Number(value) < 0) {
+              return json({ error: "Inventory must be a nonnegative whole number" }, { status: 400 });
+            }
+            value = Number(value);
+          }
+          updates.push(column + " = ?");
+          values.push(value);
+        }
+        if (updates.length) {
+          writes.push(env.DB.prepare(
+            "UPDATE product_variants SET " + updates.join(", ") +
+            ", updated_at = datetime('now') WHERE id = ? AND product_id = ?"
+          ).bind(...values, variantId, id));
+        }
+      }
+    }
+    // One D1 batch commits product, variants, redirects, and collections together.
+    await env.DB.batch(writes);
     return json({ ok: true });
   } catch (err) {
     console.error("[products/update]", err?.message || err);
@@ -547,6 +683,9 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   if (m && method === "POST") {
     return retryAssetJob(request, env, m[1], url);
   }
+
+  if (path === "/api/admin/collections" && method === "GET") return listAdminCollections(request, env);
+  if (path === "/api/admin/collections" && method === "POST") return createAdminCollection(request, env);
 
   if (path === "/api/admin/products" && method === "GET") return listProducts(request, env);
   if (path === "/api/admin/products" && method === "POST") return createProduct(request, env);

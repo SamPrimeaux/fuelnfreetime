@@ -95,6 +95,8 @@ CREATE TABLE IF NOT EXISTS products (
   slug         TEXT NOT NULL UNIQUE,
   title        TEXT NOT NULL,
   description  TEXT,
+  seo_title    TEXT,
+  seo_description TEXT,
   collection   TEXT,
   price_cents  INTEGER NOT NULL DEFAULT 0,
   image_url    TEXT,
@@ -102,6 +104,14 @@ CREATE TABLE IF NOT EXISTS products (
   created_at   TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Permanent link continuity when an active product changes its URL handle.
+CREATE TABLE IF NOT EXISTS product_slug_redirects (
+  old_slug TEXT PRIMARY KEY,
+  product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_product_slug_redirects_product ON product_slug_redirects(product_id);
 
 CREATE TABLE IF NOT EXISTS product_variants (
   id             INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -22,6 +22,8 @@ function formatProduct(row) {
     slug: row.slug,
     title: row.title,
     description: row.description,
+    seo_title: row.seo_title || null,
+    seo_description: row.seo_description || null,
     collection: row.collection,
     price_cents: row.price_cents,
     price: (row.price_cents / 100).toFixed(2),

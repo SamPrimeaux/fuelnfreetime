@@ -183,7 +183,11 @@ test("Product Studio persistence and Completeful mutations are server-side contr
   assert.match(workspace, /\/api\/admin\/product-studio\/drafts/);
   assert.match(workspace, /Prepare for print/);
   assert.match(workspace, /Render Completeful mockup/);
-  assert.match(workspace, /Create Completeful \+ store product/);
+  assert.match(workspace, /Next step · Product details/);
+  assert.match(workspace, /continueToProductDetails/);
+  assert.doesNotMatch(workspace, /Storefront description/);
+  assert.doesNotMatch(workspace, /Retail price \(USD\)/);
+  assert.match(backend, /createProductFromDraft/);
   assert.doesNotMatch(workspace, /product-design\.json/);
   assert.doesNotMatch(workspace, /Download design layout/);
 });

@@ -285,9 +285,12 @@ async function saveDraft(request, env) {
     : await ensureDraftProduct(env, body, selection.product);
   if (!product) return json({ ok: false, error: "Draft product could not be resolved" }, { status: 500 });
 
-  const originalMediaId = body.original_media_asset_id ? Number(body.original_media_asset_id) : draft?.original_media_asset_id || null;
-  const preparedMediaId = body.prepared_media_asset_id ? Number(body.prepared_media_asset_id) : draft?.prepared_media_asset_id || null;
-  const previewMediaId = body.preview_media_asset_id ? Number(body.preview_media_asset_id) : draft?.preview_media_asset_id || null;
+  // Explicit null clears a stale placement/derivative; omitted fields retain the draft.
+  const mediaSelection = (field, previous) =>
+    Object.hasOwn(body, field) ? (body[field] ? Number(body[field]) : null) : (previous || null);
+  const originalMediaId = mediaSelection("original_media_asset_id", draft?.original_media_asset_id);
+  const preparedMediaId = mediaSelection("prepared_media_asset_id", draft?.prepared_media_asset_id);
+  const previewMediaId = mediaSelection("preview_media_asset_id", draft?.preview_media_asset_id);
   if (originalMediaId && !(await mediaById(env, originalMediaId))) {
     return json({ ok: false, error: "Original artwork is no longer in the media library" }, { status: 400 });
   }
@@ -301,8 +304,10 @@ async function saveDraft(request, env) {
   const shop = await primaryShop(env);
   const id = draft?.id || `psd_${crypto.randomUUID()}`;
   const title = String(body.title ?? draft?.title ?? selection.product.default_title ?? selection.product.name).trim();
-  const description = body.description ?? draft?.description ?? selection.product.default_description ?? null;
-  const price = Math.max(0, Math.round(Number(body.retail_price_cents ?? draft?.retail_price_cents ?? product.price_cents ?? 0)));
+  // Commercial title, description and price are owned by Product Editor.
+  // Studio's optional title is an internal design label; never overwrite product fields.
+  const description = product.description ?? null;
+  const price = Math.max(0, Number(product.price_cents || 0));
   const placement = {
     x: Number(body.placement?.x ?? draft?.placement?.x ?? 50),
     y: Number(body.placement?.y ?? draft?.placement?.y ?? 50),
@@ -385,11 +390,19 @@ async function saveDraft(request, env) {
       .run();
   }
 
-  await env.DB.prepare(
-    `UPDATE products SET title = ?, description = ?, price_cents = ?, updated_at = datetime('now') WHERE id = ?`,
-  )
-    .bind(title, description, price, product.id)
-    .run();
+  // Attach a saved placement approximation to the draft product (not source art).
+  if (previewMediaId) {
+    const preview = await mediaById(env, previewMediaId);
+    const priorImage = await env.DB.prepare(
+      "SELECT id FROM product_images WHERE product_id = ? LIMIT 1"
+    ).bind(product.id).first();
+    await env.DB.prepare(
+      "INSERT OR IGNORE INTO product_images (product_id, media_asset_id, position, is_primary) VALUES (?, ?, 0, ?)"
+    ).bind(product.id, previewMediaId, priorImage ? 0 : 1).run();
+    await env.DB.prepare(
+      "UPDATE products SET image_url = COALESCE(image_url, ?), updated_at = datetime('now') WHERE id = ?"
+    ).bind(preview.url, product.id).run();
+  }
 
   return json({ ok: true, draft: await loadDraft(env, id) });
 }
@@ -726,9 +739,25 @@ async function createLocalMappings(env, draft, selection, providerProductId, des
 async function createProductFromDraft(request, env, id) {
   let draft = await loadDraft(env, id);
   if (!draft) return json({ ok: false, error: "Draft not found" }, { status: 404 });
-  if (Number(draft.retail_price_cents) <= 0) {
-    return json({ ok: false, error: "Set a retail price above $0 before creating the product" }, { status: 400 });
+  // A saved provider association must be reused, never duplicated.
+  const link = await env.DB.prepare(
+    "SELECT completeful_store_product_id FROM completeful_product_links WHERE product_id = ? AND completeful_store_product_id IS NOT NULL LIMIT 1"
+  ).bind(draft.product_id).first();
+  if (link?.completeful_store_product_id) {
+    return json({ ok: true, already_linked: true, product_id: draft.product_id,
+      completeful_store_product_id: link.completeful_store_product_id, draft });
   }
+  const product = await env.DB.prepare("SELECT * FROM products WHERE id = ?")
+    .bind(draft.product_id).first();
+  if (!product) return json({ ok: false, error: "Storefront product not found" }, { status: 404 });
+  if (Number(product.price_cents) <= 0) {
+    return json({ ok: false, error: "Set the retail price in Product Details before connecting fulfillment" }, { status: 400 });
+  }
+  // Snapshot the latest commercial values at provider-creation time.
+  await env.DB.prepare(
+    "UPDATE product_studio_drafts SET title = ?, description = ?, retail_price_cents = ?, updated_at = datetime('now') WHERE id = ?"
+  ).bind(product.title, product.description || null, product.price_cents, id).run();
+  draft = await loadDraft(env, id);
   if (!draft.prepared_media_asset_id && !draft.original_media_asset_id) {
     return json({ ok: false, error: "Add artwork before creating the product" }, { status: 400 });
   }
