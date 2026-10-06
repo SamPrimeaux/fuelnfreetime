@@ -134,6 +134,8 @@ assert.equal(result.before.toolbar.themeTrigger,true);
 assert.equal(result.before.toolbar.pageVisible,true);
 assert.equal(result.before.toolbar.menuOpened,true);
 assert.equal(result.before.toolbar.options,3);
+assert.equal(result.before.toolbar.noOverflow,true);
+assert.equal(results.get(1000).before.toolbar.noOverflow,true,"Mid-size desktop should fit all three editor panes");
 assert.ok(result.before.blockInspector,"The real collection card must remain selectable");
 assert.match(result.before.blockInspector.title,/Collection card/i);
 assert.deepEqual(result.before.blockInspector.groups,["Content","Media","Buttons and links"]);
