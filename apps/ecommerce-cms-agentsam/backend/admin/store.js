@@ -374,7 +374,7 @@ export async function postStorePreferences(request, env) {
     const announcementText = String(incoming.announcementText ?? "").trim();
     const announcementHref = String(incoming.announcementHref ?? "").trim();
     const validHref =
-      announcementHref.startsWith("/") ||
+      (announcementHref.startsWith("/") && !announcementHref.startsWith("//")) ||
       announcementHref.startsWith("#") ||
       announcementHref.startsWith("https://");
     if (!announcementText) {
