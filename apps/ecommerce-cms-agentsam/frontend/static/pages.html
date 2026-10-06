@@ -56,9 +56,11 @@ function renderRows(pages) {
 
   body.innerHTML = pages
     .map((p) => {
-      const badge = p.has_live_storefront && !p.cms_published
-        ? { label: "Live site · CMS not imported", cls: "pages-badge pages-badge--visible" }
-        : visibilityBadge(p.status || "draft");
+      const badge = p.content_authority === "cms-draft-linked"
+        ? { label: "Live site · editable draft", cls: "pages-badge pages-badge--visible" }
+        : p.content_authority === "storefront-html"
+          ? { label: "Live site · sync required", cls: "pages-badge pages-badge--visible" }
+          : visibilityBadge(p.status || "draft");
       const editHref = `/admin/theme-editor?slug=${encodeURIComponent(p.slug)}`;
       return `
         <tr data-href="${editHref}" data-slug="${p.slug}">
