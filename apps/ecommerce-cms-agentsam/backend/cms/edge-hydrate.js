@@ -72,6 +72,10 @@ export function applyCmsSlotValue(el, path, sectionsByKey) {
     const withoutBg = existing.replace(/background-image\s*:\s*[^;]+;?/gi, "").trim();
     const next = `${withoutBg}${withoutBg ? "; " : ""}background-image: url('${safe}')`.trim();
     el.setAttribute("style", next);
+  } else if (attr === "href" || attr === "src") {
+    const safe = safeCmsUrl(value, attr === "src");
+    if (!safe) return false;
+    el.setAttribute(attr, safe);
   } else {
     el.setAttribute(attr, String(value));
   }
