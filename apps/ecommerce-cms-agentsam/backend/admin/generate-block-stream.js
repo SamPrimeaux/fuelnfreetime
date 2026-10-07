@@ -1,3 +1,4 @@
+import { generateWithProvider } from "./provider.mjs";
 const encoder = new TextEncoder();
 
 function event(name, data) {
@@ -13,6 +14,7 @@ export function generateBlockStream(request, upstream) {
     else signal.addEventListener("abort", stopUpstream, { once: true });
   }
   if (typeof upstream === "function") upstream(upstreamAbort.signal);
+  else if (request.manifest) generateWithProvider(request.manifest, request.body || {}, upstreamAbort.signal).catch(() => {});
   const stream = new ReadableStream({
     start(controller) {
       const send = (name, data) => controller.enqueue(event(name, data));

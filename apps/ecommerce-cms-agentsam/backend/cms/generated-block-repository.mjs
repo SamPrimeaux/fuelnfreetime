@@ -42,6 +42,17 @@ export function createSqlStore(db) {
   };
 }
 
+
+export function createD1Store(db) {
+  return {
+    async first(sql, params = []) { return db.prepare(sql).bind(...params).first(); },
+    async all(sql, params = []) { const result = await db.prepare(sql).bind(...params).all(); return result.results || []; },
+    async run(sql, params = []) { return db.prepare(sql).bind(...params).run(); },
+    async batch(statements) {
+      return db.batch(statements.map((statement) => db.prepare(statement.sql).bind(...(statement.params || []))));
+    },
+  };
+}
 export function createMemoryObjectStore() {
   const objects = new Map();
   return {
@@ -68,7 +79,12 @@ export async function ensureBlockTree(sql) {
 }
 
 export function createGeneratedBlockRepository(sql, objects, options = {}) {
-  const maxDepth = () => Number(options.maxDepth || 4);
+  const DEFAULT_MAX_DEPTH = 2;
+  const maxDepth = (manifest) => {
+    const configured = manifest && manifest.cms && manifest.cms.blocks && manifest.cms.blocks.maxDepth;
+    const value = Number(configured == null ? DEFAULT_MAX_DEPTH : configured);
+    return Number.isFinite(value) ? value : DEFAULT_MAX_DEPTH;
+  };
   async function blockRow(accountId, blockId) {
     return sql.first("SELECT * FROM " + TABLES.blocks + " WHERE account_id = ? AND id = ?", [accountId, blockId]);
   }
@@ -106,7 +122,7 @@ export function createGeneratedBlockRepository(sql, objects, options = {}) {
       const account = await assertAccount(input.accountId, input.sectionId, input.parentBlockId);
       if (account && account.ok === false) return account;
       const depth = await depthOf(input.accountId, input.parentBlockId);
-      if (depth > maxDepth()) return { ok: false, status: 422, error: "depth cap" };
+      if (depth > maxDepth(input.manifest)) return { ok: false, status: 422, error: "depth cap" };
       const digest = hashManifest(canonical || input.manifest);
       const hash16 = digest.slice(0, 16);
       const key = "cms/artifacts/block/" + hash16 + "/manifest.json";
@@ -150,7 +166,7 @@ export function createGeneratedBlockRepository(sql, objects, options = {}) {
         }
       }
       const depth = await depthOf(accountId, newParentId);
-      if (depth > maxDepth()) return { ok: false, status: 422, error: "depth cap" };
+      if (depth > maxDepth(options.manifest)) return { ok: false, status: 422, error: "depth cap" };
       await sql.run("UPDATE " + TABLES.blocks + " SET parent_block_id = ?, sort_order = ? WHERE account_id = ? AND id = ?", [newParentId || null, index || 0, accountId, blockId]);
       return { ok: true };
     },
