@@ -9,7 +9,9 @@
       "description": "Repository-level AgentSam runtime guidance.",
       "manifest_path": "AGENTSAM.md",
       "status": "active",
-      "metadata": { "family": "ecommerce-cms-agentsam" }
+      "metadata": {
+        "family": "ecommerce-cms-agentsam"
+      }
     },
     {
       "contract_key": "application.ecommerce-cms-agentsam",
@@ -44,7 +46,9 @@
       "description": "Bundled commerce Product Studio App contract.",
       "manifest_path": "apps/ecommerce-cms-agentsam/apps/product-studio/agentsam.app.json",
       "status": "active",
-      "metadata": { "app_id": "product-studio" }
+      "metadata": {
+        "app_id": "product-studio"
+      }
     },
     {
       "contract_key": "app.growth",
@@ -54,7 +58,9 @@
       "description": "Bundled Growth/marketing App contract.",
       "manifest_path": "apps/ecommerce-cms-agentsam/apps/growth/agentsam.app.json",
       "status": "active",
-      "metadata": { "app_id": "growth" }
+      "metadata": {
+        "app_id": "growth"
+      }
     },
     {
       "contract_key": "app.completeful",
@@ -64,7 +70,10 @@
       "description": "Bundled Completeful provider App contract.",
       "manifest_path": "apps/ecommerce-cms-agentsam/apps/completeful/agentsam.app.json",
       "status": "active",
-      "metadata": { "app_id": "completeful", "plugin_key": "completeful" }
+      "metadata": {
+        "app_id": "completeful",
+        "plugin_key": "completeful"
+      }
     },
     {
       "contract_key": "app.resend",
@@ -106,6 +115,29 @@
         "canonical_contract": "app.completeful",
         "plugin_key": "completeful",
         "family": "ecommerce-cms-agentsam"
+      }
+    },
+    {
+      "contract_key": "schema.cms-data-family",
+      "contract_version": "1.0.0",
+      "contract_type": "schema",
+      "name": "CMS normalized data family",
+      "description": "Parallel normalized CMS page, section, block, revision and global tables with legacy provenance; renderer/editor authority remains on pages/page_sections during migration.",
+      "manifest_path": "db/migrate-cms-data-family-20261007.sql",
+      "status": "active",
+      "metadata": {
+        "tables": [
+          "cms_pages",
+          "cms_page_sections",
+          "cms_section_blocks",
+          "cms_revisions",
+          "cms_globals"
+        ],
+        "legacy_authority": [
+          "pages",
+          "page_sections"
+        ],
+        "migration_mode": "parallel-backfill"
       }
     }
   ]
