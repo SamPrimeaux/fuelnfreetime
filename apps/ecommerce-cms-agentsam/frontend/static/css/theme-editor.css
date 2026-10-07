@@ -1698,3 +1698,18 @@ body.shell-mode-theme-editor .theme-studio {
   font-size: 10px;
 }
 .te-provenance[data-provenance="foreign-ai"] { background: #f3ead8; }
+
+#te-block-panel[data-surface="left"] { display: block; }
+#te-block-panel[hidden] { display: none; }
+#te-block-panel textarea[data-request-box] { width: 100%; min-height: 4.5rem; }
+agentsam-composer { display: block; }
+agentsam-composer input { height: 32px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+miniagentsam-codepreview { display: block; max-height: 13lh; overflow: auto; -webkit-mask-image: linear-gradient(transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(transparent, #000 12%, #000 88%, transparent); font-family: ui-monospace, monospace; }
+.token-tag { color: var(--te-token-tag); }
+.token-attr { color: var(--te-token-attr); }
+.token-string { color: var(--te-token-string); }
+.token-template { color: var(--te-token-template); }
+.token-prop { color: var(--te-token-prop); }
+.token-comment { color: var(--te-token-comment); }
+.token-streaming { opacity: 0.55; }
+@media (prefers-reduced-motion: reduce) { miniagentsam-codepreview { scroll-behavior: auto; } }

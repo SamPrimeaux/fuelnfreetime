@@ -28,6 +28,8 @@ function renderAgentsamShell() {
             <span id="agentsam-status">Context-aware admin chat</span>
           </div>
         </div>
+        <div data-assistant-actions="true"><button type="button" data-assistant-action="New chat">New chat</button><button type="button" data-assistant-action="Expand">Expand</button></div>
+        <span data-context-chip="true"></span>
         <button type="button" class="agentsam-close" id="agentsam-close" aria-label="Close AgentSam Side Assistant">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
@@ -35,7 +37,7 @@ function renderAgentsamShell() {
       <div class="agentsam-mcp" id="agentsam-mcp" hidden></div>
       <div class="agentsam-messages" id="agentsam-messages" role="log" aria-live="polite"></div>
       <form class="agentsam-compose" id="agentsam-form">
-        <textarea id="agentsam-input" rows="2" placeholder="Ask anything…" autocomplete="off"></textarea>
+        <textarea id="agentsam-input" rows="2" placeholder="Ask about this page" autocomplete="off"></textarea>
         <button type="submit" class="agentsam-send" id="agentsam-send" aria-label="Send">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h13M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>

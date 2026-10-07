@@ -121,7 +121,7 @@
             '<button type="button" data-mobile-pane="settings">Settings</button>',
           '</nav>',
           '<aside class="theme-studio-tree" id="te-editor-drawer">' +
-            '<section class="te-drawer-panel" data-drawer-panel="sections"><div class="te-panel-title"><span class="te-panel-kicker">Page structure</span><h2 id="te-tree-title">Page</h2><p id="te-tree-path">/</p></div><div id="te-tree"></div><div class="te-tree-footer"><button type="button" class="te-library-browse" id="te-library-browse">Browse sections</button><a id="te-manage-page" href="#">Page content & settings →</a></div></section>' +
+            '<section class="te-drawer-panel" data-drawer-panel="sections"><div class="te-panel-title"><span class="te-panel-kicker">Page structure</span><h2 id="te-tree-title">Page</h2><p id="te-tree-path">/</p></div><div id="te-tree"></div><section id="te-block-panel" data-surface="left" hidden></section><div class="te-tree-footer"><button type="button" class="te-library-browse" id="te-library-browse">Browse sections</button><a id="te-manage-page" href="#">Page content & settings →</a></div></section>' +
             '<section class="te-drawer-panel" data-drawer-panel="theme-settings" hidden><div class="te-panel-title"><span class="te-panel-kicker">Theme</span><h2>Theme settings</h2><p>Global appearance for the installed theme. A preview switch does not rename it.</p></div><div class="te-theme-options" id="te-theme-popover">' + ((window.ThemeStudioPreview && window.ThemeStudioPreview.themes) || []).map(function(theme) { return '<button type="button" class="te-theme-option' + (theme.id === selectedTheme ? ' is-active' : '') + '" data-theme-preview="' + cmsEscapeAttr(theme.id) + '" aria-pressed="' + String(theme.id === selectedTheme) + '">' + '<strong>' + cmsEscapeHtml(theme.name) + '</strong><small>' + cmsEscapeHtml('Appearance preview') + '</small></button>'; }).join('') + '</div></section>' +
             '<section class="te-drawer-panel" data-drawer-panel="app-embeds" hidden><div class="te-panel-title"><span class="te-panel-kicker">Storefront</span><h2>App embeds</h2><p>Extensions that run on the storefront, not admin apps.</p></div><input class="te-page-search" id="te-embed-search" placeholder="Search app embeds" aria-label="Search app embeds"><div class="te-empty" id="te-embed-empty">No storefront embeds are installed for this theme.</div></section>' +
           '</aside>',
@@ -132,7 +132,7 @@
           '</main>',
           '<aside class="theme-editor-panel">',
             '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><div class="te-inspector-tools"><button type="button" id="te-agent-open" class="te-agent-open" aria-label="Ask miniAgentSam about the selected section">✦ Ask AgentSam</button><span class="te-badge" id="te-section-status">draft</span></div></div>',
-            '<div class="te-inspector-body" id="te-inspector-body"></div>',
+            '<div class="te-inspector-body" id="te-inspector-body"></div><div data-composer-slot="editor"></div>',
             '<div class="te-inspector-save"><button type="button" class="te-toolbar-btn is-primary" id="te-save">Save draft</button><p class="te-note" id="te-note"></p></div>',
           '</aside>',
         '</div>',
@@ -2112,6 +2112,7 @@
 
   let generationInspector = null;
   const generationLock = { locked: function() { return false; } };
+  import('/admin/js/generation-surfaces.mjs').catch(function() {});
   import('/admin/js/generation-inspector.mjs').then(function(mod) { generationInspector = mod; }).catch(function() {});
   import('/admin/js/generation-lock.mjs').then(function(mod) {
     const lock = mod.createGenerationLock();
