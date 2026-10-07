@@ -398,7 +398,7 @@ test("a real storefront imports into a private draft without publishing syntheti
     fx.db.exec("DELETE FROM page_sections; DELETE FROM pages;");
     const before = await getPageAdmin(fx.env, "shop");
     assert.equal(before.seeded, false);
-    assert.equal(before.page.content_authority, "storefront-html");
+    assert.equal(before.page.content_authority, "cms-draft-only");
 
     const invalid = await importLivePageDraft(fx.env, "shop", {
       sections: [{ key: "fictional", content: { headline: "Not on the site" } }]
@@ -531,4 +531,12 @@ test("customer imports actual 4319 before/after content through one real CMS dra
     ).get().n;
     assert.equal(rows, 4, "Failed imports do not create partial sections");
   } finally { fx.db.close(); }
+});
+
+test("a seeded private draft remains editable when a separate live HTML route exists", async () => {
+  const { resolvePageAuthority } = await import("../apps/ecommerce-cms-agentsam/backend/cms/page-authority.js");
+  const routes = [{ page: "shop", path: "/shop", handler: "cms-page" }];
+  assert.equal(resolvePageAuthority("shop", routes, { seeded: true, cmsPublished: false }).content_authority, "cms-draft-only");
+  assert.equal(resolvePageAuthority("shop", routes, { seeded: false, cmsPublished: false }).content_authority, "storefront-html");
+  assert.equal(resolvePageAuthority("shop", routes, { seeded: true, cmsPublished: true }).content_authority, "cms-published");
 });
