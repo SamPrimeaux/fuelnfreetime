@@ -458,6 +458,56 @@
     renderTree();
   }
 
+  function openBlockCatalog(sectionKey, owner = slug) {
+    const section = findSection(sectionKey, owner);
+    const schema = section && schemaForSection(section);
+    const templates = Array.isArray(schema?.blocks) ? schema.blocks : [];
+    if (!templates.length) return;
+    const existingBlocks = section.content?.__editor?.blocks || [];
+    const modal = document.createElement('dialog');
+    modal.className = 'te-section-menu te-block-picker';
+    modal.setAttribute('aria-label', 'Add block');
+    modal.innerHTML = '<div class="te-section-menu__head"><div><strong>Add a block</strong>' +
+      '<small>' + cmsEscapeHtml(schema.label || humanize(sectionKey)) + ' · compatible blocks</small></div>' +
+      '<button type="button" class="te-tree-mini" data-close-block-catalog aria-label="Close block catalog">×</button></div>' +
+      '<input class="te-section-search" data-block-search placeholder="Search available blocks" aria-label="Search blocks" autocomplete="off">' +
+      '<div class="te-section-catalog" data-block-options></div>';
+    const options = modal.querySelector('[data-block-options]');
+    const search = modal.querySelector('[data-block-search]');
+    function paint(query) {
+      const needle = String(query || '').toLowerCase().trim();
+      const matching = templates.filter(function(template) {
+        return !needle || (template.label + ' ' + template.key + ' ' + (template.description || '')).toLowerCase().includes(needle);
+      });
+      const totalMax = Number(schema.guardrails?.maxBlocks || 0);
+      options.innerHTML = matching.length ? matching.map(function(template) {
+        const used = existingBlocks.filter(function(block) { return block.templateKey === template.key; }).length;
+        const disabled = (Number.isFinite(Number(template.max)) && used >= Number(template.max)) ||
+          (totalMax > 0 && existingBlocks.length >= totalMax);
+        return '<button type="button" class="te-section-catalog-item" data-choose-block="' +
+          cmsEscapeAttr(template.key) + '"' + (disabled ? ' disabled' : '') + '>' +
+          '<span class="te-section-catalog-item__icon">' + icon.section + '</span>' +
+          '<span><strong>' + cmsEscapeHtml(template.label || humanize(template.key)) + '</strong>' +
+          '<small>' + cmsEscapeHtml(disabled ? 'Maximum blocks reached' :
+            (template.description || (template.fields || []).length + ' editable fields')) + '</small></span></button>';
+      }).join('') : '<div class="te-empty">No compatible blocks match that search.</div>';
+    }
+    paint('');
+    modal.addEventListener('close', function() { modal.remove(); });
+    modal.querySelector('[data-close-block-catalog]').addEventListener('click', function() { modal.close(); });
+    modal.addEventListener('click', function(event) {
+      const button = event.target.closest('[data-choose-block]');
+      if (!button || button.disabled) return;
+      const templateKey = button.dataset.chooseBlock;
+      modal.close();
+      void insertBlock(sectionKey, templateKey, owner);
+    });
+    search.addEventListener('input', function() { paint(search.value); });
+    document.body.append(modal);
+    modal.showModal();
+    requestAnimationFrame(function() { search.focus(); });
+  }
+
   function renderTree() {
     const pageSections = ownerSections(slug);
     const siteSections = ownerSections('site');
@@ -496,10 +546,7 @@
 
       const blockTemplates = Array.isArray(schema.blocks) ? schema.blocks : [];
       const addBlock = blockTemplates.length
-        ? '<button type="button" class="te-add-block" data-add-block-section="' + cmsEscapeAttr(section.key) + '" data-block-owner="' + cmsEscapeAttr(owner) + '">+ Add block</button>' +
-          '<div class="te-block-menu" data-block-menu="' + cmsEscapeAttr(owner + ':' + section.key) + '" hidden><select data-block-template="' + cmsEscapeAttr(owner + ':' + section.key) + '">' +
-            blockTemplates.map(function(block) { return '<option value="' + cmsEscapeAttr(block.key) + '">' + cmsEscapeHtml(block.label || humanize(block.key)) + '</option>'; }).join('') +
-          '</select><button type="button" class="te-media-button" data-insert-block="' + cmsEscapeAttr(section.key) + '" data-block-owner="' + cmsEscapeAttr(owner) + '">Add</button></div>'
+        ? '<button type="button" class="te-add-block" data-add-block-section="' + cmsEscapeAttr(section.key) + '" data-block-owner="' + cmsEscapeAttr(owner) + '">+ Add block</button>'
         : '';
 
       const canReorder = !isGlobal && capabilities.reorder !== false;
@@ -608,17 +655,7 @@
 
     byId('te-tree').querySelectorAll('[data-add-block-section]').forEach(function(button) {
       button.addEventListener('click', function() {
-        const ref = (button.dataset.blockOwner || slug) + ':' + button.dataset.addBlockSection;
-        const menu = byId('te-tree').querySelector('[data-block-menu="' + CSS.escape(ref) + '"]');
-        if (menu) menu.hidden = !menu.hidden;
-      });
-    });
-    byId('te-tree').querySelectorAll('[data-insert-block]').forEach(function(button) {
-      button.addEventListener('click', function() {
-        const owner = button.dataset.blockOwner || slug;
-        const ref = owner + ':' + button.dataset.insertBlock;
-        const select = byId('te-tree').querySelector('[data-block-template="' + CSS.escape(ref) + '"]');
-        if (select && select.value) insertBlock(button.dataset.insertBlock, select.value, owner);
+        openBlockCatalog(button.dataset.addBlockSection, button.dataset.blockOwner || slug);
       });
     });
     byId('te-tree').querySelectorAll('[data-duplicate-block]').forEach(function(button) {
