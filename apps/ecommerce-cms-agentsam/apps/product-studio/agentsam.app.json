@@ -33,5 +33,33 @@
   },
   "navigation": {
     "placement": "products"
+  },
+  "agent": {
+    "tool_resolution": "agentsam_tools.capability_key",
+    "resource_scope": "current tenant + selected commerce/media resources",
+    "capabilities": {
+      "read": [
+        "catalog.read",
+        "catalog.search"
+      ],
+      "write": [
+        "design.create",
+        "product.sync"
+      ],
+      "approval_required": [
+        "product.publish"
+      ],
+      "optional_tool_capabilities": [
+        "assets.media.list",
+        "assets.image.variant_plan",
+        "store.products.list"
+      ],
+      "normalization_pending": [
+        "assets.media.list",
+        "assets.image.variant_plan",
+        "store.products.list"
+      ]
+    },
+    "notes": "Commerce capabilities are verified in the live tool registry. Optional media/store keys currently exist on tools but are not yet normalized into agentsam_capabilities."
   }
 }

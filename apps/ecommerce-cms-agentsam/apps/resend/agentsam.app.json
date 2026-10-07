@@ -33,5 +33,18 @@
   "navigation": {
     "placement": "apps",
     "label": "Email"
+  },
+  "agent": {
+    "status": "plugin-and-tool-registration-pending",
+    "tool_resolution": "agentsam_tools.capability_key + enabled plugin_key=resend",
+    "resource_scope_source": "agentsam_plugins.resource_scope_json",
+    "intended_capabilities": [
+      "email.send",
+      "email.batch.send",
+      "email.webhook.receive",
+      "email.delivery.status"
+    ],
+    "verified_tools": [],
+    "notes": "Email/Resend runtime is implemented and working, but the live FNF agentsam_plugins registry has no resend installation and no matching Resend tools are registered yet."
   }
 }

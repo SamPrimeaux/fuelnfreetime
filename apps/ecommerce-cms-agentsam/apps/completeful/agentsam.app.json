@@ -29,5 +29,26 @@
   },
   "extensions": [
     "product-studio"
-  ]
+  ],
+  "agent": {
+    "tool_resolution": "agentsam_tools.capability_key + enabled plugin_key=completeful",
+    "resource_scope_source": "agentsam_plugins.resource_scope_json",
+    "capabilities": {
+      "read": [
+        "catalog.read",
+        "catalog.search",
+        "order.quote"
+      ],
+      "write": [
+        "catalog.sync",
+        "design.create",
+        "product.sync"
+      ],
+      "approval_required": [
+        "order.create",
+        "product.publish"
+      ]
+    },
+    "notes": "These capability keys are present in the live agentsam_capabilities catalog and are backed by Completeful tools today."
+  }
 }

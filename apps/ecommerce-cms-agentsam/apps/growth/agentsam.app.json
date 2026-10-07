@@ -37,5 +37,18 @@
   "navigation": {
     "placement": "main",
     "label": "Growth"
+  },
+  "agent": {
+    "status": "tool-registration-pending",
+    "tool_resolution": "agentsam_tools.capability_key",
+    "resource_scope": "current tenant + selected campaign/audience/content resources",
+    "intended_capabilities": [
+      "campaign.create",
+      "campaign.manage",
+      "campaign.analytics",
+      "attribution.read"
+    ],
+    "verified_tools": [],
+    "notes": "Growth UI/backend are implemented, but no matching Growth/Campaign tools are registered in the live FNF agentsam_tools table yet."
   }
 }
