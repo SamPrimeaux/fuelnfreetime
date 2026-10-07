@@ -545,3 +545,62 @@ test("a seeded private draft remains editable when a separate live HTML route ex
   assert.equal(resolvePageAuthority("shop", routes, { seeded: false, cmsPublished: false }).content_authority, "storefront-html");
   assert.equal(resolvePageAuthority("shop", routes, { seeded: true, cmsPublished: true }).content_authority, "cms-published");
 });
+
+test("Shop editorial and product grids share native edit, duplicate, move, hide, reload and publish operations", async () => {
+  const fx = fixture();
+  try {
+    await publishPage(fx.env, "shop");
+    const before = await getPublishedPage(fx.env, "shop");
+    assert.ok(before.sections.length >= 3);
+
+    const editorial = await insertSection(fx.env, "shop", { templateKey: "editorial-grid", toIndex: 2 });
+    const products = await insertSection(fx.env, "shop", { templateKey: "products-grid", toIndex: 3 });
+    assert.equal(editorial.section_key, "editorial-grid");
+    assert.equal(products.section_key, "products-grid");
+
+    const draft = await getPageAdmin(fx.env, "shop");
+    const editorialRow = draft.page.sections.find((s) => s.key === "editorial-grid");
+    const productRow = draft.page.sections.find((s) => s.key === "products-grid");
+    assert.equal(editorialRow.content.tile1.headline, "Run it past redline");
+    assert.equal(productRow.content.title, "Shop all gear");
+
+    const editedEditorial = structuredClone(editorialRow.content);
+    editedEditorial.tile1.headline = "Ride into the weekend";
+    assert.equal((await updateSection(fx.env, "shop", editorial.section_key, {
+      content: editedEditorial, expected_version: editorialRow.version
+    })).ok, true);
+
+    const editedProducts = structuredClone(productRow.content);
+    editedProducts.title = "Available gear";
+    assert.equal((await updateSection(fx.env, "shop", products.section_key, {
+      content: editedProducts, expected_version: productRow.version
+    })).ok, true);
+    assert.equal("products" in editedProducts, false, "Catalog data must remain outside CMS");
+
+    const duplicate = await duplicateSection(fx.env, "shop", editorial.section_key);
+    assert.equal(duplicate.ok, true);
+    assert.equal((await setSectionVisibility(fx.env, "shop", duplicate.section_key, { enabled: false })).ok, true);
+    assert.equal((await moveSection(fx.env, "shop", products.section_key, { toIndex: 0 })).ok, true);
+
+    const restored = await getPageAdmin(fx.env, "shop");
+    assert.equal(restored.page.sections.find((s) => s.key === products.section_key).content.title, "Available gear");
+    assert.equal(restored.page.sections.find((s) => s.key === editorial.section_key).content.tile1.headline, "Ride into the weekend");
+    assert.equal(restored.page.sections.find((s) => s.key === duplicate.section_key).content.__editor.visibility.enabled, false);
+
+    const publicBefore = await getPublishedPage(fx.env, "shop");
+    assert.equal(publicBefore.sections.some((s) => s.key === "products-grid"), false,
+      "Private grid edits must not leak to public composition");
+    assert.equal((await publishPage(fx.env, "shop")).ok, true);
+    const publicAfter = await getPublishedPage(fx.env, "shop");
+    assert.equal(publicAfter.sections.find((s) => s.key === "products-grid").content.title, "Available gear");
+    assert.equal(publicAfter.sections.find((s) => s.key === "editorial-grid").content.tile1.headline, "Ride into the weekend");
+    assert.equal(publicAfter.sections.find((s) => s.key === duplicate.section_key).content.__editor.visibility.enabled, false);
+
+    assert.equal((await removeSection(fx.env, "shop", duplicate.section_key)).ok, true);
+    const stillPublic = await getPublishedPage(fx.env, "shop");
+    assert.ok(stillPublic.sections.some((s) => s.key === duplicate.section_key),
+      "Removing a private instance cannot remove the last published copy");
+  } finally {
+    fx.db.close();
+  }
+});
