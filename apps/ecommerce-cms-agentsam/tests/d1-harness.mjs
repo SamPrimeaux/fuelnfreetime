@@ -1,4 +1,4 @@
-import { schema } from "./cms-schema.mjs";
+import { schema, stub } from "./cms-schema.mjs";
 import { createD1Store, createGeneratedBlockRepository, createMemoryObjectStore } from "../backend/cms/generated-block-repository.mjs";
 
 function canonical(id) {
@@ -10,7 +10,8 @@ function canonical(id) {
 }
 
 async function applySchema(sql) {
-  for (const statement of schema.split(";")) {
+  for (const statement of (stub + "
+" + schema).split(";")) {
     const query = statement.trim();
     if (query) await sql.run(query);
   }

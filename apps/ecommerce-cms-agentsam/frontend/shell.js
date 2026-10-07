@@ -513,6 +513,16 @@ function buildUserNav(user) {
   return nav;
 }
 
+function safeAvatarUrl(value) {
+  if (typeof value !== "string" || /[\s<>"']/.test(value)) return "";
+  try {
+    const url = new URL(value, window.location.origin);
+    if (value.startsWith("https://") && url.protocol === "https:") return url.href;
+    if (value.startsWith("/") && !value.startsWith("//") && url.origin === window.location.origin) return url.href;
+  } catch (error) {}
+  return "";
+}
+
 function hydrateShellProfile(user) {
   if (!user) return;
   const name = user.display_name || user.email || "Account";
@@ -525,7 +535,17 @@ function hydrateShellProfile(user) {
   });
   document.querySelectorAll("[data-profile-avatar]").forEach((el) => {
     if (user.avatar_url) {
-      el.innerHTML = `<img src="${user.avatar_url}" alt="" referrerpolicy="no-referrer">`;
+      const src = safeAvatarUrl(user.avatar_url);
+      if (!src) {
+        el.textContent = user.initials || "??";
+        el.classList.remove("has-image");
+        return;
+      }
+      const img = document.createElement("img");
+      img.src = src;
+      img.alt = "";
+      img.referrerPolicy = "no-referrer";
+      el.replaceChildren(img);
       el.classList.add("has-image");
     } else {
       el.textContent = user.initials || "??";

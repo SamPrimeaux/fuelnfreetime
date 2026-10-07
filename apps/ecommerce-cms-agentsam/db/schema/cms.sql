@@ -1,9 +1,5 @@
 PRAGMA foreign_keys = ON;
 
-CREATE TABLE IF NOT EXISTS accounts (
-  id TEXT PRIMARY KEY
-);
-
 CREATE TABLE IF NOT EXISTS cms_pages (
   id TEXT PRIMARY KEY DEFAULT ('cmsp_' || lower(hex(randomblob(8)))),
   account_id TEXT NOT NULL REFERENCES accounts(id),

@@ -7,6 +7,7 @@ import { createGeneratedBlockRepository, createMemoryObjectStore, createSqlStore
 import { generateWithProvider } from "../backend/admin/provider.mjs";
 import { renderAssistantHeader, presentAgentsamProposal } from "../frontend/static/js/side-assistant.mjs";
 
+const stub = readFileSync(new URL("../db/schema/accounts.stub.sql", import.meta.url), "utf8");
 const schema = readFileSync(new URL("../db/schema/cms.sql", import.meta.url), "utf8");
 function canonical(id) {
   return {
@@ -17,7 +18,7 @@ function canonical(id) {
 }
 function openStore() {
   const db = new DatabaseSync(":memory:");
-  db.exec(schema);
+  db.exec(stub + "\n" + schema);
   db.prepare("INSERT INTO accounts (id) VALUES ('acct-a')").run();
   db.prepare("INSERT INTO cms_pages (id, account_id, slug, title) VALUES ('page-a', 'acct-a', 'home', 'Home')").run();
   db.prepare("INSERT INTO cms_page_sections (id, account_id, page_id, section_key, section_type) VALUES ('section-a', 'acct-a', 'page-a', 'hero', 'hero')").run();

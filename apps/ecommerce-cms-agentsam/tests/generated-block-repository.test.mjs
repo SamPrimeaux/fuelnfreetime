@@ -4,11 +4,12 @@ import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { createGeneratedBlockRepository, createMemoryObjectStore, createSqlStore, ensureBlockTree } from "../backend/cms/generated-block-repository.mjs";
 
+const stub = readFileSync(new URL("../db/schema/accounts.stub.sql", import.meta.url), "utf8");
 const schema = readFileSync(new URL("../db/schema/cms.sql", import.meta.url), "utf8");
 
 function openDb() {
   const db = new DatabaseSync(":memory:");
-  db.exec(schema);
+  db.exec(stub + "\n" + schema);
   db.prepare("INSERT INTO accounts (id) VALUES ('acct-a'), ('acct-b')").run();
   db.prepare("INSERT INTO cms_pages (id, account_id, slug, title) VALUES ('page-a', 'acct-a', 'home', 'Home')").run();
   db.prepare("INSERT INTO cms_page_sections (id, account_id, page_id, section_key, section_type) VALUES ('section-a', 'acct-a', 'page-a', 'hero', 'hero')").run();
