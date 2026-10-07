@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
-import { acceptGeneratedSection, getPageAdmin, publishPage, getPublishedPage, updateSection, listGeneratedRevisions, restoreGeneratedRevision } from "../apps/ecommerce-cms-agentsam/backend/cms/api.js";
+import { acceptGeneratedSection, getPageAdmin, publishPage, getPublishedPage, updateSection, listGeneratedRevisions, restoreGeneratedRevision, duplicateSection, moveSection, setSectionVisibility, removeSection } from "../apps/ecommerce-cms-agentsam/backend/cms/api.js";
 import { attachCmsDefinitions, listCmsDefinitions } from "../apps/ecommerce-cms-agentsam/backend/cms/definition-registry.mjs";
 
 function fixture() {
@@ -176,5 +176,32 @@ test("merchant can restore an earlier generated section revision privately witho
     assert.equal(fx.db.prepare("SELECT content_version FROM cms_page_sections").get().content_version,restored.version);
     assert.equal(fx.db.prepare("SELECT COUNT(*) AS n FROM cms_revisions").get().n,3);
     assert.equal(fx.cache.size,0,"Rollback must not publish");
+  } finally {fx.db.close();}
+});
+
+test("generated sections duplicate, move, hide, remove and publish like native sections",async()=>{
+  const fx=fixture();
+  try {
+    const first=await acceptGeneratedSection(fx.env,"shop","acct_alpha",{record:record()});
+    assert.equal(first.ok,true);
+    const duplicate=await duplicateSection(fx.env,"shop",first.section_key);
+    assert.equal(duplicate.ok,true,JSON.stringify(duplicate));
+    assert.notEqual(duplicate.section_key,first.section_key);
+    assert.equal(fx.db.prepare("SELECT COUNT(*) AS n FROM cms_page_sections").get().n,2);
+    assert.equal(fx.db.prepare("SELECT COUNT(*) AS n FROM cms_artifacts").get().n,1,
+      "Cloning an instance must reuse its immutable implementation");
+    assert.equal((await moveSection(fx.env,"shop",duplicate.section_key,{toIndex:0})).ok,true);
+    assert.equal((await setSectionVisibility(fx.env,"shop",duplicate.section_key,{enabled:false})).ok,true);
+    const hidden=await getPageAdmin(fx.env,"shop");
+    assert.equal(hidden.page.sections.find((s)=>s.key===duplicate.section_key).content.__editor.visibility.enabled,false);
+    assert.equal((await publishPage(fx.env,"shop")).ok,true);
+    const published=await getPublishedPage(fx.env,"shop");
+    assert.ok(published.sections.find((s)=>s.key===duplicate.section_key).implementation);
+    assert.equal(fx.db.prepare("SELECT status FROM cms_page_sections WHERE section_key=?").get(duplicate.section_key).status,"published");
+    assert.equal(fx.db.prepare("SELECT status FROM cms_pages WHERE slug='shop'").get().status,"published");
+    assert.equal((await removeSection(fx.env,"shop",duplicate.section_key)).ok,true);
+    assert.equal(fx.db.prepare("SELECT status FROM cms_page_sections WHERE section_key=?").get(duplicate.section_key).status,"removed");
+    assert.ok((await getPublishedPage(fx.env,"shop")).sections.some((s)=>s.key===duplicate.section_key),
+      "A private removal must not erase the public section until Publish");
   } finally {fx.db.close();}
 });
