@@ -1,0 +1,175 @@
+{
+  "schema": "agentsam.cms-block-types.v1",
+  "notes": [
+    "cms_section_blocks stores block instances; this registry defines reusable block semantics.",
+    "Generated code/bundles are cms_artifacts referenced by artifact_id, never stuffed into content_json.",
+    "Section-specific max block counts, static/non-removable blocks and allowed block types belong in the section registry, not D1 columns.",
+    "Provider/model provenance stays provider-agnostic in artifact/media metadata."
+  ],
+  "types": {
+    "heading": {
+      "family": "basic",
+      "storage": "inline",
+      "content": [
+        "text",
+        "level"
+      ],
+      "container": false
+    },
+    "text": {
+      "family": "basic",
+      "storage": "inline",
+      "content": [
+        "text"
+      ],
+      "container": false
+    },
+    "image": {
+      "family": "basic",
+      "storage": "media-reference",
+      "content": [
+        "asset_id",
+        "alt",
+        "link"
+      ],
+      "container": false,
+      "authority": "media_assets"
+    },
+    "button": {
+      "family": "basic",
+      "storage": "inline",
+      "content": [
+        "label",
+        "href",
+        "style"
+      ],
+      "container": false
+    },
+    "group": {
+      "family": "basic",
+      "storage": "inline",
+      "content": [
+        "layout",
+        "gap",
+        "alignment"
+      ],
+      "container": true,
+      "children_via": "parent_block_id"
+    },
+    "custom": {
+      "family": "basic",
+      "storage": "artifact-reference",
+      "content": [
+        "settings"
+      ],
+      "container": false,
+      "artifact_required": true,
+      "artifact_content_modes": [
+        "html",
+        "component",
+        "embed",
+        "bundle"
+      ]
+    },
+    "product-title": {
+      "family": "commerce",
+      "storage": "data-binding",
+      "binds_to": "commerce.product.title",
+      "container": false
+    },
+    "product-price": {
+      "family": "commerce",
+      "storage": "data-binding",
+      "binds_to": "commerce.product.price",
+      "container": false
+    },
+    "product-rating": {
+      "family": "commerce",
+      "storage": "data-binding",
+      "binds_to": "commerce.product.rating",
+      "container": false,
+      "notes": "Review provider is resolved by the commerce/runtime layer; the block is provider-neutral."
+    },
+    "product-sku": {
+      "family": "commerce",
+      "storage": "data-binding",
+      "binds_to": "commerce.variant.sku",
+      "container": false
+    },
+    "product-swatches": {
+      "family": "commerce",
+      "storage": "data-binding",
+      "binds_to": "commerce.product.options",
+      "container": false,
+      "notes": "Swatches are visual selectors for variant options such as color/material."
+    },
+    "product-media": {
+      "family": "commerce",
+      "storage": "data-binding",
+      "binds_to": "commerce.product.media",
+      "container": false
+    },
+    "copyright": {
+      "family": "utility",
+      "storage": "global-binding",
+      "binds_to": "cms.global.brand",
+      "container": false
+    },
+    "policy-links": {
+      "family": "utility",
+      "storage": "global-binding",
+      "binds_to": "cms.global.policies",
+      "container": false
+    },
+    "social-links": {
+      "family": "utility",
+      "storage": "global-binding",
+      "binds_to": "cms.global.social",
+      "container": false
+    },
+    "email-signup": {
+      "family": "utility",
+      "storage": "app-binding",
+      "binds_to": "communications.subscriber.capture",
+      "container": false
+    },
+    "payment-icons": {
+      "family": "utility",
+      "storage": "data-binding",
+      "binds_to": "commerce.payment.methods",
+      "container": false
+    },
+    "feature": {
+      "family": "content",
+      "storage": "inline",
+      "content": [
+        "title",
+        "text"
+      ],
+      "container": false,
+      "notes": "Normalized legacy f1..fN feature blocks."
+    },
+    "value": {
+      "family": "content",
+      "storage": "inline",
+      "content": [
+        "title",
+        "description"
+      ],
+      "container": false,
+      "notes": "Normalized legacy v1..vN value/proposition blocks."
+    },
+    "collection-card": {
+      "family": "commerce-content",
+      "storage": "inline-or-data-binding",
+      "content": [
+        "name",
+        "image_asset_id",
+        "href",
+        "collection_id"
+      ],
+      "container": false,
+      "notes": "Can begin as migrated inline content and later bind to a commerce collection/media asset."
+    }
+  }
+}
