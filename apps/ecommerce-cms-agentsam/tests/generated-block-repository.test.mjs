@@ -70,15 +70,18 @@ test("restoreRevision returns the prior code and settings", async () => {
   assert.equal(restored.snapshot.settings.padding, 8);
 });
 
-test("concurrent saves get distinct revision numbers", async () => {
+test("revision numbers advance per block instead of globally across unrelated blocks", async () => {
   const db = openDb();
   const { store } = repo(db);
-  await Promise.all([
-    store.saveGenerated({ accountId: "acct-a", sectionId: "section-a", blockId: "one", blockKey: "one", manifest: { canonical: canonical("one") } }),
-    store.saveGenerated({ accountId: "acct-a", sectionId: "section-a", blockId: "two", blockKey: "two", manifest: { canonical: canonical("two") } }),
+  await store.saveGenerated({ accountId: "acct-a", sectionId: "section-a", blockId: "one", blockKey: "one", manifest: { canonical: canonical("one") } });
+  await store.saveGenerated({ accountId: "acct-a", sectionId: "section-a", blockId: "two", blockKey: "two", manifest: { canonical: canonical("two") } });
+  await store.saveGenerated({ accountId: "acct-a", sectionId: "section-a", blockId: "one", blockKey: "one", manifest: { canonical: canonical("one") }, settingsValues: { padding: 12 } });
+  const rows = db.prepare("SELECT entity_id, revision_number FROM cms_revisions ORDER BY entity_id, revision_number").all().map((row) => ({ ...row }));
+  assert.deepEqual(rows, [
+    { entity_id: "one", revision_number: 1 },
+    { entity_id: "one", revision_number: 2 },
+    { entity_id: "two", revision_number: 1 },
   ]);
-  const numbers = db.prepare("SELECT revision_number FROM cms_revisions ORDER BY revision_number").all().map((row) => row.revision_number);
-  assert.equal(new Set(numbers).size, numbers.length);
 });
 
 test("tree round-trips, cycles and depth are refused, delete cascades", async () => {
@@ -124,4 +127,25 @@ test("migration skips when the tree columns already exist", async () => {
   const db = openDb();
   const first = await ensureBlockTree(createSqlStore(db));
   assert.equal(first.skipped, true);
+});
+
+
+test("app-local CMS schema is an exact mirror of the canonical root schema", () => {
+  const root = readFileSync(new URL("../../../db/schema/cms.sql", import.meta.url), "utf8");
+  assert.equal(schema, root);
+});
+
+test("generated artifacts use the canonical manifest pointer contract", async () => {
+  const db = openDb();
+  const { store } = repo(db);
+  const saved = await store.saveGenerated({ accountId: "acct-a", sectionId: "section-a", blockId: "menu", blockKey: "menu", manifest: { canonical: canonical("menu") } });
+  assert.equal(saved.ok, true);
+  const artifact = { ...db.prepare("SELECT artifact_type, content_mode, r2_prefix, manifest_r2_key, source_kind FROM cms_artifacts WHERE id = ?").get(saved.artifactId) };
+  assert.deepEqual(artifact, {
+    artifact_type: "embed",
+    content_mode: "component",
+    r2_prefix: "cms/artifacts/block/" + saved.artifactId.replace(/^cmsa_/, "") + "/",
+    manifest_r2_key: saved.key,
+    source_kind: "generator",
+  });
 });
