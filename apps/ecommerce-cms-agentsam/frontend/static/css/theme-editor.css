@@ -1690,3 +1690,11 @@ body.shell-mode-theme-editor .theme-studio {
     display: none;
   }
 }
+.te-provenance {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #eceae4;
+  font-size: 10px;
+}
+.te-provenance[data-provenance="foreign-ai"] { background: #f3ead8; }

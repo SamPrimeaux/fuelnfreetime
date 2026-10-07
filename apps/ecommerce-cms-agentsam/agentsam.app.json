@@ -40,6 +40,9 @@
     "source_scaffold": "workspace-source",
     "cloudflare": "requires-owner-provisioning"
   },
+  "generation": {
+    "namespace": "agentsam"
+  },
   "capabilities": {
     "products": true,
     "cms": true,

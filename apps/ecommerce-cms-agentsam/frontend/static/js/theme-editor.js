@@ -481,13 +481,15 @@
         : '';
 
       const canReorder = !isGlobal && capabilities.reorder !== false;
+      const provenance = generationApi.detectProvenance(JSON.stringify(section.content || section));
+      const provenanceLabel = provenance === 'agentsam' ? 'AgentSam' : provenance === 'foreign-ai' ? 'foreign' : '';
       const metaText = (isGlobal ? 'global' : (visible ? section.status || 'draft' : 'hidden')) + ' · ' + fields.length + ' fields' + (blockMeta.length ? ' · ' + blockMeta.length + ' blocks' : '');
 
       return '<div class="te-tree-section" data-tree-section="' + cmsEscapeAttr(owner + ':' + section.key) + '" data-group="' + cmsEscapeAttr(group) + '">' +
         '<div class="te-tree-row' + (sectionSelected && !activeBlockId ? ' is-active' : '') + '" data-section-key="' + cmsEscapeAttr(section.key) + '" data-section-owner="' + cmsEscapeAttr(owner) + '" draggable="' + canReorder + '" data-index="' + index + '">' +
           '<button type="button" class="te-tree-row__main" data-select-section="' + cmsEscapeAttr(section.key) + '" data-section-owner="' + cmsEscapeAttr(owner) + '">' +
             '<span class="te-tree-row__icon">' + icon.section + '</span><span class="te-tree-row__copy"><span class="te-tree-row__name">' + cmsEscapeHtml(label) +
-            '</span><span class="te-tree-row__meta">' + cmsEscapeHtml(metaText) + '</span></span>' +
+            '</span><span class="te-tree-row__meta">' + cmsEscapeHtml(metaText) + (provenanceLabel ? '<span class="te-provenance" data-provenance="' + cmsEscapeAttr(provenance) + '">' + cmsEscapeHtml(provenanceLabel) + '</span>' : '') + '</span></span>' +
           '</button>' +
           '<span class="te-tree-row__actions">' +
             (!isGlobal ? '<button type="button" class="te-tree-mini" data-toggle-section="' + cmsEscapeAttr(section.key) + '" data-section-owner="' + cmsEscapeAttr(owner) + '" title="' + (visible ? 'Hide section' : 'Show section') + '">' + (visible ? '◉' : '○') + '</button>' : '') +
@@ -2302,6 +2304,21 @@
     }
     history.pushState({ agentsamEditor: 1 }, '');
   });
+
+  const generationApi = {
+    detectProvenance: function() { return 'unknown'; },
+    scanSections: function() { return []; },
+    persistScanReport: function() { return Promise.resolve({ ok: false, fatal: false }); },
+  };
+  import('/admin/js/generation-namespace.mjs').then(function(mod) {
+    Object.assign(generationApi, mod);
+    renderTree();
+    const sections = ownerSections(slug).concat(ownerSections('site'));
+    const report = generationApi.scanSections(sections);
+    generationApi.persistScanReport(report, function(body) {
+      return editorRequest('/api/admin/theme-editor/provenance-scan', { method: 'POST', body: JSON.stringify({ report: body }) });
+    }).catch(function() { return { ok: false, fatal: false }; });
+  }).catch(function() {});
 
   setDevice(device);
   setEditorDrawer('sections');
