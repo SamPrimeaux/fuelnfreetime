@@ -897,6 +897,9 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
     return handleCompletefulAdminApi(request, env, url);
   }
 
+  if (path === "/api/admin/agentsam/generate-block" && method === "POST") {
+    return generateBlockStream(request);
+  }
   if (path === "/api/admin/agentsam/chat" && method === "POST") {
     return agentsamChat(request, env, executionCtx);
   }

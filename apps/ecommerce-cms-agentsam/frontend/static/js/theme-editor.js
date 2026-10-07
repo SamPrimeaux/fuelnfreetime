@@ -1734,6 +1734,7 @@
   }
 
   async function saveDraft() {
+    if (generationLock.locked()) { setNote('Wait for generation to finish.'); return false; }
     if (liveUnimported) {
       setNote('This is a read-only live preview. Choose Start editing page to create a CMS draft before making changes.');
       return false;
@@ -1780,6 +1781,7 @@
   }
 
   async function publishPage() {
+    if (generationLock.locked()) { setNote('Wait for generation to finish.'); return false; }
     if (liveUnimported) {
       setNote('Import the existing live page before publishing any CMS draft.', 'error');
       return;
@@ -2086,7 +2088,19 @@
 
   let editorLeaving = false;
 
+  const generationLock = { locked: function() { return false; } };
+  import('/admin/js/generation-lock.mjs').then(function(mod) {
+    const lock = mod.createGenerationLock();
+    generationLock.start = lock.start.bind(lock);
+    generationLock.finish = lock.finish.bind(lock);
+    generationLock.locked = lock.locked.bind(lock);
+    generationLock.run = lock.run.bind(lock);
+  }).catch(function() {});
+
   function confirmLeave() {
+    if (generationLock.locked()) {
+      return window.confirm('A generation is still running. Leave and abort it?');
+    }
     if (!dirty) return true;
     return window.confirm('Leave the editor? Unsaved changes on this page will be lost.');
   }
@@ -2238,6 +2252,10 @@
     void openMiniAgentSam();
   });
   byId('te-save').addEventListener('click', saveDraft);
+  document.addEventListener('click', function(event) {
+    const dockSave = event.target && event.target.closest && event.target.closest('[data-dock-save], #dock-save');
+    if (dockSave) saveDraft();
+  });
   byId('te-publish').addEventListener('click', publishPage);
   byId('theme-preview').addEventListener('load', function() {
     bindPreviewSelection();
