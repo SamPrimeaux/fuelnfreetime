@@ -1,6 +1,8 @@
 (() => {
+  const host = window.AgentSamThemeEditorHost || null;
+  const editorRequest = host ? host.adapter.request.bind(host.adapter) : window.adminFetch;
   const params = new URLSearchParams(location.search);
-  let slug = params.get('slug') || 'shop';
+  let slug = host?.page || params.get('slug') || 'shop';
   let pageData = null;
   let siteData = null;
   let pages = [];
@@ -62,7 +64,7 @@
   let showOutlines = localStorage.getItem('fnf-theme-editor-outlines') !== '0';
   let autoPreview = localStorage.getItem('fnf-theme-editor-auto-preview') !== '0';
 
-  const fallbackPages = [
+  const fallbackPages = host ? [] : [
     { slug: 'home', title: 'Home page', route: '/' },
     { slug: 'shop', title: 'Shop', route: '/shop' },
     { slug: 'about', title: 'About', route: '/about' },
@@ -147,9 +149,18 @@
     ].join('');
   }
 
-  renderShell('/admin/theme-editor', shellMarkup(), { fullBleed: true });
+  if (host) {
+    document.body.innerHTML = shellMarkup();
+    document.body.dataset.themeEditorEmbedded = '';
+  } else {
+    renderShell('/admin/theme-editor', shellMarkup(), { fullBleed: true });
+  }
 
   const byId = function(id) { return document.getElementById(id); };
+  if (host) {
+    const themeMenu = document.querySelector('.te-theme-menu');
+    if (themeMenu) themeMenu.hidden = true;
+  }
 
   function setMobilePane(pane) {
     if (!['sections', 'preview', 'settings'].includes(pane)) return;
@@ -169,6 +180,7 @@
   }
 
   function pageRoute(pageSlug) {
+    if (host) return host.pageRoutes?.[pageSlug] || null;
     // Bridge Fly is a real authored R2 scene, not a publishable storefront
     // route. Its authenticated canvas can still be previewed in this editor.
     if (pageSlug === 'bridge-fly') return '/admin/bridge-fly-preview';
@@ -252,6 +264,11 @@
   function syncPublishCapability() {
     const button = byId('te-publish');
     if (!button) return;
+    if (host && host.adapter.capabilities?.publish === false) {
+      button.disabled = true;
+      button.title = 'This draft theme workspace does not publish pages directly. Publish the reviewed theme from Online Store.';
+      return;
+    }
     const sceneOnly = slug === 'bridge-fly';
     const previewOnly = selectedTheme !== 'heuristic' || sceneOnly;
     button.disabled = previewOnly || liveUnimported;
@@ -1542,7 +1559,22 @@
     });
   }
 
-  function refreshPreview() {
+  async function refreshPreview() {
+    if (host) {
+      try {
+        const preview = await host.adapter.resolvePreview(slug, pageData);
+        if (preview?.html) {
+          byId('theme-preview').removeAttribute('src');
+          byId('theme-preview').srcdoc = preview.html;
+          byId('te-preview-label').textContent = 'Draft theme preview — ' + ((pageData && pageData.title) || humanize(slug));
+          byId('te-open-tab').removeAttribute('href');
+        }
+      } catch (error) {
+        byId('theme-preview').srcdoc = '<!doctype html><html><body style="font:16px system-ui;padding:32px"><h2>Preview unavailable</h2><p>' + cmsEscapeHtml(error.message || String(error)) + '</p></body></html>';
+        setNote(error.message || String(error), 'error');
+      }
+      return;
+    }
     if (selectedTheme !== 'heuristic') {
       pushLocalPreview();
       return;
@@ -1583,9 +1615,10 @@
     try {
       await loadCmsRegistry();
       const results = await Promise.all([
-        adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug)),
-        adminFetch('/api/admin/cms/pages').catch(function() { return { pages: [] }; }),
-        adminFetch('/api/admin/cms/pages/site')
+        editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug)),
+        editorRequest('/api/admin/cms/pages').catch(function() { return { pages: [] }; }),
+        host ? Promise.resolve({ page: { slug: 'site', title: 'Global', sections: [], status: 'draft' } })
+             : adminFetch('/api/admin/cms/pages/site')
       ]);
       pageData = results[0].page;
       liveUnimported = pageData.content_authority === 'storefront-html';
@@ -1599,7 +1632,7 @@
       liveCapturedSections = [];
       unmanagedLiveSections = [];
       if (liveUnimported) selectedTheme = 'heuristic';
-      byId('te-import-live').hidden = !missingSourceSections.length && !liveUnimported;
+      byId('te-import-live').hidden = Boolean(host) || (!missingSourceSections.length && !liveUnimported);
       if (!liveUnimported && missingSourceSections.length) {
         byId('te-import-live').textContent = 'Stage ' + missingSourceSections.length + ' missing sections';
       }
@@ -1630,8 +1663,19 @@
       }
 
       byId('te-page-title').textContent = pageData.title || humanize(slug);
-      byId('te-page-settings').href = '/admin/page-edit?slug=' + encodeURIComponent(slug);
-      byId('te-manage-page').href = '/admin/page-edit?slug=' + encodeURIComponent(slug);
+      for (const id of ['te-page-settings', 'te-manage-page']) {
+        const link = byId(id);
+        if (host) {
+          link.href = '#';
+          link.hidden = !host.onPageSettings;
+          link.onclick = host.onPageSettings ? async function(event) {
+            event.preventDefault();
+            if (!dirty || await saveDraft()) host.onPageSettings(slug);
+          } : null;
+        } else {
+          link.href = '/admin/page-edit?slug=' + encodeURIComponent(slug);
+        }
+      }
       syncPublishCapability();
       renderPageOptions('');
       renderTree();
@@ -1662,7 +1706,7 @@
         const parsed = parseDirtyRef(ref);
         const section = findSection(parsed.key, parsed.owner);
         if (!section) continue;
-        const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(parsed.owner) + '/sections/' + encodeURIComponent(section.key), {
+        const result = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(parsed.owner) + '/sections/' + encodeURIComponent(section.key), {
           method: 'PUT',
           body: JSON.stringify({
             content: section.content,
@@ -1707,13 +1751,13 @@
     try {
       if (dirty && !(await saveDraft())) throw new Error('Could not save draft before publishing');
       let siteResult = null;
-      if (siteDraftTouched) {
+      if (!host && siteDraftTouched) {
         siteResult = await adminFetch('/api/admin/cms/pages/site/publish', { method: 'POST' });
         siteData.status = 'published';
         (siteData.sections || []).forEach(function(section) { section.status = 'published'; });
         siteDraftTouched = false;
       }
-      const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/publish', { method: 'POST' });
+      const result = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/publish', { method: 'POST' });
       pageData.status = 'published';
       (pageData.sections || []).forEach(function(section) { section.status = 'published'; });
       setDirty(false);
@@ -1735,7 +1779,7 @@
     if (liveUnimported) { setNote('Start editing page to create a private draft before changing its sections.'); return false; }
     setNote('Adding section…');
     try {
-      const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections', {
+      const result = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections', {
         method: 'POST',
         body: JSON.stringify({
           templateKey: templateKey,
@@ -1759,7 +1803,7 @@
     if (liveUnimported) { setNote('Start editing page to create a private draft before changing its sections.'); return false; }
     setNote('Duplicating section…');
     try {
-      const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/duplicate', {
+      const result = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/duplicate', {
         method: 'POST',
         body: JSON.stringify({})
       });
@@ -1778,7 +1822,7 @@
   async function moveSection(sectionKey, toIndex) {
     if (liveUnimported) { setNote('Start editing page to create a private draft before changing its sections.'); return false; }
     try {
-      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/move', {
+      await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/move', {
         method: 'POST',
         body: JSON.stringify({ toIndex: toIndex })
       });
@@ -1795,7 +1839,7 @@
     if (liveUnimported) { setNote('Start editing page to create a private draft before changing its sections.'); return false; }
     const owner = ownerSlug || slug;
     try {
-      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(owner) + '/sections/' + encodeURIComponent(sectionKey) + '/visibility', {
+      await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(owner) + '/sections/' + encodeURIComponent(sectionKey) + '/visibility', {
         method: 'PUT',
         body: JSON.stringify({ enabled: enabled })
       });
@@ -1816,7 +1860,7 @@
     if (!confirm('Remove "' + label + '" from this page? You can add it again later.')) return;
 
     try {
-      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey), {
+      await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey), {
         method: 'DELETE'
       });
       setNote('Section removed.', 'success');
@@ -1836,7 +1880,7 @@
     try {
       const section = findSection(sectionKey, owner);
       const blocks = section?.content?.__editor?.blocks || [];
-      const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(owner) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks', {
+      const result = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(owner) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks', {
         method: 'POST',
         body: JSON.stringify({ templateKey: templateKey, toIndex: blocks.length })
       });
@@ -1858,7 +1902,7 @@
     const owner = ownerSlug || slug;
     setNote('Duplicating block…');
     try {
-      const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(owner) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId) + '/duplicate', {
+      const result = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(owner) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId) + '/duplicate', {
         method: 'POST',
         body: JSON.stringify({})
       });
@@ -1879,7 +1923,7 @@
     if (liveUnimported) { setNote('Start editing page to create a private draft before changing its sections.'); return false; }
     const owner = ownerSlug || slug;
     try {
-      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(owner) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId) + '/move', {
+      await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(owner) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId) + '/move', {
         method: 'POST',
         body: JSON.stringify({ toIndex: toIndex })
       });
@@ -1902,7 +1946,7 @@
     if (!confirm('Remove "' + label + '" from this section?')) return;
 
     try {
-      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(owner) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId), {
+      await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(owner) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId), {
         method: 'DELETE'
       });
       if (owner === 'site') siteDraftTouched = true;
@@ -1931,7 +1975,8 @@
     activeSectionKey = null;
     activeBlockId = null;
     activeFieldKey = null;
-    history.replaceState(null, '', '?slug=' + encodeURIComponent(slug));
+    if (!host) history.replaceState(null, '', '?slug=' + encodeURIComponent(slug));
+    else host.onPageChange?.(slug);
     closePageMenu();
     await loadPage();
   }
@@ -1964,7 +2009,7 @@
   }
 
   async function loadMedia() {
-    const response = await adminFetch('/api/admin/media?view=all');
+    const response = await editorRequest('/api/admin/media?view=all');
     mediaLibrary = response.assets || response.media || [];
     return mediaLibrary;
   }
@@ -2013,7 +2058,9 @@
     files.forEach(function(file) { form.append('files', file); });
     form.append('prefix', 'uploads/theme-editor/');
 
-    const response = await fetch('/api/admin/media', { method: 'POST', credentials: 'include', body: form });
+    const response = host
+      ? await host.adapter.uploadMedia(files)
+      : await fetch('/api/admin/media', { method: 'POST', credentials: 'include', body: form });
     if (response.status === 401) {
       location.href = '/admin/login';
       throw new Error('Unauthorized');

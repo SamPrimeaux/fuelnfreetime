@@ -169,9 +169,12 @@ test("no active theme fails gracefully without abandoning live storefront previe
   assert.equal(elem("theme-preview-desktop").src, "/");
 });
 
-test("Online Store does not confuse Shop CMS page publish with theme publishing", () => {
+test("Online Store uses the real theme lifecycle without confusing it with Shop CMS page publish", () => {
   assert.doesNotMatch(match[1], /adminFetch\(["']\/api\/admin\/cms\/pages\/shop\/publish/);
-  assert.match(match[1], /Publish unavailable/);
+  assert.match(match[1], /publish_ready/);
+  assert.match(match[1], /Needs review/);
+  assert.match(match[1], /\/api\/admin\/store\/themes\/\$\{encodeURIComponent\(btn\.dataset\.themeId\)\}\/publish/);
+  assert.match(match[1], /review and runtime readiness are both verified/i);
   assert.match(css, /online-store-preview\[data-preview-status="loading"\]/);
   assert.match(css, /online-store-preview-message/);
 });

@@ -14,6 +14,8 @@ await cp(path.join(root, 'packages/heuristic-theme/presets'), path.join(output, 
 await cp(path.join(root, 'packages/heuristic-theme/theme.json'), path.join(output, 'theme/theme.json'));
 await cp(path.join(root, 'node_modules/@inneranimalmedia/revise-theme/dist'), path.join(output, 'admin/theme-previews/revise'), { recursive: true });
 await cp(path.join(root, 'node_modules/@inneranimalmedia/section-library/dist/layout.css'), path.join(output, 'admin/theme-previews/revise/layout.css'));
+await cp(path.join(root, 'node_modules/@inneranimalmedia/revise-theme/dist'), path.join(output, 'theme-assets/revise'), { recursive: true });
+await cp(path.join(root, 'node_modules/@inneranimalmedia/section-library/dist/layout.css'), path.join(output, 'theme-assets/revise/layout.css'));
 await mkdir(path.join(output, 'admin/theme-previews/fnf'), { recursive: true });
 await cp(path.join(root, 'packages/fnf-theme/src/theme/tokens.css'), path.join(output, 'admin/theme-previews/fnf/tokens.css'));
 await cp(path.join(root, 'packages/fnf-theme/src/layout/layout.css'), path.join(output, 'admin/theme-previews/fnf/layout.css'));
@@ -80,4 +82,4 @@ const template = `<template id="mail-app-template">\n${partial}\n</template>\n`;
 await writeFile(emailPath, email.includes('id="mail-app-template"')
   ? email.replace(/<template id="mail-app-template">[\s\S]*?<\/template>\n?/, template)
   : email.replace('<body>', `<body>\n${template}`));
-console.log('Assembled Heuristic + Revise/FNF preview assets + commerce dashboard into dist/assets');
+console.log('Assembled Heuristic + Revise/FNF previews + package theme workspace + commerce dashboard into dist/assets');
