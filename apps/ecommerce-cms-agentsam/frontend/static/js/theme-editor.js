@@ -534,11 +534,11 @@
           return '<button type="button" class="te-live-only-row" data-scroll-live="' + index + '"><span>' + icon.section + '</span><span><strong>' + cmsEscapeHtml(humanize(region.label.replaceAll('.', ' '))) + '</strong><small>Existing storefront · adapter needed</small></span></button>';
         }).join('') + '</div>' : '') +
       '<button type="button" class="te-add-section" id="te-add-section">+ Add section</button>' +
-      '<div class="te-section-menu" id="te-section-menu" hidden>' +
-        '<div class="te-section-menu__head"><strong>Add section · Shared library</strong><button type="button" class="te-tree-mini" id="te-section-cancel" aria-label="Close">×</button></div>' +
+      '<dialog class="te-section-menu" id="te-section-menu" aria-label="Add a section" hidden>' +
+        '<div class="te-section-menu__head"><div><strong>Add a section</strong><small>Choose a reusable storefront component</small></div><button type="button" class="te-tree-mini" id="te-section-cancel" aria-label="Close section catalog">×</button></div>' +
         '<input class="te-section-search" id="te-section-search" placeholder="Search sections" autocomplete="off">' +
         '<div class="te-section-catalog" id="te-section-catalog"></div>' +
-      '</div>' +
+      '</dialog>' +
       '<div class="te-tree-group te-tree-group--global"><div class="te-tree-group__label">Footer</div>' + footerRow + '</div>';
 
     function renderCatalog(query) {
@@ -560,6 +560,7 @@
 
       byId('te-section-catalog').querySelectorAll('[data-catalog-template]').forEach(function(button) {
         button.addEventListener('click', function() {
+          if (menu.open) menu.close();
           insertSection(button.dataset.catalogTemplate, button.dataset.catalogPreset);
         });
       });
@@ -639,9 +640,20 @@
       menu.hidden = false;
       add.hidden = true;
       renderCatalog('');
+      if (typeof menu.showModal === 'function') menu.showModal();
       requestAnimationFrame(function() { byId('te-section-search')?.focus(); });
     });
-    byId('te-section-cancel')?.addEventListener('click', function() { menu.hidden = true; add.hidden = false; });
+    menu.addEventListener('close', function() {
+      menu.hidden = true;
+      add.hidden = false;
+    });
+    byId('te-section-cancel')?.addEventListener('click', function() {
+      if (menu.open) menu.close();
+      else {
+        menu.hidden = true;
+        add.hidden = false;
+      }
+    });
     byId('te-section-search')?.addEventListener('input', function(event) { renderCatalog(event.target.value); });
     // Preserve old atlas links without maintaining another source editor.
     // This opens the one canonical cross-theme section catalog in place.
