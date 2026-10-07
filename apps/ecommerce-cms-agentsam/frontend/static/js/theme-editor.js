@@ -1573,6 +1573,8 @@
       block_id: activeBlockId,
       block_type: block?.templateKey || null,
       field_key: activeFieldKey,
+      generated: Boolean(section?.content?.__editor?.generated),
+      version: section?.version ?? 0,
     };
   }
 
@@ -2581,6 +2583,36 @@
     endGenerating: endGenerating,
     context: generationSelectionContext,
     wrapper: generationPreviewWrapper,
+    currentGenerated: function() {
+      const section = currentSection();
+      if (!section?.content?.__editor?.generated) return null;
+      return {
+        definition: {type:section.content.__editor.definitionKey},
+        settings: Object.fromEntries(Object.entries(section.content).filter(function([key]) { return key !== '__editor'; })),
+        canonical: section.implementation || null,
+      };
+    },
+    acceptGenerated: async function(record, provenance, options = {}) {
+      if (host) throw new Error('Generated section installation requires the native FNF CMS host.');
+      if (liveUnimported) throw new Error('Open the private page draft before installing a generated section.');
+      if (dirty || saveInFlight) {
+        if (!(await saveDraft())) throw new Error('Save existing edits before installing.');
+      }
+      const response = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/generated-accept', {
+        method: 'POST',
+        body: JSON.stringify({ record, provenance, sectionKey: options.sectionKey,
+          expectedVersion: options.expectedVersion }),
+      });
+      if (!response.ok) throw new Error(response.error || 'Generated section installation failed');
+      activeSectionOwner = slug;
+      activeSectionKey = response.section_key;
+      activeBlockId = null;
+      activeFieldKey = null;
+      await loadPage();
+      selectSection(response.section_key,null,true,slug);
+      setNote('AgentSam section installed privately. Review the storefront preview before publishing.', 'success');
+      return response;
+    },
   };
   setDevice(device);
   setEditorDrawer('sections');

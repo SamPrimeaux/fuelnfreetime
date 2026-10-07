@@ -144,7 +144,10 @@ async function init() {
           capability: "code.generate",
           request: requestText,
           promptPrefix,
-          context: contextNow,
+          context: {
+            ...contextNow,
+            ...(contextNow.generated ? { existingSection: bridge.currentGenerated?.() || null } : {}),
+          },
           output_contract: "cms.generated-definition.v1",
         }),
       });
@@ -203,7 +206,12 @@ async function init() {
         prompt: requestText,
         definition: result.record.definition,
       };
-      flow.complete(result.record.settings, provenance);
+      // The model output is NOT an installed section. Show a sandboxed,
+      // non-executing review before a separate authenticated D1/R2 commit.
+      flow.review(result.record, () => bridge.acceptGenerated(result.record, provenance, {
+        sectionKey: contextNow.generated ? contextNow.section_key : undefined,
+        expectedVersion: contextNow.generated ? contextNow.version : undefined,
+      }));
     } catch (error) {
       if (error?.name === "AbortError") flow.fail("Generation stopped.");
       else flow.fail(error?.message || "Generation failed.");
