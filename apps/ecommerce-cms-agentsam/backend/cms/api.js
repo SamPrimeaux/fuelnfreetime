@@ -1,5 +1,6 @@
 import { ROUTE_MANIFEST } from "../lib/route-manifest.js";
 import { attachCmsDefinitions, listCmsDefinitions } from "./definition-registry.mjs";
+import { attachGeneratedImplementations, inspectGeneratedSection, persistGeneratedImplementation } from "./generated-section.mjs";
 import { guardSectionWrite } from "../../frontend/static/js/generation-namespace.mjs";
 import { cmsStorefrontRoutes, resolvePageAuthority } from "./page-authority.js";
 import {
@@ -257,7 +258,8 @@ export async function buildPublishedSnapshot(env, slug) {
   const page = await loadPageRow(env, slug);
   if (!page || page.status !== "published") return null;
 
-  const sections = await loadSectionsFromDb(env, slug, page.id, { publishedOnly: true });
+  const sections = await attachGeneratedImplementations(env, slug,
+    await loadSectionsFromDb(env, slug, page.id, { publishedOnly: true }));
   if (!sections.length) return null;
 
   return {
@@ -265,12 +267,13 @@ export async function buildPublishedSnapshot(env, slug) {
     title: page.title,
     status: page.status,
     updated_at: page.updated_at,
-    sections: sections.map(({ key, sort_order, status, content, updated_at }) => ({
+    sections: sections.map(({ key, sort_order, status, content, updated_at, implementation }) => ({
       key,
       sort_order,
       status,
       content,
       updated_at,
+      ...(implementation ? { implementation } : {}),
     })),
     source: "r2",
   };
@@ -338,7 +341,7 @@ export async function getPreviewPage(env, slug) {
     title: page.title,
     status: page.status,
     updated_at: page.updated_at,
-    sections: mergeWithRegistry(slug, sections),
+    sections: await attachGeneratedImplementations(env, slug, mergeWithRegistry(slug, sections)),
     source: "preview",
   };
 }
@@ -406,7 +409,7 @@ export async function getPageAdmin(env, slug) {
     };
   }
 
-  const sections = await loadSectionsFromDb(env, slug, page.id);
+  const sections = await attachGeneratedImplementations(env, slug, await loadSectionsFromDb(env, slug, page.id));
   // This is factual D1 inventory, not synthetic registry content. An editor may
   // explicitly stage missing source-backed sections as private drafts without
   // replacing the already published snapshot or modifying existing rows.
@@ -1175,6 +1178,84 @@ export async function handlePublicCmsApi(request, env, url) {
   );
 }
 
+/**
+ * Install or revise a semantic section in the existing private draft.
+ * The generator stream itself never writes D1 or publishes anything.
+ */
+export async function acceptGeneratedSection(env, slug, accountId, body = {}) {
+  if (!accountId) return { error:"Account required",status:403 };
+  const page = await loadPageRow(env,slug);
+  if (!page) return { error:"Open a private working draft before installing generated sections",status:409 };
+  const canonical = await env.DB.prepare("SELECT id FROM cms_pages WHERE account_id = ? AND slug = ?").bind(accountId,slug).first();
+  if (!canonical) return {error:"Canonical CMS page is not available for this account",status:409};
+
+  const existingKey = String(body.sectionKey || "");
+  const replacing = Boolean(existingKey);
+  let current = null;
+  if (replacing) {
+    if (!/^[a-z][a-z0-9-]{1,63}$/.test(existingKey)) return {error:"Invalid section key",status:422};
+    const row = await env.DB.prepare("SELECT id,content_version,sort_order FROM page_sections WHERE page_id = ? AND section_key = ? AND status != 'removed'")
+      .bind(page.id,existingKey).first();
+    if (!row) return {error:"Generated section not found",status:404};
+    const draft = await readSectionContent(env,slug,existingKey);
+    if (!draft?.content?.__editor?.generated) return {error:"Cannot replace a built-in section with generated code",status:409};
+    if (Number(body.expectedVersion) !== Number(row.content_version)) return {error:"Draft changed since last edit",status:409};
+    if (draft.content.__editor.definitionKey !== body.record?.definition?.type) return {error:"Changing the semantic section type is not supported",status:422};
+    current = { row, draft };
+  }
+  const type = String(body.record?.definition?.type || "");
+  const sectionKey = existingKey || (type.slice(0,28) + "-" + crypto.randomUUID().slice(0,8));
+  let written;
+  try {
+    written = await persistGeneratedImplementation(env,accountId,body.record,sectionKey,body.provenance || {});
+  } catch(error) {
+    return {error:"Unable to persist generated artifact: " + error.message,status:500};
+  }
+  if (!written.ok) return written;
+  const content = { ...written.settings,
+    __editor: {
+      ...(current?.draft?.content?.__editor || {}),
+      templateKey: written.type,
+      definitionKey: written.type,
+      definitionVersion: written.version,
+      artifactId: written.artifactId,
+      generated: true,
+      source:"agentsam",
+      visibility: current?.draft?.content?.__editor?.visibility || {enabled:true},
+    },
+  };
+  const position = current?.row?.sort_order ??
+    (Number((await env.DB.prepare("SELECT MAX(sort_order) AS n FROM page_sections WHERE page_id = ?").bind(page.id).first())?.n || 0) + 10);
+  const meta = await persistSectionDraft(env,slug,page.id,sectionKey,content,position,
+    {expectedVersion: replacing ? body.expectedVersion : 0});
+  if (meta.error) return meta;
+
+  const legacy = await env.DB.prepare("SELECT id FROM page_sections WHERE page_id = ? AND section_key = ?")
+    .bind(page.id,sectionKey).first();
+  await env.DB.prepare(`INSERT INTO cms_page_sections
+    (account_id,page_id,legacy_section_id,section_key,section_type,sort_order,status,content_r2_key,content_version,content_hash,metadata_json)
+    VALUES (?,?,?,?,?,?,'draft',?,?,?,?,?)
+    ON CONFLICT(page_id,section_key) DO UPDATE SET section_type=excluded.section_type,
+      sort_order=excluded.sort_order,status='draft',content_r2_key=excluded.content_r2_key,
+      content_version=excluded.content_version,content_hash=excluded.content_hash,
+      metadata_json=excluded.metadata_json,updated_at=datetime('now')`)
+    .bind(accountId,canonical.id,legacy?.id ?? null,sectionKey,written.type,position,
+      meta.key,meta.version,meta.content_hash,JSON.stringify({definitionKey:written.type,artifactId:written.artifactId})).run();
+  const section = await env.DB.prepare("SELECT id FROM cms_page_sections WHERE account_id = ? AND page_id = ? AND section_key = ?")
+    .bind(accountId,canonical.id,sectionKey).first();
+  const latest = await env.DB.prepare("SELECT COALESCE(MAX(revision_number),0) AS n FROM cms_revisions WHERE account_id = ? AND entity_type = 'section' AND entity_id = ?")
+    .bind(accountId,section.id).first();
+  await env.DB.prepare(`INSERT INTO cms_revisions
+    (account_id,entity_type,entity_id,revision_number,revision_kind,content_r2_key,content_hash,snapshot_json,metadata_json)
+    VALUES (?,'section',?,?,'draft',?,?,?,?)`)
+    .bind(accountId,section.id,Number(latest?.n||0)+1,meta.key,meta.content_hash,
+      JSON.stringify({content,artifactId:written.artifactId,definitionKey:written.type}),
+      JSON.stringify({source:"agentsam",version:written.version})).run();
+  await markPageDraft(env,page.id,slug);
+  return {ok:true,published:false,section_key:sectionKey,artifact_id:written.artifactId,
+    definition_key:written.type,version:meta.version,revision_number:Number(latest?.n||0)+1};
+}
+
 export async function handleAdminCmsApi(request, env, url, context = {}) {
   const path = url.pathname;
   const method = request.method;
@@ -1182,6 +1263,15 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
   if (path === "/api/admin/cms/warm" && method === "POST") {
     const { warmAllCmsPages } = await import("./deploy.js");
     return json(await warmAllCmsPages(env));
+  }
+
+  const generatedMatch = path.match(/^\\/api\\/admin\\/cms\\/pages\\/([a-z0-9-]+)\\/generated-accept$/);
+  if (generatedMatch && method === "POST") {
+    let body;
+    try { body = await request.json(); }
+    catch { return json({error:"Invalid JSON"}, {status:400}); }
+    const result = await acceptGeneratedSection(env,generatedMatch[1],context.accountId,body);
+    return json(result,{status:result.status || 200});
   }
 
   if (path === "/api/admin/cms/registry" && method === "GET") {
