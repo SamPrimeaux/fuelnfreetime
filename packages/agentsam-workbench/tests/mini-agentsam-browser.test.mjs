@@ -24,13 +24,15 @@ test('miniAgentSam stays compact on focus and expands tools only by explicit act
     "const shadow=portal.shadowRoot;",
     "const composer=shadow.querySelector('.composer');",
     "const input=shadow.querySelector('textarea');",
+    "const expand=shadow.querySelector('.expand');",
     "const more=shadow.querySelector('.more');",
     "const tools=shadow.querySelector('.tools');",
     "const before=composer.getBoundingClientRect();",
     "input.focus(); await wait(40); const focused=composer.getBoundingClientRect();",
-    "const focusedExpanded=composer.classList.contains('expanded');",
-    "more.click(); await wait(40); const explicit=composer.getBoundingClientRect();",
-    "const result={beforeWidth:Math.round(before.width),focusedWidth:Math.round(focused.width),explicitWidth:Math.round(explicit.width),focusedExpanded,explicitExpanded:composer.classList.contains('expanded'),toolsVisible:!tools.hidden,ariaExpanded:more.getAttribute('aria-expanded')};",
+    "const focusedExpanded=composer.classList.contains('message-expanded');",
+    "expand.click(); await wait(40); const explicit=composer.getBoundingClientRect(); const expandedHeight=input.getBoundingClientRect().height;",
+    "more.click(); await wait(40);",
+    "const result={beforeWidth:Math.round(before.width),focusedWidth:Math.round(focused.width),explicitWidth:Math.round(explicit.width),focusedExpanded,explicitExpanded:composer.classList.contains('message-expanded'),expandedHeight:Math.round(expandedHeight),toolsVisible:!tools.hidden,expandAria:expand.getAttribute('aria-expanded'),toolsAria:more.getAttribute('aria-expanded')};",
     "const pre=document.createElement('pre'); pre.id='result'; pre.textContent=JSON.stringify(result); document.body.append(pre);"
   ].join('\n');
   const server=http.createServer((req,res)=>{
@@ -53,7 +55,9 @@ test('miniAgentSam stays compact on focus and expands tools only by explicit act
     assert.equal(result.focusedExpanded,false);
     assert.equal(result.explicitWidth,240);
     assert.equal(result.explicitExpanded,true);
+    assert.equal(result.expandedHeight,88);
     assert.equal(result.toolsVisible,true);
-    assert.equal(result.ariaExpanded,'true');
+    assert.equal(result.expandAria,'true');
+    assert.equal(result.toolsAria,'true');
   } finally { server.close(); }
 });

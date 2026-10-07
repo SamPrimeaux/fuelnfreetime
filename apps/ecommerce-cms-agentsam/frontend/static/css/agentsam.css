@@ -218,6 +218,69 @@ body.agentsam-overlay-mode.agentsam-open {
   font-weight: 600;
 }
 
+.agentsam-proposal {
+  display: grid;
+  gap: 8px;
+}
+
+.agentsam-proposal-title {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.agentsam-proposal-note {
+  margin: 0;
+  color: #6f6879;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.agentsam-proposal-text {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  border: 1px solid rgba(92, 45, 145, 0.22);
+  border-radius: 10px;
+  padding: 9px 10px;
+  background: rgba(255, 255, 255, 0.92);
+  color: inherit;
+  font: 12px/1.5 inherit;
+}
+
+.agentsam-proposal-text:focus {
+  outline: 2px solid rgba(139, 92, 246, 0.35);
+  outline-offset: 1px;
+}
+
+.agentsam-proposal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.agentsam-proposal-actions button {
+  min-height: 32px;
+  border: 1px solid rgba(0, 0, 0, 0.11);
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: #fff;
+  color: #25212b;
+  font: 700 11px/1.2 inherit;
+  cursor: pointer;
+}
+
+.agentsam-proposal-actions button.is-primary {
+  border-color: #5c2d91;
+  background: #5c2d91;
+  color: #fff;
+}
+
+.agentsam-proposal-actions button:disabled {
+  opacity: .58;
+  cursor: default;
+}
+
 .agentsam-msg-route {
   font-size: 10px;
   letter-spacing: 0.04em;

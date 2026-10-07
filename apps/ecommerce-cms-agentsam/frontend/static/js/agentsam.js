@@ -103,6 +103,78 @@ function appendMessage(role, text, routing) {
   box.scrollTop = box.scrollHeight;
 }
 
+function presentAgentsamProposal(options = {}) {
+  initAgentsamDrawer();
+  if (options.context) setAgentsamPageContext(options.context);
+  openAgentsamDrawer();
+
+  const box = document.getElementById("agentsam-messages");
+  if (!box) return null;
+
+  const card = document.createElement("section");
+  card.className = "agentsam-msg agentsam-msg--assistant agentsam-proposal";
+  card.setAttribute("aria-label", options.title || "AgentSam proposal");
+
+  const route = document.createElement("div");
+  route.className = "agentsam-msg-route";
+  route.textContent = options.source || "miniAgentSam · proposal";
+  card.appendChild(route);
+
+  const title = document.createElement("strong");
+  title.className = "agentsam-proposal-title";
+  title.textContent = options.title || "Proposed change";
+  card.appendChild(title);
+
+  if (options.note) {
+    const note = document.createElement("p");
+    note.className = "agentsam-proposal-note";
+    note.textContent = options.note;
+    card.appendChild(note);
+  }
+
+  const editor = document.createElement("textarea");
+  editor.className = "agentsam-proposal-text";
+  editor.value = String(options.text || "");
+  editor.setAttribute("aria-label", "Review proposed AgentSam text");
+  card.appendChild(editor);
+
+  const actions = document.createElement("div");
+  actions.className = "agentsam-proposal-actions";
+
+  const copy = document.createElement("button");
+  copy.type = "button";
+  copy.textContent = "Copy";
+  copy.addEventListener("click", () => {
+    navigator.clipboard?.writeText(editor.value).catch(() => {
+      updateStatusLine("Copy is unavailable in this browser.");
+    });
+  });
+  actions.appendChild(copy);
+
+  if (typeof options.onApply === "function") {
+    const apply = document.createElement("button");
+    apply.type = "button";
+    apply.className = "is-primary";
+    apply.textContent = options.applyLabel || "Apply to draft";
+    apply.addEventListener("click", async () => {
+      try {
+        const result = await options.onApply(editor.value);
+        if (result === false) return;
+        apply.disabled = true;
+        apply.textContent = options.appliedLabel || "Applied";
+      } catch (error) {
+        updateStatusLine(error?.message || "Could not apply proposal.");
+      }
+    });
+    actions.appendChild(apply);
+  }
+
+  card.appendChild(actions);
+  box.appendChild(card);
+  box.scrollTop = box.scrollHeight;
+  return card;
+}
+
 function setBusy(busy) {
   const send = document.getElementById("agentsam-send");
   const input = document.getElementById("agentsam-input");
@@ -287,5 +359,6 @@ function setAgentsamPageContext(ctx) {
 window.openAgentsamDrawer = openAgentsamDrawer;
 window.closeAgentsamDrawer = closeAgentsamDrawer;
 window.sendAgentsamMessage = sendAgentsamMessage;
+window.presentAgentsamProposal = presentAgentsamProposal;
 window.initAgentsamDrawer = initAgentsamDrawer;
 window.setAgentsamPageContext = setAgentsamPageContext;

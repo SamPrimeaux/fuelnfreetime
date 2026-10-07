@@ -49,9 +49,10 @@ const probe=`<script>(async function(){
   const arrow=mini.querySelector('.send').textContent.trim();
   mini.querySelector('textarea').value='Rewrite the selected headline to sound more compelling.';
   mini.querySelector('.send').click();
-  const review=await until(()=>{const el=document.getElementById('te-agent-review');return el&&!el.hidden?el:null});
-  const proposed=document.getElementById('te-agent-proposal').value;
-  const apply=document.getElementById('te-agent-apply');
+  const review=await until(()=>document.querySelector('.agentsam-proposal'));
+  const proposed=review.querySelector('.agentsam-proposal-text').value;
+  const apply=review.querySelector('.agentsam-proposal-actions .is-primary');
+  const localReviewExists=!!document.getElementById('te-agent-review');
   const beforeWrites=window.__writes.length;
   const beforeField=document.getElementById('te-field-hero-headline').value;
   const canApply=!apply.disabled;
@@ -59,17 +60,22 @@ const probe=`<script>(async function(){
   const fieldAfter=document.getElementById('te-field-hero-headline').value;
   const dirty=document.getElementById('te-save-state').textContent;
   const afterApplyWrites=window.__writes.length;
+  const sideAssistantOpen=document.body.classList.contains('agentsam-open');
+  const previewCta=document.getElementById('theme-preview').contentDocument?.querySelector('[data-cms="ctaPrimary.label"]');
+  if(previewCta){previewCta.click();await sleep(120);}
+  const focusedGroups=[...document.querySelectorAll('.te-inspector-group__head h3')].map(el=>el.textContent.trim());
   document.getElementById('te-save').click();
   await until(()=>window.__writes.length===1);
   const miniRect=mini.querySelector('.composer').getBoundingClientRect();
-  const result={initialValue,caption,composerVisible:true,sourceRect:{left:sourceRect.left,right:sourceRect.right,top:sourceRect.top,bottom:sourceRect.bottom},initialComposerRect:{left:initialComposerRect.left,right:initialComposerRect.right,top:initialComposerRect.top,bottom:initialComposerRect.bottom},arrow,proposed,canApply,beforeField,beforeWrites,fieldAfter,dirty,afterApplyWrites,savedWrites:window.__writes.length,saved:window.__writes[0],chatCount:window.__chatCount,viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,composerRect:{left:miniRect.left,right:miniRect.right,top:miniRect.top,bottom:miniRect.bottom},errors:window.__agentErrors};
+  const result={initialValue,caption,composerVisible:true,localReviewExists,sideAssistantOpen,focusedGroups,sourceRect:{left:sourceRect.left,right:sourceRect.right,top:sourceRect.top,bottom:sourceRect.bottom},initialComposerRect:{left:initialComposerRect.left,right:initialComposerRect.right,top:initialComposerRect.top,bottom:initialComposerRect.bottom},arrow,proposed,canApply,beforeField,beforeWrites,fieldAfter,dirty,afterApplyWrites,savedWrites:window.__writes.length,saved:window.__writes[0],chatCount:window.__chatCount,viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,composerRect:{left:miniRect.left,right:miniRect.right,top:miniRect.top,bottom:miniRect.bottom},errors:window.__agentErrors};
   const pre=document.createElement('pre');pre.id='mini-result';pre.textContent=JSON.stringify(result);document.body.append(pre);
  }catch(error){const pre=document.createElement('pre');pre.id='mini-result';pre.textContent=JSON.stringify({fatal:String(error),note:document.getElementById('te-note')?.textContent,errors:window.__agentErrors,html:document.getElementById('te-inspector-body')?.innerText?.slice(0,150)});document.body.append(pre);}
 })()</script>`;
 const template=file('apps/ecommerce-cms-agentsam/frontend/static/theme-editor.html')
- .replace('<script src="/admin/js/shell.js"></script>',shim)
+ .replace('<script src="/admin/js/shell.js"></script>',shim+'<script src="/admin/js/agentsam.js"></script>')
  .replace('</body>',probe+'</body>');
 const assets={
+ '/admin/js/agentsam.js':'apps/ecommerce-cms-agentsam/frontend/static/js/agentsam.js',
  '/admin/js/pages-shared.js':'apps/ecommerce-cms-agentsam/frontend/static/js/pages-shared.js',
  '/admin/js/portable-sections.js':'packages/theme-contract/runtime/portable-sections.js',
  '/admin/js/theme-preview-registry.js':'packages/theme-contract/runtime/theme-preview-registry.js',
@@ -114,6 +120,9 @@ try{
  assert.match(result.caption,/hero.*headline/i);
  assert.equal(result.proposed,message);
  assert.equal(result.canApply,true);
+ assert.equal(result.localReviewExists,false,'Theme inspector must not render a second proposal composer');
+ assert.equal(result.sideAssistantOpen,true,'miniAgentSam proposal must open in the AgentSam Side Assistant');
+ assert.deepEqual(result.focusedGroups,['Buttons and links'],'CTA selection should show CTA/link controls without unrelated Media fields');
  assert.equal(result.beforeWrites,0);
  assert.equal(result.afterApplyWrites,0,'Only Save may persist a draft');
  assert.equal(result.beforeField,result.initialValue);
@@ -124,6 +133,6 @@ try{
  assert.deepEqual(result.errors,[]);
  assert.ok(result.documentWidth<=result.viewport+2,'Editor must fit viewport without horizontal overflow');
  assert.ok(result.composerRect.left>=0 && result.composerRect.right<=result.viewport+2,'Composer must stay inside viewport');
- console.log('PASS '+width+'px: selected CMS headline → miniAgentSam proposal → approve locally → explicit Save, no publish');
+ console.log('PASS '+width+'px: selected CMS headline → miniAgentSam → Side Assistant proposal → approve locally → explicit Save, no publish');
  }
 }finally{server.close()}

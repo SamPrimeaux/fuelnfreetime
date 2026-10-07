@@ -2,6 +2,8 @@
 
 Portable, framework-neutral AgentSam interaction UI for browser hosts.
 
+This package does **not** own the full AgentSam Chat/Work application or the persistent AgentSam Side Assistant. miniAgentSam is a separate dashboard-wide contextual composer that may hand context/results into those larger surfaces.
+
 The package owns:
 - contextual resource selection feedback and positioning
 - the compact miniAgentSam composer

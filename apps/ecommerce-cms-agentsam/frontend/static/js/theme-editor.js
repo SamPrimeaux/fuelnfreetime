@@ -136,7 +136,6 @@
           '<aside class="theme-editor-panel">',
             '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><div class="te-inspector-tools"><button type="button" id="te-agent-open" class="te-agent-open" aria-label="Ask miniAgentSam about the selected section">✦ Ask AgentSam</button><span class="te-badge" id="te-section-status">draft</span></div></div>',
             '<div class="te-inspector-body" id="te-inspector-body"></div>',
-            '<section class="te-agent-review" id="te-agent-review" aria-label="AgentSam proposed change" hidden><div class="te-agent-review__head"><strong>✦ miniAgentSam · proposal</strong><button type="button" id="te-agent-discard" aria-label="Discard AgentSam proposal">×</button></div><p id="te-agent-review-note">Review before applying. Nothing is saved automatically.</p><textarea id="te-agent-proposal" rows="4" aria-label="Review proposed AgentSam text"></textarea><div class="te-agent-review__actions"><button type="button" id="te-agent-copy">Copy</button><button type="button" id="te-agent-apply">Apply to draft</button></div></section>',
             '<div class="te-inspector-save"><button type="button" class="te-toolbar-btn is-primary" id="te-save">Save draft</button><p class="te-note" id="te-note"></p></div>',
           '</aside>',
         '</div>',
@@ -781,9 +780,19 @@
       media: 'Use the existing media library or upload a file.',
       links: 'Choose where visitors go when they click.'
     };
-    let html = Object.keys(groups).filter(function(kind) {
+    let visibleKinds = Object.keys(groups).filter(function(kind) {
       return groups[kind].length > 0;
-    }).map(function(kind) {
+    });
+    const focusedField = activeFieldKey ? fieldByKey(activeFieldKey) : null;
+    if (focusedField && currentSchema().some(function(field) { return field.key === focusedField.key; })) {
+      const focusedKind = fieldKind(focusedField);
+      const focusedSemanticKey = String(focusedField.blockRelativeKey || focusedField.key);
+      const focusedGroup = focusedKind === 'content' && /cta|button|linkLabel|action/i.test(focusedSemanticKey)
+        ? 'links'
+        : focusedKind;
+      if (groups[focusedGroup]?.length) visibleKinds = [focusedGroup];
+    }
+    let html = visibleKinds.map(function(kind) {
       return '<section class="te-inspector-group" aria-label="' + titles[kind] + '">' +
         '<div class="te-inspector-group__head"><h3>' + titles[kind] + '</h3><p>' + descriptions[kind] + '</p></div>' +
         groups[kind].map(function(field) { return renderField(section, field); }).join('') +
@@ -1373,21 +1382,55 @@
 
   function presentAgentProposal(proposal) {
     pendingAgentProposal = proposal;
-    const panel = byId('te-agent-review');
     const isEditable = mayApplyAgentText(proposal.selection);
-    byId('te-agent-proposal').value = proposal.text;
-    byId('te-agent-review-note').textContent = isEditable
-      ? 'Proposed field text. Review or adjust it, then explicitly apply to the unsaved CMS draft.'
-      : 'Suggested guidance for the selected section. No changes have been made. Select an editable text field in a CMS draft to request an applicable rewrite.';
-    byId('te-agent-apply').disabled = !isEditable;
-    panel.hidden = false;
-    panel.scrollIntoView({ block: 'nearest' });
+    const field = proposal.selection?.fieldKey ? fieldByKey(proposal.selection.fieldKey) : null;
+    const note = isEditable
+      ? 'Review or adjust this proposal in the Side Assistant. Apply changes the local CMS draft only; Save draft remains explicit.'
+      : 'Review this guidance in the Side Assistant. Nothing has been changed or published.';
+
+    if (typeof window.presentAgentsamProposal !== 'function') {
+      setNote('AgentSam Side Assistant is unavailable on this page.', 'error');
+      return;
+    }
+
+    window.presentAgentsamProposal({
+      source: 'miniAgentSam · proposal',
+      title: field ? 'Proposed ' + humanize(field.blockRelativeKey || field.key) : 'Theme Studio proposal',
+      text: proposal.text,
+      note,
+      context: {
+        page: '/admin/theme-editor',
+        slug,
+        selected_resource: {
+          type: field ? 'cms_field' : 'cms_section',
+          id: proposal.selection.sectionKey,
+          section: proposal.selection.sectionKey,
+          field: proposal.selection.fieldKey || undefined,
+          surface: 'theme-studio',
+        },
+      },
+      onApply: isEditable ? function(value) {
+        if (!pendingAgentProposal || !mayApplyAgentText(pendingAgentProposal.selection)) {
+          setNote('This field changed or is no longer editable. Request a fresh proposal.', 'error');
+          return false;
+        }
+        const target = fieldByKey(pendingAgentProposal.selection.fieldKey);
+        const nextValue = String(value || '').trim();
+        if (!target || !nextValue) {
+          setNote('Proposed text is empty. Nothing was changed.', 'error');
+          return false;
+        }
+        setFieldValue(target, nextValue);
+        pendingAgentProposal = null;
+        renderInspector();
+        setNote('AgentSam proposal applied locally. Review the preview and choose Save draft when ready.', 'success');
+        return true;
+      } : undefined,
+    });
   }
 
   function closeAgentProposal() {
     pendingAgentProposal = null;
-    const panel = byId('te-agent-review');
-    if (panel) panel.hidden = true;
   }
 
   async function openMiniAgentSam() {
@@ -2115,26 +2158,6 @@
   byId('te-agent-open').addEventListener('click', function() {
     if (!miniAnchor?.element?.isConnected) setMiniAnchor(byId('te-agent-open'));
     void openMiniAgentSam();
-  });
-  byId('te-agent-discard').addEventListener('click', closeAgentProposal);
-  byId('te-agent-copy').addEventListener('click', function() {
-    if (!pendingAgentProposal) return;
-    navigator.clipboard?.writeText(byId('te-agent-proposal').value).catch(function() {
-      setNote('Copy is unavailable in this browser.', 'error');
-    });
-  });
-  byId('te-agent-apply').addEventListener('click', function() {
-    if (!pendingAgentProposal || !mayApplyAgentText(pendingAgentProposal.selection)) {
-      setNote('This field changed or is not editable. Select the field and request a new proposal.', 'error');
-      return;
-    }
-    const field = fieldByKey(pendingAgentProposal.selection.fieldKey);
-    const value = byId('te-agent-proposal').value.trim();
-    if (!field || !value) { setNote('Proposed text is empty. Nothing was changed.', 'error'); return; }
-    setFieldValue(field, value);
-    closeAgentProposal();
-    renderInspector();
-    setNote('AgentSam proposal applied locally. Review the preview and choose Save draft when ready.', 'success');
   });
   byId('te-save').addEventListener('click', saveDraft);
   byId('te-publish').addEventListener('click', publishPage);

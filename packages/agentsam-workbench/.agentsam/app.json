@@ -4,7 +4,9 @@
   "name": "AgentSam Workbench",
   "role": "embedded-package",
   "package": "@inneranimalmedia/agentsam-workbench",
-  "modes": ["embedded"],
+  "modes": [
+    "embedded"
+  ],
   "surfaces": [
     "mini-composer",
     "resource-inspector",
@@ -31,5 +33,5 @@
     "browser": "ready",
     "framework": "agnostic"
   },
-  "notes": "Portable browser workbench. Hosts own resource discovery, authorization and transport; this package owns contextual selection UI, positioning, composer interaction, attachments and capability selection."
+  "notes": "Portable browser interaction kit for contextual miniAgentSam and reusable workbench primitives. Hosts own resource discovery, authorization and transport. This package does not own the full AgentSam Chat/Work application or the persistent AgentSam Side Assistant."
 }

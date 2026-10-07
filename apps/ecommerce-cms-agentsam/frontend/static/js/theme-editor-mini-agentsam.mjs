@@ -45,6 +45,9 @@ export function createThemeEditorMiniAgentSam({ onProposal }) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || `AgentSam request failed (${res.status})`);
       if (!data.reply) throw new Error('AgentSam returned no reviewable proposal.');
+      if (/temporary issue reaching the AI models|could not reach Workers AI|couldn't complete that request right now/i.test(data.reply)) {
+        throw new Error(data.reply);
+      }
       if (data.conversation_id) conversations.set(conversationKey, data.conversation_id);
       return { ...data, selection: resource };
     },
