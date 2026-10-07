@@ -735,9 +735,7 @@ async function rewriteSectionOrder(env, pageId, orderedKeys) {
     // Keep the canonical D1 presentation order aligned for installed instances.
     await env.DB.prepare(`UPDATE cms_page_sections SET sort_order=?,updated_at=datetime('now')
       WHERE legacy_section_id=(SELECT id FROM page_sections WHERE page_id=? AND section_key=?)`)
-      .bind(order,pageId,key).run().catch((error)=>{
-        if (!/no such table: cms_page_sections/i.test(error.message||"")) throw error;
-      });
+      .bind(order,pageId,key).run();
     order += 10;
   }
 }
@@ -1169,15 +1167,11 @@ export async function publishPage(env, slug) {
   if (snapshot) {
     await env.DB.prepare(`UPDATE cms_page_sections SET status='published',updated_at=datetime('now')
       WHERE legacy_section_id IN (SELECT id FROM page_sections WHERE page_id=? AND status!='removed')`)
-      .bind(page.id).run().catch((error)=>{
-        if (!/no such table: cms_page_sections/i.test(error.message||"")) throw error;
-      });
+      .bind(page.id).run();
     await env.DB.prepare(`UPDATE cms_pages SET status='published',updated_at=datetime('now')
       WHERE id IN (SELECT page_id FROM cms_page_sections
         WHERE legacy_section_id IN (SELECT id FROM page_sections WHERE page_id=?))`)
-      .bind(page.id).run().catch((error)=>{
-        if (!/no such table: cms_pages/i.test(error.message||"")) throw error;
-      });
+      .bind(page.id).run();
   }
   return { ok: true, published_at: snapshot?.updated_at || null };
 }
