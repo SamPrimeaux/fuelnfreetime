@@ -65,7 +65,9 @@ test("theme editor is the visual editor and page edit is presented as page setti
   assert.doesNotMatch(themeEditor, /Full editor/);
   assert.doesNotMatch(themeEditor, /te-full-editor/);
   assert.match(themeEditor, /Draft theme preview|Theme preview</);
-  assert.match(themeEditor, /id="te-theme-trigger"/);
+  assert.match(themeEditor, /id="te-theme-name"/);
+  assert.match(themeEditor, /data-drawer-mode="theme-settings"/);
+  assert.doesNotMatch(themeEditor, /id="te-theme-trigger"/);
   assert.match(themeEditor, />Page settings</);
   assert.match(themeEditor, /Appearance and layout/);
   assert.match(themeEditor, /function renderInspectorGroups/);
