@@ -12,7 +12,8 @@ function fixture() {
     CREATE TABLE page_sections (id INTEGER PRIMARY KEY AUTOINCREMENT,page_id INTEGER REFERENCES pages(id),section_key TEXT NOT NULL,sort_order INTEGER NOT NULL DEFAULT 0,
       content_json TEXT NOT NULL DEFAULT '{}',content_r2_key TEXT,content_version INTEGER NOT NULL DEFAULT 0,content_hash TEXT,status TEXT DEFAULT 'draft',
       updated_at TEXT DEFAULT (datetime('now')),UNIQUE(page_id,section_key));
-    CREATE TABLE cms_pages (id TEXT PRIMARY KEY,account_id TEXT NOT NULL,slug TEXT NOT NULL,UNIQUE(account_id,slug));
+    CREATE TABLE cms_pages (id TEXT PRIMARY KEY,account_id TEXT NOT NULL,slug TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'draft',updated_at TEXT DEFAULT (datetime('now')),UNIQUE(account_id,slug));
     CREATE TABLE cms_artifacts (id TEXT PRIMARY KEY,account_id TEXT NOT NULL,artifact_key TEXT NOT NULL,artifact_type TEXT NOT NULL,version TEXT NOT NULL,
       r2_prefix TEXT NOT NULL,manifest_r2_key TEXT NOT NULL,content_hash TEXT NOT NULL,content_mode TEXT NOT NULL,status TEXT NOT NULL,source_kind TEXT,source_ref TEXT,
       metadata_json TEXT NOT NULL DEFAULT '{}',UNIQUE(account_id,artifact_key,version));
