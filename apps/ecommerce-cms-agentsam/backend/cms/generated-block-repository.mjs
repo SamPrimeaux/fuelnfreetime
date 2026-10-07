@@ -15,7 +15,7 @@ function hashManifest(manifest) {
 function selection(manifest) {
   const generation = (manifest && manifest.generation) || {};
   return {
-    capability: generation.capability || "structured.generate",
+    capability: generation.capability || "code.generate",
     provider: generation.provider || "",
     model: generation.model || "",
     namespace: generation.namespace || "agentsam",
@@ -113,6 +113,13 @@ export function createGeneratedBlockRepository(sql, objects, options = {}) {
     async saveGenerated(input) {
       const picked = selection(input.manifest);
       const canonical = input.manifest && input.manifest.canonical;
+      const definition = input.manifest && input.manifest.definition;
+      const semanticType = String(
+        (definition && definition.type) || input.blockType || input.blockKey || input.blockId || "generated-block"
+      ).trim();
+      if (!/^[a-z][a-z0-9-]{1,63}$/.test(semanticType)) {
+        return { ok: false, status: 422, error: "invalid generated semantic type", written: false };
+      }
       if (canonical) {
         const forms = nsForms(input.blockKey || input.blockId || "block", picked.namespace);
         const resolved = { html: resolveUidToken(canonical.html || "", forms.blockId, picked.namespace), css: resolveUidToken(canonical.css || "", forms.blockId, picked.namespace), js: resolveUidToken(canonical.js || "", forms.blockId, picked.namespace) };
@@ -139,9 +146,9 @@ export function createGeneratedBlockRepository(sql, objects, options = {}) {
       const blockId = input.blockId || ("cmsb_" + hash16);
       try {
         await sql.batch([
-          { sql: "INSERT INTO " + TABLES.artifacts + " (id, account_id, artifact_key, version, artifact_type, source_kind, content_hash, content_r2_key, metadata_json) VALUES (?, ?, ?, '1', 'block', 'generator', ?, ?, ?) ON CONFLICT(account_id, artifact_key, version) DO UPDATE SET metadata_json = excluded.metadata_json", params: ["cmsa_" + hash16, input.accountId, "block/" + hash16, digest, key, JSON.stringify(provenance)] },
-          { sql: "INSERT INTO " + TABLES.blocks + " (id, account_id, section_id, parent_block_id, block_key, block_type, sort_order, status, content_json, artifact_id) VALUES (?, ?, ?, ?, ?, 'custom', ?, 'active', ?, ?) ON CONFLICT(section_id, block_key) DO UPDATE SET content_json = excluded.content_json, artifact_id = excluded.artifact_id, parent_block_id = excluded.parent_block_id, updated_at = datetime('now')", params: [blockId, input.accountId, input.sectionId, input.parentBlockId || null, input.blockKey || blockId, input.index || 0, JSON.stringify(input.settingsValues || {}), "cmsa_" + hash16] },
-          { sql: "INSERT INTO " + TABLES.revisions + " (account_id, entity_type, entity_id, revision_number, revision_kind, content_hash, snapshot_json, metadata_json) SELECT ?, 'block', ?, COALESCE(MAX(revision_number), 0) + 1, 'draft', ?, ?, ? FROM " + TABLES.revisions + " WHERE account_id = ? AND entity_type = 'block'", params: [input.accountId, blockId, digest, JSON.stringify({ artifactId: "cmsa_" + hash16, settings: input.settingsValues || {}, canonical }), JSON.stringify(provenance), input.accountId] },
+          { sql: "INSERT INTO " + TABLES.artifacts + " (id, account_id, artifact_key, artifact_type, version, r2_prefix, manifest_r2_key, content_hash, content_mode, status, source_kind, source_ref, metadata_json) VALUES (?, ?, ?, 'embed', '1', ?, ?, ?, 'component', 'ready', 'generator', ?, ?) ON CONFLICT(account_id, artifact_key, version) DO UPDATE SET manifest_r2_key = excluded.manifest_r2_key, content_hash = excluded.content_hash, source_ref = excluded.source_ref, metadata_json = excluded.metadata_json", params: ["cmsa_" + hash16, input.accountId, "block/" + hash16, "cms/artifacts/block/" + hash16 + "/", key, digest, picked.capability, JSON.stringify(provenance)] },
+          { sql: "INSERT INTO " + TABLES.blocks + " (id, account_id, section_id, parent_block_id, block_key, block_type, sort_order, status, content_json, artifact_id, metadata_json) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?) ON CONFLICT(section_id, block_key) DO UPDATE SET block_type = excluded.block_type, content_json = excluded.content_json, artifact_id = excluded.artifact_id, metadata_json = excluded.metadata_json, parent_block_id = excluded.parent_block_id, updated_at = datetime('now')", params: [blockId, input.accountId, input.sectionId, input.parentBlockId || null, input.blockKey || blockId, semanticType, input.index || 0, JSON.stringify(input.settingsValues || {}), "cmsa_" + hash16, JSON.stringify({ generated: true, definition: definition || { type: semanticType }, provenance })] },
+          { sql: "INSERT INTO " + TABLES.revisions + " (account_id, entity_type, entity_id, revision_number, revision_kind, content_hash, snapshot_json, metadata_json) SELECT ?, 'block', ?, COALESCE(MAX(revision_number), 0) + 1, 'draft', ?, ?, ? FROM " + TABLES.revisions + " WHERE account_id = ? AND entity_type = 'block' AND entity_id = ?", params: [input.accountId, blockId, digest, JSON.stringify({ artifactId: "cmsa_" + hash16, settings: input.settingsValues || {}, canonical }), JSON.stringify(provenance), input.accountId, blockId] },
         ]);
       } catch (error) {
         return { ok: false, status: 500, error: error.message, orphan: key };
@@ -199,9 +206,10 @@ export function createGeneratedBlockRepository(sql, objects, options = {}) {
       const rows = await this.loadBlockTree(accountId, sectionId);
       const output = [];
       for (const row of rows) {
-        if (row.block_type !== "custom" || !row.artifact_id) continue;
-        const artifact = await sql.first("SELECT content_r2_key FROM " + TABLES.artifacts + " WHERE id = ? AND account_id = ?", [row.artifact_id, accountId]);
-        const raw = await objects.get(artifact.content_r2_key);
+        if (!row.artifact_id) continue;
+        const artifact = await sql.first("SELECT manifest_r2_key FROM " + TABLES.artifacts + " WHERE id = ? AND account_id = ?", [row.artifact_id, accountId]);
+        if (!artifact?.manifest_r2_key) return { ok: false, error: "artifact manifest missing" };
+        const raw = await objects.get(artifact.manifest_r2_key);
         const canonical = JSON.parse(raw);
         const resolved = {
           html: resolveUidToken(canonical.html || "", row.block_key),

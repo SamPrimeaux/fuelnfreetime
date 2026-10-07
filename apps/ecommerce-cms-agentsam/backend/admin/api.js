@@ -96,6 +96,8 @@ import { handleDiscountsApi } from "./discounts.js";
 import { handleCompletefulAdminApi } from "./completeful.js";
 import { handleProductStudioAdminApi } from "./product-studio.js";
 import { getBrandWorkspace, patchBrandWorkspace, searchBrandAssets } from "./brand.js";
+import { handleGenerateBlockRequest } from "./generate-block-stream.js";
+import { handleWorkersAiCodeProvider } from "./code-provider-workers-ai.js";
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -897,8 +899,11 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
     return handleCompletefulAdminApi(request, env, url);
   }
 
+  if (path === "/api/admin/agentsam/providers/workers-ai/code" && method === "POST") {
+    return handleWorkersAiCodeProvider(request, env, user);
+  }
   if (path === "/api/admin/agentsam/generate-block" && method === "POST") {
-    return generateBlockStream(request);
+    return handleGenerateBlockRequest(request);
   }
   if (path === "/api/admin/agentsam/chat" && method === "POST") {
     return agentsamChat(request, env, executionCtx);
