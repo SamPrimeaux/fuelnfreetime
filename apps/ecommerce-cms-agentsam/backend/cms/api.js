@@ -732,6 +732,12 @@ async function rewriteSectionOrder(env, pageId, orderedKeys) {
     await env.DB.prepare(
       `UPDATE page_sections SET sort_order = ?, updated_at = datetime('now') WHERE page_id = ? AND section_key = ?`
     ).bind(order, pageId, key).run();
+    // Keep the canonical D1 presentation order aligned for installed instances.
+    await env.DB.prepare(`UPDATE cms_page_sections SET sort_order=?,updated_at=datetime('now')
+      WHERE legacy_section_id=(SELECT id FROM page_sections WHERE page_id=? AND section_key=?)`)
+      .bind(order,pageId,key).run().catch((error)=>{
+        if (!/no such table: cms_page_sections/i.test(error.message||"")) throw error;
+      });
     order += 10;
   }
 }
@@ -823,7 +829,18 @@ export async function duplicateSection(env, slug, sectionKey, body = {}) {
   const source = await sectionContentForRow(env, slug, sourceRow);
   const portable = source.__editor?.templateKey === "portable" ? PORTABLE.get(source.__editor?.themePreset) : null;
   const templateKey = portable ? "portable" : (source.__editor?.templateKey || (PAGE_REGISTRY[slug]?.sections?.[sectionKey] ? sectionKey : null));
-  if (!templateKey || (!portable && !PAGE_REGISTRY[slug]?.sections?.[templateKey])) {
+  const generated = source.__editor?.generated === true;
+  let canonicalSource = null;
+  if (generated) {
+    canonicalSource = await env.DB.prepare(`SELECT s.account_id,s.page_id FROM cms_page_sections s
+      JOIN cms_pages p ON p.id=s.page_id AND p.account_id=s.account_id
+      WHERE s.legacy_section_id=? AND p.slug=?`).bind(sourceRow.id,slug).first();
+    if (!canonicalSource) return {error:"Canonical generated section is missing",status:409};
+    const verified = await env.DB.prepare("SELECT id FROM cms_artifacts WHERE id=? AND account_id=? AND status='ready'")
+      .bind(source.__editor.artifactId,canonicalSource.account_id).first();
+    if (!verified) return {error:"Generated implementation is not available",status:409};
+  }
+  if (!templateKey || (!generated && !portable && !PAGE_REGISTRY[slug]?.sections?.[templateKey])) {
     return { error: "Section template is not registered", status: 409 };
   }
 
@@ -837,6 +854,17 @@ export async function duplicateSection(env, slug, sectionKey, body = {}) {
 
   const saved = await persistSectionDraft(env, slug, page.id, newKey, content, Number(sourceRow.sort_order || 0) + 5);
   if (saved.error) return saved;
+  if (generated) {
+    const created=await env.DB.prepare("SELECT id FROM page_sections WHERE page_id=? AND section_key=?")
+      .bind(page.id,newKey).first();
+    await env.DB.prepare(`INSERT INTO cms_page_sections
+      (account_id,page_id,legacy_section_id,section_key,section_type,sort_order,status,content_r2_key,content_version,content_hash,metadata_json)
+      VALUES (?,?,?,?,?,?,'draft',?,?,?,?)`)
+      .bind(canonicalSource.account_id,canonicalSource.page_id,created.id,newKey,templateKey,
+        Number(sourceRow.sort_order||0)+5,saved.key,saved.version,saved.content_hash,
+        JSON.stringify({artifactId:source.__editor.artifactId,definitionKey:templateKey})).run();
+    await syncGeneratedRevision(env,slug,newKey,content,saved,{duplicatedFrom:sectionKey});
+  }
   const activeKeys = (await orderedSectionRows(env, page.id))
     .filter((row) => row.status !== "removed")
     .map((row) => row.section_key);
@@ -886,7 +914,9 @@ export async function setSectionVisibility(env, slug, sectionKey, body = {}) {
       enabled: body.enabled !== false,
     },
   };
-  await persistSectionDraft(env, slug, page.id, sectionKey, content, row.sort_order);
+  const saved=await persistSectionDraft(env, slug, page.id, sectionKey, content, row.sort_order);
+  if (saved.error) return saved;
+  if (content.__editor?.generated) await syncGeneratedRevision(env,slug,sectionKey,content,saved);
   await markPageDraft(env, page.id, slug);
 
   return { ok: true, section_key: sectionKey, enabled: body.enabled !== false };
@@ -906,10 +936,16 @@ export async function removeSection(env, slug, sectionKey) {
     removed: true,
     visibility: { ...(content.__editor?.visibility || {}), enabled: false },
   };
-  await persistSectionDraft(env, slug, page.id, sectionKey, content, row.sort_order);
+  const saved=await persistSectionDraft(env, slug, page.id, sectionKey, content, row.sort_order);
+  if (saved.error) return saved;
+  if (content.__editor?.generated) await syncGeneratedRevision(env,slug,sectionKey,content,saved,{removed:true});
   await env.DB.prepare(
     `UPDATE page_sections SET status = 'removed', updated_at = datetime('now') WHERE page_id = ? AND section_key = ?`
   ).bind(page.id, sectionKey).run();
+  if (content.__editor?.generated) {
+    await env.DB.prepare(`UPDATE cms_page_sections SET status='removed' WHERE legacy_section_id=?`)
+      .bind(row.id).run();
+  }
   await markPageDraft(env, page.id, slug);
 
   return { ok: true, section_key: sectionKey, removed: true };
@@ -1130,6 +1166,19 @@ export async function publishPage(env, slug) {
     .run();
 
   const snapshot = await writePublishedSnapshot(env, slug);
+  if (snapshot) {
+    await env.DB.prepare(`UPDATE cms_page_sections SET status='published',updated_at=datetime('now')
+      WHERE legacy_section_id IN (SELECT id FROM page_sections WHERE page_id=? AND status!='removed')`)
+      .bind(page.id).run().catch((error)=>{
+        if (!/no such table: cms_page_sections/i.test(error.message||"")) throw error;
+      });
+    await env.DB.prepare(`UPDATE cms_pages SET status='published',updated_at=datetime('now')
+      WHERE id IN (SELECT page_id FROM cms_page_sections
+        WHERE legacy_section_id IN (SELECT id FROM page_sections WHERE page_id=?))`)
+      .bind(page.id).run().catch((error)=>{
+        if (!/no such table: cms_pages/i.test(error.message||"")) throw error;
+      });
+  }
   return { ok: true, published_at: snapshot?.updated_at || null };
 }
 
