@@ -46,7 +46,9 @@ export function inspectGeneratedSection(record, sectionKey = "preview-section") 
       /(?:javascript:|data:|vbscript:)/i.test(html)) {
     return { error:"Unsafe generated markup", status:422 };
   }
-  let cleaned = html.replace(TAG, (full, tag, raw) => {
+  let cleaned;
+  try {
+    cleaned = html.replace(TAG, (full, tag, raw) => {
     if (!SAFE_TAGS.has(tag)) throw new Error("Unsupported generated HTML element: " + tag);
     if (full.startsWith("</")) return "";
     const matched = raw.replace(/\s+([\w-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g, (_,key,a,b) => {
@@ -59,7 +61,10 @@ export function inspectGeneratedSection(record, sectionKey = "preview-section") 
     }).replace(/\s|\//g,"");
     if (matched) throw new Error("Malformed generated markup attributes");
     return "";
-  });
+    });
+  } catch (error) {
+    return { error:error.message || "Unsafe generated markup",status:422 };
+  }
   if (cleaned.includes("<") || cleaned.includes(">")) return { error:"Invalid generated HTML", status:422 };
   if (!html.includes('data-agentsam-block="__UID__"')) return { error:"Missing section scope", status:422 };
   for (const key of Object.keys(fields)) {
