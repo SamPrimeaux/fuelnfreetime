@@ -57,8 +57,19 @@ export function createGenerationFlow(regions) {
       insertGeneratingNode(regions.tree);
       regions.panel.hidden = false;
       regions.panel.setAttribute("data-panel-state", "request");
-      regions.panel.innerHTML = '<label>Request</label><textarea data-request-box="true">' + state.request + '</textarea><button type="button" data-send-request="true">Send</button>';
-      regions.panel.querySelector("[data-send-request]").addEventListener("click", () => this.send());
+      regions.panel.replaceChildren();
+      const doc = regions.panel.ownerDocument;
+      const label = doc.createElement("label");
+      label.textContent = "Request";
+      const box = doc.createElement("textarea");
+      box.setAttribute("data-request-box", "true");
+      box.value = state.request;
+      const send = doc.createElement("button");
+      send.type = "button";
+      send.setAttribute("data-send-request", "true");
+      send.textContent = "Send";
+      send.addEventListener("click", () => this.send());
+      regions.panel.append(label, box, send);
     },
     send() {
       state.request = regions.panel.querySelector("[data-request-box]").value;
@@ -66,7 +77,19 @@ export function createGenerationFlow(regions) {
       state.calls += 1;
       regions.panel.setAttribute("data-panel-state", "generating");
       regions.panel.setAttribute("data-surface", "left");
-      regions.panel.innerHTML = '<div class="te-phase" aria-live="polite">Making layout responsive<button type="button" data-stop="true">Stop</button></div><miniagentsam-codepreview data-lines="13"></miniagentsam-codepreview>';
+      regions.panel.replaceChildren();
+      const doc = regions.panel.ownerDocument;
+      const phase = doc.createElement("div");
+      phase.className = "te-phase";
+      phase.setAttribute("aria-live", "polite");
+      phase.textContent = "Making layout responsive";
+      const stop = doc.createElement("button");
+      stop.type = "button";
+      stop.setAttribute("data-stop", "true");
+      stop.textContent = "Stop";
+      const preview = doc.createElement("miniagentsam-codepreview");
+      preview.setAttribute("data-lines", "13");
+      regions.panel.append(phase, stop, preview);
     },
     complete(settings, provenance) {
       state.generating = false;
@@ -74,12 +97,22 @@ export function createGenerationFlow(regions) {
       regions.panel.setAttribute("data-panel-state", "settings");
       const card = renderProvenanceCard(provenance, false);
       renderGeneratedSettings(regions.inspector, settings);
-      const cardNode = regions.inspector.ownerDocument.createElement('details');
-      cardNode.setAttribute('data-ai-generated', 'true');
-      cardNode.innerHTML = '<summary>' + card.title + '</summary><p>' + card.prompt + '</p>';
-      const follow = regions.inspector.ownerDocument.createElement('form');
-      follow.setAttribute('data-followup', 'true');
-      follow.innerHTML = '<input data-followup-input="true" /><button type="submit">Send</button>';
+      const doc = regions.inspector.ownerDocument;
+      const cardNode = doc.createElement("details");
+      cardNode.setAttribute("data-ai-generated", "true");
+      const summary = doc.createElement("summary");
+      summary.textContent = card.title;
+      const prompt = doc.createElement("p");
+      prompt.textContent = card.prompt;
+      cardNode.append(summary, prompt);
+      const follow = doc.createElement("form");
+      follow.setAttribute("data-followup", "true");
+      const followInput = doc.createElement("input");
+      followInput.setAttribute("data-followup-input", "true");
+      const followSend = doc.createElement("button");
+      followSend.type = "submit";
+      followSend.textContent = "Send";
+      follow.append(followInput, followSend);
       regions.inspector.prepend(cardNode);
       regions.inspector.appendChild(follow);
       bindGeneratedSettings(regions.inspector, regions.wrapper, null);

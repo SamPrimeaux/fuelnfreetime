@@ -46,3 +46,39 @@ test("request stays editable and nothing generates before send", () => {
   assert.equal(document.querySelector("#te-inspector-body [data-ai-generated]") !== null, true);
   assert.equal(document.querySelector("#te-inspector-body [data-followup]") !== null, true);
 });
+
+import { readFileSync } from "node:fs";
+
+test("a hostile request renders as text and creates no img element", () => {
+  const document = page();
+  const hostile = '<img src=x onerror=alert(1)>';
+  const flow = createGenerationFlow({
+    assistant: document.querySelector("#agentsam-dock"),
+    messages: document.querySelector("#agentsam-messages"),
+    tree: document.querySelector("#te-tree"),
+    panel: document.querySelector("#te-block-panel"),
+    inspector: document.querySelector("#te-inspector-body"),
+    wrapper: document.querySelector("[data-agentsam-block]"),
+  });
+  flow.handoff(hostile);
+  document.querySelector("[data-action-card]").click();
+  assert.equal(document.querySelector("#te-block-panel img"), null);
+  assert.equal(document.querySelector("[data-request-box]").value, hostile);
+  flow.complete({}, { prompt: hostile, title: hostile });
+  assert.equal(document.querySelector("#te-inspector-body img"), null);
+  assert.equal(document.querySelector("[data-ai-generated] p").textContent, hostile);
+});
+
+test("streamed code reaches the real preview element only through textContent", () => {
+  const source = readFileSync(new URL("../frontend/static/js/miniagentsam-codepreview.js", import.meta.url), "utf8");
+  const dom = new JSDOM("<!doctype html><body></body>", { runScripts: "dangerously", url: "https://editor.local/" });
+  dom.window.eval(source);
+  const preview = dom.window.document.createElement("miniagentsam-codepreview");
+  dom.window.document.body.appendChild(preview);
+  preview.appendText("<img src=x onerror=alert(1)>");
+  const pre = preview.shadowRoot.querySelector("pre");
+  assert.equal(pre.querySelector("img"), null);
+  assert.equal(pre.textContent, "<img src=x onerror=alert(1)>");
+  assert.equal(source.includes("this.pre.innerHTML"), false);
+  assert.equal(source.includes("this.pre.textContent"), true);
+});
