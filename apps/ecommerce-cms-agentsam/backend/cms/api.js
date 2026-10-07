@@ -1265,7 +1265,7 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     return json(await warmAllCmsPages(env));
   }
 
-  const generatedMatch = path.match(/^\\/api\\/admin\\/cms\\/pages\\/([a-z0-9-]+)\\/generated-accept$/);
+  const generatedMatch = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/generated-accept$/);
   if (generatedMatch && method === "POST") {
     let body;
     try { body = await request.json(); }
