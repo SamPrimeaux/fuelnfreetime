@@ -41,7 +41,15 @@
     "cloudflare": "requires-owner-provisioning"
   },
   "generation": {
-    "namespace": "agentsam"
+    "namespace": "agentsam",
+    "capabilities": {
+      "create": "code.generate",
+      "edit": "code.edit"
+    },
+    "output_contracts": {
+      "create": "cms.generated-definition.v1",
+      "edit": "cms.generated-patch.v1"
+    }
   },
   "capabilities": {
     "products": true,
@@ -196,16 +204,48 @@
   "notes": "Reusable Ecommerce + CMS application contract. Core admin UI is defined by frontend/admin.surface.json. Bundled Apps are defined by apps/registry.json. Customer brand/data/credentials/resource bindings belong to the host installation.",
   "accounts": {
     "maxDepth": 3,
-    "kinds": ["organization", "reseller", "client"],
-    "roles": ["owner", "admin", "editor", "viewer"],
+    "kinds": [
+      "organization",
+      "reseller",
+      "client"
+    ],
+    "roles": [
+      "owner",
+      "admin",
+      "editor",
+      "viewer"
+    ],
     "plans": {
-      "free": {"entitlements": {"brand.powered_by.visible": true}},
-      "agency": {"entitlements": {"brand.powered_by.visible": false}}
+      "free": {
+        "entitlements": {
+          "brand.powered_by.visible": true
+        }
+      },
+      "agency": {
+        "entitlements": {
+          "brand.powered_by.visible": false
+        }
+      }
     }
   },
   "cms": {
     "blocks": {
       "maxDepth": 2
     }
-  }
+  },
+  "providers": [
+    {
+      "name": "workers-ai",
+      "endpoint": "/api/admin/agentsam/providers/workers-ai/code",
+      "capabilities": [
+        "code.generate",
+        "code.edit"
+      ],
+      "supports": {
+        "structured_output": true,
+        "abort": true
+      },
+      "model_policy": "agentsam_ai:code_generation"
+    }
+  ]
 }

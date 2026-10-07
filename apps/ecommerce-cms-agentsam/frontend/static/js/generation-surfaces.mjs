@@ -54,7 +54,6 @@ export function createGenerationFlow(regions) {
       return card;
     },
     openRequest() {
-      insertGeneratingNode(regions.tree);
       regions.panel.hidden = false;
       regions.panel.setAttribute("data-panel-state", "request");
       regions.panel.replaceChildren();
@@ -73,8 +72,10 @@ export function createGenerationFlow(regions) {
     },
     send() {
       state.request = regions.panel.querySelector("[data-request-box]").value;
+      if (!state.request.trim()) return;
       state.generating = true;
       state.calls += 1;
+      insertGeneratingNode(regions.tree);
       regions.panel.setAttribute("data-panel-state", "generating");
       regions.panel.setAttribute("data-surface", "left");
       regions.panel.replaceChildren();
@@ -90,6 +91,31 @@ export function createGenerationFlow(regions) {
       const preview = doc.createElement("miniagentsam-codepreview");
       preview.setAttribute("data-lines", "13");
       regions.panel.append(phase, stop, preview);
+      const detail = { request: state.request, phase, stop, preview };
+      regions.panel.dispatchEvent(new doc.defaultView.CustomEvent("agentsam-generation-request", {
+        bubbles: true,
+        detail,
+      }));
+      stop.addEventListener("click", () => {
+        regions.panel.dispatchEvent(new doc.defaultView.CustomEvent("agentsam-generation-stop", {
+          bubbles: true,
+        }));
+      });
+      return detail;
+    },
+    fail(message) {
+      state.generating = false;
+      removeGeneratingNode(regions.tree);
+      regions.panel.setAttribute("data-panel-state", "error");
+      const doc = regions.panel.ownerDocument;
+      const error = doc.createElement("p");
+      error.className = "te-generation-error";
+      error.textContent = message || "Generation failed.";
+      const retry = doc.createElement("button");
+      retry.type = "button";
+      retry.textContent = "Edit request";
+      retry.addEventListener("click", () => this.openRequest());
+      regions.panel.replaceChildren(error, retry);
     },
     complete(settings, provenance) {
       state.generating = false;
@@ -115,7 +141,8 @@ export function createGenerationFlow(regions) {
       follow.append(followInput, followSend);
       regions.inspector.prepend(cardNode);
       regions.inspector.appendChild(follow);
-      bindGeneratedSettings(regions.inspector, regions.wrapper, null);
+      const wrapper = typeof regions.wrapper === "function" ? regions.wrapper() : regions.wrapper;
+      if (wrapper) bindGeneratedSettings(regions.inspector, wrapper, null);
     },
   };
 }

@@ -138,7 +138,8 @@
     "db:migrate:cms-block-integrity": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-cms-block-integrity-20261007.sql",
     "db:verify:cms-artifacts-block-system": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/verify-cms-artifacts-block-system-20261007.sql",
     "db:cms:local-schema": "sh -c 'sqlite3 \"${CMS_SQLITE_PATH:-.agentsam/data/agentsam.sqlite}\" < db/schema/cms.sql'",
-    "db:seed:repository-contract:cms-artifacts-block-system": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/seed-repository-contract-cms-artifacts-block-system-20261007.sql"
+    "db:seed:repository-contract:cms-artifacts-block-system": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/seed-repository-contract-cms-artifacts-block-system-20261007.sql",
+    "db:migrate:agentsam-code-capabilities": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-agentsam-code-capabilities-20261007.sql"
   },
   "devDependencies": {
     "esbuild": "^0.28.1",

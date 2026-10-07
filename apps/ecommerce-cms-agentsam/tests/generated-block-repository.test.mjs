@@ -149,3 +149,25 @@ test("generated artifacts use the canonical manifest pointer contract", async ()
     source_kind: "generator",
   });
 });
+
+
+test("artifact-backed generated blocks persist their semantic type instead of custom", async () => {
+  const db = openDb();
+  const { store } = repo(db);
+  const saved = await store.saveGenerated({
+    accountId: "acct-a",
+    sectionId: "section-a",
+    blockId: "proof",
+    blockKey: "proof",
+    manifest: {
+      definition: { kind: "block", type: "testimonial-carousel", label: "Testimonial carousel" },
+      canonical: canonical("proof"),
+    },
+  });
+  assert.equal(saved.ok, true);
+  const row = db.prepare("SELECT block_type, metadata_json FROM cms_section_blocks WHERE id = ?").get("proof");
+  assert.equal(row.block_type, "testimonial-carousel");
+  const metadata = JSON.parse(row.metadata_json);
+  assert.equal(metadata.generated, true);
+  assert.equal(metadata.definition.type, "testimonial-carousel");
+});

@@ -147,14 +147,8 @@ export function createGenerationSession(options) {
       return options.lock.run(options.id, async () => {
         try {
           const transport = options.transport;
-          const response = await transport({
-            signal: controller.signal,
-            promptPrefix: GENERATION_PROMPT_PREFIX,
-            model: options.model || "",
-          });
-          const chunks = response && response.chunks ? response.chunks : [];
-          for (const chunk of chunks) {
-            if (aborted) break;
+          const consumeChunk = (chunk) => {
+            if (aborted) return;
             for (const event of parser.push(chunk)) {
               if (event.phase) {
                 phases.push(event.phase);
@@ -162,7 +156,16 @@ export function createGenerationSession(options) {
               }
               if (event.text) sink.append(resolver.push(event.text));
             }
-          }
+          };
+          const response = await transport({
+            signal: controller.signal,
+            promptPrefix: GENERATION_PROMPT_PREFIX,
+            model: options.model || "",
+            onChunk: consumeChunk,
+            onPhase: options.onPhase,
+          });
+          const chunks = response && response.chunks ? response.chunks : [];
+          for (const chunk of chunks) consumeChunk(chunk);
           sink.append(resolver.flush());
           if (aborted) return { ok: false, aborted: true, record: null, saved: false };
           phases.push(PHASE_LABELS.checking);
@@ -185,7 +188,7 @@ export function createGenerationSession(options) {
           record = {
             blockId: options.blockId,
             canonical: accepted.canonical,
-            provenance: accepted.provenance,
+            provenance: { ...accepted.provenance, ...(response?.provenance || {}) },
             definition: parseGeneratedDefinition(parser.parts.definition, {
               type: options.semanticType,
               label: options.semanticLabel,

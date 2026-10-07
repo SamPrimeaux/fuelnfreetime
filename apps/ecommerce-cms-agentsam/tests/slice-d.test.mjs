@@ -88,3 +88,13 @@ test("provider resolver separates code generation from code editing", async () =
   assert.equal(resolveProvider(manifest, "code.generate").provider, "generator");
   assert.equal(resolveProvider(manifest, "code.edit").provider, "editor");
 });
+
+
+test("app manifest routes generated code by canonical capabilities without a hardcoded model", () => {
+  const manifest = JSON.parse(readFileSync(new URL("../agentsam.app.json", import.meta.url), "utf8"));
+  const provider = manifest.providers?.[0];
+  assert.ok(provider);
+  assert.deepEqual(provider.capabilities, ["code.generate", "code.edit"]);
+  assert.equal(Object.hasOwn(provider, "model"), false);
+  assert.equal(JSON.stringify(manifest).includes("structured.generate"), false);
+});

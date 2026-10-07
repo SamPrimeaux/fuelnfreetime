@@ -1474,6 +1474,42 @@
     }
   }
 
+  function generationSelectionContext() {
+    const section = currentSection();
+    const block = currentBlockMeta();
+    return {
+      page: slug,
+      owner: activeSectionOwner,
+      theme: selectedTheme,
+      section_key: activeSectionKey,
+      section_type: section?.content?.__editor?.templateKey || section?.key || null,
+      block_id: activeBlockId,
+      block_type: block?.templateKey || null,
+      field_key: activeFieldKey,
+    };
+  }
+
+  function generationPreviewWrapper() {
+    let doc;
+    try { doc = byId('theme-preview')?.contentDocument; } catch { return null; }
+    if (!doc || !activeSectionKey) return null;
+    const sectionNode = doc.querySelector(
+      '[data-cms-section="' + CSS.escape(activeSectionKey) + '"], [data-section-id="' + CSS.escape(activeSectionKey) + '"]'
+    );
+    if (!sectionNode) return null;
+    if (activeBlockId) {
+      const blockNode = sectionNode.querySelector('[data-cms-block="' + CSS.escape(activeBlockId) + '"]');
+      if (blockNode) return blockNode.querySelector('[data-agentsam-block]') || blockNode;
+    }
+    return sectionNode.querySelector('[data-agentsam-block]') || sectionNode;
+  }
+
+  function publishGenerationSelection() {
+    document.dispatchEvent(new CustomEvent('theme-editor:selection', {
+      detail: generationSelectionContext(),
+    }));
+  }
+
   function selectSection(sectionKey, fieldKey, scrollPreview, ownerSlug) {
     const section = findSection(sectionKey, ownerSlug);
     if (!section) return;
@@ -1497,6 +1533,7 @@
     }
     highlightPreviewSelection();
     closeAgentProposal();
+    publishGenerationSelection();
     void openMiniAgentSam();
   }
 
@@ -1531,6 +1568,7 @@
     }
     highlightPreviewSelection();
     closeAgentProposal();
+    publishGenerationSelection();
     void openMiniAgentSam();
   }
 
@@ -2363,7 +2401,12 @@
     }).catch(function() { return { ok: false, fatal: false }; });
   }).catch(function() {});
 
-  window.AgentSamEditorGeneration = { beginGenerating: beginGenerating, endGenerating: endGenerating };
+  window.AgentSamEditorGeneration = {
+    beginGenerating: beginGenerating,
+    endGenerating: endGenerating,
+    context: generationSelectionContext,
+    wrapper: generationPreviewWrapper,
+  };
   setDevice(device);
   setEditorDrawer('sections');
   loadThemeIdentity();

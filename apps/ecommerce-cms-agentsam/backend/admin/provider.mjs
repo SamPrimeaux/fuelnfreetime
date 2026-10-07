@@ -7,16 +7,28 @@ export function resolveProvider(manifest, capability = "code.generate") {
     model: match.model || "",
     endpoint: match.endpoint || "",
     capability,
+    supports: match.supports || {},
   };
+}
+
+function resolveEndpoint(endpoint, baseUrl) {
+  if (/^https?:\/\//i.test(String(endpoint || ""))) return String(endpoint);
+  if (!baseUrl) throw new Error("provider base url missing");
+  return new URL(String(endpoint || ""), baseUrl).toString();
 }
 
 export async function generateWithProvider(manifest, request, signal, options = {}) {
   const capability = options.capability || request?.capability || "code.generate";
   const selected = resolveProvider(manifest, capability);
-  const response = await fetch(selected.endpoint, {
+  const endpoint = resolveEndpoint(selected.endpoint, options.baseUrl);
+  const headers = {
+    "content-type": "application/json",
+    ...(options.headers || {}),
+  };
+  const response = await fetch(endpoint, {
     method: "POST",
     signal,
-    headers: { "content-type": "application/json" },
+    headers,
     body: JSON.stringify({
       capability,
       provider: selected.provider,
