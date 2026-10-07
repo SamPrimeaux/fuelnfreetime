@@ -29,14 +29,14 @@ shop.sections = shop.sections.map(s => ({...s,version:1}));
 const site = getRegistryPage("site");
 const pages = {ok:true,pages:[{slug:"shop",title:"Shop",status:"draft",has_live_storefront:true, cms_published:false,draft_exists:true}]};
 const shim = "<script>" +
- "window.__nativeConfirmCount=0;window.confirm=()=>{window.__nativeConfirmCount++;return true;};window.__submitted=null;window.__linked=false;window.__saved=[];" +
+ "window.__nativeConfirmCount=0;window.confirm=()=>{window.__nativeConfirmCount++;return true;};window.__submitted=null;window.__linked=false;window.__saved=[];window.__isNewPage=new URLSearchParams(location.search).get('unseeded')==='1';" +
  "window.renderShell=function(_,html){document.body.insertAdjacentHTML('afterbegin',html);};" +
  "window.adminFetch=async function(url,options){" +
  "if(url.endsWith('/registry'))return " + JSON.stringify(registryForAdmin()) + ";" +
  "if(url.endsWith('/pages/site'))return {page:" + JSON.stringify(site) + "};" +
  "if(url.endsWith('/pages/shop/import-live')){window.__submitted=JSON.parse(options.body);window.__linked=true;return {ok:true,published:false};}" +
  "if(url.endsWith('/pages/shop/sections/hero')&&options?.method==='PUT'){window.__saved.push(JSON.parse(options.body));return {ok:true,version:2,updated_at:'2026-10-07T00:00:00Z'};}" +
- "if(url.endsWith('/pages/shop'))return {seeded:true,page:{...(" + JSON.stringify(shop) + "),content_authority:window.__linked?'cms-draft-linked':'storefront-html'}};" +
+ "if(url.endsWith('/pages/shop'))return {seeded:!window.__isNewPage||window.__linked,page:{...(" + JSON.stringify(shop) + "),content_authority:window.__linked?'cms-draft-linked':'storefront-html'}};" +
  "if(url.endsWith('/pages'))return " + JSON.stringify(pages) + ";" +
  "throw Error('Unexpected API '+url);};</script>";
 
@@ -83,12 +83,15 @@ const probe = "<script>setTimeout(function(){" +
  "noOverflow:document.documentElement.scrollWidth<=window.innerWidth+1};" +
  "}" +
  "before.saveDisabled=document.getElementById('te-save').disabled;" +
+ "if(!window.__isNewPage){" +
  "document.getElementById('te-save').click();before.noImplicitImport=window.__submitted===null;" +
  "document.getElementById('te-import-live').click();" +
  "var review=document.querySelector('.te-review-dialog');" +
  "before.reviewOpened=!!review?.open;before.reviewProtected=window.__submitted===null;" +
  "before.nativeConfirms=window.__nativeConfirmCount;" +
  "review?.querySelector('[data-approve]')?.click();" +
+ "}else{before.autoDraft=window.__linked&&window.__submitted?.mode==='create';" +
+ "before.noReview=!document.querySelector('.te-review-dialog');}" +
  "setTimeout(function(){document.querySelector('[data-select-section=hero]')?.click();" +
  "var field=document.getElementById('te-field-hero-headline');" +
  "if(field){field.value='Private autosave browser proof';field.dispatchEvent(new Event('input',{bubbles:true}));}" +
@@ -123,13 +126,13 @@ await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
 const results=new Map();
 try{
  const url="http://127.0.0.1:"+server.address().port+"/admin/theme-editor?slug=shop";
- for(const width of [1440,1000,744,390]){
+ for(const [width,isNewPage] of [[1440,false],[1000,false],[744,false],[390,false],[1440,true]]){
   const {stdout:dom}=await exec(chrome,["--headless=new","--disable-gpu","--disable-dev-shm-usage","--no-sandbox",
-    "--force-device-scale-factor=1","--virtual-time-budget=7000","--window-size="+width+",1000","--dump-dom",url],
+    "--force-device-scale-factor=1","--virtual-time-budget=7000","--window-size="+width+",1000","--dump-dom",url+(isNewPage?"&unseeded=1":"")],
     {timeout:60000,encoding:"utf8",maxBuffer:1<<22});
   const match=dom.match(/<pre id="browser-result">([^<]+)<\/pre>/);
   assert.ok(match,"Browser did not complete editor test at "+width+"px");
-  results.set(width,JSON.parse(match[1].replaceAll("&quot;",'"').replaceAll("&amp;","&").replaceAll("&lt;","<").replaceAll("&gt;",">")));
+  results.set(isNewPage?"auto":width,JSON.parse(match[1].replaceAll("&quot;",'"').replaceAll("&amp;","&").replaceAll("&lt;","<").replaceAll("&gt;",">")));
  }
 }finally{server.close()}
 const result=results.get(1440);
@@ -171,6 +174,11 @@ assert.equal(result.linked,true);
 assert.ok(result.saved.some(s=>s.content.headline==="Private autosave browser proof"),"Editing a native field should automatically persist a private draft");
 assert.equal(result.saveState,"Saved privately","Autosave should report completion without publishing");
 console.log("PASS: real Shop content enters the CMS editor, then autosaves a private field edit");
+const automaticallyOpened = results.get("auto");
+assert.equal(automaticallyOpened.before.autoDraft,true,"A page with no existing draft should initialize its private revision automatically");
+assert.equal(automaticallyOpened.before.noReview,true,"Creating a new private revision must not ask to replace existing work");
+assert.ok(automaticallyOpened.saved.some(s=>s.content.headline==="Private autosave browser proof"),"Automatically initialized drafts must also support autosave");
+console.log("PASS: an uninitialized live page becomes editable automatically without touching publication");
 
 for(const width of [744,390]){
  const mobile=results.get(width)?.before?.mobile;
