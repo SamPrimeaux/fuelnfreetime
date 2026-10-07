@@ -140,7 +140,7 @@ assert.equal(result.before.visible,true);
 assert.ok(result.before.liveOnly.some(v => /editorial/i.test(v)), "live editorial scene must appear in the tree");
 assert.ok(result.before.liveOnly.some(v => /products/i.test(v)), "live product grid must appear in the tree");
 assert.match(result.before.inspector,/Time is the\s*real horsepower/i);
-assert.equal(result.before.toolbar.theme,"Section library");
+assert.equal(result.before.toolbar.theme,"Theme","Unconfigured theme identity should show its neutral fallback");
 assert.equal(result.before.toolbar.legacyTabs,0);
 assert.equal(result.before.toolbar.themeSettings,true);
 assert.equal(result.before.toolbar.pageVisible,true);
