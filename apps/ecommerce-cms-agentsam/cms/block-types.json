@@ -155,6 +155,18 @@
       ],
       "container": false,
       "notes": "Can begin as migrated inline content and later bind to a commerce collection/media asset."
+    },
+    "editorial-tile": {
+      "family": "commerce-content",
+      "storage": "inline-or-data-binding",
+      "content": [
+        "eyebrow",
+        "headline",
+        "imageUrl",
+        "href"
+      ],
+      "container": false,
+      "notes": "Native editorial collection tile; store product/collection data by resource reference, not copied catalog rows."
     }
   },
   "editorActions": {
