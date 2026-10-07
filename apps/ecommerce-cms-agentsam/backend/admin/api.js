@@ -1005,7 +1005,7 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
     return agentsamSkillGet(env, skillMatch[1], url);
   }
 
-  const cmsResponse = await handleAdminCmsApi(request, env, url);
+  const cmsResponse = await handleAdminCmsApi(request, env, url, { accountId: user.account_id });
   if (cmsResponse) return cmsResponse;
 
   return json({ error: "Not found" }, { status: 404 });

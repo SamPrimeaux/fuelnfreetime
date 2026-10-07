@@ -1,4 +1,5 @@
 import { ROUTE_MANIFEST } from "../lib/route-manifest.js";
+import { attachCmsDefinitions, listCmsDefinitions } from "./definition-registry.mjs";
 import { guardSectionWrite } from "../../frontend/static/js/generation-namespace.mjs";
 import { cmsStorefrontRoutes, resolvePageAuthority } from "./page-authority.js";
 import {
@@ -1156,7 +1157,7 @@ export async function handlePublicCmsApi(request, env, url) {
   );
 }
 
-export async function handleAdminCmsApi(request, env, url) {
+export async function handleAdminCmsApi(request, env, url, context = {}) {
   const path = url.pathname;
   const method = request.method;
 
@@ -1166,7 +1167,29 @@ export async function handleAdminCmsApi(request, env, url) {
   }
 
   if (path === "/api/admin/cms/registry" && method === "GET") {
-    return json(registryForAdmin());
+    // The studio bridge may supply a portable registry without a logged-in
+    // account. In hosted admin, discover only definitions for this session.
+    if (!context.accountId) return json(registryForAdmin());
+    const definitions = await listCmsDefinitions(env, context.accountId, { status: "active" });
+    return json(attachCmsDefinitions(registryForAdmin(), definitions));
+  }
+
+  if (path === "/api/admin/cms/definitions" && method === "GET") {
+    if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
+    const filters = {
+      kind: url.searchParams.get("kind") || undefined,
+      status: url.searchParams.get("status") || "active",
+      key: url.searchParams.get("key") || undefined,
+      version: url.searchParams.get("version") || undefined,
+    };
+    try {
+      return json({ ok: true, definitions: await listCmsDefinitions(env, context.accountId, filters) });
+    } catch (error) {
+      if (/^invalid_definition_/.test(String(error.message))) {
+        return json({ error: error.message }, { status: 400 });
+      }
+      throw error;
+    }
   }
 
   if (path === "/api/admin/cms/bootstrap" && method === "POST") {
