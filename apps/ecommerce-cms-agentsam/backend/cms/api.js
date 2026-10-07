@@ -18,6 +18,7 @@ const PORTABLE = globalThis.ThemePortableSections;
 import {
   draftKey,
   publishedKey,
+  publishedSnapshotKey,
   writeSectionDraft,
   publishSectionToR2,
   loadSectionsFromR2,
@@ -278,8 +279,19 @@ export async function buildPublishedSnapshot(env, slug) {
 export async function writePublishedSnapshot(env, slug) {
   const snapshot = await buildPublishedSnapshot(env, slug);
   if (!snapshot) {
-    await env.CMS_CACHE?.delete(kvKey(slug));
+    // A draft/partial failure must never erase the last published storefront.
     return null;
+  }
+  // Publish the ordered page composition as one R2 manifest. Draft edits may
+  // change D1 section status/order while this immutable public snapshot remains.
+  if (env.WEBSITE_ASSETS) {
+    const key = publishedSnapshotKey(slug);
+    const stored = await writeR2Json(env, key, snapshot);
+    if (!stored) throw new Error("Cannot persist published page snapshot");
+    const check = await readR2Json(env, key);
+    if (!check || JSON.stringify(check) !== JSON.stringify(snapshot)) {
+      throw new Error("Published page snapshot failed R2 read-back");
+    }
   }
   if (env.CMS_CACHE) {
     await env.CMS_CACHE.put(kvKey(slug), JSON.stringify(snapshot), {
@@ -295,14 +307,20 @@ export async function getPublishedPage(env, slug) {
     if (cached?.sections?.length) return { ...cached, source: "kv" };
   }
 
-  const snapshot = await buildPublishedSnapshot(env, slug);
-  if (snapshot) {
-    if (env.CMS_CACHE) {
-      await env.CMS_CACHE.put(kvKey(slug), JSON.stringify(snapshot));
-    }
-    return snapshot;
+  // Cache eviction must not turn a private working revision into a public
+  // outage or leak its reordered/edited D1 rows into the storefront.
+  const durable = await readR2Json(env, publishedSnapshotKey(slug));
+  if (durable?.slug === slug && Array.isArray(durable.sections) && durable.sections.length) {
+    if (env.CMS_CACHE) await env.CMS_CACHE.put(kvKey(slug), JSON.stringify(durable));
+    return { ...durable, source: "r2-manifest" };
   }
 
+  // Compatibility for published pages created before the R2 manifest existed.
+  const snapshot = await buildPublishedSnapshot(env, slug);
+  if (snapshot) {
+    if (env.CMS_CACHE) await env.CMS_CACHE.put(kvKey(slug), JSON.stringify(snapshot));
+    return snapshot;
+  }
   return null;
 }
 

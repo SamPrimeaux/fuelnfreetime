@@ -340,6 +340,11 @@ test("merchant can add Revise/FNF sections, edit, reload draft, and publish one 
 
     const beforePublish = await getPublishedPage(fx.env, "shop");
     assert.ok(beforePublish?.sections?.length >= 3, "Public KV snapshot remains readable during a draft.");
+    await fx.env.CMS_CACHE.delete("cms:page:shop:v1");
+    const recoveredPublication = await getPublishedPage(fx.env, "shop");
+    assert.equal(recoveredPublication.source, "r2-manifest", "R2 must recover public composition after KV eviction");
+    assert.deepEqual(recoveredPublication.sections.map((section) => section.key),
+      original.sections.map((section) => section.key), "Private draft ordering must not leak after cache eviction");
     assert.equal(beforePublish.sections.some(section => section.key === added.section_key), false,
       "Draft sections must not automatically become publicly visible.");
 
