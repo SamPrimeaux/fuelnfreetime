@@ -1713,3 +1713,106 @@ miniagentsam-codepreview { display: block; max-height: 13lh; overflow: auto; -we
 .token-comment { color: var(--te-token-comment); }
 .token-streaming { opacity: 0.55; }
 @media (prefers-reduced-motion: reduce) { miniagentsam-codepreview { scroll-behavior: auto; } }
+
+
+/* Section picker is a real top-layer dialog, not a second scrollbar inside the tree. */
+dialog.te-section-menu {
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  width: min(900px, calc(100vw - 32px));
+  height: min(680px, calc(100dvh - 48px));
+  max-width: none;
+  max-height: none;
+  margin: auto;
+  padding: 22px;
+  border: 1px solid var(--te-border);
+  border-radius: 18px;
+  background: var(--te-panel);
+  color: var(--te-text);
+  box-shadow: 0 28px 90px rgba(0,0,0,.22);
+  grid-template-rows: auto auto minmax(0,1fr);
+  gap: 16px;
+  overflow: hidden;
+}
+dialog.te-section-menu:not([open]), dialog.te-section-menu[hidden] { display: none; }
+dialog.te-section-menu[open] { display: grid; }
+dialog.te-section-menu::backdrop {
+  background: rgba(14, 14, 18, .53);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+dialog.te-section-menu .te-section-menu__head {
+  padding: 0 0 12px;
+  border-bottom: 1px solid var(--te-border);
+  align-items: flex-start;
+}
+dialog.te-section-menu .te-section-menu__head strong {
+  display: block;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -.025em;
+}
+dialog.te-section-menu .te-section-menu__head small {
+  display: block;
+  margin-top: 5px;
+  color: var(--te-muted);
+  font-size: 12px;
+}
+dialog.te-section-menu .te-section-search {
+  min-height: 42px;
+  box-sizing: border-box;
+  margin: 0;
+  font-size: 13px;
+}
+dialog.te-section-menu .te-section-catalog {
+  min-height: 0;
+  max-height: none;
+  margin: 0;
+  padding: 2px 2px 4px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  align-content: start;
+  gap: 10px;
+}
+dialog.te-section-menu .te-section-catalog-item {
+  min-width: 0;
+  min-height: 82px;
+  padding: 13px;
+  border: 1px solid var(--te-border);
+  border-radius: 12px;
+  background: var(--te-panel);
+  transition: border-color .15s ease, background .15s ease;
+}
+dialog.te-section-menu .te-section-catalog-item:hover,
+dialog.te-section-menu .te-section-catalog-item:focus-visible {
+  background: var(--te-soft);
+  border-color: var(--te-accent);
+  outline-offset: 2px;
+}
+dialog.te-section-menu .te-section-catalog-item__icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+}
+dialog.te-section-menu .te-section-catalog-item strong { font-size: 13px; }
+dialog.te-section-menu .te-section-catalog-item small {
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  dialog.te-section-menu {
+    width: calc(100vw - 16px);
+    height: min(760px, calc(100dvh - 24px));
+    padding: 15px;
+    gap: 12px;
+    border-radius: 14px;
+  }
+  dialog.te-section-menu .te-section-catalog { grid-template-columns: minmax(0, 1fr); }
+  dialog.te-section-menu .te-section-catalog-item { min-height: 68px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  dialog.te-section-menu .te-section-catalog-item { transition: none; }
+}

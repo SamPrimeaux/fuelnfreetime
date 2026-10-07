@@ -29,13 +29,14 @@ shop.sections = shop.sections.map(s => ({...s,version:1}));
 const site = getRegistryPage("site");
 const pages = {ok:true,pages:[{slug:"shop",title:"Shop",status:"draft",has_live_storefront:true, cms_published:false,draft_exists:true}]};
 const shim = "<script>" +
- "window.__nativeConfirmCount=0;window.confirm=()=>{window.__nativeConfirmCount++;return true;};window.__submitted=null;window.__linked=false;" +
+ "window.__nativeConfirmCount=0;window.confirm=()=>{window.__nativeConfirmCount++;return true;};window.__submitted=null;window.__linked=false;window.__saved=[];window.__isNewPage=new URLSearchParams(location.search).get('unseeded')==='1';" +
  "window.renderShell=function(_,html){document.body.insertAdjacentHTML('afterbegin',html);};" +
  "window.adminFetch=async function(url,options){" +
  "if(url.endsWith('/registry'))return " + JSON.stringify(registryForAdmin()) + ";" +
  "if(url.endsWith('/pages/site'))return {page:" + JSON.stringify(site) + "};" +
  "if(url.endsWith('/pages/shop/import-live')){window.__submitted=JSON.parse(options.body);window.__linked=true;return {ok:true,published:false};}" +
- "if(url.endsWith('/pages/shop'))return {seeded:true,page:{...(" + JSON.stringify(shop) + "),content_authority:window.__linked?'cms-draft-linked':'storefront-html'}};" +
+ "if(url.endsWith('/pages/shop/sections/hero')&&options?.method==='PUT'){window.__saved.push(JSON.parse(options.body));return {ok:true,version:2,updated_at:'2026-10-07T00:00:00Z'};}" +
+ "if(url.endsWith('/pages/shop'))return {seeded:!window.__isNewPage||window.__linked,page:{...(" + JSON.stringify(shop) + "),content_authority:window.__linked?'cms-draft-linked':'storefront-html'}};" +
  "if(url.endsWith('/pages'))return " + JSON.stringify(pages) + ";" +
  "throw Error('Unexpected API '+url);};</script>";
 
@@ -44,15 +45,20 @@ const probe = "<script>setTimeout(function(){" +
  "var before={src:frame.getAttribute('src'),headline:frame.contentDocument?.querySelector('[data-cms-section=\"hero\"] [data-cms=\"headline\"]')?.textContent," +
  "visible:!document.getElementById('te-import-live').hidden,liveOnly:[...document.querySelectorAll('.te-live-only-row strong')].map(e=>e.textContent)," +
  "inspector:document.getElementById('te-field-hero-headline')?.value};" +
- "var themeTrigger=document.getElementById('te-theme-trigger');" +
+ "var settingsButton=document.querySelector('[data-drawer-mode=\\\"theme-settings\\\"]');" +
  "before.toolbar={theme:document.getElementById('te-theme-name')?.textContent," +
- "themeTrigger:!!themeTrigger,legacyTabs:document.querySelectorAll('#te-tabs,.te-theme-switch').length," +
+ "themeSettings:!!settingsButton,legacyTabs:document.querySelectorAll('#te-tabs,.te-theme-switch').length," +
  "pageVisible:getComputedStyle(document.getElementById('te-page-trigger')).display!=='none'," +
  "noOverflow:document.documentElement.scrollWidth<=window.innerWidth+1};" +
- "themeTrigger?.click();" +
- "before.toolbar.menuOpened=!document.getElementById('te-theme-popover').hidden;" +
+ "settingsButton?.click();" +
+ "before.toolbar.settingsOpened=!document.querySelector('[data-drawer-panel=\\\"theme-settings\\\"]').hidden;" +
  "before.toolbar.options=document.querySelectorAll('[data-theme-preview]').length;" +
- "themeTrigger?.click();" +
+ "document.querySelector('[data-drawer-mode=\\\"sections\\\"]')?.click();" +
+ "document.getElementById('te-add-section')?.click();" +
+ "var catalog=document.getElementById('te-section-menu');" +
+ "before.catalog={modal:!!catalog?.open,cards:catalog?.querySelectorAll('[data-catalog-template]').length||0};" +
+ "document.getElementById('te-section-cancel')?.click();" +
+ "before.catalog.closed=!catalog?.open;" +
  "if(window.innerWidth>900){" +
  "var blockButton=document.querySelector('[data-select-block=card3][data-block-section=collections]');" +
  "if(blockButton){" +
@@ -82,14 +88,22 @@ const probe = "<script>setTimeout(function(){" +
  "noOverflow:document.documentElement.scrollWidth<=window.innerWidth+1};" +
  "}" +
  "before.saveDisabled=document.getElementById('te-save').disabled;" +
+ "if(!window.__isNewPage){" +
  "document.getElementById('te-save').click();before.noImplicitImport=window.__submitted===null;" +
  "document.getElementById('te-import-live').click();" +
  "var review=document.querySelector('.te-review-dialog');" +
  "before.reviewOpened=!!review?.open;before.reviewProtected=window.__submitted===null;" +
  "before.nativeConfirms=window.__nativeConfirmCount;" +
  "review?.querySelector('[data-approve]')?.click();" +
+ "}else{before.autoDraft=window.__linked&&window.__submitted?.mode==='create';" +
+ "before.noReview=!document.querySelector('.te-review-dialog');}" +
+ "setTimeout(function(){document.querySelector('[data-select-section=hero]')?.click();" +
+ "var field=document.getElementById('te-field-hero-headline');" +
+ "if(field){field.value='Private autosave browser proof';field.dispatchEvent(new Event('input',{bubbles:true}));}" +
+ "},300);" +
  "setTimeout(function(){var pre=document.createElement('pre');pre.id='browser-result';" +
- "pre.textContent=JSON.stringify({before,imported:window.__submitted,linked:window.__linked});document.body.append(pre);},550);" +
+ "pre.textContent=JSON.stringify({before,imported:window.__submitted,linked:window.__linked,saved:window.__saved," +
+ "saveState:document.getElementById('te-save-state')?.textContent});document.body.append(pre);},1900);" +
  "},2200)</script>";
 const template = file("apps/ecommerce-cms-agentsam/frontend/static/theme-editor.html")
  .replace('<script src="/admin/js/shell.js"></script>',shim).replace("</body>",probe+"</body>");
@@ -117,13 +131,13 @@ await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
 const results=new Map();
 try{
  const url="http://127.0.0.1:"+server.address().port+"/admin/theme-editor?slug=shop";
- for(const width of [1440,1000,744,390]){
+ for(const [width,isNewPage] of [[1440,false],[1000,false],[744,false],[390,false],[1440,true]]){
   const {stdout:dom}=await exec(chrome,["--headless=new","--disable-gpu","--disable-dev-shm-usage","--no-sandbox",
-    "--force-device-scale-factor=1","--virtual-time-budget=7000","--window-size="+width+",1000","--dump-dom",url],
+    "--force-device-scale-factor=1","--virtual-time-budget=7000","--window-size="+width+",1000","--dump-dom",url+(isNewPage?"&unseeded=1":"")],
     {timeout:60000,encoding:"utf8",maxBuffer:1<<22});
   const match=dom.match(/<pre id="browser-result">([^<]+)<\/pre>/);
   assert.ok(match,"Browser did not complete editor test at "+width+"px");
-  results.set(width,JSON.parse(match[1].replaceAll("&quot;",'"').replaceAll("&amp;","&").replaceAll("&lt;","<").replaceAll("&gt;",">")));
+  results.set(isNewPage?"auto":width,JSON.parse(match[1].replaceAll("&quot;",'"').replaceAll("&amp;","&").replaceAll("&lt;","<").replaceAll("&gt;",">")));
  }
 }finally{server.close()}
 const result=results.get(1440);
@@ -134,13 +148,16 @@ assert.equal(result.before.visible,true);
 assert.ok(result.before.liveOnly.some(v => /editorial/i.test(v)), "live editorial scene must appear in the tree");
 assert.ok(result.before.liveOnly.some(v => /products/i.test(v)), "live product grid must appear in the tree");
 assert.match(result.before.inspector,/Time is the\s*real horsepower/i);
-assert.equal(result.before.toolbar.theme,"Section library");
+assert.equal(result.before.toolbar.theme,"Theme","Unconfigured theme identity should show its neutral fallback");
 assert.equal(result.before.toolbar.legacyTabs,0);
-assert.equal(result.before.toolbar.themeTrigger,true);
+assert.equal(result.before.toolbar.themeSettings,true);
 assert.equal(result.before.toolbar.pageVisible,true);
-assert.equal(result.before.toolbar.menuOpened,true);
+assert.equal(result.before.toolbar.settingsOpened,true);
 assert.equal(result.before.toolbar.options,3);
 assert.equal(result.before.toolbar.noOverflow,true);
+assert.equal(result.before.catalog.modal,true,"Section picker should open in a native dialog");
+assert.ok(result.before.catalog.cards>0,"Section picker must show registered choices");
+assert.equal(result.before.catalog.closed,true,"Section picker must close without losing the editor");
 assert.equal(results.get(1000).before.toolbar.noOverflow,true,"Mid-size desktop should fit all three editor panes");
 assert.ok(result.before.blockInspector,"The real collection card must remain selectable");
 assert.match(result.before.blockInspector.title,/Collection card/i);
@@ -162,7 +179,14 @@ assert.equal(cards.card1.name, "High Octane");
 assert.equal(cards.card2.name, "Masters");
 assert.equal(cards.card3.name, "Essentials");
 assert.equal(result.linked,true);
-console.log("PASS: real live Shop content enters the actual CMS editor without production writes");
+assert.ok(result.saved.some(s=>s.content.headline==="Private autosave browser proof"),"Editing a native field should automatically persist a private draft");
+assert.equal(result.saveState,"Saved privately","Autosave should report completion without publishing");
+console.log("PASS: real Shop content enters the CMS editor, then autosaves a private field edit");
+const automaticallyOpened = results.get("auto");
+assert.equal(automaticallyOpened.before.autoDraft,true,"A page with no existing draft should initialize its private revision automatically");
+assert.equal(automaticallyOpened.before.noReview,true,"Creating a new private revision must not ask to replace existing work");
+assert.ok(automaticallyOpened.saved.some(s=>s.content.headline==="Private autosave browser proof"),"Automatically initialized drafts must also support autosave");
+console.log("PASS: an uninitialized live page becomes editable automatically without touching publication");
 
 for(const width of [744,390]){
  const mobile=results.get(width)?.before?.mobile;
@@ -174,9 +198,12 @@ for(const width of [744,390]){
  assert.equal(mobile.backToPreview,true);
  assert.equal(mobile.treeHasAdd,true);
  assert.equal(mobile.noOverflow,true, "Editor must have no horizontal page overflow");
+ assert.equal(results.get(width).before.catalog.modal,true,"Mobile catalog should open in a modal");
+ assert.equal(results.get(width).before.catalog.closed,true,"Mobile catalog should close normally");
  assert.equal(results.get(width).before.toolbar.legacyTabs,0);
  assert.equal(results.get(width).before.toolbar.pageVisible,true);
- assert.equal(results.get(width).before.toolbar.menuOpened,true);
+ assert.equal(results.get(width).before.toolbar.settingsOpened,true);
  assert.equal(results.get(width).linked,true);
+ assert.ok(results.get(width).saved.some(s=>s.content.headline==="Private autosave browser proof"),"Mobile edits must autosave too");
  console.log("PASS: "+width+"px mobile CMS Sections / Preview / Settings editor");
 }
