@@ -1,0 +1,120 @@
+{
+  "schema": "agentsam.theme-authoring.v1",
+  "version": "1.0.0",
+  "authority": {
+    "page": "cms_pages",
+    "section_instance": "cms_page_sections",
+    "block_instance": "cms_section_blocks",
+    "definition": "cms_definitions",
+    "implementation": "cms_artifacts",
+    "revision": "cms_revisions",
+    "global": "cms_globals",
+    "media": "media_assets"
+  },
+  "composition": {
+    "hierarchy": [
+      "page",
+      "section",
+      "block",
+      "setting"
+    ],
+    "definition_kinds": [
+      "section",
+      "block"
+    ],
+    "definition_origins": [
+      "built_in",
+      "package",
+      "imported",
+      "generated",
+      "app"
+    ],
+    "required_identity": [
+      "definition_key",
+      "version",
+      "kind"
+    ],
+    "instance_identity": [
+      "id",
+      "definition_key",
+      "definition_version"
+    ],
+    "settings_are_public_api": true,
+    "stable_instance_ids": true,
+    "resource_data_as_references": true
+  },
+  "editor": {
+    "working_revision": "auto_restore_or_create",
+    "autosave": "private",
+    "published_mutation": "publish_only",
+    "catalog_preview": "same_renderer_as_storefront",
+    "catalog_contexts": [
+      "sections",
+      "blocks",
+      "apps"
+    ],
+    "block_eligibility": "section_definition.allowed_blocks",
+    "selection": "stable_across_assistant_toggle",
+    "generated_is_native": true
+  },
+  "artifact": {
+    "implementation_storage": "cms_artifacts/R2",
+    "instance_values_storage": "cms_page_sections or cms_section_blocks",
+    "shared_values_storage": "cms_globals",
+    "media_storage": "media_assets",
+    "namespace_prefix": "agentsam_gen_",
+    "immutable_versions": true,
+    "scope_styles_to_instance": true,
+    "require_reduced_motion": true
+  },
+  "agent": {
+    "before_edit": [
+      "inspect_existing_owner",
+      "resolve_definition",
+      "read_settings_schema",
+      "read_current_revision"
+    ],
+    "generate": [
+      "propose",
+      "temporary_tree_entry",
+      "implement",
+      "normalize",
+      "validate",
+      "store_immutable_artifact",
+      "register_definition",
+      "insert_instance",
+      "focus_inspector"
+    ],
+    "followup": "version_existing_definition_unless_semantic_type_changes",
+    "forbidden_types": [
+      "custom",
+      "ai-section",
+      "imported-section",
+      "legacy-section"
+    ],
+    "forbidden_new_tables": [
+      "cms_section_templates",
+      "cms_generated_sections",
+      "cms_custom_sections",
+      "cms_ai_sections",
+      "cms_imported_sections"
+    ]
+  },
+  "verification": [
+    "definition_schema",
+    "allowed_blocks",
+    "artifact_integrity",
+    "stable_ids",
+    "namespace_isolation",
+    "scoped_css",
+    "settings_roundtrip",
+    "media_references",
+    "accessibility",
+    "responsive",
+    "reduced_motion",
+    "duplicate_instance",
+    "editor_reload",
+    "private_autosave",
+    "publish_only"
+  ]
+}
