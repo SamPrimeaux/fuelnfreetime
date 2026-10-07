@@ -29,12 +29,13 @@ shop.sections = shop.sections.map(s => ({...s,version:1}));
 const site = getRegistryPage("site");
 const pages = {ok:true,pages:[{slug:"shop",title:"Shop",status:"draft",has_live_storefront:true, cms_published:false,draft_exists:true}]};
 const shim = "<script>" +
- "window.__nativeConfirmCount=0;window.confirm=()=>{window.__nativeConfirmCount++;return true;};window.__submitted=null;window.__linked=false;" +
+ "window.__nativeConfirmCount=0;window.confirm=()=>{window.__nativeConfirmCount++;return true;};window.__submitted=null;window.__linked=false;window.__saved=[];" +
  "window.renderShell=function(_,html){document.body.insertAdjacentHTML('afterbegin',html);};" +
  "window.adminFetch=async function(url,options){" +
  "if(url.endsWith('/registry'))return " + JSON.stringify(registryForAdmin()) + ";" +
  "if(url.endsWith('/pages/site'))return {page:" + JSON.stringify(site) + "};" +
  "if(url.endsWith('/pages/shop/import-live')){window.__submitted=JSON.parse(options.body);window.__linked=true;return {ok:true,published:false};}" +
+ "if(url.endsWith('/pages/shop/sections/hero')&&options?.method==='PUT'){window.__saved.push(JSON.parse(options.body));return {ok:true,version:2,updated_at:'2026-10-07T00:00:00Z'};}" +
  "if(url.endsWith('/pages/shop'))return {seeded:true,page:{...(" + JSON.stringify(shop) + "),content_authority:window.__linked?'cms-draft-linked':'storefront-html'}};" +
  "if(url.endsWith('/pages'))return " + JSON.stringify(pages) + ";" +
  "throw Error('Unexpected API '+url);};</script>";
@@ -88,8 +89,13 @@ const probe = "<script>setTimeout(function(){" +
  "before.reviewOpened=!!review?.open;before.reviewProtected=window.__submitted===null;" +
  "before.nativeConfirms=window.__nativeConfirmCount;" +
  "review?.querySelector('[data-approve]')?.click();" +
+ "setTimeout(function(){document.querySelector('[data-select-section=hero]')?.click();" +
+ "var field=document.getElementById('te-field-hero-headline');" +
+ "if(field){field.value='Private autosave browser proof';field.dispatchEvent(new Event('input',{bubbles:true}));}" +
+ "},300);" +
  "setTimeout(function(){var pre=document.createElement('pre');pre.id='browser-result';" +
- "pre.textContent=JSON.stringify({before,imported:window.__submitted,linked:window.__linked});document.body.append(pre);},550);" +
+ "pre.textContent=JSON.stringify({before,imported:window.__submitted,linked:window.__linked,saved:window.__saved," +
+ "saveState:document.getElementById('te-save-state')?.textContent});document.body.append(pre);},1900);" +
  "},2200)</script>";
 const template = file("apps/ecommerce-cms-agentsam/frontend/static/theme-editor.html")
  .replace('<script src="/admin/js/shell.js"></script>',shim).replace("</body>",probe+"</body>");
@@ -162,7 +168,9 @@ assert.equal(cards.card1.name, "High Octane");
 assert.equal(cards.card2.name, "Masters");
 assert.equal(cards.card3.name, "Essentials");
 assert.equal(result.linked,true);
-console.log("PASS: real live Shop content enters the actual CMS editor without production writes");
+assert.ok(result.saved.some(s=>s.content.headline==="Private autosave browser proof"),"Editing a native field should automatically persist a private draft");
+assert.equal(result.saveState,"Saved privately","Autosave should report completion without publishing");
+console.log("PASS: real Shop content enters the CMS editor, then autosaves a private field edit");
 
 for(const width of [744,390]){
  const mobile=results.get(width)?.before?.mobile;
@@ -178,5 +186,6 @@ for(const width of [744,390]){
  assert.equal(results.get(width).before.toolbar.pageVisible,true);
  assert.equal(results.get(width).before.toolbar.settingsOpened,true);
  assert.equal(results.get(width).linked,true);
+ assert.ok(results.get(width).saved.some(s=>s.content.headline==="Private autosave browser proof"),"Mobile edits must autosave too");
  console.log("PASS: "+width+"px mobile CMS Sections / Preview / Settings editor");
 }
