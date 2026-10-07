@@ -63,7 +63,11 @@ test('media editor mounts shared workbench and stores derivative provenance', ()
   const server=readFileSync(new URL('../apps/ecommerce-cms-agentsam/backend/admin/media.js',import.meta.url),'utf8');
   assert.match(html,/id="media-agent-workbench"/);
   assert.match(js,/createMediaAssetWorkbench/);
-  assert.match(js,/surface: "content-library"/);
+  const inspector=readFileSync(new URL('../apps/ecommerce-cms-agentsam/frontend/inspector.js',import.meta.url),'utf8');
+  const workbench=readFileSync(new URL('../packages/agentsam-workbench/src/media-asset-workbench.js',import.meta.url),'utf8');
+  assert.match(inspector,/surface: 'content-library'/);
+  assert.match(workbench,/Image tools/);
+  assert.doesNotMatch(workbench,/miniAgentSam|media-agent-compose|Ask AgentSam about this asset/,'Do not fake a second AgentSam in the media editor');
   assert.match(js,/source_media_asset_id/);
   assert.match(server,/source_media_asset_id: Number\(editedSource.id\)/);
 });

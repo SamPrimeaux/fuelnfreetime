@@ -46,12 +46,7 @@ const server = http.createServer((req,res)=>{
   const url = new URL(req.url,'http://127.0.0.1');
   const p = url.pathname;
   if(p==='/admin/content')return res.writeHead(200,{'content-type':'text/html'}).end(html);
-  if(p==='/admin/media-kit/index.js')return res.writeHead(200,{'content-type':'text/javascript'}).end(`
-    export const IMAGE_PREVIEW_PRESETS=[];
-    export function getImagePreviewPreset(){return null;}
-    export function previewStyleForPreset(){return '';}
-    export function previewLabel(){return '';}
-  `);
+  if(p==='/admin/media-kit/index.js')return res.writeHead(200,{'content-type':'text/javascript'}).end(read('packages/media-kit/src/preview.js'));
   if(p==='/admin/workbench/media-asset-workbench.js')return res.writeHead(200,{'content-type':'text/javascript'}).end(read('packages/agentsam-workbench/src/media-asset-workbench.js'));
   if(p==='/admin/js/media-library.js'||p==='/admin/js/brand-workspace.js')return res.writeHead(200,{'content-type':'text/javascript'}).end(read('apps/ecommerce-cms-agentsam/frontend/static/js/'+path.basename(p)));
   if(p.startsWith('/admin/css/'))return res.writeHead(200,{'content-type':'text/css'}).end(read('apps/ecommerce-cms-agentsam/frontend/static/css/'+path.basename(p)));
@@ -136,8 +131,8 @@ try{
       const dialogOpened=await evaluate(`document.getElementById('media-album-dialog').open`);
       assert.equal(dialogOpened,true,'Creating a new album should open the actual form');
       if(width===390){
-        const mobileDetail = await evaluate(`(()=>{document.getElementById('media-album-dialog').close();document.querySelector('#media-grid .media-item[data-id]').click();return {detail:!document.getElementById('media-detail-page').hidden,docWidth:document.documentElement.scrollWidth,viewport:innerWidth,stageWidth:Math.round(document.getElementById('media-drawer-preview-shell').getBoundingClientRect().width),inspectorWidth:Math.round(document.querySelector('.media-workspace-settings').getBoundingClientRect().width)}})()`);
-        assert.equal(mobileDetail.detail,true,'Mobile selection must open the dedicated page');
+        const mobileDetail = await evaluate(`(()=>{document.getElementById('media-album-dialog').close();document.querySelector('#media-grid .media-item[data-id]').click();return {detail:!document.getElementById('media-detail-page').hidden,docWidth:document.documentElement.scrollWidth,viewport:innerWidth,stageWidth:Math.round(document.getElementById('media-drawer-preview-shell').getBoundingClientRect().width),inspectorWidth:Math.round(document.querySelector('.media-workspace-settings').getBoundingClientRect().width),errors:window.__errors}})()`);
+        assert.equal(mobileDetail.detail,true,'Mobile selection must open the dedicated page: '+JSON.stringify(mobileDetail));
         assert.ok(mobileDetail.docWidth <= mobileDetail.viewport+2, 'Mobile image-detail must not overflow viewport: '+JSON.stringify(mobileDetail));
         assert.ok(mobileDetail.stageWidth > 220, 'Mobile image stage must remain large enough to inspect');
       }
@@ -157,10 +152,24 @@ try{
           markupDisabled:bar.querySelector('[data-media-tool="markup"]').disabled,
           removeBgDisabled:bar.querySelector('[data-media-tool="remove-bg"]').disabled };
       })()`);
-      assert.equal(assistant.visible,true,'miniAgentSam should appear for every selected image');
+      assert.equal(assistant.visible,true,'Image editing tools should be available for every selected image');
+      assert.equal(await evaluate(`!!document.querySelector('#media-agent-workbench .media-agent-compose')`),false,'Media editor must not embed a fake second AgentSam composer');
       assert.equal(assistant.detailPage,true,'selected asset must open dedicated detail page');
       assert.match(assistant.url,/asset=1/,'asset deep link must reflect current image');
       assert.equal(assistant.overlay,null,'the old overlay/backdrop must be removed');
+      const sizeMetrics = await evaluate(`(()=>{
+        const img=document.querySelector('#media-drawer-preview img');
+        const original=img.getBoundingClientRect();
+        const stage=document.getElementById('media-drawer-preview-shell').getBoundingClientRect();
+        document.querySelector('[data-media-preview-preset="thumbnail"]').click();
+        const thumb=img.getBoundingClientRect();
+        const thumbStage=document.getElementById('media-drawer-preview-shell').getBoundingClientRect();
+        return {originalWidth:original.width,originalHeight:original.height,thumbWidth:thumb.width,thumbHeight:thumb.height,stageWidth:stage.width,thumbStageWidth:thumbStage.width,note:document.getElementById('media-preview-note').textContent};
+      })()`);
+      assert.ok(sizeMetrics.thumbWidth <= 150 && sizeMetrics.thumbHeight <= 150, 'Thumbnail must fit within 150×150px: '+JSON.stringify(sizeMetrics));
+      assert.ok(sizeMetrics.thumbWidth < sizeMetrics.originalWidth, 'Thumbnail must render smaller than Original: '+JSON.stringify(sizeMetrics));
+      assert.ok(Math.abs(sizeMetrics.stageWidth-sizeMetrics.thumbStageWidth)<1, 'Switching presets must not resize the stage');
+      assert.match(sizeMetrics.note,/no upscaling/i);
       const details = await evaluate(`({ tabsHidden:getComputedStyle(document.querySelector('.content-product-tabs')).display==='none', libraryHidden:getComputedStyle(document.getElementById('content-view-library')).display==='none', backLink:!!document.getElementById('media-detail-back') })`);
       assert.equal(details.tabsHidden,true,'Asset detail must replace media library as a page, not overlay it');
       assert.equal(details.libraryHidden,true,'Media library must not remain visible behind detail');
@@ -169,7 +178,7 @@ try{
       assert.ok(assistant.imagePanelWidth>420,'Media preview must have a useful editing surface: '+JSON.stringify(assistant));
       assert.ok(assistant.settingsPanelWidth>260,'Inspector needs an independent settings pane: '+JSON.stringify(assistant));
       assert.equal(assistant.commentEnabled,true,'SVG images should still support comments');
-      assert.match(read('apps/ecommerce-cms-agentsam/frontend/static/js/media-library.js'), /surface: "content-library"/);
+      assert.match(read('apps/ecommerce-cms-agentsam/frontend/inspector.js'), /surface: 'content-library'/);
       assert.equal(assistant.markupDisabled,true,'vector source cannot silently rasterize into an editable original');
       assert.equal(assistant.removeBgDisabled,true,'unsupported background removal must remain unavailable');
       const back = await evaluate(`(()=>{document.getElementById('media-detail-back').click(); const trigger=document.querySelector('[data-media-actions="1"]'); trigger.click(); const menu=trigger.closest('.media-item').querySelector('.media-card-menu'); return {returned:!document.body.classList.contains('media-detail-active'), url:location.search, menuOpen:!menu.hidden, expanded:trigger.getAttribute('aria-expanded')};})()`);

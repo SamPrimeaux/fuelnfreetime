@@ -16,7 +16,7 @@ export function validateImageDimensions(width, height) {
     width <= MAX_EDGE && height <= MAX_EDGE && width * height <= MAX_PIXELS;
 }
 
-export function createMediaAssetWorkbench({ mount, ask, addComment, saveDerivative, imageUrl, canRemoveBackground = false }) {
+export function createMediaAssetWorkbench({ mount, addComment, saveDerivative, imageUrl, canRemoveBackground = false }) {
   if (!mount) throw new Error('Media workbench needs a mount element');
   let asset = null;
   let revision = 0;
@@ -31,9 +31,9 @@ export function createMediaAssetWorkbench({ mount, ask, addComment, saveDerivati
   let commentPosition = { x: 0.5, y: 0.5 };
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 
-  mount.innerHTML = `<section class="media-agent" aria-label="AgentSam image assistant" hidden>
+  mount.innerHTML = `<section class="media-agent" aria-label="Image editing tools" hidden>
     <div class="media-agent-bar">
-      <span class="media-agent-identity" aria-label="miniAgentSam"><span aria-hidden="true" class="media-agent-sigil">✦</span> miniAgentSam</span>
+      <span class="media-agent-identity">Image tools</span>
       <div class="media-agent-tools" role="toolbar" aria-label="Image tools">
         <button type="button" data-media-tool="markup" title="Draw directly on a reviewable working copy">Markup</button>
         <button type="button" data-media-tool="comment" title="Pin a review comment to this image">Comment</button>
@@ -42,17 +42,11 @@ export function createMediaAssetWorkbench({ mount, ask, addComment, saveDerivati
         <button type="button" data-media-tool="resize" title="Resize a working copy in exact pixels">Resize</button>
       </div>
     </div>
-    <form class="media-agent-compose">
-      <label class="sr-only" for="media-agent-prompt">Ask AgentSam about this asset</label>
-      <textarea id="media-agent-prompt" rows="1" maxlength="3000" placeholder="Ask AgentSam about this image…"></textarea>
-      <button type="submit" class="media-agent-send" aria-label="Ask AgentSam">Ask ↗</button>
-    </form>
+    <p class="media-image-tools-help">Editing creates a separate working copy. Use the top-right Inspect control to ask AgentSam about this image.</p>
     <p class="media-agent-response" role="status" aria-live="polite" hidden></p>
   </section>`;
   const root = mount.querySelector('.media-agent');
   const response = root.querySelector('.media-agent-response');
-  const prompt = root.querySelector('textarea');
-  const form = root.querySelector('form');
   const toolbar = root.querySelector('.media-agent-tools');
   const dialog = document.createElement('dialog');
   dialog.className = 'media-agent-editor';
@@ -219,23 +213,6 @@ export function createMediaAssetWorkbench({ mount, ask, addComment, saveDerivati
     if (button.dataset.mediaTool === 'remove-bg') return;
     void openEditor(button.dataset.mediaTool);
   });
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const message = prompt.value.trim();
-    if (!message || !asset || busy) return;
-    const selectedId = String(asset.id);
-    const atRevision = revision;
-    setBusy(true);
-    say('AgentSam is reviewing the selected image…');
-    try {
-      const result = await ask({ prompt: message, asset });
-      if (revision === atRevision && String(asset?.id) === selectedId) {
-        say(String(result?.reply || result?.message || 'AgentSam returned no reply.'));
-        prompt.value = '';
-      }
-    } catch (error) { if (revision === atRevision) say(error.message || 'AgentSam is unavailable.', true); }
-    finally { setBusy(false); }
-  });
   dialog.addEventListener('click', (event) => {
     const mode = event.target.closest('[data-editor-mode]');
     if (mode && !busy) { switchTool(mode.dataset.editorMode); return; }
@@ -371,7 +348,6 @@ export function createMediaAssetWorkbench({ mount, ask, addComment, saveDerivati
       if (isRasterTool && !raster) button.title = 'This file type cannot be safely raster-edited in the browser';
     }
     say('');
-    prompt.value = '';
     const remove = toolbar.querySelector('[data-media-tool="remove-bg"]');
     // This UI never guesses backend capability: only enable with an implemented host action.
     remove.disabled = true;

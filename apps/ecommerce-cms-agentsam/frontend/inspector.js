@@ -109,23 +109,87 @@
     }
   }
 
+  function mediaPreviewImage() {
+    if (location.pathname !== '/admin/content' || !document.body.classList.contains('media-detail-active')) return null;
+    return document.querySelector('#media-detail-page:not([hidden]) #media-drawer-preview img, #media-detail-page:not([hidden]) #media-drawer-preview video');
+  }
+
+  function mediaLibraryGrid() {
+    return location.pathname === '/admin/content' && !document.body.classList.contains('media-detail-active')
+      ? document.getElementById('media-grid') : null;
+  }
+
+  function mediaResource(element) {
+    const detail = element.closest('#media-drawer-preview');
+    const card = element.closest('.media-item[data-id]');
+    return {
+      type: 'media_asset',
+      id: detail?.dataset.agentsamMediaId || card?.dataset.id || '',
+      label: detail?.dataset.agentsamMediaFilename || card?.querySelector('.media-item-name')?.textContent?.trim() || 'Media asset',
+      page: location.pathname + location.search,
+      surface: 'content-library',
+    };
+  }
+
+  function selectMedia(element) {
+    const resource = mediaResource(element);
+    if (!resource.id) return;
+    active = false;
+    window.__fnfGlobalInspectMode = false;
+    button?.setAttribute('aria-pressed', 'false');
+    instance.select(resource, boundsFor(element));
+  }
+
   function refreshAvailability() {
     if (!button) return;
-    const available = Array.from(document.querySelectorAll('iframe')).some(isEligiblePreviewFrame);
+    const hasFrame = Array.from(document.querySelectorAll('iframe')).some(isEligiblePreviewFrame);
+    const mediaDetail = Boolean(mediaPreviewImage());
+    const mediaGallery = Boolean(mediaLibraryGrid()?.querySelector('.media-item[data-id]'));
+    const available = hasFrame || mediaDetail || mediaGallery;
     button.disabled = !available;
-    button.title = available
-      ? 'Inspect & annotate storefront preview'
-      : 'Open a customer-facing storefront preview to annotate';
+    button.title = mediaDetail ? 'Inspect this image with AgentSam'
+      : mediaGallery ? 'Inspect & annotate media assets'
+      : hasFrame ? 'Inspect & annotate storefront preview'
+      : 'Open an image or storefront preview to inspect with AgentSam';
     button.setAttribute('aria-label', button.title);
     if (!available && active) deactivate({ close: true });
   }
 
   function activate() {
     if (!instance || !button || button.disabled) return;
+    const image = mediaPreviewImage();
+    if (image) {
+      // The image is already selected on its detail page; one click opens the real shared composer.
+      selectMedia(image);
+      return;
+    }
     active = true;
     window.__fnfGlobalInspectMode = true;
     button.setAttribute('aria-pressed', 'true');
-    instance.startSelecting('Click a storefront preview element to annotate · Esc to exit');
+    instance.startSelecting(mediaLibraryGrid()
+      ? 'Click a media image to annotate · Esc to exit'
+      : 'Click a storefront preview element to annotate · Esc to exit');
+  }
+
+  function watchMediaSelections() {
+    document.addEventListener('pointerover', event => {
+      if (!active || !mediaLibraryGrid()) return;
+      const element = event.target.closest?.('#media-grid .media-item[data-id] img, #media-grid .media-item[data-id] video');
+      if (element) instance.highlight(boundsFor(element));
+    }, true);
+    document.addEventListener('pointerout', event => {
+      if (!active || !mediaLibraryGrid()) return;
+      if (event.target.closest?.('#media-grid .media-item[data-id]')) instance.clearHighlight();
+    }, true);
+    document.addEventListener('click', event => {
+      if (!active || !mediaLibraryGrid()) return;
+      const element = event.target.closest?.('#media-grid .media-item[data-id] img, #media-grid .media-item[data-id] video');
+      if (!element) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      selectMedia(element);
+    }, true);
+    window.addEventListener('agentsam:media-detail-change', refreshAvailability);
   }
 
   function watch(doc, frame) {
@@ -280,8 +344,9 @@
     };
     bar.prepend(button);
 
-    // Never bind annotation selection to the admin shell itself.
-    // Only same-origin, non-/admin storefront preview iframes are inspectable.
+    // Only actual storefront preview elements or selected merchant media assets are inspectable.
+    // Never claim the shell itself is an editable CMS resource.
+    watchMediaSelections();
     watchFrames();
     new MutationObserver(watchFrames).observe(document.body, {
       childList: true,

@@ -1575,7 +1575,7 @@
 .media-album-delete:hover, .media-album-delete:focus-visible { color: #a53535; border-color: #d5a6a6; background: #fff1f1; }
 .media-batch-danger { color: #b12d2d !important; }
 
-/* Resource-scoped miniAgentSam: uses the portable workbench module, FNF host tokens. */
+/* Source-preserving Image tools, separate from the shared AgentSam inspector. */
 .media-agent-workbench { margin: 11px 0 13px; min-width: 0; }
 .media-agent[hidden], .media-agent-editor [hidden] { display: none !important; }
 .media-agent {
@@ -1585,7 +1585,6 @@
 }
 .media-agent-bar { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; }
 .media-agent-identity { color: #2d3e29; font-size: 12px; font-weight: 750; white-space: nowrap; }
-.media-agent-sigil { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-right: 3px; border-radius: 7px; color: #fff; background: #29382a; }
 .media-agent-tools { display: flex; flex: 1 1 auto; gap: 5px; overflow-x: auto; scrollbar-width: thin; padding: 3px 0; }
 .media-agent-tools button, .media-agent-editor button {
   font: inherit; font-size: 12px; font-weight: 650; cursor: pointer;
@@ -1595,9 +1594,6 @@
 .media-agent-tools button:hover:not(:disabled), .media-agent-editor button:hover:not(:disabled) { background: #e9efe4; border-color: #89a37a; }
 .media-agent-tools button:disabled, .media-agent-editor button:disabled { cursor: not-allowed; opacity: .53; }
 .media-agent button:focus-visible, .media-agent-editor button:focus-visible, .media-agent textarea:focus-visible, .media-agent-editor input:focus-visible { outline: 2px solid #678b50; outline-offset: 2px; }
-.media-agent-compose { display: flex; align-items: flex-end; gap: 6px; margin-top: 8px; border: 1px solid #d3d9cb; background: #fff; border-radius: 11px; padding: 5px; }
-.media-agent-compose textarea { flex: 1; min-width: 0; min-height: 32px; max-height: 94px; resize: vertical; border: 0; outline: none; background: transparent; color: #18251d; padding: 8px; font: inherit; font-size: 13px; line-height: 1.35; }
-.media-agent-compose .media-agent-send { border: 0; border-radius: 8px; background: #29382a; color: #fff; min-height: 34px; padding: 0 11px; white-space: nowrap; }
 .media-agent-response { padding: 10px; margin: 9px 0 0; border-radius: 8px; background: #eaf0e6; font-size: 12px; line-height: 1.5; max-height: 150px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
 .media-agent-response.is-error { background: #fff0ee; color: #9a3021; }
 
@@ -1716,3 +1712,84 @@ body.media-detail-active #content-view-brand { display:none !important; }
 }
 
 .media-detail-workspace .media-drawer-preview { background:#f0f2ef; margin:0; border:0; }
+
+/* Quiet media-card controls: compact visual chrome with full finger/keyboard hit targets. */
+.media-item .media-select-toggle,
+.media-item .media-card-menu-trigger {
+  top: 4px;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  isolation: isolate;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  color: #fff;
+}
+.media-item .media-select-toggle { left: 3px; font-size: 12px; }
+.media-item .media-card-menu-trigger { right: 3px; font-size: 16px; font-weight: 750; line-height: 1; }
+.media-item .media-select-toggle::before,
+.media-item .media-card-menu-trigger::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  width: 18px;
+  height: 18px;
+  border: 1px solid rgba(255,255,255,.75);
+  border-radius: 5px;
+  background: rgba(17, 24, 24, .67);
+  box-shadow: 0 1px 5px rgba(0,0,0,.16);
+}
+.media-item .media-card-menu-trigger::before { width: 20px; height: 20px; border-color: rgba(255,255,255,.36); border-radius: 6px; }
+.media-item .media-select-toggle:hover,
+.media-item .media-select-toggle.is-selected,
+.media-item .media-card-menu-trigger:hover,
+.media-item .media-card-menu-trigger[aria-expanded='true'] { background: transparent; }
+.media-item .media-select-toggle.is-selected::before { background: #426c39; border-color: #a9d3a4; }
+.media-item .media-select-toggle:hover::before,
+.media-item .media-card-menu-trigger:hover::before,
+.media-item .media-card-menu-trigger[aria-expanded='true']::before { background: rgba(20,42,34,.94); }
+.media-item .media-select-toggle:focus-visible,
+.media-item .media-card-menu-trigger:focus-visible { outline: 2px solid #8baf83; outline-offset: 1px; }
+/* Compact, grouped actions rather than an oversized loose popup. */
+.media-item .media-card-menu {
+  top: 34px;
+  right: 5px;
+  min-width: 158px;
+  max-width: min(200px,calc(100vw - 24px));
+  padding: 5px;
+  border: 1px solid #dfe5dc;
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(16,26,20,.2);
+}
+.media-item .media-card-menu button {
+  min-height: 34px;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 610;
+  border-radius: 6px;
+  line-height: 1.25;
+}
+.media-item .media-card-menu button[data-media-action='download'],
+.media-item .media-card-menu button[data-media-action='delete'] { border-top: 1px solid #e9eee6; border-radius: 0; margin-top: 3px; }
+.media-item .media-card-menu button[data-media-action='delete']:hover { background: #fff0ed; }
+.media-item .media-card-menu button:focus-visible { outline: 2px solid #7aa36f; outline-offset: -2px; }
+/* The real AgentSam composer lives in the top-right shared Inspect control.
+   This lower section contains image operations only, not a duplicate chat field. */
+.media-detail-workspace .media-agent {
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fafbf9;
+  border: 1px solid #dce5da;
+}
+.media-detail-workspace .media-agent-bar { align-items: center; }
+.media-detail-workspace .media-agent-identity { color: #31432f; font-size: 11px; }
+.media-detail-workspace .media-image-tools-help { margin: 8px 0 0; font-size: 10px; color: #6a7869; line-height: 1.45; }
+.media-detail-workspace .media-agent-tools { gap: 6px; }
+.media-detail-workspace .media-agent-tools button { min-height: 30px; padding: 6px 9px; font-size: 11px; }

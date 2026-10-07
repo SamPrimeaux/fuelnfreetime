@@ -1,7 +1,6 @@
 import {
   IMAGE_PREVIEW_PRESETS,
   getImagePreviewPreset,
-  previewStyleForPreset,
   previewLabel,
 } from "/admin/media-kit/index.js";
 import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbench.js";
@@ -402,6 +401,25 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
       openDrawer(assets.find((asset) => String(asset.id) === id));
     });
     mountListener(els.grid, "keydown", (event) => {
+      const menu = event.target.closest('.media-card-menu');
+      if (menu && !menu.hidden) {
+        const items = Array.from(menu.querySelectorAll('button:not(:disabled)'));
+        const current = items.indexOf(event.target);
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          const trigger = menu.closest('.media-item')?.querySelector('[data-media-actions]');
+          closeCardMenu();
+          trigger?.focus();
+          return;
+        }
+        if (['ArrowDown','ArrowUp','Home','End'].includes(event.key)) {
+          event.preventDefault();
+          const index = event.key === 'Home' ? 0 : event.key === 'End' ? items.length-1
+            : (current + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+          items[index]?.focus();
+          return;
+        }
+      }
       // Let nested menu/selection controls handle Enter and Space natively.
       if (event.target.closest('button, a, input, select, textarea')) return;
       const item = event.target.closest(".media-item[data-id]");
@@ -1452,19 +1470,25 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     if (!selected || assetKind(selected) !== "image") return;
     previewPresetId = getImagePreviewPreset(id)?.id || "original";
     const preset = getImagePreviewPreset(previewPresetId);
-    const style = previewStyleForPreset(preset, { focal: selected.meta?.focal_point });
-    const image = els.drawerPreview?.querySelector("img");
+    const image = els.drawerPreview?.querySelector('img');
+    const isOriginal = !preset || preset.id === 'original';
     if (els.drawerPreviewShell) {
-      els.drawerPreviewShell.style.aspectRatio = preset?.aspect_ratio || "auto";
-      els.drawerPreviewShell.classList.toggle("is-original", preset?.id === "original");
+      // Never resize or crop the stage itself when switching size presets.
+      els.drawerPreviewShell.style.aspectRatio = 'auto';
+      els.drawerPreviewShell.classList.toggle('is-original', isOriginal);
     }
     if (image) {
-      image.style.objectFit = style.objectFit;
-      image.style.objectPosition = style.objectPosition;
+      // Real visual sizing; browser-only. Never enlarge a thumbnail to fill the image stage.
+      image.style.objectFit = 'contain';
+      image.style.objectPosition = 'center center';
+      image.style.width = isOriginal ? '100%' : 'auto';
+      image.style.height = isOriginal ? '100%' : 'auto';
+      image.style.maxWidth = isOriginal ? '100%' : `${preset.width}px`;
+      image.style.maxHeight = isOriginal ? '100%' : `${preset.height}px`;
     }
-    if (els.previewNote) els.previewNote.textContent = preset?.id === "original"
-      ? "Original source preview."
-      : previewLabel(preset) + " browser preview — no derivative file is generated.";
+    if (els.previewNote) els.previewNote.textContent = isOriginal
+      ? 'Original source · fitted to the workspace. No image changes.'
+      : `${preset.label} preview · fits within ${preset.width} × ${preset.height} px; no upscaling or derivative generated.`;
     renderPreviewPresets(selected);
   }
 
@@ -1588,11 +1612,13 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     closeCardMenu();
     selected = asset;
     mediaWorkbench?.setAsset(asset);
+    els.drawerPreview.dataset.agentsamMediaId = String(asset.id);
+    els.drawerPreview.dataset.agentsamMediaFilename = asset.filename || 'Image';
     previewPresetId = "original";
     els.drawerPreview.innerHTML = previewHtml(asset);
     if (els.drawerTitle) els.drawerTitle.textContent = asset.filename || "Asset";
     if (els.drawerStatus) els.drawerStatus.textContent = statusLabel(asset).replace("…", "");
-    renderPreviewPresets(asset);
+    applyPreviewPreset('original');
     setInspectorTab("details");
     els.fieldFilename.value = asset.filename || "";
     els.fieldAlt.value = asset.alt_text || "";
@@ -1731,6 +1757,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
 
     document.body.classList.add('media-detail-active');
     els.detailPage.hidden = false;
+    window.dispatchEvent(new CustomEvent('agentsam:media-detail-change', { detail: { id: asset.id } }));
     document.title = `${asset.filename || 'Image'} — Media | Fuel & Free Time`;
     if (updateHistory) updateDetailUrl(asset.id, historyMode);
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -1741,6 +1768,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     mediaWorkbench?.setAsset(null);
     document.body.classList.remove('media-detail-active');
     if (els.detailPage) els.detailPage.hidden = true;
+    window.dispatchEvent(new CustomEvent('agentsam:media-detail-change', { detail: { id: null } }));
     document.title = 'Content — Fuel & Free Time Admin';
     if (updateHistory) updateDetailUrl(null, 'replace');
     closeCardMenu();
@@ -1886,21 +1914,6 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     if (!mount) return;
     mediaWorkbench = createMediaAssetWorkbench({
       mount,
-      // Reuse the existing AgentSam transport, conversation and permissions.
-      // Answers are shown in-place; no unsolicited global chat drawer.
-      ask: async ({ prompt, asset }) => {
-        if (typeof window.sendAgentsamMessage !== "function") {
-          throw new Error("AgentSam is still loading. Try again in a moment.");
-        }
-        return window.sendAgentsamMessage(prompt, {
-          context: { selected_resource: {
-            type: "media_asset", id: asset.id,
-            filename: asset.filename, content_type: asset.content_type,
-            surface: "content-library",
-          } },
-          propagateError: true,
-        });
-      },
       imageUrl: (asset) => {
         // Prefer the first-party media route so browser canvas gets same-origin pixels.
         const path = String(asset.url || "");
