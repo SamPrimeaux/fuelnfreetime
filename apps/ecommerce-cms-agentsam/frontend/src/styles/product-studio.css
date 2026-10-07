@@ -1650,3 +1650,28 @@
  .ps-workspace-actions { flex-wrap: wrap; min-width: 0 !important; }
  .ps-workspace-actions .ps-primary { flex: 1; }
 }
+
+/* Flat production-coordinate editor. Photo and provider renders stay in the mini preview. */
+.ps-product-design-preview { width: min(100%, 760px); }
+.ps-product-design-image { background: #f4f5ef; border: 1px solid #dbe0d4; min-height: 540px; }
+.ps-design-guide { position: relative; width: 100%; min-height: 540px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 58px 20px 40px; isolation: isolate; }
+.ps-design-guide__identity { position: absolute; top: 17px; left: 18px; z-index: 2; display: grid; gap: 3px; }
+.ps-design-guide__identity span { color: #6d7865; font-size: 9px; font-weight: 750; letter-spacing: .11em; text-transform: uppercase; }
+.ps-design-guide__identity strong { font-size: 13px; color: #2c3728; }
+.ps-design-guide__identity small { font-size: 10px; color: #687664; }
+.ps-design-garment-guide { position: absolute; width: min(100%, 560px); height: 95%; max-height: 540px; left: 50%; top: 51%; transform: translate(-50%, -50%); pointer-events: none; opacity: .65; }
+.ps-design-print-area { position: relative; width: min(68%, 345px); max-height: 395px; min-height: 150px; overflow: hidden; border: 2px solid #758e65; background: #ffffffcf; box-shadow: 0 3px 25px #26352918; isolation: isolate; }
+.ps-design-print-area.is-gridded { background-image: linear-gradient(#7c987123 1px,transparent 1px),linear-gradient(90deg,#7c987123 1px,transparent 1px),linear-gradient(#4b714a24 1px,transparent 1px),linear-gradient(90deg,#4b714a24 1px,transparent 1px); background-size: 10% 10%,10% 10%,50% 50%,50% 50%; }
+.ps-design-crosshair-x,.ps-design-crosshair-y { position: absolute; z-index: 1; pointer-events: none; }
+.ps-design-crosshair-x { top: 50%; left: 0; right: 0; border-top: 1px dashed #71956891; }
+.ps-design-crosshair-y { left: 50%; top: 0; bottom: 0; border-left: 1px dashed #71956891; }
+.ps-design-safe-outline { position: absolute; inset: 7%; border: 1px dashed #8caa7c; pointer-events: none; }
+.ps-design-print-area .ps-artwork-layer { z-index: 3; }
+.ps-artwork-layer--interactive { cursor: move; outline: none; }
+.ps-artwork-layer--interactive:focus-visible { outline: 2px solid #2e5827; outline-offset: 4px; }
+.ps-design-dimensions { position: absolute; bottom: 16px; font-size: 10px; font-weight: 600; color: #687663; }
+.ps-precision-control { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; color: #43553f; }
+.ps-precision-control input { width: 55px; min-height: 32px; border: 1px solid #c9d3c1; border-radius: 6px; background: #fff; padding: 3px 5px; font: inherit; }
+.ps-mini-map { width: clamp(145px, 22%, 210px); }
+.ps-mini-image { aspect-ratio: 4 / 5; }
+@media (max-width: 760px) { .ps-product-design-image,.ps-design-guide { min-height: 390px; } .ps-design-guide { padding: 70px 10px 35px; } .ps-design-print-area { width: min(65%, 250px); } .ps-mini-map { position: relative; width: min(100%, 260px); } .ps-design-guide__identity { left: 12px; top: 12px; } }

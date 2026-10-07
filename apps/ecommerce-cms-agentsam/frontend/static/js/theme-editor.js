@@ -12,6 +12,7 @@
   let liveUnimported = false;
   let missingSourceSections = [];
   let liveSourceCaptured = false;
+  let liveCapturedSections = [];
   let liveExistingDraft = false;
   let unmanagedLiveSections = [];
   let activeBlockId = null;
@@ -53,13 +54,13 @@
         '<header class="theme-studio-toolbar">',
           '<div class="theme-studio-toolbar__left">',
             '<div class="te-theme-menu">',
-              '<button type="button" class="te-theme-trigger" id="te-theme-trigger" aria-expanded="false" aria-controls="te-theme-popover" aria-label="Choose theme to preview">',
-                '<span class="te-theme-mark" aria-hidden="true">F</span>',
-                '<span class="te-theme-identity"><small>Theme preview</small><strong id="te-theme-name">' + cmsEscapeHtml(humanize(selectedTheme)) + '</strong></span>',
+              '<button type="button" class="te-theme-trigger" id="te-theme-trigger" aria-expanded="false" aria-controls="te-theme-popover" aria-label="Open reusable section library and compare appearance previews">',
+                '<span class="te-theme-mark" aria-hidden="true">⊞</span>',
+                '<span class="te-theme-identity"><small>Reusable building blocks</small><strong id="te-theme-name">Section library</strong></span>',
                 '<span class="te-theme-chevron" aria-hidden="true">⌄</span>',
               '</button>',
               '<div class="te-theme-popover" id="te-theme-popover" hidden>',
-                '<div class="te-theme-popover__title">Preview a theme</div>',
+                '<button type="button" class="te-library-browse" id="te-library-browse"><strong>+ Browse all sections</strong><small>Combine layouts and blocks from any installed design.</small></button><div class="te-theme-popover__title">Appearance previews · not separate page libraries</div>',
                 ((window.ThemeStudioPreview && window.ThemeStudioPreview.themes) || []).map(function(theme) {
                   return '<button type="button" class="te-theme-option' + (theme.id === selectedTheme ? ' is-active' : '') +
                     '" data-theme-preview="' + cmsEscapeAttr(theme.id) + '" aria-pressed="' + String(theme.id === selectedTheme) + '">' +
@@ -203,7 +204,7 @@
       button.classList.toggle('is-active', current);
       button.setAttribute('aria-pressed', String(current));
     });
-    byId('te-theme-name').textContent = humanize(selectedTheme);
+    byId('te-theme-name').textContent = 'Section library';
     closeThemeMenu();
     syncPublishCapability();
     renderTree();
@@ -330,7 +331,10 @@
 
   function setDirty(value) {
     dirty = Boolean(value);
-    if (dirty) setSaveState('Unpublished changes', 'dirty');
+    const save = byId('te-save');
+    if (save) save.disabled = liveUnimported || !dirty;
+    if (liveUnimported) setSaveState('Live preview · no draft changes');
+    else if (dirty) setSaveState('Unpublished changes', 'dirty');
     else setSaveState(pageData && pageData.status === 'published' ? 'Published' : 'Draft saved', 'saved');
   }
 
@@ -777,7 +781,9 @@
     byId('te-section-status').className = 'te-badge' + (section.status === 'published' ? ' is-published' : '');
 
     const panel = byId('te-inspector-body');
-    panel.innerHTML = (blockMeta
+    panel.innerHTML = (liveUnimported
+      ? '<div class="te-source-review"><strong>Live page preview</strong><p>This storefront layout has not been opened as an editable CMS draft. Nothing has been modified. Select <b>Start editing page</b> above the preview to create a private draft first.</p></div>'
+      : '') + (blockMeta
       ? '<button type="button" class="te-inspector-parent" id="te-inspector-parent">← ' + cmsEscapeHtml(sectionLabel) + '</button>'
       : '') + renderInspectorGroups(section);
     byId('te-inspector-parent')?.addEventListener('click', function() {
@@ -785,6 +791,9 @@
     });
     wireFields();
     wireInspectorPreferences();
+    if (liveUnimported) {
+      panel.querySelectorAll('input, textarea, select, button:not(#te-inspector-parent)').forEach(function(control) { control.disabled = true; });
+    }
 
     if (activeFieldKey) {
       requestAnimationFrame(function() {
@@ -1089,7 +1098,7 @@
       }
       if (matched) {
         content.__editor = { ...(content.__editor || {}), source: 'live-storefront' };
-        sections.push({ ...section, content, status: 'draft', __ownerSlug: slug });
+        sections.push({ ...section, content, status: 'live', __ownerSlug: slug });
         count += matched;
       }
     }
@@ -1097,7 +1106,8 @@
       setNote('This live route has no CMS-marked editable sections; nothing was imported.', 'error');
       return false;
     }
-    pageData.sections = sections; // no synthetic newsletter or other missing regions
+    liveCapturedSections = sections.map(function(section) { return structuredClone(section); });
+    pageData.sections = sections; // in-memory read-only inspection; no server mutation or draft save
     if (!sections.some(function(section) { return section.key === activeSectionKey; })) {
       activeSectionKey = sections[0].key;
       activeSectionOwner = slug;
@@ -1105,10 +1115,10 @@
     liveSourceCaptured = true;
     discoverUnmanagedSections();
     byId('te-import-live').hidden = false;
-    byId('te-import-live').textContent = liveExistingDraft ? 'Use live layout (' + sections.length + ' sections)' : 'Import ' + sections.length + ' sections';
-    byId('te-save').textContent = liveExistingDraft ? 'Reconcile & save draft' : 'Import & save draft';
+    byId('te-import-live').textContent = 'Start editing page';
+    byId('te-save').textContent = 'Save draft';
     byId('te-preview-label').textContent = 'Live storefront — ' + sections.length + ' editable regions';
-    setNote(count + ' real fields found. Import saves a private CMS draft; the storefront remains unchanged.', 'success');
+    setNote(count + ' live fields inspected. No draft changes. Choose Start editing page when you are ready to create a private CMS draft.');
     renderTree();
     renderInspector();
     return true;
@@ -1117,6 +1127,31 @@
   // A published legacy page can have more real HTML regions than D1 rows.
   // Stage ONLY absent, registered sections through the existing server API.
   // No re-seeding, no overwriting legacy rows, and no automatic publish.
+  function reviewContentChange(title, description, approveText) {
+    return new Promise(function(resolve) {
+      const dialog = document.createElement('dialog');
+      dialog.className = 'te-review-dialog';
+      dialog.innerHTML = '<div class="te-review-content"><span class="te-review-kicker">CMS draft operation</span><h2></h2><p></p><div class="te-review-actions"><button type="button" data-cancel>Keep current page</button><button type="button" data-approve></button></div></div>';
+      dialog.querySelector('h2').textContent = title;
+      dialog.querySelector('p').textContent = description;
+      dialog.querySelector('[data-approve]').textContent = approveText;
+      let complete = false;
+      function finish(accepted) {
+        if (complete) return;
+        complete = true;
+        dialog.close();
+        dialog.remove();
+        resolve(accepted);
+      }
+      dialog.querySelector('[data-cancel]').addEventListener('click', function() { finish(false); });
+      dialog.querySelector('[data-approve]').addEventListener('click', function() { finish(true); });
+      dialog.addEventListener('cancel', function(event) { event.preventDefault(); finish(false); });
+      document.body.append(dialog);
+      dialog.showModal();
+      dialog.querySelector('[data-cancel]').focus();
+    });
+  }
+
   async function stageMissingSourceSections() {
     if (!missingSourceSections.length || liveUnimported) return false;
     if (dirty) {
@@ -1124,7 +1159,7 @@
       return false;
     }
     const names = missingSourceSections.slice();
-    if (!window.confirm('Stage ' + names.length + ' source-backed section(s) as private CMS drafts? Existing page content and the published storefront will remain unchanged until you explicitly publish.')) return false;
+    if (!(await reviewContentChange('Add existing page sections', names.length + ' source-backed sections will be staged in a private CMS draft. Existing content and the published storefront will not be replaced.', 'Add to draft'))) return false;
     const button = byId('te-import-live');
     button.disabled = true;
     setSaveState('Staging');
@@ -1159,20 +1194,21 @@
       setNote('Wait for the real storefront preview before importing.', 'error');
       return false;
     }
-    if (liveExistingDraft && !window.confirm('Replace this page’s existing CMS draft with the actual live layout? The previous sections will be archived in R2. Your public storefront will not change until you explicitly publish.')) return false;
+    if (liveExistingDraft && !(await reviewContentChange('Review before replacing this draft', 'The existing CMS draft contains sections that will be archived in R2 and replaced by ' + liveCapturedSections.length + ' sections from the live storefront. The published website will not change. This operation is separate from Save and Publish.', 'Replace private draft'))) return false;
     const button = byId('te-import-live');
     button.disabled = true;
     setSaveState('Importing');
     try {
       await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/import-live', {
         method: 'POST',
-        body: JSON.stringify({ mode: liveExistingDraft ? 'reconcile' : 'create', sections: pageData.sections.map(function(section) {
+        body: JSON.stringify({ mode: liveExistingDraft ? 'reconcile' : 'create', sections: liveCapturedSections.map(function(section) {
           return { key: section.key, content: section.content, expected_version: Number(section.version ?? 0) };
         }) })
       });
       liveUnimported = false;
       liveExistingDraft = false;
       liveSourceCaptured = false;
+      liveCapturedSections = [];
       dirtySections.clear();
       setDirty(false);
       await loadPage();
@@ -1420,13 +1456,14 @@
         : [];
       liveExistingDraft = Boolean(results[0].seeded) && liveUnimported;
       liveSourceCaptured = false;
+      liveCapturedSections = [];
       unmanagedLiveSections = [];
       if (liveUnimported) selectedTheme = 'heuristic';
       byId('te-import-live').hidden = !missingSourceSections.length && !liveUnimported;
       if (!liveUnimported && missingSourceSections.length) {
         byId('te-import-live').textContent = 'Stage ' + missingSourceSections.length + ' missing sections';
       }
-      byId('te-save').textContent = liveUnimported ? (liveExistingDraft ? 'Reconcile & save draft' : 'Import & save draft') : 'Save draft';
+      byId('te-save').textContent = 'Save draft';
       siteData = results[2].page;
       pages = (results[1].pages || []).filter(function(page) { return page.slug !== 'site'; });
 
@@ -1470,9 +1507,13 @@
   }
 
   async function saveDraft() {
-    if (liveUnimported) return importLiveSource();
-    const refs = dirtySections.size ? Array.from(dirtySections) : (activeSectionKey ? [activeSectionOwner + ':' + activeSectionKey] : []);
-    if (!refs.length) return true;
+    if (liveUnimported) {
+      setNote('This is a read-only live preview. Choose Start editing page to create a CMS draft before making changes.');
+      return false;
+    }
+    // A Save with no edited fields must never write or alter a section.
+    const refs = Array.from(dirtySections);
+    if (!dirty || !refs.length) return true;
     const button = byId('te-save');
     button.disabled = true;
     setNote('Saving…');
@@ -1551,6 +1592,7 @@
   }
 
   async function insertSection(templateKey, themePreset) {
+    if (liveUnimported) { setNote('Start editing page to create a private draft before changing its sections.'); return false; }
     setNote('Adding section…');
     try {
       const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections', {
@@ -1574,6 +1616,7 @@
   }
 
   async function duplicateSection(sectionKey) {
+    if (liveUnimported) { setNote('Start editing page to create a private draft before changing its sections.'); return false; }
     setNote('Duplicating section…');
     try {
       const result = await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/duplicate', {
@@ -1593,6 +1636,7 @@
   }
 
   async function moveSection(sectionKey, toIndex) {
+    if (liveUnimported) { setNote('Start editing page to create a private draft before changing its sections.'); return false; }
     try {
       await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/move', {
         method: 'POST',
@@ -1608,6 +1652,7 @@
   }
 
   async function setSectionVisibility(sectionKey, enabled, ownerSlug) {
+    if (liveUnimported) { setNote('Start editing page to create a private draft before changing its sections.'); return false; }
     const owner = ownerSlug || slug;
     try {
       await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(owner) + '/sections/' + encodeURIComponent(sectionKey) + '/visibility', {
@@ -1624,6 +1669,7 @@
   }
 
   async function removeSection(sectionKey) {
+    if (liveUnimported) { setNote('Start editing page to create a private draft before changing its sections.'); return false; }
     const section = (pageData?.sections || []).find(function(item) { return item.key === sectionKey; });
     if (!section) return;
     const label = (schemaForSection(section)?.label || humanize(sectionKey));
@@ -1644,6 +1690,7 @@
   }
 
   async function insertBlock(sectionKey, templateKey, ownerSlug) {
+    if (liveUnimported) { setNote('Start editing page to create a private draft before changing its sections.'); return false; }
     const owner = ownerSlug || slug;
     setNote('Adding block…');
     try {
@@ -1667,6 +1714,7 @@
   }
 
   async function duplicateBlock(sectionKey, blockId, ownerSlug) {
+    if (liveUnimported) { setNote('Start editing page to create a private draft before changing its sections.'); return false; }
     const owner = ownerSlug || slug;
     setNote('Duplicating block…');
     try {
@@ -1688,6 +1736,7 @@
   }
 
   async function moveBlock(sectionKey, blockId, toIndex, ownerSlug) {
+    if (liveUnimported) { setNote('Start editing page to create a private draft before changing its sections.'); return false; }
     const owner = ownerSlug || slug;
     try {
       await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(owner) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId) + '/move', {
@@ -1704,6 +1753,7 @@
   }
 
   async function removeBlock(sectionKey, blockId, ownerSlug) {
+    if (liveUnimported) { setNote('Start editing page to create a private draft before changing its sections.'); return false; }
     const owner = ownerSlug || slug;
     const section = findSection(sectionKey, owner);
     const meta = section?.content?.__editor?.blocks?.find(function(item) { return item.id === blockId; });
@@ -1850,6 +1900,15 @@
   byId('te-theme-trigger').addEventListener('click', function() {
     if (byId('te-theme-popover').hidden) openThemeMenu();
     else closeThemeMenu();
+  });
+
+  byId('te-library-browse').addEventListener('click', function() {
+    closeThemeMenu();
+    if (window.matchMedia('(max-width: 900px)').matches) setMobilePane('sections');
+    const add = byId('te-add-section');
+    if (add && !add.hidden) add.click();
+    byId('te-section-menu')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    byId('te-section-search')?.focus();
   });
 
   byId('te-page-trigger').addEventListener('click', function() {

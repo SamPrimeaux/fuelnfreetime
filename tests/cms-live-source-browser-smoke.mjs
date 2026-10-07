@@ -29,7 +29,7 @@ shop.sections = shop.sections.map(s => ({...s,version:1}));
 const site = getRegistryPage("site");
 const pages = {ok:true,pages:[{slug:"shop",title:"Shop",status:"draft",has_live_storefront:true, cms_published:false,draft_exists:true}]};
 const shim = "<script>" +
- "window.confirm=()=>true;window.__submitted=null;window.__linked=false;" +
+ "window.__nativeConfirmCount=0;window.confirm=()=>{window.__nativeConfirmCount++;return true;};window.__submitted=null;window.__linked=false;" +
  "window.renderShell=function(_,html){document.body.insertAdjacentHTML('afterbegin',html);};" +
  "window.adminFetch=async function(url,options){" +
  "if(url.endsWith('/registry'))return " + JSON.stringify(registryForAdmin()) + ";" +
@@ -81,9 +81,15 @@ const probe = "<script>setTimeout(function(){" +
  "treeHasAdd:!!document.getElementById('te-add-section')," +
  "noOverflow:document.documentElement.scrollWidth<=window.innerWidth+1};" +
  "}" +
+ "before.saveDisabled=document.getElementById('te-save').disabled;" +
+ "document.getElementById('te-save').click();before.noImplicitImport=window.__submitted===null;" +
  "document.getElementById('te-import-live').click();" +
+ "var review=document.querySelector('.te-review-dialog');" +
+ "before.reviewOpened=!!review?.open;before.reviewProtected=window.__submitted===null;" +
+ "before.nativeConfirms=window.__nativeConfirmCount;" +
+ "review?.querySelector('[data-approve]')?.click();" +
  "setTimeout(function(){var pre=document.createElement('pre');pre.id='browser-result';" +
- "pre.textContent=JSON.stringify({before,imported:window.__submitted,linked:window.__linked});document.body.append(pre);},400);" +
+ "pre.textContent=JSON.stringify({before,imported:window.__submitted,linked:window.__linked});document.body.append(pre);},550);" +
  "},2200)</script>";
 const template = file("apps/ecommerce-cms-agentsam/frontend/static/theme-editor.html")
  .replace('<script src="/admin/js/shell.js"></script>',shim).replace("</body>",probe+"</body>");
@@ -128,7 +134,7 @@ assert.equal(result.before.visible,true);
 assert.ok(result.before.liveOnly.some(v => /editorial/i.test(v)), "live editorial scene must appear in the tree");
 assert.ok(result.before.liveOnly.some(v => /products/i.test(v)), "live product grid must appear in the tree");
 assert.match(result.before.inspector,/Time is the\s*real horsepower/i);
-assert.equal(result.before.toolbar.theme,"Heuristic");
+assert.equal(result.before.toolbar.theme,"Section library");
 assert.equal(result.before.toolbar.legacyTabs,0);
 assert.equal(result.before.toolbar.themeTrigger,true);
 assert.equal(result.before.toolbar.pageVisible,true);
@@ -143,6 +149,11 @@ assert.equal(result.before.blockInspector.advancedClosed,true);
 assert.ok(result.before.blockInspector.fieldKeys.some(k=>k.endsWith(".href")));
 assert.equal(result.before.blockInspector.parentButton,true);
 assert.equal(result.before.blockInspector.parentTitle,"Collections");
+assert.equal(result.before.saveDisabled,true,'Read-only live preview must not offer normal draft save');
+assert.equal(result.before.noImplicitImport,true,'Save without edits must not trigger import');
+assert.equal(result.before.reviewOpened,true,'Explicit import must open the in-app review dialog');
+assert.equal(result.before.reviewProtected,true,'Import must wait for approval');
+assert.equal(result.before.nativeConfirms,0,'No browser-native confirm when opening or importing');
 assert.equal(result.imported.mode,"reconcile");
 assert.ok(result.imported.sections.some(s=>s.key==="hero" && /Time is the\s*real horsepower/i.test(s.content.headline)));
 assert.ok(!result.imported.sections.some(s=>s.key==="newsletter"));

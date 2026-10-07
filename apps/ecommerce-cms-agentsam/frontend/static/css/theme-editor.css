@@ -1551,3 +1551,24 @@
   }
   .te-inspector-body { padding-inline: 11px; }
 }
+
+/* Explicit review for CMS draft import; never a browser-native confirm. */
+.te-source-review { margin: 8px 0 18px; padding: 14px; border: 1px solid #d9dfce; border-radius: 12px; background: #f3f6ef; color: #333d2e; }
+.te-source-review strong { display: block; margin-bottom: 5px; font-size: 12px; }
+.te-source-review p { margin: 0; font-size: 11px; line-height: 1.6; }
+.te-inspector-body :disabled { cursor: not-allowed; opacity: .57; }
+.te-review-dialog { width: min(440px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); border: 1px solid #d9ddd3; border-radius: 16px; background: #fcfcfa; color: #232822; padding: 0; box-shadow: 0 28px 90px #1018144d; }
+.te-review-dialog::backdrop { background: #121a16a8; backdrop-filter: blur(3px); }
+.te-review-content { padding: 25px; }
+.te-review-kicker { font-size: 10px; font-weight: 720; letter-spacing: .12em; text-transform: uppercase; color: #66814c; }
+.te-review-content h2 { margin: 10px 0; font-size: 19px; font-weight: 730; letter-spacing: -.03em; }
+.te-review-content p { font-size: 13px; line-height: 1.65; color: #53604f; }
+.te-review-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 25px; }
+.te-review-actions button { min-height: 44px; padding: 9px 15px; border-radius: 9px; border: 1px solid #d6dbce; background: #fff; font-size: 12px; font-weight: 660; cursor: pointer; }
+.te-review-actions [data-approve] { color: #fff; background: #2b3327; border-color: #2b3327; }
+.te-review-actions button:focus-visible { outline: 3px solid #88a874; outline-offset: 2px; }
+
+.te-library-browse { width: 100%; text-align: left; padding: 13px 11px; border: 1px solid #cbdabf; border-radius: 10px; background: #f3f7ef; display: grid; gap: 6px; cursor: pointer; color: #2b3827; }
+.te-library-browse strong { font-size: 13px; }
+.te-library-browse small { font-size: 11px; color: #65785b; line-height: 1.4; }
+.te-library-browse:hover,.te-library-browse:focus-visible { background: #e7f0df; outline: 2px solid #71965a; outline-offset: 1px; }

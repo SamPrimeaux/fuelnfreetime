@@ -1146,89 +1146,74 @@ export default function StudioWorkspace({
               <button type="button" onClick={() => setScale((value) => Math.min(150, value + 10))} aria-label="Make artwork larger">+</button>
               <button type="button" onClick={() => { setX(50); setY(50); }}>Center</button>
               <button type="button" onClick={() => setRotation((value) => ((value + 270) % 360) - 180)}>Rotate 90°</button>
+              <label className="ps-precision-control">X <input type="number" min="0" max="100" step="1" value={x} onChange={(event) => setX(Math.max(0, Math.min(100, Number(event.target.value))))} aria-label="Artwork X position percent" /></label>
+              <label className="ps-precision-control">Y <input type="number" min="0" max="100" step="1" value={y} onChange={(event) => setY(Math.max(0, Math.min(100, Number(event.target.value))))} aria-label="Artwork Y position percent" /></label>
+              <label className="ps-precision-control">Angle <input type="number" min="-180" max="180" step="1" value={rotation} onChange={(event) => setRotation(Math.max(-180, Math.min(180, Number(event.target.value))))} aria-label="Artwork rotation degrees" /></label>
+              <button type="button" onClick={() => setGuides((value) => !value)} aria-pressed={guides}>{guides ? "Hide grid" : "Show grid"}</button>
             </div>
           )}
           <div className="ps-stage" data-agentsam-resource="product-design-stage">
             <div className="ps-product-design-preview" style={{ transform: `scale(${canvasZoom / 100})` }}>
               <div className="ps-product-design-image">
-                {providerRenderUrl ? (
-                  <>
-                    <ProductImage
-                      sources={[providerRenderUrl]}
-                      alt={`Completeful render of ${title || detail.product.name}`}
-                      lazy={false}
-                    />
-                    <span className="ps-preview-badge ps-preview-badge--provider">COMPLETEFUL RENDER</span>
-                  </>
-                ) : (
-                  <>
-                    {designImage ? (
-                      <ProductImage
-                        key={variantId}
-                        sources={[
-                          designImage,
-                          baseImage,
-                          location?.artboard_image_url,
-                          variant?.cover_image_url,
-                          detail.product.realistic_image_url,
-                          detail.product.cover_image_url,
-                          detail.images[0]?.url,
-                        ]}
-                        alt={detail.product.name}
-                        lazy={false}
+                <div className="ps-design-guide" aria-label="Neutral positioning guide for the selected print area">
+                  <div className="ps-design-guide__identity">
+                    <span>Design artboard</span>
+                    <strong>{location?.name || "Selected print area"}</strong>
+                    <small>Neutral positioning guide · not a supplier proof</small>
+                  </div>
+                  {/shirt|tee|hoodie|sweatshirt|tank|jersey/i.test(detail.product.name) && (
+                    <svg className="ps-design-garment-guide" viewBox="0 0 500 560" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
+                      <path d="M170 66 L210 45 Q250 92 290 45 L330 66 L451 142 L407 236 L345 203 L345 502 Q250 527 155 502 L155 203 L93 236 L49 142 Z" fill="#d8ddd3" stroke="#aab5a4" strokeWidth="2"/>
+                      <path d="M210 45 Q250 126 290 45" fill="none" stroke="#aab5a4" strokeWidth="2"/>
+                      <path d="M155 203 L170 66 M345 203 L330 66" fill="none" stroke="#b7c0b1" strokeWidth="1.4"/>
+                    </svg>
+                  )}
+                  <div className={"ps-design-print-area" + (guides ? " is-gridded" : "")} style={{ aspectRatio: ratio }}>
+                    {guides && <>
+                      <span className="ps-design-crosshair-x" aria-hidden="true" />
+                      <span className="ps-design-crosshair-y" aria-hidden="true" />
+                      <span className="ps-design-safe-outline" aria-hidden="true" />
+                    </>}
+                    {asset && showArtwork ? (
+                      <img
+                        className="ps-artwork-layer ps-artwork-layer--interactive"
+                        src={asset.url}
+                        alt="Selected artwork — use arrow keys to nudge the placement"
+                        draggable={false}
+                        tabIndex={0}
+                        onKeyDown={(event) => {
+                          const step = event.shiftKey ? 5 : 1;
+                          if (event.key === "ArrowLeft") setX((value) => Math.max(0, value - step));
+                          else if (event.key === "ArrowRight") setX((value) => Math.min(100, value + step));
+                          else if (event.key === "ArrowUp") setY((value) => Math.max(0, value - step));
+                          else if (event.key === "ArrowDown") setY((value) => Math.min(100, value + step));
+                          else return;
+                          event.preventDefault();
+                        }}
+                        style={{
+                          width: `${scale}%`,
+                          left: `${x}%`,
+                          top: `${y}%`,
+                          transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+                        }}
                       />
                     ) : (
-                      <div className="ps-canvas-empty">
-                        <StudioIcon name="box" size={40} />
-                        <p>No product image supplied.</p>
-                      </div>
+                      <button className="ps-placement-empty" type="button" onClick={() => openTab("upload")}>
+                        <StudioIcon name="upload" />
+                        Add artwork
+                      </button>
                     )}
-                    <div
-                      className="ps-placement-window"
-                      style={placementFrameStyle}
-                      aria-label={`${location?.name || "Print area"} placement preview`}
-                    >
-                      {guides && (
-                        <div className="ps-safe-area">
-                          <span>{location?.name || "PRINT AREA"}</span>
-                        </div>
-                      )}
-                      {asset && showArtwork ? (
-                        <img
-                          className="ps-artwork-layer"
-                          src={asset.url}
-                          alt="Your artwork placement"
-                          draggable={false}
-                          style={{
-                            width: `${scale}%`,
-                            left: `${x}%`,
-                            top: `${y}%`,
-                            transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
-                          }}
-                        />
-                      ) : (
-                        <button
-                          className="ps-placement-empty"
-                          type="button"
-                          onClick={() => openTab("upload")}
-                        >
-                          <StudioIcon name="upload" />
-                          Add artwork
-                        </button>
-                      )}
-                    </div>
-                    <span className="ps-preview-badge">PLACEMENT PREVIEW</span>
-                  </>
-                )}
+                  </div>
+                  <span className="ps-design-dimensions">{printSizeLabel(location)} · {printPixels ? `${printPixels.width} × ${printPixels.height} px` : "Provider dimensions unavailable"}</span>
+                </div>
+                <span className="ps-preview-badge">POSITIONING GUIDE</span>
               </div>
               <div className="ps-product-design-caption">
                 <strong>{variant?.variant_title || variant?.name || detail.product.name}</strong>
                 <span>
-                  {providerRenderUrl
-                    ? `Rendered by Completeful · ${location?.name || "print area"}`
-                    : asset
-                      ? `${asset.filename} · ${location?.name || "choose a print area"}`
-                      : `No artwork selected · ${location?.name || "choose a print area"}`}
+                  {asset
+                    ? `${asset.filename} · ${location?.name || "choose a print area"}`
+                    : `No artwork selected · ${location?.name || "choose a print area"}`}
                 </span>
               </div>
             </div>

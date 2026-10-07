@@ -266,13 +266,16 @@ renderShell("/admin/content", `
         <button type="button" class="btn ghost small" id="media-drawer-close">Close</button>
       </div>
     </div>
-    <div class="media-drawer-body">
+    <div class="media-drawer-body media-workspace-body">
+      <div class="media-workspace-canvas">
       <div class="media-drawer-preview-shell" id="media-drawer-preview-shell">
         <div class="media-drawer-preview" id="media-drawer-preview"></div>
       </div>
       <div class="media-preview-presets" id="media-preview-presets" aria-label="Preview sizes"></div>
       <p class="media-preview-note" id="media-preview-note">Preview only — no derivative file is generated.</p>
       <div id="media-agent-workbench" class="media-agent-workbench"></div>
+      </div>
+      <div class="media-workspace-settings">
       <div class="media-inspector-tabs" role="tablist" aria-label="Asset inspector">
         <button type="button" class="is-active" data-media-inspector-tab="details">Details</button>
         <button type="button" data-media-inspector-tab="optimize">Optimize</button>
@@ -363,6 +366,7 @@ renderShell("/admin/content", `
           <strong>Versions</strong>
           <div id="media-drawer-versions"></div>
         </div>
+      </div>
       </div>
     </div>
     <div class="media-drawer-foot">

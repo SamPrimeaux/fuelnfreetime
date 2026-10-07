@@ -144,11 +144,17 @@ try{
         const bar=document.querySelector('#media-agent-workbench .media-agent');
         return { visible:bar&&!bar.hidden, drawer:document.getElementById('media-drawer').classList.contains('is-open'),
           commentEnabled:!bar.querySelector('[data-media-tool="comment"]').disabled,
+          workspaceCols:getComputedStyle(document.querySelector('.media-workspace-body')).gridTemplateColumns.split(' ').length,
+          imagePanelWidth:Math.round(document.querySelector('.media-workspace-canvas').getBoundingClientRect().width),
+          settingsPanelWidth:Math.round(document.querySelector('.media-workspace-settings').getBoundingClientRect().width),
           markupDisabled:bar.querySelector('[data-media-tool="markup"]').disabled,
           removeBgDisabled:bar.querySelector('[data-media-tool="remove-bg"]').disabled };
       })()`);
       assert.equal(assistant.visible,true,'miniAgentSam should appear for every selected image');
       assert.equal(assistant.drawer,true,'selected media must open in asset inspector');
+      assert.equal(assistant.workspaceCols,2,'Desktop asset detail should show a two-column canvas and inspector');
+      assert.ok(assistant.imagePanelWidth>420,'Media preview must have a useful editing surface: '+JSON.stringify(assistant));
+      assert.ok(assistant.settingsPanelWidth>260,'Inspector needs an independent settings pane: '+JSON.stringify(assistant));
       assert.equal(assistant.commentEnabled,true,'SVG images should still support comments');
       assert.match(read('apps/ecommerce-cms-agentsam/frontend/static/js/media-library.js'), /surface: "content-library"/);
       assert.equal(assistant.markupDisabled,true,'vector source cannot silently rasterize into an editable original');
