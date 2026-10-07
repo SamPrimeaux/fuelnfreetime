@@ -16,6 +16,7 @@
   let liveSourceCaptured = false;
   let liveCapturedSections = [];
   let liveExistingDraft = false;
+  let importingLiveSource = false;
   let unmanagedLiveSections = [];
   let activeBlockId = null;
   let activeFieldKey = null;
@@ -1244,13 +1245,21 @@
     }
     liveSourceCaptured = true;
     discoverUnmanagedSections();
-    byId('te-import-live').hidden = false;
-    byId('te-import-live').textContent = 'Start editing page';
     byId('te-save').textContent = 'Save draft';
     byId('te-preview-label').textContent = 'Live storefront — ' + sections.length + ' editable regions';
-    setNote(count + ' live fields inspected. No draft changes. Choose Start editing page when you are ready to create a private CMS draft.');
     renderTree();
     renderInspector();
+    // No existing page row: creating a new private draft cannot overwrite merchant
+    // work. Do it automatically after verified same-origin source extraction.
+    if (!liveExistingDraft && !host) {
+      byId('te-import-live').hidden = true;
+      setNote('Opening a private working draft from ' + count + ' existing storefront fields…');
+      void importLiveSource({ automatic: true });
+    } else {
+      byId('te-import-live').hidden = false;
+      byId('te-import-live').textContent = 'Review source reconciliation';
+      setNote('Existing CMS work was found and preserved. Review any source reconciliation before replacing private content.');
+    }
     return true;
   }
 
@@ -1319,12 +1328,17 @@
     }
   }
 
-  async function importLiveSource() {
+  async function importLiveSource({ automatic = false } = {}) {
+    if (importingLiveSource) return false;
     if (!liveUnimported || !liveSourceCaptured) {
       setNote('Wait for the real storefront preview before importing.', 'error');
       return false;
     }
-    if (liveExistingDraft && !(await reviewContentChange('Review before replacing this draft', 'The existing CMS draft contains sections that will be archived in R2 and replaced by ' + liveCapturedSections.length + ' sections from the live storefront. The published website will not change. This operation is separate from Save and Publish.', 'Replace private draft'))) return false;
+    if (liveExistingDraft) {
+      if (automatic) return false; // Existing work must never be replaced automatically.
+      if (!(await reviewContentChange('Review source reconciliation', 'The existing CMS draft contains sections that will be archived in R2 and replaced by ' + liveCapturedSections.length + ' sections from the live storefront. The published website will not change. This operation is separate from Save and Publish.', 'Replace private draft'))) return false;
+    }
+    importingLiveSource = true;
     const button = byId('te-import-live');
     button.disabled = true;
     setSaveState('Importing');
@@ -1342,13 +1356,18 @@
       dirtySections.clear();
       setDirty(false);
       await loadPage();
-      setNote('Existing storefront content imported into an unpublished CMS draft.', 'success');
+      setNote(automatic ? 'Private working draft ready. The storefront has not been published.' : 'Existing storefront content imported into an unpublished CMS draft.', 'success');
       return true;
     } catch (error) {
       setNote(error.message || String(error), 'error');
       setSaveState('Import failed', 'error');
+      if (automatic) {
+        button.hidden = false;
+        button.textContent = 'Retry opening private draft';
+      }
       return false;
     } finally {
+      importingLiveSource = false;
       button.disabled = false;
     }
   }
