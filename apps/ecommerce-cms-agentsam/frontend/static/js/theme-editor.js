@@ -81,7 +81,11 @@
     tablet: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="5" y="2.5" width="14" height="19" rx="2.5" stroke="currentColor" stroke-width="1.7"/></svg>',
     mobile: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="7" y="2.5" width="10" height="19" rx="2.5" stroke="currentColor" stroke-width="1.7"/></svg>',
     refresh: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M20 6v5h-5M4 18v-5h5" stroke="currentColor" stroke-width="1.7"/><path d="M6 9a7 7 0 0 1 12-2l2 2M4 15l2 2a7 7 0 0 0 12-2" stroke="currentColor" stroke-width="1.7"/></svg>',
-    external: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M14 5h5v5M19 5l-8 8" stroke="currentColor" stroke-width="1.7"/><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" stroke="currentColor" stroke-width="1.7"/></svg>'
+    external: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M14 5h5v5M19 5l-8 8" stroke="currentColor" stroke-width="1.7"/><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" stroke="currentColor" stroke-width="1.7"/></svg>',
+    exit: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M10 7 5 12l5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 12h9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M14 5h4a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-4" stroke="currentColor" stroke-width="1.7"/></svg>',
+    sections: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 7h14M5 12h14M5 17h14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+    settings: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M6 6l1.6 1.6M16.4 16.4 18 18M18 6l-1.6 1.6M7.6 16.4 6 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+    embeds: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="13" y="13" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><path d="M13 7h5a2 2 0 0 1 2 2v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>'
   };
 
   function shellMarkup() {
@@ -89,25 +93,14 @@
       '<div class="theme-studio">',
         '<header class="theme-studio-toolbar">',
           '<div class="theme-studio-toolbar__left">',
-            '<div class="te-theme-menu">',
-              '<button type="button" class="te-theme-trigger" id="te-theme-trigger" aria-expanded="false" aria-controls="te-theme-popover" aria-label="Open reusable section library and compare appearance previews">',
-                '<span class="te-theme-mark" aria-hidden="true">⊞</span>',
-                '<span class="te-theme-identity"><small>Reusable building blocks</small><strong id="te-theme-name">Section library</strong></span>',
-                '<span class="te-theme-chevron" aria-hidden="true">⌄</span>',
-              '</button>',
-              '<div class="te-theme-popover" id="te-theme-popover" hidden>',
-                '<button type="button" class="te-library-browse" id="te-library-browse"><strong>+ Browse all sections</strong><small>Combine layouts and blocks from any installed design.</small></button><div class="te-theme-popover__title">Appearance previews · not separate page libraries</div>',
-                ((window.ThemeStudioPreview && window.ThemeStudioPreview.themes) || []).map(function(theme) {
-                  return '<button type="button" class="te-theme-option' + (theme.id === selectedTheme ? ' is-active' : '') +
-                    '" data-theme-preview="' + cmsEscapeAttr(theme.id) + '" aria-pressed="' + String(theme.id === selectedTheme) + '">' +
-                    '<strong>' + cmsEscapeHtml(theme.name) + '</strong><small>' +
-                      cmsEscapeHtml(theme.id === 'heuristic' ? 'Current storefront renderer' : 'Visual preview only · not publishable') +
-                    '</small></button>';
-                }).join('') +
-              '</div>',
-            '</div>',
+            '<button type="button" class="te-mode-btn" id="te-exit" aria-label="Exit editor" title="Exit editor">', icon.exit, '<span>Exit</span></button>',
+            '<button type="button" class="te-mode-btn" data-drawer-mode="sections" aria-pressed="true" aria-label="Sections" title="Sections (⌘⌃1)">', icon.sections, '<span>Sections</span></button>',
+            '<button type="button" class="te-mode-btn" data-drawer-mode="theme-settings" aria-pressed="false" aria-label="Theme settings" title="Theme settings (⌘⌃2)">', icon.settings, '</button>',
+            '<button type="button" class="te-mode-btn" data-drawer-mode="app-embeds" aria-pressed="false" aria-label="App embeds" title="App embeds (⌘⌃3)">', icon.embeds, '</button>',
           '</div>',
           '<div class="theme-studio-toolbar__center">',
+            '<div class="te-theme-identity" aria-live="polite"><strong id="te-theme-name">Theme</strong><span class="te-theme-status" id="te-theme-status" hidden></span></div>',
+
             '<div class="te-page-menu">',
               '<button type="button" class="te-page-trigger" id="te-page-trigger" aria-expanded="false"><span class="te-page-trigger__content">', icon.page, '<strong id="te-page-title">Loading…</strong></span><span aria-hidden="true">⌄</span></button>',
               '<div class="te-page-popover" id="te-page-popover" hidden><input class="te-page-search" id="te-page-search" placeholder="Search online store pages" autocomplete="off" aria-label="Search pages"><div class="te-page-options" id="te-page-options"></div></div>',
@@ -119,7 +112,7 @@
               '<button type="button" class="te-device-btn" data-device="mobile" title="Mobile">', icon.mobile, '</button>',
             '</div>',
           '</div>',
-          '<div class="theme-studio-toolbar__right"><a class="te-toolbar-btn" id="te-page-settings" href="#">Page settings</a><button type="button" class="te-toolbar-btn is-primary" id="te-publish">Publish</button></div>',
+          '<div class="theme-studio-toolbar__right"><button type="button" class="te-icon-btn" id="agentsam-toggle" aria-label="Open AgentSam" title="Open AgentSam" aria-expanded="false"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/></svg></button><a class="te-toolbar-btn" id="te-page-settings" href="#">Page settings</a><button type="button" class="te-toolbar-btn is-primary" id="te-publish">Publish</button></div>',
         '</header>',
         '<div class="theme-studio-workspace">',
           '<nav class="te-mobile-pane-switch" id="te-mobile-pane-switch" aria-label="Editor workspace view">',
@@ -127,7 +120,11 @@
             '<button type="button" data-mobile-pane="preview" aria-current="true">Preview</button>',
             '<button type="button" data-mobile-pane="settings">Settings</button>',
           '</nav>',
-          '<aside class="theme-studio-tree"><div class="te-panel-title"><span class="te-panel-kicker">Page structure</span><h2 id="te-tree-title">Page</h2><p id="te-tree-path">/</p></div><div id="te-tree"></div><div class="te-tree-footer"><a id="te-manage-page" href="#">Page content &amp; settings →</a></div></aside>',
+          '<aside class="theme-studio-tree" id="te-editor-drawer">' +
+            '<section class="te-drawer-panel" data-drawer-panel="sections"><div class="te-panel-title"><span class="te-panel-kicker">Page structure</span><h2 id="te-tree-title">Page</h2><p id="te-tree-path">/</p></div><div id="te-tree"></div><section id="te-block-panel" data-surface="left" hidden></section><div class="te-tree-footer"><button type="button" class="te-library-browse" id="te-library-browse">Browse sections</button><a id="te-manage-page" href="#">Page content & settings →</a></div></section>' +
+            '<section class="te-drawer-panel" data-drawer-panel="theme-settings" hidden><div class="te-panel-title"><span class="te-panel-kicker">Theme</span><h2>Theme settings</h2><p>Global appearance for the installed theme. A preview switch does not rename it.</p></div><div class="te-theme-options" id="te-theme-popover">' + ((window.ThemeStudioPreview && window.ThemeStudioPreview.themes) || []).map(function(theme) { return '<button type="button" class="te-theme-option' + (theme.id === selectedTheme ? ' is-active' : '') + '" data-theme-preview="' + cmsEscapeAttr(theme.id) + '" aria-pressed="' + String(theme.id === selectedTheme) + '">' + '<strong>' + cmsEscapeHtml(theme.name) + '</strong><small>' + cmsEscapeHtml('Appearance preview') + '</small></button>'; }).join('') + '</div></section>' +
+            '<section class="te-drawer-panel" data-drawer-panel="app-embeds" hidden><div class="te-panel-title"><span class="te-panel-kicker">Storefront</span><h2>App embeds</h2><p>Extensions that run on the storefront, not admin apps.</p></div><input class="te-page-search" id="te-embed-search" placeholder="Search app embeds" aria-label="Search app embeds"><div class="te-empty" id="te-embed-empty">No storefront embeds are installed for this theme.</div></section>' +
+          '</aside>',
           '<main class="theme-studio-canvas">',
             '<div class="te-preview-bar"><span id="te-preview-label">Storefront preview</span><div class="te-preview-bar__actions"><button class="te-import-live" type="button" id="te-import-live" hidden>Import live page</button><button class="te-icon-btn" type="button" id="te-refresh" title="Refresh preview">', icon.refresh, '</button><a class="te-icon-btn" id="te-open-tab" href="#" target="_blank" rel="noopener" title="Open in new tab">', icon.external, '</a></div></div>',
             '<div class="te-preview-stage"><div class="te-preview-device" id="te-preview-device" data-device="desktop"><iframe id="theme-preview" title="Storefront preview" class="theme-editor-preview"></iframe></div></div>',
@@ -135,7 +132,7 @@
           '</main>',
           '<aside class="theme-editor-panel">',
             '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><div class="te-inspector-tools"><button type="button" id="te-agent-open" class="te-agent-open" aria-label="Ask miniAgentSam about the selected section">✦ Ask AgentSam</button><span class="te-badge" id="te-section-status">draft</span></div></div>',
-            '<div class="te-inspector-body" id="te-inspector-body"></div>',
+            '<div class="te-inspector-body" id="te-inspector-body"></div><div data-composer-slot="editor"></div>',
             '<div class="te-inspector-save"><button type="button" class="te-toolbar-btn is-primary" id="te-save">Save draft</button><p class="te-note" id="te-note"></p></div>',
           '</aside>',
         '</div>',
@@ -151,8 +148,9 @@
   if (host) {
     document.body.innerHTML = shellMarkup();
     document.body.dataset.themeEditorEmbedded = '';
+    document.body.dataset.shellMode = 'theme-editor';
   } else {
-    renderShell('/admin/theme-editor', shellMarkup(), { fullBleed: true });
+    renderShell('/admin/theme-editor', shellMarkup(), { fullBleed: true, shellMode: 'theme-editor' });
   }
 
   const byId = function(id) { return document.getElementById(id); };
@@ -253,7 +251,7 @@
       button.classList.toggle('is-active', current);
       button.setAttribute('aria-pressed', String(current));
     });
-    byId('te-theme-name').textContent = 'Section library';
+    applyThemeIdentity(themeIdentity);
     closeThemeMenu();
     syncPublishCapability();
     renderTree();
@@ -483,13 +481,15 @@
         : '';
 
       const canReorder = !isGlobal && capabilities.reorder !== false;
+      const provenance = generationApi.detectProvenance(JSON.stringify(section.content || section));
+      const provenanceLabel = provenance === 'agentsam' ? 'AgentSam' : provenance === 'foreign-ai' ? 'foreign' : '';
       const metaText = (isGlobal ? 'global' : (visible ? section.status || 'draft' : 'hidden')) + ' · ' + fields.length + ' fields' + (blockMeta.length ? ' · ' + blockMeta.length + ' blocks' : '');
 
       return '<div class="te-tree-section" data-tree-section="' + cmsEscapeAttr(owner + ':' + section.key) + '" data-group="' + cmsEscapeAttr(group) + '">' +
         '<div class="te-tree-row' + (sectionSelected && !activeBlockId ? ' is-active' : '') + '" data-section-key="' + cmsEscapeAttr(section.key) + '" data-section-owner="' + cmsEscapeAttr(owner) + '" draggable="' + canReorder + '" data-index="' + index + '">' +
           '<button type="button" class="te-tree-row__main" data-select-section="' + cmsEscapeAttr(section.key) + '" data-section-owner="' + cmsEscapeAttr(owner) + '">' +
             '<span class="te-tree-row__icon">' + icon.section + '</span><span class="te-tree-row__copy"><span class="te-tree-row__name">' + cmsEscapeHtml(label) +
-            '</span><span class="te-tree-row__meta">' + cmsEscapeHtml(metaText) + '</span></span>' +
+            '</span><span class="te-tree-row__meta">' + cmsEscapeHtml(metaText) + (provenanceLabel ? '<span class="te-provenance" data-provenance="' + cmsEscapeAttr(provenance) + '">' + cmsEscapeHtml(provenanceLabel) + '</span>' : '') + '</span></span>' +
           '</button>' +
           '<span class="te-tree-row__actions">' +
             (!isGlobal ? '<button type="button" class="te-tree-mini" data-toggle-section="' + cmsEscapeAttr(section.key) + '" data-section-owner="' + cmsEscapeAttr(owner) + '" title="' + (visible ? 'Hide section' : 'Show section') + '">' + (visible ? '◉' : '○') + '</button>' : '') +
@@ -876,6 +876,7 @@
     });
     wireFields();
     wireInspectorPreferences();
+    paintGeneratedSettings(panel, section);
     if (liveUnimported) {
       panel.querySelectorAll('input, textarea, select, button:not(#te-inspector-parent)').forEach(function(control) { control.disabled = true; });
     }
@@ -892,6 +893,27 @@
     }
   }
 
+
+  function paintGeneratedSettings(panel, section) {
+    const generatedSettings = section.content && section.content.__editor && section.content.__editor.generatedSettings;
+    if (!generationInspector || !generatedSettings) return;
+    const host = document.createElement('div');
+    host.id = 'te-generated-settings';
+    generationInspector.renderGeneratedSettings(host, generatedSettings);
+    panel.appendChild(host);
+    const wrapper = document.querySelector('[data-agentsam-block]') || { style: { setProperty() {} }, dataset: {} };
+    generationInspector.bindGeneratedSettings(host, wrapper, null);
+  }
+
+  function beginGenerating() {
+    const tree = byId('te-tree');
+    if (generationInspector && tree) generationInspector.insertGeneratingNode(tree);
+  }
+
+  function endGenerating() {
+    const tree = byId('te-tree');
+    if (generationInspector && tree) generationInspector.removeGeneratingNode(tree);
+  }
   function wireFields() {
     document.querySelectorAll('[data-field-input]').forEach(function(input) {
       input.addEventListener('focus', function() {
@@ -1734,6 +1756,7 @@
   }
 
   async function saveDraft() {
+    if (generationLock.locked()) { setNote('Wait for generation to finish.'); return false; }
     if (liveUnimported) {
       setNote('This is a read-only live preview. Choose Start editing page to create a CMS draft before making changes.');
       return false;
@@ -1780,6 +1803,7 @@
   }
 
   async function publishPage() {
+    if (generationLock.locked()) { setNote('Wait for generation to finish.'); return false; }
     if (liveUnimported) {
       setNote('Import the existing live page before publishing any CMS draft.', 'error');
       return;
@@ -2024,17 +2048,103 @@
     await loadPage();
   }
 
+  let editorDrawer = null;
+  let themeIdentity = { name: '', status: '' };
+  const drawerScroll = { sections: 0, 'theme-settings': 0, 'app-embeds': 0 };
+
+  function statusLabel(value) {
+    const raw = String(value || '').toLowerCase();
+    if (raw === 'active' || raw === 'wired' || raw === 'published') return 'Active';
+    if (raw === 'unpublished') return 'Unpublished';
+    if (raw === 'draft') return 'Draft';
+    return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : '';
+  }
+
+  function applyThemeIdentity(identity) {
+    themeIdentity = {
+      name: identity && identity.name ? String(identity.name) : 'Theme',
+      status: identity && identity.status ? String(identity.status) : ''
+    };
+    const nameEl = byId('te-theme-name');
+    const statusEl = byId('te-theme-status');
+    if (nameEl) nameEl.textContent = themeIdentity.name;
+    if (statusEl) {
+      const label = statusLabel(themeIdentity.status);
+      statusEl.textContent = label;
+      statusEl.hidden = !label;
+      statusEl.dataset.status = themeIdentity.status.toLowerCase();
+    }
+  }
+
+  async function loadThemeIdentity() {
+    try {
+      if (host && host.adapter && typeof host.adapter.getThemeIdentity === 'function') {
+        applyThemeIdentity(await host.adapter.getThemeIdentity());
+        return;
+      }
+      const response = await fetch('/api/admin/store', { credentials: 'include' });
+      const data = await response.json();
+      const theme = data.active_theme || data.theme || null;
+      applyThemeIdentity({ name: theme && theme.name, status: theme && (theme.state || theme.status) });
+    } catch (error) {
+      applyThemeIdentity({ name: '', status: '' });
+    }
+  }
+
+  function setEditorDrawer(next) {
+    const aside = byId('te-editor-drawer');
+    if (aside && editorDrawer) drawerScroll[editorDrawer] = aside.scrollTop;
+    editorDrawer = editorDrawer === next ? null : next;
+    const studio = document.querySelector('.theme-studio');
+    if (studio) studio.setAttribute('data-editor-drawer', editorDrawer || 'closed');
+    document.querySelectorAll('[data-drawer-mode]').forEach(function(button) {
+      const on = button.dataset.drawerMode === editorDrawer;
+      button.classList.toggle('is-active', on);
+      button.setAttribute('aria-pressed', String(on));
+    });
+    document.querySelectorAll('[data-drawer-panel]').forEach(function(panel) {
+      panel.hidden = panel.dataset.drawerPanel !== editorDrawer;
+    });
+    if (aside && editorDrawer) aside.scrollTop = drawerScroll[editorDrawer] || 0;
+  }
+
+  let editorLeaving = false;
+
+  let generationInspector = null;
+  const generationLock = { locked: function() { return false; } };
+  import('/admin/js/generation-surfaces.mjs').catch(function() {});
+  import('/admin/js/generation-inspector.mjs').then(function(mod) { generationInspector = mod; }).catch(function() {});
+  import('/admin/js/generation-lock.mjs').then(function(mod) {
+    const lock = mod.createGenerationLock();
+    generationLock.start = lock.start.bind(lock);
+    generationLock.finish = lock.finish.bind(lock);
+    generationLock.locked = lock.locked.bind(lock);
+    generationLock.run = lock.run.bind(lock);
+  }).catch(function() {});
+
+  function confirmLeave() {
+    if (generationLock.locked()) {
+      return window.confirm('A generation is still running. Leave and abort it?');
+    }
+    if (!dirty) return true;
+    return window.confirm('Leave the editor? Unsaved changes on this page will be lost.');
+  }
+
+  function exitEditor() {
+    if (!confirmLeave()) return;
+    editorLeaving = true;
+    if (window.AgentSamShell && AgentSamShell.unbindShellShortcuts) AgentSamShell.unbindShellShortcuts();
+    const dest = window.AgentSamShell && AgentSamShell.resolveExitTarget ? AgentSamShell.resolveExitTarget() : '/admin/store';
+    location.assign(dest);
+  }
+
   function closeThemeMenu() {
-    const popover = byId('te-theme-popover');
-    if (!popover) return;
-    popover.hidden = true;
-    byId('te-theme-trigger').setAttribute('aria-expanded', 'false');
+    if (editorDrawer === 'theme-settings') setEditorDrawer('sections');
   }
 
   function openThemeMenu() {
     closePageMenu();
-    byId('te-theme-popover').hidden = false;
-    byId('te-theme-trigger').setAttribute('aria-expanded', 'true');
+    setEditorDrawer('theme-settings');
   }
 
   function openPageMenu() {
@@ -2127,9 +2237,16 @@
     button.addEventListener('click', function() { setDevice(button.dataset.device); });
   });
 
-  byId('te-theme-trigger').addEventListener('click', function() {
-    if (byId('te-theme-popover').hidden) openThemeMenu();
-    else closeThemeMenu();
+  byId('te-exit').addEventListener('click', exitEditor);
+  document.querySelectorAll('[data-drawer-mode]').forEach(function(button) {
+    button.addEventListener('click', function() { setEditorDrawer(button.dataset.drawerMode); });
+  });
+  byId('te-embed-search')?.addEventListener('input', function(event) {
+    const empty = byId('te-embed-empty');
+    if (!empty) return;
+    empty.textContent = event.target.value.trim()
+      ? 'No storefront embeds match that search.'
+      : 'No storefront embeds are installed for this theme.';
   });
 
   byId('te-library-browse').addEventListener('click', function() {
@@ -2160,6 +2277,10 @@
     void openMiniAgentSam();
   });
   byId('te-save').addEventListener('click', saveDraft);
+  document.addEventListener('click', function(event) {
+    const dockSave = event.target && event.target.closest && event.target.closest('[data-dock-save], #dock-save');
+    if (dockSave) saveDraft();
+  });
   byId('te-publish').addEventListener('click', publishPage);
   byId('theme-preview').addEventListener('load', function() {
     bindPreviewSelection();
@@ -2187,8 +2308,7 @@
 
   document.addEventListener('click', function(event) {
     if (!byId('te-page-popover').hidden && !event.target.closest('.te-page-menu')) closePageMenu();
-    if (!byId('te-theme-popover').hidden && !event.target.closest('.te-theme-menu')) closeThemeMenu();
-  });
+      });
 
   document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') {
@@ -2202,12 +2322,50 @@
     }
   });
 
+  if (window.AgentSamShell && AgentSamShell.bindShellShortcuts) {
+    AgentSamShell.bindShellShortcuts('theme-editor', function(shortcut) {
+      if (shortcut && shortcut.drawer) setEditorDrawer(shortcut.drawer);
+    });
+  }
+  window.addEventListener('pagehide', function() {
+    if (window.AgentSamShell && AgentSamShell.unbindShellShortcuts) AgentSamShell.unbindShellShortcuts();
+  });
+
   window.addEventListener('beforeunload', function(event) {
-    if (!dirty) return;
+    if (!dirty || editorLeaving) return;
     event.preventDefault();
     event.returnValue = '';
   });
 
+  if (!history.state || !history.state.agentsamEditor) history.pushState({ agentsamEditor: 1 }, '');
+  window.addEventListener('popstate', function() {
+    if (!dirty) return;
+    if (confirmLeave()) {
+      editorLeaving = true;
+      if (window.AgentSamShell && AgentSamShell.unbindShellShortcuts) AgentSamShell.unbindShellShortcuts();
+      return;
+    }
+    history.pushState({ agentsamEditor: 1 }, '');
+  });
+
+  const generationApi = {
+    detectProvenance: function() { return 'unknown'; },
+    scanSections: function() { return []; },
+    persistScanReport: function() { return Promise.resolve({ ok: false, fatal: false }); },
+  };
+  import('/admin/js/generation-namespace.mjs').then(function(mod) {
+    Object.assign(generationApi, mod);
+    renderTree();
+    const sections = ownerSections(slug).concat(ownerSections('site'));
+    const report = generationApi.scanSections(sections);
+    generationApi.persistScanReport(report, function(body) {
+      return editorRequest('/api/admin/theme-editor/provenance-scan', { method: 'POST', body: JSON.stringify({ report: body }) });
+    }).catch(function() { return { ok: false, fatal: false }; });
+  }).catch(function() {});
+
+  window.AgentSamEditorGeneration = { beginGenerating: beginGenerating, endGenerating: endGenerating };
   setDevice(device);
+  setEditorDrawer('sections');
+  loadThemeIdentity();
   loadPage();
 })();

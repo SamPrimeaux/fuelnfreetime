@@ -456,7 +456,7 @@ export function mountAdminDock(options = {}) {
   vv?.addEventListener("resize", syncKeyboard);
   vv?.addEventListener("scroll", syncKeyboard);
 
-  doc.body.classList.add("admin-dock-active");
+  if (!doc.body.classList.contains("admin-dock-off")) doc.body.classList.add("admin-dock-active");
   render();
 
   return {
