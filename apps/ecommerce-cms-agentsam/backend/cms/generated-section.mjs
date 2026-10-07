@@ -97,13 +97,15 @@ export async function persistGeneratedImplementation(env, accountId, record, sec
   const checked = inspectGeneratedSection(record,sectionKey);
   if (!checked.ok) return checked;
   if (!env.WEBSITE_ASSETS) return {error:"R2 is not bound",status:503};
-  const serialized = JSON.stringify(checked.canonical);
-  const digest = await sha256(serialized);
+  // The implementation identity includes the semantic contract, but NOT
+  // instance setting values or a presentation-only label.
+  const manifest = { schema:"cms.generated-implementation.v1",canonical:checked.canonical,
+    definition:{kind:"section",type:checked.type},fields:checked.fields };
+  const digest = await sha256(JSON.stringify(manifest));
   const artifactId = "cmsa_" + digest.slice(0,24);
   const version = digest.slice(0,16);
   const prefix = "cms/artifacts/section/" + digest + "/";
   const key = prefix + "manifest.json";
-  const manifest = { schema:"cms.generated-implementation.v1",canonical:checked.canonical,definition:checked.definition,fields:checked.fields };
   // Content addressing avoids overwriting another version or merchant's original.
   const prior = await readR2Json(env,key);
   if (prior && JSON.stringify(prior) !== JSON.stringify(manifest)) return {error:"Immutable artifact collision",status:409};
@@ -140,9 +142,10 @@ export async function attachGeneratedImplementations(env, slug, sections, accoun
     if (!artifact) return section;
     const manifest = await readR2Json(env,artifact.manifest_r2_key);
     if (!manifest || manifest.schema !== "cms.generated-implementation.v1") return section;
-    const checked = inspectGeneratedSection({canonical:manifest.canonical,definition:manifest.definition,settings:section.content},section.key);
+    const settings = Object.fromEntries(Object.entries(section.content).filter(([key])=>key !== "__editor"));
+    const checked = inspectGeneratedSection({canonical:manifest.canonical,definition:manifest.definition,settings},section.key);
     if (!checked.ok) return section;
-    if (await sha256(JSON.stringify(manifest.canonical)) !== artifact.content_hash) return section;
+    if (await sha256(JSON.stringify(manifest)) !== artifact.content_hash) return section;
     return {...section,implementation:manifest.canonical};
   }));
 }

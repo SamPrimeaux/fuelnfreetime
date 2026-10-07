@@ -111,8 +111,10 @@ test("revising a generated section creates immutable versions without changing i
   try {
     const first=await acceptGeneratedSection(fx.env,"shop","acct_alpha",{record:record()});
     assert.equal(first.ok,true,JSON.stringify(first));
+    const revisedRecord=record("Updated story");
+    revisedRecord.canonical.css='[data-agentsam-block="__UID__"] { padding: 32px; } [data-agentsam-block="__UID__"] h2 { color: #fff; }';
     const next=await acceptGeneratedSection(fx.env,"shop","acct_alpha",{
-      sectionKey:first.section_key,expectedVersion:first.version,record:record("Updated story"),
+      sectionKey:first.section_key,expectedVersion:first.version,record:revisedRecord,
     });
     assert.equal(next.ok,true,JSON.stringify(next));
     assert.equal(next.section_key,first.section_key);
