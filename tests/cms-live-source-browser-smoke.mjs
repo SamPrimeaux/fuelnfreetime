@@ -44,7 +44,8 @@ const probe = "<script>setTimeout(function(){" +
  "var frame=document.getElementById('theme-preview');" +
  "var before={src:frame.getAttribute('src'),headline:frame.contentDocument?.querySelector('[data-cms-section=\"hero\"] [data-cms=\"headline\"]')?.textContent," +
  "visible:!document.getElementById('te-import-live').hidden,liveOnly:[...document.querySelectorAll('.te-live-only-row strong')].map(e=>e.textContent)," +
- "inspector:document.getElementById('te-field-hero-headline')?.value};" +
+ "inspector:document.getElementById('te-field-hero-headline')?.value," +
+ "nativeShop:[...document.querySelectorAll('[data-select-section]')].map(n=>n.dataset.selectSection)};" +
  "var settingsButton=document.querySelector('[data-drawer-mode=\\\"theme-settings\\\"]');" +
  "before.toolbar={theme:document.getElementById('te-theme-name')?.textContent," +
  "themeSettings:!!settingsButton,legacyTabs:document.querySelectorAll('#te-tabs,.te-theme-switch').length," +
@@ -145,8 +146,9 @@ console.log(JSON.stringify(result,null,2));
 assert.match(result.before.src,/^\/shop\?_=/);
 assert.match(result.before.headline,/Time is the\s*real horsepower/i);
 assert.equal(result.before.visible,true);
-assert.ok(result.before.liveOnly.some(v => /editorial/i.test(v)), "live editorial scene must appear in the tree");
-assert.ok(result.before.liveOnly.some(v => /products/i.test(v)), "live product grid must appear in the tree");
+assert.ok(result.before.nativeShop.includes("editorial-grid"), "Editorial grid must be a native selectable section");
+assert.ok(result.before.nativeShop.includes("products-grid"), "Live product grid must be a native selectable section");
+assert.ok(!result.before.liveOnly.some(v => /editorial|products/i.test(v)), "Both supported sections must leave the unmanaged warning group");
 assert.match(result.before.inspector,/Time is the\s*real horsepower/i);
 assert.equal(result.before.toolbar.theme,"Theme","Unconfigured theme identity should show its neutral fallback");
 assert.equal(result.before.toolbar.legacyTabs,0);
@@ -178,6 +180,15 @@ const cards = result.imported.sections.find(s => s.key === "collections").conten
 assert.equal(cards.card1.name, "High Octane");
 assert.equal(cards.card2.name, "Masters");
 assert.equal(cards.card3.name, "Essentials");
+const editorial = result.imported.sections.find(s=>s.key==="editorial-grid")?.content;
+assert.ok(editorial, "Editorial source must be imported into a normal private section");
+assert.equal(editorial.tile1.headline, "Run it past redline");
+assert.equal(editorial.tile2.eyebrow, "The long way home");
+assert.equal(editorial.tile3.href, "/shop/collections/essentials");
+const productGrid = result.imported.sections.find(s=>s.key==="products-grid")?.content;
+assert.deepEqual({ eyebrow:productGrid?.eyebrow,title:productGrid?.title },
+  { eyebrow:"Available now",title:"Shop all gear" });
+assert.ok(!("products" in productGrid), "Products must stay bound to the commerce API, not copied into CMS configuration");
 assert.equal(result.linked,true);
 assert.ok(result.saved.some(s=>s.content.headline==="Private autosave browser proof"),"Editing a native field should automatically persist a private draft");
 assert.equal(result.saveState,"Saved privately","Autosave should report completion without publishing");
