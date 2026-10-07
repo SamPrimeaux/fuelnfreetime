@@ -44,15 +44,15 @@ const probe = "<script>setTimeout(function(){" +
  "var before={src:frame.getAttribute('src'),headline:frame.contentDocument?.querySelector('[data-cms-section=\"hero\"] [data-cms=\"headline\"]')?.textContent," +
  "visible:!document.getElementById('te-import-live').hidden,liveOnly:[...document.querySelectorAll('.te-live-only-row strong')].map(e=>e.textContent)," +
  "inspector:document.getElementById('te-field-hero-headline')?.value};" +
- "var themeTrigger=document.getElementById('te-theme-trigger');" +
+ "var settingsButton=document.querySelector('[data-drawer-mode=\\\"theme-settings\\\"]');" +
  "before.toolbar={theme:document.getElementById('te-theme-name')?.textContent," +
- "themeTrigger:!!themeTrigger,legacyTabs:document.querySelectorAll('#te-tabs,.te-theme-switch').length," +
+ "themeSettings:!!settingsButton,legacyTabs:document.querySelectorAll('#te-tabs,.te-theme-switch').length," +
  "pageVisible:getComputedStyle(document.getElementById('te-page-trigger')).display!=='none'," +
  "noOverflow:document.documentElement.scrollWidth<=window.innerWidth+1};" +
- "themeTrigger?.click();" +
- "before.toolbar.menuOpened=!document.getElementById('te-theme-popover').hidden;" +
+ "settingsButton?.click();" +
+ "before.toolbar.settingsOpened=!document.querySelector('[data-drawer-panel=\\\"theme-settings\\\"]').hidden;" +
  "before.toolbar.options=document.querySelectorAll('[data-theme-preview]').length;" +
- "themeTrigger?.click();" +
+ "document.querySelector('[data-drawer-mode=\\\"sections\\\"]')?.click();" +
  "if(window.innerWidth>900){" +
  "var blockButton=document.querySelector('[data-select-block=card3][data-block-section=collections]');" +
  "if(blockButton){" +
@@ -136,9 +136,9 @@ assert.ok(result.before.liveOnly.some(v => /products/i.test(v)), "live product g
 assert.match(result.before.inspector,/Time is the\s*real horsepower/i);
 assert.equal(result.before.toolbar.theme,"Section library");
 assert.equal(result.before.toolbar.legacyTabs,0);
-assert.equal(result.before.toolbar.themeTrigger,true);
+assert.equal(result.before.toolbar.themeSettings,true);
 assert.equal(result.before.toolbar.pageVisible,true);
-assert.equal(result.before.toolbar.menuOpened,true);
+assert.equal(result.before.toolbar.settingsOpened,true);
 assert.equal(result.before.toolbar.options,3);
 assert.equal(result.before.toolbar.noOverflow,true);
 assert.equal(results.get(1000).before.toolbar.noOverflow,true,"Mid-size desktop should fit all three editor panes");
@@ -176,7 +176,7 @@ for(const width of [744,390]){
  assert.equal(mobile.noOverflow,true, "Editor must have no horizontal page overflow");
  assert.equal(results.get(width).before.toolbar.legacyTabs,0);
  assert.equal(results.get(width).before.toolbar.pageVisible,true);
- assert.equal(results.get(width).before.toolbar.menuOpened,true);
+ assert.equal(results.get(width).before.toolbar.settingsOpened,true);
  assert.equal(results.get(width).linked,true);
  console.log("PASS: "+width+"px mobile CMS Sections / Preview / Settings editor");
 }
