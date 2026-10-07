@@ -69,7 +69,13 @@ export function inspectGeneratedSection(record, sectionKey = "preview-section") 
     return { error:"Unsupported or unsafe generated CSS", status:422 };
   }
   const forms = nsForms(sectionKey);
-  const accepted = acceptGeneratedBlock({html,css,js:""}, {blockId:sectionKey,namespace:"agentsam"});
+  // The UID names classes and ids, while the wrapper uses the stable CMS
+  // section identity. Resolve these separately before applying the shared lint.
+  const scopedHtml = html.replaceAll('data-agentsam-block="__UID__"',
+    'data-agentsam-block="' + forms.blockId + '"');
+  const scopedCss = css.replaceAll('[data-agentsam-block="__UID__"]',
+    '[data-agentsam-block="' + forms.blockId + '"]');
+  const accepted = acceptGeneratedBlock({html:scopedHtml,css:scopedCss,js:""}, {blockId:sectionKey,namespace:"agentsam"});
   if (!accepted.ok) return { error:accepted.error,status:422 };
   const scoped = '[data-agentsam-block="' + forms.blockId + '"]';
   for (const rule of accepted.resolved.css.split("}")) {
