@@ -1,22 +1,19 @@
-# Fuel & Free Time — feature capsules
+# Compatibility feature manifests
 
-Incubating `agentsam.feature.v1` manifests for behavior already built in this repo.
+This directory remains readable while the Ecommerce app is refactored toward clearer ownership.
 
-Schema SSOT: `agentsam-sdk/protocol/features/agentsam.feature.v1.schema.json`
+Canonical ownership now follows the thing being described:
 
-| Feature | Kind | Status |
-|---------|------|--------|
-| provider.resend | provider | incubating |
-| provider.completeful | provider | extracted (`@inneranimalmedia/agentsam-provider-completeful`) |
-| admin.shell-nav | ui | incubating |
-| admin.mobile-dock | ui | incubating (`@inneranimalmedia/admin-dock`) |
-| agentsam.mini-composer | composer | extracted (package) |
-| growth.campaigns | domain | incubating |
-| commerce.product-studio | domain | incubating · requires `commerce.catalog` |
+- Core Ecommerce admin frontend -> apps/ecommerce-cms-agentsam/frontend/admin.surface.json
+- Bundled Ecommerce Apps -> apps/ecommerce-cms-agentsam/apps/*/agentsam.app.json
+- Extracted/shared package features -> live with their package (for example packages/agentsam-workbench/agentsam.feature.json)
 
-Host APP: `../.agentsam/app.json`  
-Ecommerce APP: `../apps/ecommerce-cms-agentsam/.agentsam/app.json`
+The manifests in this root features/ directory are compatibility bridges for older discovery flows. Do not add new Ecommerce Apps here. New App contracts belong under apps/ecommerce-cms-agentsam/apps/; new package-scoped features belong with the package that owns them.
 
-**Law:** npm/package install is inert. AgentSam activates after plan + approval.
+Current bundled Ecommerce Apps:
+- Product Studio
+- Growth
+- Completeful
+- Resend / Email
 
-Product Studio consumes `agentsam.commerce.catalog.v1` (`catalog_product_id` / `catalog_variant_id`). Completeful provider ids stay adapter aliases.
+admin-mobile-dock remains a shared UI/package feature while its reusable package contract is retained separately.

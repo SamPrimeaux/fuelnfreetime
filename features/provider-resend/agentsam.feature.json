@@ -17,15 +17,24 @@
   ],
   "requires": [],
   "optional": [],
-  "runtime": ["worker", "node"],
+  "runtime": [
+    "worker",
+    "node"
+  ],
   "contributes": {
     "routes": [],
-    "tools": ["email.send"],
+    "tools": [
+      "email.send"
+    ],
     "webhooks": [
       "POST /webhooks/resend/outbound",
       "POST /webhooks/resend/inbound"
     ],
-    "hooks": ["email.sent", "email.delivered", "email.bounced"]
+    "hooks": [
+      "email.sent",
+      "email.delivered",
+      "email.bounced"
+    ]
   },
   "secrets": {
     "server_only": [
@@ -33,11 +42,19 @@
       "RESEND_WEBHOOK_SECRET_OUTBOUND",
       "RESEND_WEBHOOK_SECRET_INBOUND"
     ],
-    "optional": ["RESEND_FROM"]
+    "optional": [
+      "RESEND_FROM"
+    ]
   },
   "host_bindings": {
-    "required": ["env.RESEND_*", "from_address_default"],
-    "forbidden_in_feature": ["FNF_ACCOUNT_ID", "hardcoded fuelnfreetime.com brand"]
+    "required": [
+      "env.RESEND_*",
+      "from_address_default"
+    ],
+    "forbidden_in_feature": [
+      "FNF_ACCOUNT_ID",
+      "hardcoded fuelnfreetime.com brand"
+    ]
   },
   "source": {
     "proving_ground": "fuelnfreetime",
@@ -59,5 +76,10 @@
       "verify",
       "write_install_receipt"
     ]
+  },
+  "compatibility": {
+    "canonical": "apps/ecommerce-cms-agentsam/apps/resend/agentsam.app.json",
+    "classification": "provider-app",
+    "note": "Resend/Email is now classified as a bundled provider App. This feature manifest remains as a compatibility bridge."
   }
 }

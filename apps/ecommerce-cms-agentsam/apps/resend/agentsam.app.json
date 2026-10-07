@@ -1,0 +1,37 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "resend",
+  "name": "Email",
+  "provider": "Resend",
+  "role": "provider-app",
+  "category": "communications",
+  "status": "bundled",
+  "routes": [
+    "/admin/email"
+  ],
+  "provides": [
+    "email.send",
+    "email.batch.send",
+    "email.webhook.receive",
+    "email.delivery.status"
+  ],
+  "implementation": {
+    "frontend": [
+      "frontend/static/dashboard/email.html"
+    ],
+    "backend": [
+      "backend/admin/mail.js",
+      "backend/lib/mail-mailboxes.js",
+      "backend/lib/resend.js",
+      "backend/webhooks/resend.js"
+    ]
+  },
+  "configuration": {
+    "plugin_key": "resend",
+    "credential_secret": "RESEND_API_KEY"
+  },
+  "navigation": {
+    "placement": "apps",
+    "label": "Email"
+  }
+}

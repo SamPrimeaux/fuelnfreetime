@@ -35,7 +35,7 @@ import {
   redirectToAdminLogin,
 } from "./lib/admin-routes.js";
 import { redirectWww, resolveStorefrontPath, serveStaticAlias, STORE_HTML_REDIRECTS, PAGES_CLEAN_REDIRECTS } from "./lib/routes.js";
-import { ADMIN_REDIRECTS } from "./lib/route-manifest.js";
+import { ADMIN_REDIRECTS, adminRouteForPath } from "./lib/route-manifest.js";
 
 import {
   handleResendOutboundWebhook,
@@ -350,11 +350,7 @@ export default {
       }
     }
 
-    // Analytics SPA — /admin/analytics/overview|finance|health (no .html)
-    const analyticsViewMatch = path.match(/^\/admin\/analytics\/(overview|finance|health)\/?$/);
-    const accountViewMatch = path === "/admin/account" || path === "/admin/account/";
-    const productStudioMatch = /^\/admin\/products\/create(?:\/[^/]+)?\/?$/.test(path);
-    const productArtworkHelpMatch = /^\/admin\/products\/help\/artwork\/?$/.test(path);
+    // SPA admin routes compile from the canonical route manifest.
     if (path === ADMIN_ANALYTICS_PREFIX || path === `${ADMIN_ANALYTICS_PREFIX}/`) {
       const user = await getSessionUser(request, env);
       if (!user) {
@@ -364,7 +360,8 @@ export default {
         Response.redirect(new URL(`${ADMIN_ANALYTICS_PREFIX}/overview`, request.url), 302)
       );
     }
-    if (analyticsViewMatch || accountViewMatch || productStudioMatch || productArtworkHelpMatch) {
+    const adminRoute = adminRouteForPath(path);
+    if (adminRoute?.handler === "admin-spa") {
       const user = await getSessionUser(request, env);
       if (!user) {
         return noStore(redirectToAdminLogin(request));

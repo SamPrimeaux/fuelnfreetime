@@ -1,0 +1,33 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "completeful",
+  "name": "Completeful",
+  "role": "provider-app",
+  "category": "fulfillment",
+  "status": "bundled",
+  "provides": [
+    "commerce.catalog.read",
+    "commerce.catalog.sync",
+    "commerce.fulfillment.orders",
+    "commerce.provider.webhooks"
+  ],
+  "requires": [
+    "storage.sql"
+  ],
+  "implementation": {
+    "backend": [
+      "backend/admin/completeful.js",
+      "backend/completeful",
+      "backend/webhooks/completeful.js",
+      "backend/agentsam/completeful-tools.js"
+    ]
+  },
+  "configuration": {
+    "plugin_key": "completeful",
+    "credential_secret": "CAPP_KEY",
+    "live_writes_gate": "COMPLETEFUL_ALLOW_LIVE_WRITES"
+  },
+  "extensions": [
+    "product-studio"
+  ]
+}

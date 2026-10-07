@@ -15,9 +15,14 @@
     "commerce.fulfillment.orders",
     "commerce.provider.webhooks"
   ],
-  "requires": ["storage.sql"],
+  "requires": [
+    "storage.sql"
+  ],
   "optional": [],
-  "runtime": ["worker", "node"],
+  "runtime": [
+    "worker",
+    "node"
+  ],
   "contributes": {
     "tools": [
       "completeful.shop.list",
@@ -26,16 +31,31 @@
       "completeful.order.get",
       "completeful.webhook.list"
     ],
-    "webhooks": ["completeful.webhook.verify"],
+    "webhooks": [
+      "completeful.webhook.verify"
+    ],
     "skills": []
   },
   "secrets": {
-    "server_only": ["completeful.api_key"],
-    "optional": ["completeful.api_url", "completeful.allow_live_writes"]
+    "server_only": [
+      "completeful.api_key"
+    ],
+    "optional": [
+      "completeful.api_url",
+      "completeful.allow_live_writes"
+    ]
   },
   "host_bindings": {
-    "required": ["env secret map (e.g. CAPP_KEY)", "db for host catalog mirror", "admin_session"],
-    "forbidden_in_feature": ["FNF_ACCOUNT_ID", "browser_exposure_of_CAPP_KEY", "account_id_hardcode"]
+    "required": [
+      "env secret map (e.g. CAPP_KEY)",
+      "db for host catalog mirror",
+      "admin_session"
+    ],
+    "forbidden_in_feature": [
+      "FNF_ACCOUNT_ID",
+      "browser_exposure_of_CAPP_KEY",
+      "account_id_hardcode"
+    ]
   },
   "source": {
     "proving_ground": "fuelnfreetime",
@@ -58,5 +78,10 @@
       "verify",
       "write_install_receipt"
     ]
+  },
+  "compatibility": {
+    "canonical": "apps/ecommerce-cms-agentsam/apps/completeful/agentsam.app.json",
+    "classification": "provider-app",
+    "note": "Completeful is now classified as a bundled provider App. This feature manifest remains as a compatibility bridge."
   }
 }

@@ -14,11 +14,22 @@
     "commerce.product.studio",
     "commerce.catalog.browse"
   ],
-  "requires": ["commerce.catalog.read"],
-  "optional": ["media.assets", "agentsam.mini-composer"],
-  "runtime": ["browser", "worker"],
+  "requires": [
+    "commerce.catalog.read"
+  ],
+  "optional": [
+    "media.assets",
+    "agentsam.mini-composer"
+  ],
+  "runtime": [
+    "browser",
+    "worker"
+  ],
   "contributes": {
-    "ui": ["ProductStudioPage", "StudioWorkspace"],
+    "ui": [
+      "ProductStudioPage",
+      "StudioWorkspace"
+    ],
     "routes": [
       "/admin/products/create",
       "/admin/products/create/:productId"
@@ -28,8 +39,16 @@
     "catalog": "agentsam-sdk/protocol/commerce/catalog.v1.json"
   },
   "host_bindings": {
-    "required": ["commerce.catalog adapter", "admin_session"],
-    "forbidden_in_feature": ["CAPP_KEY", "Completeful URL shapes", "FNF_ACCOUNT_ID", "completeful_* as primary UI ids"]
+    "required": [
+      "commerce.catalog adapter",
+      "admin_session"
+    ],
+    "forbidden_in_feature": [
+      "CAPP_KEY",
+      "Completeful URL shapes",
+      "FNF_ACCOUNT_ID",
+      "completeful_* as primary UI ids"
+    ]
   },
   "source": {
     "proving_ground": "fuelnfreetime",
@@ -51,5 +70,10 @@
       "verify",
       "write_install_receipt"
     ]
+  },
+  "compatibility": {
+    "canonical": "apps/ecommerce-cms-agentsam/apps/product-studio/agentsam.app.json",
+    "classification": "app",
+    "note": "Product Studio is now classified as a bundled Ecommerce App. This feature manifest remains as a compatibility bridge."
   }
 }

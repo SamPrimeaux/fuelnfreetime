@@ -15,15 +15,29 @@
     "admin.chrome.theme"
   ],
   "requires": [],
-  "optional": ["agentsam.mini-composer"],
-  "runtime": ["browser"],
+  "optional": [
+    "agentsam.mini-composer"
+  ],
+  "runtime": [
+    "browser"
+  ],
   "contributes": {
-    "ui": ["console-sidenav", "console-topbar", "console-theme"],
+    "ui": [
+      "console-sidenav",
+      "console-topbar",
+      "console-theme"
+    ],
     "routes": []
   },
   "host_bindings": {
-    "required": ["nav_model_or_defaults", "active_href", "logo_url"],
-    "forbidden_in_feature": ["FNF_ACCOUNT_ID"]
+    "required": [
+      "nav_model_or_defaults",
+      "active_href",
+      "logo_url"
+    ],
+    "forbidden_in_feature": [
+      "FNF_ACCOUNT_ID"
+    ]
   },
   "source": {
     "proving_ground": "fuelnfreetime",
@@ -42,5 +56,10 @@
       "verify",
       "write_install_receipt"
     ]
+  },
+  "compatibility": {
+    "canonical": "apps/ecommerce-cms-agentsam/frontend/admin.surface.json",
+    "classification": "core-surface",
+    "note": "The admin shell/navigation is now classified as a core Ecommerce application surface. This file remains as a compatibility bridge."
   }
 }

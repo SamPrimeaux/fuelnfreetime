@@ -1,0 +1,41 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "growth",
+  "name": "Growth",
+  "role": "embedded-app",
+  "category": "marketing",
+  "status": "bundled",
+  "routes": [
+    "/admin/growth"
+  ],
+  "provides": [
+    "campaign.create",
+    "campaign.manage",
+    "campaign.analytics",
+    "attribution.read"
+  ],
+  "requires": [
+    "account.context",
+    "storage.sql"
+  ],
+  "optional": [
+    "email.send",
+    "cms.publish",
+    "commerce.catalog.read"
+  ],
+  "implementation": {
+    "frontend": [
+      "frontend/static/growth.html",
+      "frontend/static/js/growth.js",
+      "frontend/static/css/growth.css"
+    ],
+    "backend": [
+      "backend/admin/growth.js",
+      "backend/attribution"
+    ]
+  },
+  "navigation": {
+    "placement": "main",
+    "label": "Growth"
+  }
+}

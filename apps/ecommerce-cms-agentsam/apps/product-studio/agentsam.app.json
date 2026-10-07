@@ -1,0 +1,37 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "product-studio",
+  "name": "Product Studio",
+  "role": "embedded-app",
+  "category": "commerce",
+  "status": "bundled",
+  "routes": [
+    "/admin/products/create",
+    "/admin/products/create/:productId",
+    "/admin/products/help/artwork"
+  ],
+  "provides": [
+    "commerce.product.draft",
+    "commerce.product.studio",
+    "commerce.catalog.browse"
+  ],
+  "requires": [
+    "commerce.catalog.read"
+  ],
+  "optional": [
+    "media.assets",
+    "agentsam.mini-composer"
+  ],
+  "implementation": {
+    "frontend": [
+      "frontend/src/pages/products/ProductStudioPage.tsx",
+      "frontend/src/pages/products/ArtworkHelpPage.tsx"
+    ],
+    "backend": [
+      "backend/admin/product-studio.js"
+    ]
+  },
+  "navigation": {
+    "placement": "products"
+  }
+}

@@ -15,11 +15,24 @@
     "agentsam.composer.capabilities",
     "agentsam.composer.attachments"
   ],
-  "requires": ["agentsam.runtime.send"],
-  "optional": ["agentsam.voice", "agentsam.generation.mount"],
-  "runtime": ["browser", "common"],
+  "requires": [
+    "agentsam.runtime.send"
+  ],
+  "optional": [
+    "agentsam.voice",
+    "agentsam.generation.mount"
+  ],
+  "runtime": [
+    "browser",
+    "common"
+  ],
   "contributes": {
-    "ui": ["mini-agentsam", "composer", "capability-menu", "attachment-controller"]
+    "ui": [
+      "mini-agentsam",
+      "composer",
+      "capability-menu",
+      "attachment-controller"
+    ]
   },
   "host_bindings": {
     "required": [
@@ -51,5 +64,10 @@
       "verify",
       "write_install_receipt"
     ]
+  },
+  "compatibility": {
+    "canonical": "packages/agentsam-workbench/agentsam.feature.json",
+    "classification": "package-feature",
+    "note": "miniAgentSam ownership lives with @inneranimalmedia/agentsam-workbench. This root feature manifest remains as a compatibility bridge."
   }
 }
