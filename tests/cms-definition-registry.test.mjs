@@ -48,3 +48,49 @@ test("an artifact without a ready, tenant-matching record is not executable", ()
   const bad = normalizeCmsDefinition({ id:"cmsd", definition_key:"scene", kind:"section",version:"1",label:"Scene",status:"active",origin:"generated",artifact_id:"x", artifact_status:"building",settings_schema_json:"{}",allowed_blocks_json:"[]" });
   assert.equal(bad.artifact,null);
 });
+
+test("admin definition endpoint is account-scoped and validates filters", async () => {
+  const { handleAdminCmsApi } = await import("../apps/ecommerce-cms-agentsam/backend/cms/api.js");
+  let bound = null;
+  const env = { DB: { prepare(sql) {
+    return { bind(...values) {
+      bound = { sql, values };
+      return { all: async () => ({ results: [] }) };
+    } };
+  } } };
+  const request = new Request("https://fuelnfreetime.test/api/admin/cms/definitions?kind=section&status=active");
+  const denied = await handleAdminCmsApi(request, env, new URL(request.url));
+  assert.equal(denied.status, 403, "A missing account must never permit definition discovery");
+  assert.equal(bound, null);
+
+  const allowed = await handleAdminCmsApi(request, env, new URL(request.url), { accountId:"acct_alpha" });
+  assert.equal(allowed.status, 200);
+  assert.deepEqual((await allowed.json()).definitions, []);
+  assert.deepEqual(bound.values, ["acct_alpha", "section", "active"]);
+
+  const invalid = new Request("https://fuelnfreetime.test/api/admin/cms/definitions?kind=../../../oops");
+  const bad = await handleAdminCmsApi(invalid, env, new URL(invalid.url), { accountId:"acct_alpha" });
+  assert.equal(bad.status, 400);
+});
+
+test("admin registry overlays active D1 metadata without replacing section renderers", async () => {
+  const { handleAdminCmsApi } = await import("../apps/ecommerce-cms-agentsam/backend/cms/api.js");
+  const env = { DB: { prepare(sql) {
+    assert.match(sql,/WHERE d.account_id =/);
+    return { bind(...values) {
+      assert.deepEqual(values, ["acct_alpha","active"]);
+      return { all: async () => ({ results: [{
+        id:"cmsd_x", definition_key:"collections",kind:"section",version:"1",label:"Collections",
+        origin:"imported",status:"active",settings_schema_json:"{}",allowed_blocks_json:"[]"
+      }] }) };
+    } };
+  } } };
+  const request = new Request("https://fuelnfreetime.test/api/admin/cms/registry");
+  const response = await handleAdminCmsApi(request, env, new URL(request.url), { accountId:"acct_alpha" });
+  const data = await response.json();
+  assert.equal(data.ok,true);
+  assert.equal(data.pages.shop.sections.collections.definitionId,"cmsd_x");
+  assert.equal(data.pages.shop.sections.collections.fields[0].key,"title","Real inspector controls must remain intact");
+  assert.equal(data.definitions.find((entry)=>entry.key==="collections").insertable,true);
+  assert.equal(data.pages.shop.sections["unbuilt-scene"],undefined);
+});
