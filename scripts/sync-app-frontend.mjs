@@ -11,6 +11,8 @@ await cp(path.join(root, 'packages/heuristic-theme/storefront'), output, { recur
 await cp(path.join(root, 'packages/heuristic-theme/contracts'), path.join(output, 'theme/contracts'), { recursive: true });
 await cp(path.join(root, 'packages/heuristic-theme/presets'), path.join(output, 'theme/presets'), { recursive: true });
 await cp(path.join(root, 'packages/heuristic-theme/theme.json'), path.join(output, 'theme/theme.json'));
+await cp(path.join(root, 'node_modules/@inneranimalmedia/revise-theme/dist'), path.join(output, 'theme-assets/revise'), { recursive: true });
+await cp(path.join(root, 'node_modules/@inneranimalmedia/section-library/dist/layout.css'), path.join(output, 'theme-assets/revise/layout.css'));
 await cp(path.join(frontend, 'static'), path.join(output, 'admin'), { recursive: true });
 await cp(path.join(frontend, 'dist'), path.join(output, 'admin/_spa'), { recursive: true });
 await cp(path.join(root, 'packages/agentsam-workbench/src'), path.join(output, 'admin/workbench'), { recursive: true });
@@ -21,6 +23,7 @@ const manifest = JSON.parse(await readFile(path.join(root, 'apps/ecommerce-cms-a
 if (!manifest.dock) throw new Error('agentsam.app.json is missing the "dock" block');
 await writeFile(path.join(output, 'admin/dock/dock.config.json'), JSON.stringify(manifest.dock, null, 2) + '\n');
 await cp(path.join(root, 'packages/media-kit/src'), path.join(output, 'admin/media-kit'), { recursive: true });
+await cp(path.join(frontend, 'theme-editor'), path.join(output, 'admin/theme-editor-lib'), { recursive: true });
 for (const file of ['shell.js', 'inspector.js']) {
   await cp(path.join(frontend, file), path.join(output, 'admin/js', file));
 }
@@ -31,4 +34,4 @@ const template = `<template id="mail-app-template">\n${partial}\n</template>\n`;
 await writeFile(emailPath, email.includes('id="mail-app-template"')
   ? email.replace(/<template id="mail-app-template">[\s\S]*?<\/template>\n?/, template)
   : email.replace('<body>', `<body>\n${template}`));
-console.log('Assembled Heuristic + commerce dashboard into dist/assets');
+console.log('Assembled Heuristic + Revise theme assets + commerce dashboard into dist/assets');
