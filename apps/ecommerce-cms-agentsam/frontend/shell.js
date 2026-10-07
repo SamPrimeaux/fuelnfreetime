@@ -136,8 +136,38 @@ function resolveShellMode(options = {}) {
   return (requested && SHELL_MODES[requested]) || SHELL_MODES.admin;
 }
 
+function decodeExitPath(value) {
+  let current = String(value || "");
+  for (let i = 0; i < 2; i += 1) {
+    try {
+      const next = decodeURIComponent(current);
+      if (next === current) break;
+      current = next;
+    } catch (error) { break; }
+  }
+  return current;
+}
+function normalizeAdminPath(value) {
+  const decoded = decodeExitPath(value).split(String.fromCharCode(92)).join("/");
+  if (!decoded || /[ -\s]/.test(decoded)) return "";
+  if (/^[a-z][a-z0-9+.-]*:/i.test(decoded)) return "";
+  if (decoded.includes("://") || decoded.startsWith("//")) return "";
+  const path = decoded.split("?")[0].split("#")[0];
+  if (!path.startsWith("/")) return "";
+  const parts = [];
+  for (const part of path.split("/")) {
+    if (!part || part === ".") continue;
+    if (part === "..") {
+      if (!parts.length) return "";
+      parts.pop();
+      continue;
+    }
+    parts.push(part);
+  }
+  return "/" + parts.join("/");
+}
 function isAllowlistedAdminPath(pathname, routes) {
-  const path = String(pathname || "").split("?")[0].split("#")[0];
+  const path = normalizeAdminPath(pathname);
   if (!path.startsWith("/admin/") || path.startsWith("/admin/theme-editor") || path.startsWith("/admin/theme-workspace")) return false;
   return (routes || ADMIN_EXIT_ROUTES).some(function(route) {
     return path === route || path.startsWith(route + "/");
@@ -152,14 +182,12 @@ function rememberEditorReturn(pathname) {
 function resolveExitTarget(candidate) {
   const mode = SHELL_MODES["theme-editor"];
   const fallback = mode.exitFallback || "/admin/store";
-  let path = "";
-  if (typeof candidate === "string" && candidate.startsWith("/admin/") && candidate.indexOf("://") === -1) path = candidate.split("?")[0].split("#")[0];
-  if (!path) {
-    try { path = sessionStorage.getItem(EDITOR_RETURN_KEY) || ""; } catch (error) { path = ""; }
-  }
-  path = String(path || "").split("?")[0].split("#")[0];
-  if (!isAllowlistedAdminPath(path, mode.exitRoutes)) return fallback;
-  return path;
+  let stored = "";
+  try { stored = sessionStorage.getItem(EDITOR_RETURN_KEY) || ""; } catch (error) { stored = ""; }
+  const direct = normalizeAdminPath(candidate);
+  const remembered = normalizeAdminPath(stored);
+  const path = isAllowlistedAdminPath(direct, mode.exitRoutes) ? direct : remembered;
+  return isAllowlistedAdminPath(path, mode.exitRoutes) ? path : fallback;
 }
 
 let shellShortcutAbort = null;
