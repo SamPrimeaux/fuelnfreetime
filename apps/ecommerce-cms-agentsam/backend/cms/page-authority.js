@@ -18,10 +18,10 @@ export function resolvePageAuthority(slug, routes, { seeded = false, cmsPublishe
       ? "cms-published"
       : cmsDraftLinked
         ? "cms-draft-linked"
-      : liveRoute
-        ? "storefront-html"
-        : seeded
-          ? "cms-draft-only"
+      : seeded
+        ? "cms-draft-only" // Keep real private edits immediately usable, even when live HTML is published separately.
+        : liveRoute
+          ? "storefront-html"
           : "registry-defaults",
   };
 }

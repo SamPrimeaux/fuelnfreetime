@@ -37,7 +37,7 @@ test("canonical FNF registry retains all unrelated storefronts and original sect
   assert.deepEqual(Object.keys(PAGE_REGISTRY.home.sections),
     ["hero", "manifesto", "collections", "values", "community", "newsletter"]);
   assert.deepEqual(Object.keys(PAGE_REGISTRY.shop.sections),
-    ["hero", "collections", "stories", "newsletter"]);
+    ["hero", "collections", "editorial-grid", "products-grid", "stories", "newsletter"]);
 });
 for(const slug of Object.keys(paths)){
   test(slug + ": actual source has every section and no imaginary editor rows", () => {

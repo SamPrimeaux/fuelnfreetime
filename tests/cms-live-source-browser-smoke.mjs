@@ -29,14 +29,14 @@ shop.sections = shop.sections.map(s => ({...s,version:1}));
 const site = getRegistryPage("site");
 const pages = {ok:true,pages:[{slug:"shop",title:"Shop",status:"draft",has_live_storefront:true, cms_published:false,draft_exists:true}]};
 const shim = "<script>" +
- "window.__nativeConfirmCount=0;window.confirm=()=>{window.__nativeConfirmCount++;return true;};window.__submitted=null;window.__linked=false;window.__saved=[];window.__isNewPage=new URLSearchParams(location.search).get('unseeded')==='1';" +
+ "window.__nativeConfirmCount=0;window.confirm=()=>{window.__nativeConfirmCount++;return true;};window.__submitted=null;window.__linked=false;window.__saved=[];window.__isNewPage=new URLSearchParams(location.search).get('unseeded')==='1';window.__nativeDraft=new URLSearchParams(location.search).get('native')==='1';" +
  "window.renderShell=function(_,html){document.body.insertAdjacentHTML('afterbegin',html);};" +
  "window.adminFetch=async function(url,options){" +
  "if(url.endsWith('/registry'))return " + JSON.stringify(registryForAdmin()) + ";" +
  "if(url.endsWith('/pages/site'))return {page:" + JSON.stringify(site) + "};" +
  "if(url.endsWith('/pages/shop/import-live')){window.__submitted=JSON.parse(options.body);window.__linked=true;return {ok:true,published:false};}" +
- "if(url.endsWith('/pages/shop/sections/hero')&&options?.method==='PUT'){window.__saved.push(JSON.parse(options.body));return {ok:true,version:2,updated_at:'2026-10-07T00:00:00Z'};}" +
- "if(url.endsWith('/pages/shop'))return {seeded:!window.__isNewPage||window.__linked,page:{...(" + JSON.stringify(shop) + "),content_authority:window.__linked?'cms-draft-linked':'storefront-html'}};" +
+ "if(url.includes('/pages/shop/sections/')&&options?.method==='PUT'){window.__saved.push({...JSON.parse(options.body),key:url.split('/').pop()});return {ok:true,version:2,updated_at:'2026-10-07T00:00:00Z'};}" +
+ "if(url.endsWith('/pages/shop'))return {seeded:!window.__isNewPage||window.__linked,page:{...(" + JSON.stringify(shop) + "),content_authority:window.__linked?'cms-draft-linked':window.__nativeDraft?'cms-draft-only':'storefront-html'}};" +
  "if(url.endsWith('/pages'))return " + JSON.stringify(pages) + ";" +
  "throw Error('Unexpected API '+url);};</script>";
 
@@ -44,7 +44,8 @@ const probe = "<script>setTimeout(function(){" +
  "var frame=document.getElementById('theme-preview');" +
  "var before={src:frame.getAttribute('src'),headline:frame.contentDocument?.querySelector('[data-cms-section=\"hero\"] [data-cms=\"headline\"]')?.textContent," +
  "visible:!document.getElementById('te-import-live').hidden,liveOnly:[...document.querySelectorAll('.te-live-only-row strong')].map(e=>e.textContent)," +
- "inspector:document.getElementById('te-field-hero-headline')?.value};" +
+ "inspector:document.getElementById('te-field-hero-headline')?.value," +
+ "nativeShop:[...document.querySelectorAll('[data-select-section]')].map(n=>n.dataset.selectSection)};" +
  "var settingsButton=document.querySelector('[data-drawer-mode=\\\"theme-settings\\\"]');" +
  "before.toolbar={theme:document.getElementById('te-theme-name')?.textContent," +
  "themeSettings:!!settingsButton,legacyTabs:document.querySelectorAll('#te-tabs,.te-theme-switch').length," +
@@ -59,6 +60,12 @@ const probe = "<script>setTimeout(function(){" +
  "before.catalog={modal:!!catalog?.open,cards:catalog?.querySelectorAll('[data-catalog-template]').length||0};" +
  "document.getElementById('te-section-cancel')?.click();" +
  "before.catalog.closed=!catalog?.open;" +
+ "document.querySelector('[data-add-block-section=collections]')?.click();" +
+ "var blockCatalog=document.querySelector('dialog.te-block-picker');" +
+ "before.blockCatalog={open:!!blockCatalog?.open,collectionCard:!!blockCatalog?.querySelector('[data-choose-block=collection-card]')," +
+ "noNestedSelector:!document.querySelector('[data-block-menu]')};" +
+ "blockCatalog?.querySelector('[data-close-block-catalog]')?.click();" +
+ "before.blockCatalog.closed=!blockCatalog?.open;" +
  "if(window.innerWidth>900){" +
  "var blockButton=document.querySelector('[data-select-block=card3][data-block-section=collections]');" +
  "if(blockButton){" +
@@ -88,18 +95,24 @@ const probe = "<script>setTimeout(function(){" +
  "noOverflow:document.documentElement.scrollWidth<=window.innerWidth+1};" +
  "}" +
  "before.saveDisabled=document.getElementById('te-save').disabled;" +
- "if(!window.__isNewPage){" +
+ "if(!window.__isNewPage&&!window.__nativeDraft){" +
  "document.getElementById('te-save').click();before.noImplicitImport=window.__submitted===null;" +
  "document.getElementById('te-import-live').click();" +
  "var review=document.querySelector('.te-review-dialog');" +
  "before.reviewOpened=!!review?.open;before.reviewProtected=window.__submitted===null;" +
  "before.nativeConfirms=window.__nativeConfirmCount;" +
  "review?.querySelector('[data-approve]')?.click();" +
- "}else{before.autoDraft=window.__linked&&window.__submitted?.mode==='create';" +
+ "}else if(window.__isNewPage){before.autoDraft=window.__linked&&window.__submitted?.mode==='create';" +
  "before.noReview=!document.querySelector('.te-review-dialog');}" +
- "setTimeout(function(){document.querySelector('[data-select-section=hero]')?.click();" +
+ "setTimeout(function(){" +
+ "if(window.__nativeDraft){" +
+ "document.querySelector('[data-select-section=products-grid]')?.click();" +
+ "var productField=document.getElementById('te-field-products-grid-title');" +
+ "before.productInspector={present:!!productField,value:productField?.value,disabled:productField?.disabled};" +
+ "if(productField){productField.value='Merchant-edited product grid';productField.dispatchEvent(new Event('input',{bubbles:true}));}" +
+ "}else{document.querySelector('[data-select-section=hero]')?.click();" +
  "var field=document.getElementById('te-field-hero-headline');" +
- "if(field){field.value='Private autosave browser proof';field.dispatchEvent(new Event('input',{bubbles:true}));}" +
+ "if(field){field.value='Private autosave browser proof';field.dispatchEvent(new Event('input',{bubbles:true}));}}" +
  "},300);" +
  "setTimeout(function(){var pre=document.createElement('pre');pre.id='browser-result';" +
  "pre.textContent=JSON.stringify({before,imported:window.__submitted,linked:window.__linked,saved:window.__saved," +
@@ -131,13 +144,13 @@ await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
 const results=new Map();
 try{
  const url="http://127.0.0.1:"+server.address().port+"/admin/theme-editor?slug=shop";
- for(const [width,isNewPage] of [[1440,false],[1000,false],[744,false],[390,false],[1440,true]]){
+ for(const [width,scenario] of [[1440,"live"],[1000,"live"],[744,"live"],[390,"live"],[1440,"auto"],[1440,"native"]]){
   const {stdout:dom}=await exec(chrome,["--headless=new","--disable-gpu","--disable-dev-shm-usage","--no-sandbox",
-    "--force-device-scale-factor=1","--virtual-time-budget=7000","--window-size="+width+",1000","--dump-dom",url+(isNewPage?"&unseeded=1":"")],
+    "--force-device-scale-factor=1","--virtual-time-budget=7000","--window-size="+width+",1000","--dump-dom",url+(scenario==="auto"?"&unseeded=1":scenario==="native"?"&native=1":"")],
     {timeout:60000,encoding:"utf8",maxBuffer:1<<22});
   const match=dom.match(/<pre id="browser-result">([^<]+)<\/pre>/);
   assert.ok(match,"Browser did not complete editor test at "+width+"px");
-  results.set(isNewPage?"auto":width,JSON.parse(match[1].replaceAll("&quot;",'"').replaceAll("&amp;","&").replaceAll("&lt;","<").replaceAll("&gt;",">")));
+  results.set(scenario==="live"?width:scenario,JSON.parse(match[1].replaceAll("&quot;",'"').replaceAll("&amp;","&").replaceAll("&lt;","<").replaceAll("&gt;",">")));
  }
 }finally{server.close()}
 const result=results.get(1440);
@@ -145,8 +158,9 @@ console.log(JSON.stringify(result,null,2));
 assert.match(result.before.src,/^\/shop\?_=/);
 assert.match(result.before.headline,/Time is the\s*real horsepower/i);
 assert.equal(result.before.visible,true);
-assert.ok(result.before.liveOnly.some(v => /editorial/i.test(v)), "live editorial scene must appear in the tree");
-assert.ok(result.before.liveOnly.some(v => /products/i.test(v)), "live product grid must appear in the tree");
+assert.ok(result.before.nativeShop.includes("editorial-grid"), "Editorial grid must be a native selectable section");
+assert.ok(result.before.nativeShop.includes("products-grid"), "Live product grid must be a native selectable section");
+assert.ok(!result.before.liveOnly.some(v => /editorial|products/i.test(v)), "Both supported sections must leave the unmanaged warning group");
 assert.match(result.before.inspector,/Time is the\s*real horsepower/i);
 assert.equal(result.before.toolbar.theme,"Theme","Unconfigured theme identity should show its neutral fallback");
 assert.equal(result.before.toolbar.legacyTabs,0);
@@ -158,6 +172,8 @@ assert.equal(result.before.toolbar.noOverflow,true);
 assert.equal(result.before.catalog.modal,true,"Section picker should open in a native dialog");
 assert.ok(result.before.catalog.cards>0,"Section picker must show registered choices");
 assert.equal(result.before.catalog.closed,true,"Section picker must close without losing the editor");
+assert.deepEqual(result.before.blockCatalog,{open:true,collectionCard:true,noNestedSelector:true,closed:true},
+  "Add Block must open the same accessible picker and show only compatible block definitions");
 assert.equal(results.get(1000).before.toolbar.noOverflow,true,"Mid-size desktop should fit all three editor panes");
 assert.ok(result.before.blockInspector,"The real collection card must remain selectable");
 assert.match(result.before.blockInspector.title,/Collection card/i);
@@ -178,6 +194,15 @@ const cards = result.imported.sections.find(s => s.key === "collections").conten
 assert.equal(cards.card1.name, "High Octane");
 assert.equal(cards.card2.name, "Masters");
 assert.equal(cards.card3.name, "Essentials");
+const editorial = result.imported.sections.find(s=>s.key==="editorial-grid")?.content;
+assert.ok(editorial, "Editorial source must be imported into a normal private section");
+assert.equal(editorial.tile1.headline, "Run it past redline");
+assert.equal(editorial.tile2.eyebrow, "The long way home");
+assert.equal(editorial.tile3.href, "/shop/collections/essentials");
+const productGrid = result.imported.sections.find(s=>s.key==="products-grid")?.content;
+assert.deepEqual({ eyebrow:productGrid?.eyebrow,title:productGrid?.title },
+  { eyebrow:"Available now",title:"Shop all gear" });
+assert.ok(!("products" in productGrid), "Products must stay bound to the commerce API, not copied into CMS configuration");
 assert.equal(result.linked,true);
 assert.ok(result.saved.some(s=>s.content.headline==="Private autosave browser proof"),"Editing a native field should automatically persist a private draft");
 assert.equal(result.saveState,"Saved privately","Autosave should report completion without publishing");
@@ -187,6 +212,14 @@ assert.equal(automaticallyOpened.before.autoDraft,true,"A page with no existing 
 assert.equal(automaticallyOpened.before.noReview,true,"Creating a new private revision must not ask to replace existing work");
 assert.ok(automaticallyOpened.saved.some(s=>s.content.headline==="Private autosave browser proof"),"Automatically initialized drafts must also support autosave");
 console.log("PASS: an uninitialized live page becomes editable automatically without touching publication");
+const existingDraft = results.get("native");
+assert.equal(existingDraft.before.visible,false,"Existing private draft should not ask for a live import");
+assert.deepEqual(existingDraft.before.productInspector,{present:true,value:"Shop all gear",disabled:false},
+  "A preexisting draft must expose native product-grid controls immediately");
+assert.ok(existingDraft.saved.some(s=>s.key==="products-grid"&&s.content.title==="Merchant-edited product grid"),
+  "Existing draft product-grid fields must autosave without replacing the source page");
+assert.equal(existingDraft.imported,null,"Opening an existing draft must not import/reconcile the live source");
+console.log("PASS: existing merchant drafts open with an editable, autosaved native product grid");
 
 for(const width of [744,390]){
  const mobile=results.get(width)?.before?.mobile;

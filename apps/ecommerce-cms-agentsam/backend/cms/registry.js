@@ -608,8 +608,59 @@ export const PAGE_REGISTRY = {
           },
         },
       },
-      stories: {
+      "editorial-grid": {
         sortOrder: 2,
+        label: "Collections Editorial Grid",
+        icon: "collections",
+        fields: [],
+        blocks: [
+          {
+            key: "editorial-tile",
+            label: "Editorial tile",
+            repeatable: true,
+            min: 1,
+            max: 9,
+            fields: [
+              { key: "eyebrow", label: "Eyebrow", type: "text" },
+              { key: "headline", label: "Headline", type: "text" },
+              { key: "imageUrl", label: "Photo", type: "media" },
+              { key: "href", label: "Destination", type: "link" },
+            ],
+            defaultContent: {
+              eyebrow: "Collection",
+              headline: "A story worth telling",
+              imageUrl: "/assets/presets/fuel-free-time/earned-hours-hero.webp",
+              href: "/shop/collections",
+            },
+          },
+        ],
+        defaultContent: {
+          tile1: { eyebrow: "High Octane", headline: "Run it past redline", imageUrl: "/assets/presets/fuel-free-time/earned-hours-hero.webp", href: "/shop/collections/high-octane-performance-gear" },
+          tile2: { eyebrow: "The long way home", headline: "Wear the hours you earned", imageUrl: "/assets/presets/fuel-free-time/masters.webp", href: "#catalog" },
+          tile3: { eyebrow: "Essentials", headline: "Clock out. Get gone.", imageUrl: "/assets/presets/fuel-free-time/essentials.webp", href: "/shop/collections/essentials" },
+          __editor: {
+            blocks: [
+              { id: "tile1", templateKey: "editorial-tile", enabled: true },
+              { id: "tile2", templateKey: "editorial-tile", enabled: true },
+              { id: "tile3", templateKey: "editorial-tile", enabled: true },
+            ],
+          },
+        },
+      },
+      "products-grid": {
+        sortOrder: 3,
+        label: "Products Grid",
+        icon: "products",
+        fields: [
+          { key: "eyebrow", label: "Eyebrow", type: "text" },
+          { key: "title", label: "Heading", type: "text" },
+        ],
+        // Products, availability, prices, variants, filtering and purchases
+        // remain bound to the commerce API. No product rows in CMS settings.
+        defaultContent: { eyebrow: "Available now", title: "Shop all gear" },
+      },
+      stories: {
+        sortOrder: 4,
         fields: [
           { key: "title", label: "Title", type: "text" },
           { key: "body", label: "Body", type: "textarea" },
@@ -622,7 +673,7 @@ export const PAGE_REGISTRY = {
         },
       },
       newsletter: {
-        sortOrder: 3,
+        sortOrder: 5,
         fields: [
           { key: "title", label: "Title", type: "text" },
           { key: "buttonLabel", label: "Button label", type: "text" },
