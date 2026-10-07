@@ -29,14 +29,14 @@ shop.sections = shop.sections.map(s => ({...s,version:1}));
 const site = getRegistryPage("site");
 const pages = {ok:true,pages:[{slug:"shop",title:"Shop",status:"draft",has_live_storefront:true, cms_published:false,draft_exists:true}]};
 const shim = "<script>" +
- "window.__nativeConfirmCount=0;window.confirm=()=>{window.__nativeConfirmCount++;return true;};window.__submitted=null;window.__linked=false;window.__saved=[];window.__isNewPage=new URLSearchParams(location.search).get('unseeded')==='1';" +
+ "window.__nativeConfirmCount=0;window.confirm=()=>{window.__nativeConfirmCount++;return true;};window.__submitted=null;window.__linked=false;window.__saved=[];window.__isNewPage=new URLSearchParams(location.search).get('unseeded')==='1';window.__nativeDraft=new URLSearchParams(location.search).get('native')==='1';" +
  "window.renderShell=function(_,html){document.body.insertAdjacentHTML('afterbegin',html);};" +
  "window.adminFetch=async function(url,options){" +
  "if(url.endsWith('/registry'))return " + JSON.stringify(registryForAdmin()) + ";" +
  "if(url.endsWith('/pages/site'))return {page:" + JSON.stringify(site) + "};" +
  "if(url.endsWith('/pages/shop/import-live')){window.__submitted=JSON.parse(options.body);window.__linked=true;return {ok:true,published:false};}" +
- "if(url.endsWith('/pages/shop/sections/hero')&&options?.method==='PUT'){window.__saved.push(JSON.parse(options.body));return {ok:true,version:2,updated_at:'2026-10-07T00:00:00Z'};}" +
- "if(url.endsWith('/pages/shop'))return {seeded:!window.__isNewPage||window.__linked,page:{...(" + JSON.stringify(shop) + "),content_authority:window.__linked?'cms-draft-linked':'storefront-html'}};" +
+ "if(url.includes('/pages/shop/sections/')&&options?.method==='PUT'){window.__saved.push({...JSON.parse(options.body),key:url.split('/').pop()});return {ok:true,version:2,updated_at:'2026-10-07T00:00:00Z'};}" +
+ "if(url.endsWith('/pages/shop'))return {seeded:!window.__isNewPage||window.__linked,page:{...(" + JSON.stringify(shop) + "),content_authority:window.__linked?'cms-draft-linked':window.__nativeDraft?'cms-draft-only':'storefront-html'}};" +
  "if(url.endsWith('/pages'))return " + JSON.stringify(pages) + ";" +
  "throw Error('Unexpected API '+url);};</script>";
 
@@ -89,18 +89,24 @@ const probe = "<script>setTimeout(function(){" +
  "noOverflow:document.documentElement.scrollWidth<=window.innerWidth+1};" +
  "}" +
  "before.saveDisabled=document.getElementById('te-save').disabled;" +
- "if(!window.__isNewPage){" +
+ "if(!window.__isNewPage&&!window.__nativeDraft){" +
  "document.getElementById('te-save').click();before.noImplicitImport=window.__submitted===null;" +
  "document.getElementById('te-import-live').click();" +
  "var review=document.querySelector('.te-review-dialog');" +
  "before.reviewOpened=!!review?.open;before.reviewProtected=window.__submitted===null;" +
  "before.nativeConfirms=window.__nativeConfirmCount;" +
  "review?.querySelector('[data-approve]')?.click();" +
- "}else{before.autoDraft=window.__linked&&window.__submitted?.mode==='create';" +
+ "}else if(window.__isNewPage){before.autoDraft=window.__linked&&window.__submitted?.mode==='create';" +
  "before.noReview=!document.querySelector('.te-review-dialog');}" +
- "setTimeout(function(){document.querySelector('[data-select-section=hero]')?.click();" +
+ "setTimeout(function(){" +
+ "if(window.__nativeDraft){" +
+ "document.querySelector('[data-select-section=products-grid]')?.click();" +
+ "var productField=document.getElementById('te-field-products-grid-title');" +
+ "before.productInspector={present:!!productField,value:productField?.value,disabled:productField?.disabled};" +
+ "if(productField){productField.value='Merchant-edited product grid';productField.dispatchEvent(new Event('input',{bubbles:true}));}" +
+ "}else{document.querySelector('[data-select-section=hero]')?.click();" +
  "var field=document.getElementById('te-field-hero-headline');" +
- "if(field){field.value='Private autosave browser proof';field.dispatchEvent(new Event('input',{bubbles:true}));}" +
+ "if(field){field.value='Private autosave browser proof';field.dispatchEvent(new Event('input',{bubbles:true}));}}" +
  "},300);" +
  "setTimeout(function(){var pre=document.createElement('pre');pre.id='browser-result';" +
  "pre.textContent=JSON.stringify({before,imported:window.__submitted,linked:window.__linked,saved:window.__saved," +
@@ -132,13 +138,13 @@ await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
 const results=new Map();
 try{
  const url="http://127.0.0.1:"+server.address().port+"/admin/theme-editor?slug=shop";
- for(const [width,isNewPage] of [[1440,false],[1000,false],[744,false],[390,false],[1440,true]]){
+ for(const [width,scenario] of [[1440,"live"],[1000,"live"],[744,"live"],[390,"live"],[1440,"auto"],[1440,"native"]]){
   const {stdout:dom}=await exec(chrome,["--headless=new","--disable-gpu","--disable-dev-shm-usage","--no-sandbox",
-    "--force-device-scale-factor=1","--virtual-time-budget=7000","--window-size="+width+",1000","--dump-dom",url+(isNewPage?"&unseeded=1":"")],
+    "--force-device-scale-factor=1","--virtual-time-budget=7000","--window-size="+width+",1000","--dump-dom",url+(scenario==="auto"?"&unseeded=1":scenario==="native"?"&native=1":"")],
     {timeout:60000,encoding:"utf8",maxBuffer:1<<22});
   const match=dom.match(/<pre id="browser-result">([^<]+)<\/pre>/);
   assert.ok(match,"Browser did not complete editor test at "+width+"px");
-  results.set(isNewPage?"auto":width,JSON.parse(match[1].replaceAll("&quot;",'"').replaceAll("&amp;","&").replaceAll("&lt;","<").replaceAll("&gt;",">")));
+  results.set(scenario==="live"?width:scenario,JSON.parse(match[1].replaceAll("&quot;",'"').replaceAll("&amp;","&").replaceAll("&lt;","<").replaceAll("&gt;",">")));
  }
 }finally{server.close()}
 const result=results.get(1440);
@@ -198,6 +204,14 @@ assert.equal(automaticallyOpened.before.autoDraft,true,"A page with no existing 
 assert.equal(automaticallyOpened.before.noReview,true,"Creating a new private revision must not ask to replace existing work");
 assert.ok(automaticallyOpened.saved.some(s=>s.content.headline==="Private autosave browser proof"),"Automatically initialized drafts must also support autosave");
 console.log("PASS: an uninitialized live page becomes editable automatically without touching publication");
+const existingDraft = results.get("native");
+assert.equal(existingDraft.before.visible,false,"Existing private draft should not ask for a live import");
+assert.deepEqual(existingDraft.before.productInspector,{present:true,value:"Shop all gear",disabled:false},
+  "A preexisting draft must expose native product-grid controls immediately");
+assert.ok(existingDraft.saved.some(s=>s.key==="products-grid"&&s.content.title==="Merchant-edited product grid"),
+  "Existing draft product-grid fields must autosave without replacing the source page");
+assert.equal(existingDraft.imported,null,"Opening an existing draft must not import/reconcile the live source");
+console.log("PASS: existing merchant drafts open with an editable, autosaved native product grid");
 
 for(const width of [744,390]){
  const mobile=results.get(width)?.before?.mobile;
