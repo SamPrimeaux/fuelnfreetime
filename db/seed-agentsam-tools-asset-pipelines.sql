@@ -34,7 +34,7 @@ INSERT INTO agentsam_tools (
   '["media","library","assets","image","video","glb","icon","r2","upload"]',
   NULL, NULL, 'internal',
   'low', 0, 1, 0,
-  'creative', 'fnf_asset_ops', 'asset_manage', 'brand', 'assets.media.list', 22,
+  'creative', 'fnf_asset_ops', 'asset_manage', 'brand', 'media.library.read', 22,
   unixepoch(), unixepoch()
 ),
 (
@@ -48,7 +48,7 @@ INSERT INTO agentsam_tools (
   '["media","sync","r2","library","import","assets"]',
   NULL, NULL, 'internal',
   'medium', 0, 1, 0,
-  'creative', 'fnf_asset_ops', 'asset_manage', 'brand', 'assets.media.sync', 23,
+  'creative', 'fnf_asset_ops', 'asset_manage', 'brand', 'media.library.sync', 23,
   unixepoch(), unixepoch()
 ),
 (
@@ -62,7 +62,7 @@ INSERT INTO agentsam_tools (
   '["upload","media","r2","image","video","glb","icon"]',
   NULL, NULL, 'internal',
   'medium', 0, 1, 0,
-  'creative', 'fnf_asset_ops', 'asset_manage', 'brand', 'assets.media.upload', 24,
+  'creative', 'fnf_asset_ops', 'asset_manage', 'brand', 'media.asset.create', 24,
   unixepoch(), unixepoch()
 ),
 
@@ -78,7 +78,7 @@ INSERT INTO agentsam_tools (
   '["image","optimize","webp","avif","compress","resize","cms","product"]',
   NULL, NULL, 'internal',
   'medium', 0, 1, 0,
-  'creative', 'fnf_image_pipeline', 'image_optimize', 'brand', 'assets.image.optimize', 26,
+  'creative', 'fnf_image_pipeline', 'image_optimize', 'brand', 'media.image.optimize', 26,
   unixepoch(), unixepoch()
 ),
 (
@@ -92,7 +92,7 @@ INSERT INTO agentsam_tools (
   '["image","responsive","srcset","hero","og","variant","plan"]',
   NULL, NULL, 'internal',
   'low', 0, 1, 0,
-  'creative', 'fnf_image_pipeline', 'image_optimize', 'brand', 'assets.image.variant_plan', 27,
+  'creative', 'fnf_image_pipeline', 'image_optimize', 'brand', 'media.image.variant.plan', 27,
   unixepoch(), unixepoch()
 ),
 
@@ -108,7 +108,7 @@ INSERT INTO agentsam_tools (
   '["icon","favicon","pwa","svg","png","optimize","brand"]',
   NULL, NULL, 'internal',
   'medium', 0, 1, 0,
-  'creative', 'fnf_icon_pipeline', 'icon_optimize', 'brand', 'assets.icon.optimize', 28,
+  'creative', 'fnf_icon_pipeline', 'icon_optimize', 'brand', 'media.icon.optimize', 28,
   unixepoch(), unixepoch()
 ),
 (
@@ -122,7 +122,7 @@ INSERT INTO agentsam_tools (
   '["icon","generate","favicon","brand","logo","pwa"]',
   NULL, NULL, 'internal',
   'medium', 1, 1, 0,
-  'creative', 'fnf_icon_pipeline', 'icon_generate', 'brand', 'assets.icon.generate', 29,
+  'creative', 'fnf_icon_pipeline', 'icon_generate', 'brand', 'media.icon.generate', 29,
   unixepoch(), unixepoch()
 ),
 
@@ -138,7 +138,7 @@ INSERT INTO agentsam_tools (
   '["video","optimize","compress","mp4","webm","cms","about"]',
   NULL, NULL, 'internal',
   'medium', 0, 1, 0,
-  'creative', 'fnf_video_pipeline', 'video_optimize', 'brand', 'assets.video.optimize', 30,
+  'creative', 'fnf_video_pipeline', 'video_optimize', 'brand', 'media.video.optimize', 30,
   unixepoch(), unixepoch()
 ),
 (
@@ -152,7 +152,7 @@ INSERT INTO agentsam_tools (
   '["video","thumbnail","poster","preview","optimize"]',
   NULL, NULL, 'internal',
   'low', 0, 1, 0,
-  'creative', 'fnf_video_pipeline', 'video_optimize', 'brand', 'assets.video.thumbnail', 31,
+  'creative', 'fnf_video_pipeline', 'video_optimize', 'brand', 'media.video.thumbnail', 31,
   unixepoch(), unixepoch()
 ),
 
@@ -168,7 +168,7 @@ INSERT INTO agentsam_tools (
   '["glb","gltf","3d","model","inspect","mesh","usdz"]',
   NULL, NULL, 'internal',
   'low', 0, 1, 0,
-  'creative', 'fnf_glb_pipeline', 'glb_optimize', 'brand', 'assets.glb.inspect', 32,
+  'creative', 'fnf_glb_pipeline', 'glb_optimize', 'brand', 'media.glb.inspect', 32,
   unixepoch(), unixepoch()
 ),
 (
@@ -182,7 +182,7 @@ INSERT INTO agentsam_tools (
   '["glb","optimize","3d","draco","meshopt","compress","hero"]',
   NULL, NULL, 'internal',
   'high', 1, 1, 0,
-  'creative', 'fnf_glb_pipeline', 'glb_optimize', 'brand', 'assets.glb.optimize', 33,
+  'creative', 'fnf_glb_pipeline', 'glb_optimize', 'brand', 'media.glb.optimize', 33,
   unixepoch(), unixepoch()
 ),
 
@@ -198,7 +198,7 @@ INSERT INTO agentsam_tools (
   '["brand","audit","logo","icon","hero","glb","optimize","seo"]',
   NULL, NULL, 'internal',
   'low', 0, 1, 0,
-  'creative', 'fnf_asset_ops', 'brand_audit', 'brand', 'assets.brand.audit', 21,
+  'creative', 'fnf_asset_ops', 'brand_audit', 'brand', 'media.brand.audit', 21,
   unixepoch(), unixepoch()
 ),
 (
@@ -212,21 +212,21 @@ INSERT INTO agentsam_tools (
   '["cms","product","link","media","hero","glb","content"]',
   NULL, NULL, 'internal',
   'medium', 0, 1, 0,
-  'content', 'fnf_asset_ops', 'content_link', 'brand', 'assets.content.link', 34,
+  'content', 'fnf_asset_ops', 'content_link', 'brand', 'media.content.link', 34,
   unixepoch(), unixepoch()
 ),
 (
   'ast_fnf_asset_publish',
   'ede6590ac0d2fb7daf155b35653457b2',
   'fnf_asset_publish', 'fnf_asset_publish', 'Publish Staged Asset',
-  'assets.publish', 'cf',
+  'media.asset.publish', 'cf',
   'Promote a staged asset (uploads/staging/...) to a live R2 key served via assets.fuelnfreetime.com or /media and update media_assets. Always requires approval.',
   '{"type":"object","properties":{"staging_key":{"type":"string"},"live_key":{"type":"string"},"confirm":{"type":"boolean"}},"required":["staging_key","live_key","confirm"]}',
   '{"binding":"WEBSITE_ASSETS","bucket":"fuelnfreetime","operation":"publish_staged_asset","requires_approval":true,"registry_table":"media_assets","public_base_url":"https://assets.fuelnfreetime.com","worker_media_prefix":"/media/","s3_api":"https://ede6590ac0d2fb7daf155b35653457b2.r2.cloudflarestorage.com/fuelnfreetime"}',
   '["publish","media","live","replace","approve","r2"]',
   NULL, NULL, 'internal',
   'high', 1, 1, 0,
-  'creative', 'fnf_asset_ops', 'asset_publish', 'brand', 'assets.publish', 35,
+  'creative', 'fnf_asset_ops', 'asset_publish', 'brand', 'media.asset.publish', 35,
   unixepoch(), unixepoch()
 )
 

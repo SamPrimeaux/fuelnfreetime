@@ -9,6 +9,7 @@ import { detectBlockedFeatureRequest } from "./feature-gates.js";
 import { formatMcpForPrompt, selectMcpServers } from "./mcp-servers.js";
 import { formatSkillsForPrompt, resolveSkillsForChat } from "./skills.js";
 import { formatToolsForPrompt, selectToolsForChat } from "./tools-registry.js";
+import { adminRouteForPath } from "../lib/route-manifest.js";
 
 const INTENT_RULES = [
   {
@@ -173,6 +174,18 @@ export async function routeAgentsamRequest(env, message, context = {}) {
   });
   const mcpServers = selectMcpServers(classification.intent, message);
   const bridgeReady = Boolean(String(env.AGENTSAM_BRIDGE_KEY || "").trim());
+  const contextPage = String(context.page || "");
+  const routePath = (() => {
+    try {
+      if (/^https?:\/\//i.test(contextPage)) return new URL(contextPage).pathname;
+    } catch {
+      /* fall through to path cleanup */
+    }
+    return contextPage.split("?")[0].split("#")[0];
+  })();
+  const adminRoute = adminRouteForPath(routePath);
+  const routeAppId =
+    adminRoute?.owner?.kind === "app" ? adminRoute.owner.id : null;
   const tools = await selectToolsForChat(env, {
     intent: classification.intent,
     message,
@@ -185,6 +198,8 @@ export async function routeAgentsamRequest(env, message, context = {}) {
         : ai_routing.task_type === "image_generation"
           ? "cloudflare"
           : "general",
+    appId: routeAppId,
+    routeContext: adminRoute?.context || null,
   });
 
   const systemBlocks = [

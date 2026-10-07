@@ -28,15 +28,23 @@ function mapToolRow(row) {
     display_name: row.display_name,
     tool_category: row.tool_category,
     handler_type: row.handler_type,
+    handler_key: row.handler_key || null,
     description: row.description,
     input_schema: parseJson(row.input_schema, {}),
     handler_config: parseJson(row.handler_config, {}),
+    resource_scope: parseJson(row.resource_scope_json, {}),
+    operations: parseJson(row.operations_json, []),
     intent_tags: parseJson(row.intent_tags, []),
+    app_id: row.app_id || null,
+    plugin_key: row.plugin_key || null,
+    plugin_id: row.plugin_id || null,
     mcp_server_key: row.mcp_server_key,
     mcp_service_url: row.mcp_service_url,
     dispatch_target: row.dispatch_target,
     risk_level: row.risk_level,
     requires_approval: !!row.requires_approval,
+    requires_confirmation: !!row.requires_confirmation,
+    connector_access_class: row.connector_access_class || "read",
     route_key: row.route_key,
     workflow_key: row.workflow_key,
     task_type: row.task_type,
@@ -44,6 +52,7 @@ function mapToolRow(row) {
     capability_key: row.capability_key,
     sort_priority: row.sort_priority,
     is_active: !!row.is_active,
+    is_degraded: !!row.is_degraded,
   };
 }
 
@@ -69,7 +78,7 @@ function mapServerRow(row) {
 
 function matchesFnfPlatformScope(tool) {
   const cfg = tool.handler_config || {};
-  const scope = cfg.fnf_scope || {};
+  const scope = tool.resource_scope || cfg.fnf_scope || {};
 
   if (cfg.database && cfg.database !== FNF_PLATFORM_SCOPE.d1_database) return false;
   if (cfg.d1_database && cfg.d1_database !== FNF_PLATFORM_SCOPE.d1_database) return false;
@@ -90,6 +99,25 @@ function matchesFnfPlatformScope(tool) {
   return true;
 }
 
+
+
+/**
+ * Convert D1 tool rows into Workers AI traditional function definitions.
+ * Tool keys stay stable/provider-specific; capability keys remain domain-level policy.
+ */
+export function toolsForWorkersAi(tools = []) {
+  return (tools || [])
+    .filter((tool) => tool?.tool_key && tool?.is_active !== false)
+    .map((tool) => ({
+      name: tool.tool_key,
+      description: tool.description || tool.display_name || tool.tool_key,
+      parameters:
+        tool.input_schema && typeof tool.input_schema === "object"
+          ? tool.input_schema
+          : { type: "object", properties: {} },
+    }));
+}
+
 export function formatScopeForPrompt() {
   return `TOOL PLATFORM SCOPE (hard limit):
 - Worker: ${FNF_PLATFORM_SCOPE.worker}
@@ -102,21 +130,47 @@ ${FNF_TOOL_SCOPE_NOTE}`;
 
 export { FNF_PLATFORM_SCOPE, FNF_TOOL_SCOPE_NOTE };
 
-function scoreTool(tool, { intent, message, workflowKey, taskType, domain }) {
+export function scoreTool(
+  tool,
+  { intent, message, workflowKey, taskType, domain, appId, routeContext },
+) {
   let score = 0;
-  const hay = `${intent || ""} ${message || ""} ${workflowKey || ""} ${taskType || ""}`.toLowerCase();
+  let matched = false;
+  const hay =
+    `${intent || ""} ${message || ""} ${workflowKey || ""} ${taskType || ""} ${routeContext || ""}`
+      .toLowerCase();
   const tags = tool.intent_tags || [];
 
   for (const tag of tags) {
     const t = String(tag).toLowerCase();
-    if (t && hay.includes(t)) score += 3;
+    if (t && hay.includes(t)) {
+      score += 3;
+      matched = true;
+    }
   }
 
-  if (tool.route_key && intent && tool.route_key === intent) score += 4;
-  if (tool.workflow_key && workflowKey && tool.workflow_key === workflowKey) score += 6;
-  if (tool.task_type && taskType && tool.task_type === taskType) score += 4;
-  if (tool.domain && domain && tool.domain === domain) score += 2;
+  if (tool.app_id && appId && tool.app_id === appId) {
+    score += 10;
+    matched = true;
+  }
+  if (tool.route_key && intent && tool.route_key === intent) {
+    score += 4;
+    matched = true;
+  }
+  if (tool.workflow_key && workflowKey && tool.workflow_key === workflowKey) {
+    score += 6;
+    matched = true;
+  }
+  if (tool.task_type && taskType && tool.task_type === taskType) {
+    score += 4;
+    matched = true;
+  }
+  if (tool.domain && domain && tool.domain === domain) {
+    score += 2;
+    matched = true;
+  }
 
+  if (!matched) return 0;
   score += Math.max(0, 50 - (tool.sort_priority || 50)) / 10;
   return score;
 }
@@ -129,6 +183,7 @@ export async function listAgentSamTools(env, options = {}) {
   const binds = [options.account_id || FNF_ACCOUNT_ID, options.account_id || FNF_ACCOUNT_ID];
 
   if (!includeInactive) clauses.push("is_active = 1");
+  if (options.includeDegraded !== true) clauses.push("is_degraded = 0");
   if (options.handler_type) {
     clauses.push("handler_type = ?");
     binds.push(options.handler_type);
@@ -262,11 +317,12 @@ export async function selectToolsForChat(env, routing = {}) {
     }))
     .filter((entry) => entry.score > 0 || entry.essential)
     .sort((a, b) => {
+      if (a.score !== b.score) return b.score - a.score;
       if (a.essential !== b.essential) return a.essential ? -1 : 1;
-      return b.score - a.score;
+      return (a.tool.sort_priority || 50) - (b.tool.sort_priority || 50);
     });
 
-  return scored.slice(0, routing.limit || 6).map((e) => e.tool);
+  return scored.slice(0, routing.limit || 8).map((e) => e.tool);
 }
 
 export async function getToolsRegistryStatus(env) {

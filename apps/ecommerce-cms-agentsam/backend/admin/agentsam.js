@@ -9,7 +9,11 @@ import {
   getAgentFeatures,
 } from "../agentsam/feature-gates.js";
 import { persistChatExchange } from "../agentsam/threads.js";
-import { buildToolCallFromGithubMeta, routeChipsFromRouting } from "../agentsam/tool-traces.js";
+import {
+  buildToolCallFromGithubMeta,
+  buildToolCallTrace,
+  routeChipsFromRouting,
+} from "../agentsam/tool-traces.js";
 import { runAgentSamAi } from "../agentsam/ai-run.js";
 import {
   createAnalyticsIds,
@@ -27,7 +31,17 @@ import {
 } from "../agentsam/prompt-cache.js";
 import { listPromptFragments, listPromptTemplates } from "../agentsam/prompt-registry.js";
 import { getCompactionStatus, runAgentsamCompaction } from "../agentsam/compaction.js";
-import { getActiveToolsHash, listToolsGrouped, getToolsRegistryStatus } from "../agentsam/tools-registry.js";
+import {
+  getActiveToolsHash,
+  getToolsRegistryStatus,
+  listToolsGrouped,
+  logToolCall,
+  toolsForWorkersAi,
+} from "../agentsam/tools-registry.js";
+import {
+  executeAgentSamTool,
+  isAgentSamToolExecutable,
+} from "../agentsam/tool-handlers.js";
 import {
   bridgeConfigured,
   fetchGithubContextForChat,
@@ -540,8 +554,12 @@ export async function agentsamChat(request, env, executionCtx = null) {
     );
   }
 
-  const ai = await runAgentSamAi(env, systemPrompt, message, {
+  const callableTools = (routing.tools || []).filter(isAgentSamToolExecutable);
+  const toolDefinitions = toolsForWorkersAi(callableTools);
+
+  let ai = await runAgentSamAi(env, systemPrompt, message, {
     ...aiRouting,
+    tool_definitions: toolDefinitions,
     has_image: aiRouting.has_image || context.has_image,
     image_base64: aiRouting.image_base64 || context.image_base64,
     image_url: aiRouting.image_url || context.image_url,
@@ -570,6 +588,118 @@ export async function agentsamChat(request, env, executionCtx = null) {
       intent: routing.classification.intent,
     },
   });
+
+  if (ai.ok && Array.isArray(ai.tool_calls) && ai.tool_calls.length) {
+    const selectedByKey = new Map(callableTools.map((tool) => [tool.tool_key, tool]));
+    const toolResults = [];
+
+    for (const call of ai.tool_calls.slice(0, 4)) {
+      const tool = selectedByKey.get(call.name);
+      if (!tool) {
+        toolResults.push({
+          tool_key: call.name,
+          ok: false,
+          error: "tool_not_selected_for_request",
+        });
+        continue;
+      }
+
+      const started = Date.now();
+      const result = await executeAgentSamTool(env, tool.tool_key, call.arguments || {}, {
+        user,
+        request,
+        approved: false,
+        confirmed: false,
+      });
+      const durationMs = Date.now() - started;
+      const trace = buildToolCallTrace(
+        tool,
+        call.arguments || {},
+        result,
+        ids,
+        durationMs,
+      );
+      toolCalls.push(trace);
+      toolResults.push({
+        tool_key: tool.tool_key,
+        capability_key: tool.capability_key,
+        result,
+      });
+
+      await logToolCall(
+        env,
+        {
+          id: trace.id,
+          session_id: ids.session_id,
+          conversation_id: conversationId,
+          message_id: ids.message_id,
+          run_id: ids.run_id,
+          user_id: user?.id || null,
+          tool_name: tool.tool_name || tool.tool_key,
+          tool_key: tool.tool_key,
+          agentsam_tools_id: tool.id,
+          tool_category: tool.tool_category,
+          mcp_server_key: tool.mcp_server_key,
+          handler_type: tool.handler_type,
+          status:
+            result?.ok === true
+              ? "success"
+              : result?.approval_required || result?.confirmation_required
+                ? "approval_required"
+                : "failed",
+          duration_ms: durationMs,
+          error_message: result?.error || null,
+          input_summary: JSON.stringify(call.arguments || {}),
+          output_summary: JSON.stringify(result || {}),
+        },
+        {
+          ctx: executionCtx,
+          session_id: ids.session_id,
+          conversation_id: conversationId,
+          message_id: ids.message_id,
+          run_id: ids.run_id,
+          user_id: user?.id || null,
+        },
+      );
+    }
+
+    const toolResultBlock = toolResults
+      .map(
+        (entry) =>
+          `TOOL ${entry.tool_key} (${entry.capability_key || "unknown"}):\n${JSON.stringify(entry.result)}`,
+      )
+      .join("\n\n");
+
+    const finalSystemPrompt =
+      `${systemPrompt}\n\nTOOL EXECUTION RESULTS:\n${toolResultBlock}\n\n` +
+      "Use these results as authority. Never claim a write occurred when a tool returned approval_required, confirmation_required, or an error.";
+
+    const finalAi = await runAgentSamAi(env, finalSystemPrompt, message, {
+      ...aiRouting,
+      workflow_key: workflowKey,
+      intent: routing.classification.intent,
+      tool_definitions: [],
+      analytics: {
+        execution_ctx: executionCtx,
+        ...ids,
+        workflow_key: workflowKey,
+        workflow_id: routing.workflow?.id || null,
+        user_id: user?.id || null,
+        admin_user_id: user?.id || null,
+        user_email: user?.email || null,
+        intent: routing.classification.intent,
+      },
+    });
+
+    if (finalAi?.ok) {
+      ai = {
+        ...finalAi,
+        tool_calls: ai.tool_calls,
+        tool_results: toolResults,
+        tool_model: ai.selected_model,
+      };
+    }
+  }
 
   const totalLatencyMs = Date.now() - chatStarted;
 

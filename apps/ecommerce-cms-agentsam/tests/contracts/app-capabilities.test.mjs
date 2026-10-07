@@ -17,22 +17,24 @@ test('merchant Apps resolve domain capabilities instead of raw Cloudflare/D1/R2 
 
 test('Completeful policy preserves approval gates for order creation and product publishing', async () => {
   const app = await readApp('completeful');
-  assert.deepEqual(app.agent.capabilities.approval_required, ['order.create','product.publish']);
-  assert.ok(app.agent.capabilities.read.includes('order.quote'));
+  assert.deepEqual(app.agent.capabilities.approval_required, ['commerce.order.create','commerce.product.publish']);
+  assert.ok(app.agent.capabilities.read.includes('commerce.order.quote'));
 });
 
 test('Product Studio consumes provider/domain capabilities without becoming Completeful-shaped', async () => {
   const app = await readApp('product-studio');
-  assert.ok(app.agent.capabilities.read.includes('catalog.read'));
-  assert.ok(app.agent.capabilities.write.includes('design.create'));
+  assert.ok(app.agent.capabilities.read.includes('commerce.catalog.read'));
+  assert.ok(app.agent.capabilities.write.includes('commerce.design.create'));
   assert.ok(!JSON.stringify(app.agent).includes('completeful_'));
 });
 
-test('Growth and Resend expose current registration gaps instead of pretending tool coverage exists', async () => {
+test('Growth and Resend expose registered scoped AgentSam tools', async () => {
   const growth = await readApp('growth');
   const resend = await readApp('resend');
-  assert.equal(growth.agent.status, 'tool-registration-pending');
-  assert.deepEqual(growth.agent.verified_tools, []);
-  assert.equal(resend.agent.status, 'plugin-and-tool-registration-pending');
-  assert.deepEqual(resend.agent.verified_tools, []);
+  assert.equal(growth.agent.status, 'registered');
+  assert.ok(growth.agent.tools.includes('growth_campaigns_list'));
+  assert.ok(growth.agent.capabilities.approval_required.includes('campaign.publish'));
+  assert.equal(resend.agent.status, 'registered');
+  assert.ok(resend.agent.tools.includes('email_messages_list'));
+  assert.ok(resend.agent.capabilities.approval_required.includes('email.send'));
 });

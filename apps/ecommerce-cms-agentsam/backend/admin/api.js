@@ -886,7 +886,7 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   if (path === "/api/admin/mail/mailboxes" && method === "POST") {
     return createMailbox(request, env, user);
   }
-  if (path === "/api/admin/mail/send" && method === "POST") return sendMailPreview(request, env);
+  if (path === "/api/admin/mail/send" && method === "POST") return sendMailPreview(request, env, user);
   if (path === "/api/admin/mail/resend/status" && method === "GET") return getResendStatus(env);
 
   if (path.startsWith("/api/admin/growth/")) {

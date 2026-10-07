@@ -41,7 +41,7 @@ INSERT INTO agentsam_tools (
   '["github","repo","branch","commit","code"]',
   'inneranimalmedia-mcp-server', 'https://mcp.inneranimalmedia.com/mcp', 'bridge',
   'low', 0, 1, 0,
-  'repo', NULL, 'repo_work', 'code', 'github.repo.list', 10,
+  'repo', NULL, 'repo_work', 'code', 'repository.list', 10,
   unixepoch(), unixepoch()
 ),
 
@@ -57,7 +57,7 @@ INSERT INTO agentsam_tools (
   '["order","orders","checkout","commerce","store","inventory"]',
   NULL, NULL, 'internal',
   'low', 0, 1, 0,
-  'commerce', NULL, 'store_ops', 'commerce', 'store.orders.list', 20,
+  'commerce', NULL, 'store_ops', 'commerce', 'commerce.orders.read', 20,
   unixepoch(), unixepoch()
 ),
 (
@@ -71,7 +71,7 @@ INSERT INTO agentsam_tools (
   '["product","inventory","sku","variant","stock","tee"]',
   NULL, NULL, 'internal',
   'low', 0, 1, 0,
-  'commerce', NULL, 'store_ops', 'commerce', 'store.products.list', 21,
+  'commerce', NULL, 'store_ops', 'commerce', 'commerce.products.read', 21,
   unixepoch(), unixepoch()
 ),
 
@@ -87,7 +87,7 @@ INSERT INTO agentsam_tools (
   '["cms","page","publish","content","slug","seo"]',
   NULL, NULL, 'internal',
   'low', 0, 1, 0,
-  'content', 'fnf_content_studio', 'content_generation', 'content', 'cms.pages.list', 30,
+  'content', 'fnf_content_studio', 'content_generation', 'content', 'cms.pages.read', 30,
   unixepoch(), unixepoch()
 ),
 
@@ -103,7 +103,7 @@ INSERT INTO agentsam_tools (
   '["d1","sql","database","query","migration","schema"]',
   NULL, NULL, 'internal',
   'medium', 0, 1, 0,
-  'code', NULL, 'repo_work', 'cloudflare', 'cf.d1.query', 15,
+  'code', NULL, 'repo_work', 'cloudflare', 'database.query', 15,
   unixepoch(), unixepoch()
 ),
 (
@@ -117,21 +117,21 @@ INSERT INTO agentsam_tools (
   '["r2","media","asset","image","upload","bucket"]',
   NULL, NULL, 'internal',
   'low', 0, 1, 0,
-  'creative', 'fnf_creative_studio', 'image_generation', 'cloudflare', 'cf.r2.list', 25,
+  'creative', 'fnf_creative_studio', 'image_generation', 'cloudflare', 'storage.objects.list', 25,
   unixepoch(), unixepoch()
 ),
 (
   'ast_fnf_worker_deploy',
   'ede6590ac0d2fb7daf155b35653457b2',
   'fnf_worker_deploy', 'fnf_worker_deploy', 'Deploy Worker',
-  'deploy.worker', 'deploy',
+  'deployment.worker.deploy', 'deploy',
   'Deploy fuelnfreetime Worker via configured deploy command. Requires approval.',
   '{"type":"object","properties":{"confirm":{"type":"boolean"}}}',
   '{"command":"npm run deploy","cwd":"fuelnfreetime","requires_approval":true}',
   '["deploy","worker","cloudflare","wrangler","production"]',
   'inneranimalmedia-mcp-server', 'https://mcp.inneranimalmedia.com/mcp', 'mcp_proxy',
   'high', 1, 1, 0,
-  'code', NULL, 'repo_work', 'cloudflare', 'deploy.worker', 40,
+  'code', NULL, 'repo_work', 'cloudflare', 'deployment.worker.deploy', 40,
   unixepoch(), unixepoch()
 ),
 
@@ -147,7 +147,7 @@ INSERT INTO agentsam_tools (
   '["model","ai","workers ai","routing","fallback"]',
   NULL, NULL, 'internal',
   'low', 0, 1, 0,
-  NULL, 'fnf_agentsam_chat', 'admin_chat', 'agentsam', 'agentsam.ai.models', 12,
+  NULL, 'fnf_agentsam_chat', 'admin_chat', 'agentsam', 'agentsam.models.read', 12,
   unixepoch(), unixepoch()
 ),
 (
@@ -161,7 +161,7 @@ INSERT INTO agentsam_tools (
   '["analytics","usage","cost","fallback","latency"]',
   NULL, NULL, 'internal',
   'low', 0, 1, 0,
-  NULL, 'fnf_agentsam_chat', 'admin_chat', 'agentsam', 'agentsam.analytics.summary', 13,
+  NULL, 'fnf_agentsam_chat', 'admin_chat', 'agentsam', 'agentsam.analytics.read', 13,
   unixepoch(), unixepoch()
 ),
 (
@@ -175,7 +175,7 @@ INSERT INTO agentsam_tools (
   '["mcp","bridge","github","connection","status"]',
   'inneranimalmedia-mcp-server', 'https://mcp.inneranimalmedia.com/mcp', 'internal',
   'low', 0, 1, 0,
-  'code', NULL, 'repo_work', 'platform', 'mcp.bridge.status', 11,
+  'code', NULL, 'repo_work', 'platform', 'integration.mcp.status', 11,
   unixepoch(), unixepoch()
 ),
 
