@@ -1,4 +1,5 @@
 import { ROUTE_MANIFEST } from "../lib/route-manifest.js";
+import { gateGeneratedSave } from "../../frontend/static/js/generation-namespace.mjs";
 import { cmsStorefrontRoutes, resolvePageAuthority } from "./page-authority.js";
 import {
   getRegistryPage,
@@ -1234,6 +1235,8 @@ export async function handleAdminCmsApi(request, env, url) {
     } catch {
       return json({ error: "Invalid JSON" }, { status: 400 });
     }
+    const generatedGate = gateGeneratedSave(body);
+    if (!generatedGate.ok) return json({ error: generatedGate.error, violations: generatedGate.violations }, { status: generatedGate.status });
     const result = await insertSection(env, m[1], body);
     if (result.error) return json({ error: result.error }, { status: result.status });
     return json(result);
@@ -1286,6 +1289,8 @@ export async function handleAdminCmsApi(request, env, url) {
     } catch {
       return json({ error: "Invalid JSON" }, { status: 400 });
     }
+    const generatedGate = gateGeneratedSave(body);
+    if (!generatedGate.ok) return json({ error: generatedGate.error, violations: generatedGate.violations }, { status: generatedGate.status });
     const result = await insertBlock(env, m[1], m[2], body);
     if (result.error) return json({ error: result.error }, { status: result.status });
     return json(result);
@@ -1326,6 +1331,8 @@ export async function handleAdminCmsApi(request, env, url) {
     } catch {
       return json({ error: "Invalid JSON" }, { status: 400 });
     }
+    const generatedGate = gateGeneratedSave(body);
+    if (!generatedGate.ok) return json({ error: generatedGate.error, violations: generatedGate.violations }, { status: generatedGate.status });
     const result = await updateSection(env, m[1], m[2], body);
     if (result.error) return json(result, { status: result.status });
     return json(result);

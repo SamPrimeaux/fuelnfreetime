@@ -140,6 +140,23 @@ export function lintGeneratedBlock(resolved, forms) {
   if (/(^|\n)\s*(var|let|const)\s+[A-Za-z_$]/.test(trimmedJs) && !/^\(/.test(trimmedJs) && !trimmedJs.startsWith("export")) violations.push("top-level binding");
   if (/window\.[A-Za-z_$][\w$]*\s*=/.test(js)) violations.push("window write");
   if (/customElements\.define\s*\(/.test(js) && !/customElements\.get\s*\(/.test(js)) violations.push("customElements.define without get() guard");
+  const surface = [html, css, js].join(String.fromCharCode(10));
+  const denied = [
+    [/\beval\s*\(/, "eval"],
+    [/new\s+Function\s*\(/, "new Function"],
+    [/document\.write\s*\(/, "document.write"],
+    [/document\.cookie/, "document.cookie"],
+    [/\bfetch\s*\(/, "fetch"],
+    [/XMLHttpRequest/, "XMLHttpRequest"],
+    [/\bWebSocket\s*\(/, "WebSocket"],
+    [/importScripts\s*\(/, "importScripts"],
+    [/window\.(parent|top)\b/, "window.parent/top"],
+    [/(?:src|href)\s*=\s*["'](?:https?:)?\/\//i, "external src/href"],
+    [/(?:src|href)\s*=\s*["']javascript:/i, "javascript url"],
+  ];
+  denied.forEach(function(rule) {
+    if (rule[0].test(surface)) violations.push("denied: " + rule[1]);
+  });
   return { ok: violations.length === 0, violations };
 }
 
@@ -191,4 +208,20 @@ export async function persistScanReport(report, write) {
   } catch (error) {
     return { ok: false, fatal: false, error: String(error && error.message || error) };
   }
+}
+
+export function gateGeneratedSave(body) {
+  const blob = JSON.stringify(body || {});
+  if (detectProvenance(blob) !== "agentsam") return { ok: true };
+  const blockId = (body && (body.blockId || body.block_key)) || "block";
+  const namespace = body && (body.namespace || (body.provenance && body.provenance.namespace));
+  const forms = nsForms(blockId, namespace);
+  const code = (body && (body.code || body.canonical)) || { html: blob, css: "", js: "" };
+  const lint = lintGeneratedBlock({
+    html: code.html || "",
+    css: code.css || "",
+    js: code.js || "",
+  }, forms);
+  if (!lint.ok) return { ok: false, status: 422, error: lint.violations.join("; "), violations: lint.violations };
+  return { ok: true };
 }

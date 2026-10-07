@@ -79,3 +79,20 @@ test("missing manifest override falls back to agentsam", () => {
   assert.equal(nsForms("menu", readNamespace({})).css, "agentsam-gen-menu");
   assert.equal(nsForms("menu", readNamespace({})).js, "agentsam_gen_menu");
 });
+
+import { gateGeneratedSave, lintGeneratedBlock } from "../frontend/static/js/generation-namespace.mjs";
+
+test("deny-list rejects storefront escapes and the save gate enforces it", () => {
+  const forms = nsForms("menu");
+  const lint = lintGeneratedBlock({
+    html: '<div data-agentsam-block="menu" id="agentsam-gen-menu" class="agentsam-gen-menu"><script src="https://evil.example/x.js"></script></div>',
+    css: '[data-agentsam-block="menu"] .agentsam-gen-menu {}',
+    js: '(function(){ fetch("/cart"); })()',
+  }, forms);
+  assert.equal(lint.ok, false);
+  assert.ok(lint.violations.some((item) => item.includes("fetch")));
+  assert.ok(lint.violations.some((item) => item.includes("external src/href")));
+  const gate = gateGeneratedSave({ generator: "agentsam", blockId: "menu", code: { html: "<div></div>", css: "", js: "eval(1)" } });
+  assert.equal(gate.ok, false);
+  assert.equal(gate.status, 422);
+});
