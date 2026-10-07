@@ -1656,3 +1656,37 @@ body.shell-mode-theme-editor .theme-studio {
     width: min(320px, 86vw);
   }
 }
+
+/* Narrow editor: pane switch wins over the drawer grid. */
+@media (max-width: 900px) {
+  body.shell-mode-theme-editor .theme-studio {
+    height: auto;
+    min-height: 100dvh;
+    overflow: auto;
+  }
+  .theme-studio-toolbar {
+    height: auto;
+    min-height: 52px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .theme-studio-workspace,
+  .theme-studio[data-editor-drawer="closed"] .theme-studio-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .theme-studio-tree {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+  .theme-studio[data-mobile-pane="sections"] .theme-studio-tree,
+  .theme-studio[data-editor-drawer="closed"][data-mobile-pane="sections"] .theme-studio-tree {
+    display: block;
+  }
+  .theme-studio[data-mobile-pane="preview"] .theme-studio-tree,
+  .theme-studio[data-mobile-pane="settings"] .theme-studio-tree,
+  .theme-studio[data-editor-drawer="closed"][data-mobile-pane="preview"] .theme-studio-tree,
+  .theme-studio[data-editor-drawer="closed"][data-mobile-pane="settings"] .theme-studio-tree {
+    display: none;
+  }
+}

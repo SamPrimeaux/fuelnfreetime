@@ -2082,15 +2082,18 @@
     if (aside && editorDrawer) aside.scrollTop = drawerScroll[editorDrawer] || 0;
   }
 
+  let editorLeaving = false;
+
+  function confirmLeave() {
+    if (!dirty) return true;
+    return window.confirm('Leave the editor? Unsaved changes on this page will be lost.');
+  }
+
   function exitEditor() {
-    if (dirty && !window.confirm('Leave the editor? Unsaved changes on this page will be lost.')) return;
-    let dest = '/admin/store';
-    try {
-      const ref = new URL(document.referrer);
-      if (ref.origin === location.origin && ref.pathname.startsWith('/admin/') && ref.pathname.indexOf('/admin/theme-editor') !== 0 && ref.pathname.indexOf('/admin/theme-workspace') !== 0) {
-        dest = ref.pathname + ref.search;
-      }
-    } catch (error) {}
+    if (!confirmLeave()) return;
+    editorLeaving = true;
+    if (window.AgentSamShell && AgentSamShell.unbindShellShortcuts) AgentSamShell.unbindShellShortcuts();
+    const dest = window.AgentSamShell && AgentSamShell.resolveExitTarget ? AgentSamShell.resolveExitTarget() : '/admin/store';
     location.assign(dest);
   }
 
@@ -2268,23 +2271,36 @@
       closeThemeMenu();
       closeMediaPicker();
     }
-    if (event.metaKey && event.ctrlKey && !event.altKey && !event.shiftKey) {
-      const drawerForKey = { '1': 'sections', '2': 'theme-settings', '3': 'app-embeds' };
-      if (drawerForKey[event.key]) {
-        event.preventDefault();
-        setEditorDrawer(drawerForKey[event.key]);
-      }
-    }
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
       event.preventDefault();
       saveDraft();
     }
   });
 
+  if (window.AgentSamShell && AgentSamShell.bindShellShortcuts) {
+    AgentSamShell.bindShellShortcuts('theme-editor', function(shortcut) {
+      if (shortcut && shortcut.drawer) setEditorDrawer(shortcut.drawer);
+    });
+  }
+  window.addEventListener('pagehide', function() {
+    if (window.AgentSamShell && AgentSamShell.unbindShellShortcuts) AgentSamShell.unbindShellShortcuts();
+  });
+
   window.addEventListener('beforeunload', function(event) {
-    if (!dirty) return;
+    if (!dirty || editorLeaving) return;
     event.preventDefault();
     event.returnValue = '';
+  });
+
+  if (!history.state || !history.state.agentsamEditor) history.pushState({ agentsamEditor: 1 }, '');
+  window.addEventListener('popstate', function() {
+    if (!dirty) return;
+    if (confirmLeave()) {
+      editorLeaving = true;
+      if (window.AgentSamShell && AgentSamShell.unbindShellShortcuts) AgentSamShell.unbindShellShortcuts();
+      return;
+    }
+    history.pushState({ agentsamEditor: 1 }, '');
   });
 
   setDevice(device);

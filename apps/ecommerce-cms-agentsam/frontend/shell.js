@@ -92,15 +92,120 @@ const NAV = {
 // expand/collapse the way the old per-render DOM-class toggling did.
 const navToggleState = new Map();
 
+const ADMIN_EXIT_ROUTES = [
+  "/admin/home",
+  "/admin/store",
+  "/admin/pages",
+  "/admin/page-edit",
+  "/admin/content",
+  "/admin/orders",
+  "/admin/products",
+  "/admin/product-edit",
+  "/admin/inventory",
+  "/admin/preferences",
+  "/admin/agentsam",
+  "/admin/account",
+  "/admin/analytics/overview",
+  "/admin/analytics/finance",
+  "/admin/analytics/health",
+  "/admin/discounts",
+  "/admin/growth",
+  "/admin/subscribers",
+  "/admin/email",
+  "/admin/scaffold",
+];
+const EDITOR_RETURN_KEY = "agentsam.editorReturn";
+
 const SHELL_MODES = {
-  admin: { id: "admin", hideAdminNav: false },
-  "theme-editor": { id: "theme-editor", hideAdminNav: true },
+  admin: { id: "admin", hideAdminNav: false, shortcuts: [], exitFallback: "/admin/store", exitRoutes: ADMIN_EXIT_ROUTES },
+  "theme-editor": {
+    id: "theme-editor",
+    hideAdminNav: true,
+    exitFallback: "/admin/store",
+    exitRoutes: ADMIN_EXIT_ROUTES,
+    shortcuts: [
+      { id: "drawer-sections", combo: "meta+ctrl+1", drawer: "sections" },
+      { id: "drawer-theme-settings", combo: "meta+ctrl+2", drawer: "theme-settings" },
+      { id: "drawer-app-embeds", combo: "meta+ctrl+3", drawer: "app-embeds" },
+    ],
+  },
 };
 
 function resolveShellMode(options = {}) {
   const requested = options.shellMode;
   return (requested && SHELL_MODES[requested]) || SHELL_MODES.admin;
 }
+
+function isAllowlistedAdminPath(pathname, routes) {
+  const path = String(pathname || "").split("?")[0].split("#")[0];
+  if (!path.startsWith("/admin/") || path.startsWith("/admin/theme-editor") || path.startsWith("/admin/theme-workspace")) return false;
+  return (routes || ADMIN_EXIT_ROUTES).some(function(route) {
+    return path === route || path.startsWith(route + "/");
+  });
+}
+
+function rememberEditorReturn(pathname) {
+  if (!isAllowlistedAdminPath(pathname)) return;
+  try { sessionStorage.setItem(EDITOR_RETURN_KEY, pathname); } catch (error) {}
+}
+
+function resolveExitTarget(candidate) {
+  const mode = SHELL_MODES["theme-editor"];
+  const fallback = mode.exitFallback || "/admin/store";
+  let path = "";
+  if (typeof candidate === "string" && candidate.startsWith("/admin/") && candidate.indexOf("://") === -1) path = candidate.split("?")[0].split("#")[0];
+  if (!path) {
+    try { path = sessionStorage.getItem(EDITOR_RETURN_KEY) || ""; } catch (error) { path = ""; }
+  }
+  path = String(path || "").split("?")[0].split("#")[0];
+  if (!isAllowlistedAdminPath(path, mode.exitRoutes)) return fallback;
+  return path;
+}
+
+let shellShortcutAbort = null;
+function shortcutTargetIsField(event) {
+  const el = event.target;
+  if (!el || !el.closest) return false;
+  return Boolean(el.closest("input, textarea, select, [contenteditable='true'], [contenteditable='']"));
+}
+function comboMatches(event, combo) {
+  const parts = String(combo || "").split("+");
+  const key = parts[parts.length - 1];
+  if (event.key !== key) return false;
+  if (parts.includes("meta") && !event.metaKey) return false;
+  if (parts.includes("ctrl") && !event.ctrlKey) return false;
+  if (event.altKey || event.shiftKey) return false;
+  return true;
+}
+function unbindShellShortcuts() {
+  if (shellShortcutAbort) shellShortcutAbort.abort();
+  shellShortcutAbort = null;
+}
+function bindShellShortcuts(modeId, onShortcut) {
+  unbindShellShortcuts();
+  const mode = SHELL_MODES[modeId];
+  if (!mode || !mode.shortcuts || !mode.shortcuts.length) return;
+  shellShortcutAbort = new AbortController();
+  document.addEventListener("keydown", function(event) {
+    if (shortcutTargetIsField(event)) return;
+    for (const shortcut of mode.shortcuts) {
+      if (comboMatches(event, shortcut.combo)) {
+        event.preventDefault();
+        onShortcut(shortcut);
+      }
+    }
+  }, { signal: shellShortcutAbort.signal });
+}
+
+document.addEventListener("click", function(event) {
+  const link = event.target && event.target.closest && event.target.closest("a[href]");
+  if (!link) return;
+  try {
+    const url = new URL(link.getAttribute("href"), location.origin);
+    if (url.origin !== location.origin) return;
+    rememberEditorReturn(url.pathname);
+  } catch (error) {}
+});
 
 function ensureConsoleAssets() {
   document.body.classList.add("console-theme");
@@ -788,4 +893,4 @@ function initMobileNav() {
 window.hydrateShellProfile = hydrateShellProfile;
 window.hydrateShellNav = hydrateShellNav;
 window.loadShellUser = loadShellUser;
-window.AgentSamShell = { modes: SHELL_MODES, resolveShellMode };
+window.AgentSamShell = { modes: SHELL_MODES, resolveShellMode, resolveExitTarget, rememberEditorReturn, bindShellShortcuts, unbindShellShortcuts };
