@@ -12,6 +12,7 @@ import {
 } from "../lib/site-nav.js";
 import { getCompany, companyDomain } from "../lib/company.js";
 import { hashPassword, verifyPassword } from "../lib/auth.js";
+import { listStoreThemes } from "./themes.js";
 // Installed theme owns its appearance: never substitute a store-specific color
 // guess or force the FNF orange/light admin preset on unrelated CMS sites.
 import heuristicManifest from '../../../../packages/heuristic-theme/theme.json' with { type: 'json' };
@@ -246,10 +247,14 @@ export async function verifyStorefrontPassword(env, password) {
 }
 
 async function resolveThemes(env) {
-  // No fabricated themes. Prefer agentsam_products theme rows if present; else empty.
+  const lifecycle = await listStoreThemes(env);
+  if (lifecycle.ok) return lifecycle;
+
+  // Compatibility fallback only until migrate-store-themes.sql is applied.
+  // agentsam_products remains catalog metadata, not theme lifecycle truth.
   try {
     const { results } = await env.DB.prepare(
-      `SELECT slug AS id, name, version, status, updated_at, package_name
+      `SELECT slug AS id, slug, name, version, status, updated_at, package_name
        FROM agentsam_products
        WHERE kind = 'theme'
        ORDER BY updated_at DESC
@@ -257,20 +262,27 @@ async function resolveThemes(env) {
     ).all();
     const themes = (results || []).map((t) => ({
       id: t.id,
+      slug: t.slug,
       name: t.name,
-      status: t.status || "draft",
+      state: t.status === "wired" ? "active" : "draft",
       version: t.version || null,
       last_saved: t.updated_at || null,
       edit_href: `/admin/theme-editor?slug=shop`,
       preview_href: "/",
       package_name: t.package_name || null,
       appearance: appearanceForInstalledPackage(t),
+      publish_ready: false,
     }));
-    const active = themes.find((t) => t.status === "active" || t.status === "wired") || null;
-    const drafts = themes.filter((t) => t !== active);
-    return { active_theme: active, draft_themes: drafts };
+    const active = themes.find((t) => t.state === "active") || null;
+    return {
+      ok: false,
+      source: "agentsam_products_compat",
+      active_theme: active,
+      draft_themes: themes.filter((t) => t !== active),
+      themes,
+    };
   } catch {
-    return { active_theme: null, draft_themes: [] };
+    return { ok: false, source: "unavailable", active_theme: null, draft_themes: [], themes: [] };
   }
 }
 

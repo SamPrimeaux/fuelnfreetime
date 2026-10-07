@@ -127,7 +127,9 @@
     "db:migrate:webhook-hook-final:drop-view": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-webhook-hook-normalization-final-drop-view-20260923.sql",
     "db:migrate:webhook-hook-final:swap": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-webhook-hook-normalization-final-swap-20260923.sql",
     "db:migrate:webhook-hook-final:post": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-webhook-hook-normalization-final-post-20260923.sql",
-    "db:migrate:webhook-hook-final": "npm run db:migrate:webhook-hook-final:prepare && npm run db:migrate:webhook-hook-final:drop-view && npm run db:migrate:webhook-hook-final:swap && npm run db:migrate:webhook-hook-final:post"
+    "db:migrate:webhook-hook-final": "npm run db:migrate:webhook-hook-final:prepare && npm run db:migrate:webhook-hook-final:drop-view && npm run db:migrate:webhook-hook-final:swap && npm run db:migrate:webhook-hook-final:post",
+    "db:migrate:store-themes": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-store-themes.sql",
+    "db:migrate:store-themes:local": "npx wrangler d1 execute fuelnfreetime --local --file=db/migrate-store-themes.sql"
   },
   "devDependencies": {
     "esbuild": "^0.28.1",

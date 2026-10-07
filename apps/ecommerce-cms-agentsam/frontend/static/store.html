@@ -143,18 +143,26 @@ function labelMetricAvailability(node, metric) {
     ? "Not measured yet — no storefront analytics data available" : "";
 }
 
+function themeVersion(theme) {
+  return theme.package_version || theme.version || null;
+}
+
 function renderDraftRow(theme) {
+  const version = themeVersion(theme);
+  const packageLabel = theme.package_name || theme.source_ref || theme.meta || "Installed theme";
+  const ready = theme.publish_ready === true;
   return `
-    <div class="online-store-draft-row">
-      <div class="online-store-draft-thumb" aria-hidden="true"><span>F&amp;FT</span></div>
+    <div class="online-store-draft-row" data-theme-row="${theme.id}">
+      <div class="online-store-draft-thumb" aria-hidden="true"><span>${String(theme.name || "T").slice(0, 2).toUpperCase()}</span></div>
       <div class="online-store-draft-copy">
         <div class="online-store-draft-name">${theme.name}</div>
-        <div class="online-store-draft-meta">${theme.meta}</div>
-        <div class="online-store-version"><span class="online-store-version-dot" aria-hidden="true"></span>Version ${theme.version} available</div>
+        <div class="online-store-draft-meta">${packageLabel}</div>
+        <div class="online-store-version"><span class="online-store-version-dot" aria-hidden="true"></span>${version ? `Version ${version}` : "Installed draft"}${ready ? " · Ready to publish" : " · Review required"}</div>
       </div>
       <div class="online-store-draft-actions">
         <button type="button" class="online-store-icon-btn" aria-label="Theme options"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="19" cy="12" r="1.5" fill="currentColor"/></svg></button>
-        <button type="button" class="btn ghost small draft-publish" data-theme-id="${theme.id}">Publish</button>
+        ${theme.editor_mode === "package" ? `<a href="${theme.preview_href || theme.edit_href}" class="btn ghost small">Explore</a>` : ""}
+        <button type="button" class="btn ghost small draft-publish" data-theme-id="${theme.id}" ${ready ? "" : "disabled"}>${ready ? "Publish" : "Needs review"}</button>
         <a href="${theme.edit_href}" class="btn ghost small">Edit theme</a>
       </div>
     </div>`;
@@ -278,9 +286,23 @@ function setPreviewFrames(href) {
     // Do not pretend that publishing the Shop CMS page publishes a theme.
     // Keep draft rows read-only until a real theme publish transaction exists.
     document.querySelectorAll(".draft-publish").forEach((btn) => {
-      btn.disabled = true;
-      btn.textContent = "Publish unavailable";
-      btn.title = "Theme publishing requires a saved, versioned theme draft.";
+      if (btn.disabled) {
+        btn.title = "Theme publishing remains blocked until review and runtime readiness are both verified.";
+        return;
+      }
+      btn.addEventListener("click", async () => {
+        try {
+          if (!confirm("Publish this theme? The current live theme will move to Drafts and can be restored later.")) return;
+          btn.disabled = true;
+          btn.textContent = "Publishing…";
+          await adminFetch(`/api/admin/store/themes/${encodeURIComponent(btn.dataset.themeId)}/publish`, { method: "POST" });
+          location.reload();
+        } catch (err) {
+          btn.disabled = false;
+          btn.textContent = "Publish";
+          alert(err.message || "Could not publish theme.");
+        }
+      });
     });
   } catch (err) {
     console.error(err);
