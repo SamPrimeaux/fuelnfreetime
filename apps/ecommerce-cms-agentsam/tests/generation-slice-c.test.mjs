@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createGenerationLock } from "../frontend/static/js/generation-lock.mjs";
-import { createGenerationSession, createPreviewSink, PHASE_LABELS } from "../frontend/static/js/generation-stream.mjs";
+import { createGenerationSession, createPreviewSink, parseGeneratedDefinition, parseGeneratedSettings, PHASE_LABELS } from "../frontend/static/js/generation-stream.mjs";
 import { applyHoisted, hoistSettings } from "../frontend/static/js/settings-hoist.mjs";
 import { createGeneratedBlockStore } from "../frontend/static/js/cms-generated-store.mjs";
 import { createTokenTextHandler, guardHandler, insertOptions } from "../frontend/static/js/serve-rewrite.mjs";
@@ -38,7 +38,7 @@ test("error and abort unlock, and a script chunk stays text", async () => {
     blockId: "menu",
     lock,
     sink,
-    transport: async () => ({ chunks: ["<<<markup>>><script>alert(1)</script>"] }),
+    transport: async () => ({ chunks: ['<<<definition>>>{"kind":"section","type":"unsafe-test","label":"Unsafe test"}', "<<<markup>>><script>alert(1)</script>"] }),
   });
   const result = await session.run();
   assert.equal(result.saved, false);
@@ -68,7 +68,7 @@ test("split token resolves on the stream path", async () => {
     blockId: "menu",
     lock,
     sink,
-    transport: async () => ({ chunks: ["<<<markup>>>", "__UI", "D__"] }),
+    transport: async () => ({ chunks: ['<<<definition>>>{"kind":"section","type":"split-token","label":"Split token"}', "<<<markup>>>", "__UI", "D__"] }),
   });
   await session.run();
   assert.equal(sink.text.includes("agentsam-gen-menu"), true);
@@ -95,7 +95,7 @@ test("lint failure repairs once then saves nothing", async () => {
     id: "lint",
     blockId: "menu",
     lock,
-    transport: async () => ({ chunks: ["<<<markup>>><div></div>"] }),
+    transport: async () => ({ chunks: ['<<<definition>>>{"kind":"section","type":"lint-test","label":"Lint test"}', "<<<markup>>><div></div>"] }),
     repair() { repairs += 1; return { html: "<div></div>", css: "", js: "" }; },
   });
   const result = await session.run();
@@ -131,4 +131,28 @@ test("serve rewriter buffers a split token and skips a throwing block", () => {
   assert.equal(removed, true);
   assert.deepEqual(insertOptions(false), { html: false });
   assert.deepEqual(insertOptions(true), { html: true });
+});
+
+
+test("generated key=value settings parse into typed editor values", () => {
+  assert.deepEqual(parseGeneratedSettings("padding=12\nmotion=true\nbackground=#111827\nlabel=Hero"), {
+    padding: 12,
+    motion: true,
+    background: "#111827",
+    label: "Hero",
+  });
+});
+
+
+test("generated definition normalizes into a merchant-facing semantic type", () => {
+  assert.deepEqual(
+    parseGeneratedDefinition('{"kind":"section","type":"testimonial-carousel","label":"Testimonial carousel","settings":{"gap":{"type":"range"}}}'),
+    {
+      kind: "section",
+      type: "testimonial-carousel",
+      label: "Testimonial carousel",
+      settings: { gap: { type: "range" } },
+      blocks: [],
+    },
+  );
 });

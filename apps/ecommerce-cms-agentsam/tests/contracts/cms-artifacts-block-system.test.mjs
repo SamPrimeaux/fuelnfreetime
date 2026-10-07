@@ -43,7 +43,6 @@ test("block registry supports basic, nested, commerce and utility primitives", a
     "image",
     "button",
     "group",
-    "custom",
     "product-title",
     "product-price",
     "product-rating",
@@ -56,8 +55,16 @@ test("block registry supports basic, nested, commerce and utility primitives", a
     assert.ok(registry.types[key], "missing block type: " + key);
   }
   assert.equal(registry.types.group.container, true);
-  assert.equal(registry.types.custom.artifact_required, true);
   assert.equal(registry.types.image.authority, "media_assets");
+  assert.equal(registry.types.custom, undefined);
+  assert.deepEqual(
+    registry.editorActions["generate-with-agentsam"].capabilities,
+    ["code.generate", "code.edit"],
+  );
+  assert.equal(
+    registry.editorActions["generate-with-agentsam"].persists_as,
+    "definition.type",
+  );
 });
 
 test("legacy factual blocks keep source paths but use meaningful normalized types", async () => {

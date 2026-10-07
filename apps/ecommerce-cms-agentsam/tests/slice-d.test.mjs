@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { followUp, selectorsStable, undoLast } from "../frontend/static/js/block-followup.mjs";
 import { createGeneratedBlockRepository, createMemoryObjectStore, createSqlStore } from "../backend/cms/generated-block-repository.mjs";
-import { generateWithProvider } from "../backend/admin/provider.mjs";
+import { generateWithProvider, resolveProvider } from "../backend/admin/provider.mjs";
 import { renderAssistantHeader, presentAgentsamProposal } from "../frontend/static/js/side-assistant.mjs";
 
 const stub = readFileSync(new URL("../db/schema/accounts.stub.sql", import.meta.url), "utf8");
@@ -59,7 +59,7 @@ test("stub provider receives the abort mid-fetch", async () => {
     seen = init.signal;
     return new Response("ok");
   };
-  const pending = generateWithProvider({ providers: [{ name: "stub", model: "stub-model", endpoint: "https://provider.invalid/generate", capabilities: ["structured.generate"] }] }, { prompt: "center" }, controller.signal);
+  const pending = generateWithProvider({ providers: [{ name: "stub", model: "stub-model", endpoint: "https://provider.invalid/generate", capabilities: ["code.generate"] }] }, { prompt: "center" }, controller.signal);
   controller.abort();
   await pending;
   globalThis.fetch = original;
@@ -75,4 +75,16 @@ test("assistant proposals are cards and the composer registers once", () => {
   assert.equal(source.includes("customElements.get"), true);
   const dock = readFileSync(new URL("../../../packages/admin-dock/src/index.js", import.meta.url), "utf8");
   assert.equal(dock.includes('contains("admin-dock-off")'), true);
+});
+
+
+test("provider resolver separates code generation from code editing", async () => {
+  const manifest = {
+    providers: [
+      { name: "generator", endpoint: "https://gen.invalid", capabilities: ["code.generate"] },
+      { name: "editor", endpoint: "https://edit.invalid", capabilities: ["code.edit"] },
+    ],
+  };
+  assert.equal(resolveProvider(manifest, "code.generate").provider, "generator");
+  assert.equal(resolveProvider(manifest, "code.edit").provider, "editor");
 });

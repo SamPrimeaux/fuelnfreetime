@@ -2,7 +2,7 @@
   "schema": "agentsam.cms-block-types.v1",
   "notes": [
     "cms_section_blocks stores block instances; this registry defines reusable block semantics.",
-    "Generated code/bundles are cms_artifacts referenced by artifact_id, never stuffed into content_json.",
+    "Generated code/bundles are cms_artifacts referenced by artifact_id, never stuffed into content_json; generated instances persist under their semantic definition.type, not a generic custom type.",
     "Section-specific max block counts, static/non-removable blocks and allowed block types belong in the section registry, not D1 columns.",
     "Provider/model provenance stays provider-agnostic in artifact/media metadata."
   ],
@@ -55,21 +55,6 @@
       ],
       "container": true,
       "children_via": "parent_block_id"
-    },
-    "custom": {
-      "family": "basic",
-      "storage": "artifact-reference",
-      "content": [
-        "settings"
-      ],
-      "container": false,
-      "artifact_required": true,
-      "artifact_content_modes": [
-        "html",
-        "component",
-        "embed",
-        "bundle"
-      ]
     },
     "product-title": {
       "family": "commerce",
@@ -170,6 +155,20 @@
       ],
       "container": false,
       "notes": "Can begin as migrated inline content and later bind to a commerce collection/media asset."
+    }
+  },
+  "editorActions": {
+    "generate-with-agentsam": {
+      "label": "Generate with AgentSam",
+      "kind": "generator",
+      "capabilities": [
+        "code.generate",
+        "code.edit"
+      ],
+      "output_contract": "cms.generated-definition.v1",
+      "persists_as": "definition.type",
+      "artifact_backed": true,
+      "notes": "This is an editor action, not a saved block type. Accepted generations become ordinary semantic section/block types and retain generator provenance in metadata."
     }
   }
 }
