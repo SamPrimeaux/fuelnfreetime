@@ -398,7 +398,7 @@ test("a real storefront imports into a private draft without publishing syntheti
     fx.db.exec("DELETE FROM page_sections; DELETE FROM pages;");
     const before = await getPageAdmin(fx.env, "shop");
     assert.equal(before.seeded, false);
-    assert.equal(before.page.content_authority, "cms-draft-only");
+    assert.equal(before.page.content_authority, "storefront-html");
 
     const invalid = await importLivePageDraft(fx.env, "shop", {
       sections: [{ key: "fictional", content: { headline: "Not on the site" } }]
