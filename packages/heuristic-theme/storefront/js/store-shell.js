@@ -162,8 +162,16 @@
     )) {
       throw new Error("Store announcement link is invalid");
     }
+    const message = escapeHtml(navConfig.announcement?.text || "");
+    const marquee = navConfig.announcement?.style === "marquee";
+    const color = /^#[0-9a-f]{6}$/i.test(navConfig.announcement?.textColor || "") ? navConfig.announcement.textColor : "#ffffff";
+    const background = /^#[0-9a-f]{6}$/i.test(navConfig.announcement?.backgroundColor || "") ? navConfig.announcement.backgroundColor : "#161616";
     const announcement = announcementEnabled
-      ? `<a class="fnf-announcement" href="${escapeHtml(announcementHref)}">${escapeHtml(navConfig.announcement.text)}</a>`
+      ? `<a class="fnf-announcement${marquee ? " fnf-announcement--marquee" : ""}" href="${escapeHtml(announcementHref)}" style="--fnf-announce-bg:${background};--fnf-announce-color:${color}">
+           ${marquee
+             ? `<span class="fnf-announcement__sr">${message}</span><span class="fnf-announcement__track" aria-hidden="true"><span class="fnf-announcement__group">${Array(4).fill(`<span>${message}</span>`).join("")}</span><span class="fnf-announcement__group">${Array(4).fill(`<span>${message}</span>`).join("")}</span></span>`
+             : `<span>${message}</span>`}
+         </a>`
       : "";
 
     return `
@@ -336,16 +344,25 @@
 
   function applyCmsHeader(content) {
     if (!content || typeof content !== "object" || !navConfig) return;
-    if (content.logoUrl) navConfig.logoUrl = content.logoUrl;
-    if (Number.isFinite(Number(content.logoHeight))) navConfig.logoHeight = Number(content.logoHeight);
+    const previewOverride = new URLSearchParams(location.search).has("preview");
+    // Store Preferences becomes the single live authority once a merchant
+    // explicitly saves it. CMS draft previews can still demonstrate local
+    // header edits without silently overwriting public site settings.
+    if (previewOverride || navConfig.logoAuthority !== "preferences") {
+      if (content.logoUrl) navConfig.logoUrl = content.logoUrl;
+      if (Number.isFinite(Number(content.logoHeight))) navConfig.logoHeight = Number(content.logoHeight);
+    }
     if (content.preset && headerPresetContract.presets?.[content.preset]) {
       document.documentElement.dataset.headerPreset = content.preset;
     }
-    navConfig.announcement = {
-      enabled: content.announcementEnabled === true,
-      text: String(content.announcementText || ""),
-      href: String(content.announcementHref || ""),
-    };
+    if (previewOverride || navConfig.announcementAuthority !== "preferences") {
+      navConfig.announcement = {
+        ...navConfig.announcement,
+        enabled: content.announcementEnabled === true,
+        text: String(content.announcementText || ""),
+        href: String(content.announcementHref || ""),
+      };
+    }
     const blockMeta = content.__editor?.blocks;
     if (Array.isArray(blockMeta) && blockMeta.length) {
       const items = blockMeta
@@ -364,7 +381,7 @@
           };
         })
         .filter(Boolean);
-      if (items.length) navConfig.items = items;
+      if (items.length && (previewOverride || navConfig.navigationAuthority !== "preferences")) navConfig.items = items;
     }
   }
 

@@ -1,0 +1,37 @@
+name: FNF Scene Review and Merchant Preferences
+on:
+  pull_request:
+    paths:
+      - "apps/ecommerce-cms-agentsam/**"
+      - "packages/heuristic-theme/storefront/**"
+      - "tests/scene-review-preferences.test.mjs"
+      - "tests/preferences-merchant-browser-smoke.mjs"
+      - ".github/workflows/fnf-scene-preferences.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/ecommerce-cms-agentsam/backend/admin/scene-review.js"
+      - "apps/ecommerce-cms-agentsam/frontend/static/preferences.html"
+      - "tests/scene-review-preferences.test.mjs"
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build existing merchant admin and storefront
+        run: npm run build:admin
+      - name: Verify reviewer security and existing CMS contracts
+        run: node --test tests/scene-review-preferences.test.mjs tests/revise-atlas-contract.test.mjs tests/cms-editor-registry.test.mjs tests/cms-editor-mutations.test.mjs tests/cms-about-community-source.test.mjs tests/storefront-header-presets-editor.test.mjs tests/portable-sections.test.mjs
+      - name: Verify real merchant Preferences across devices
+        run: node tests/preferences-merchant-browser-smoke.mjs
+      - name: Verify canonical Theme Editor still handles real Shop sections
+        run: node tests/cms-live-source-browser-smoke.mjs

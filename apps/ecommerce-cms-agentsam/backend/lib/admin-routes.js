@@ -18,6 +18,7 @@ export const ADMIN_CLEAN_PAGES = new Set([
   "page-edit",
   "theme-editor",
   "scene-lab",
+  "bridge-fly-preview",
   "revise-atlas",
   "store",
   "preferences",

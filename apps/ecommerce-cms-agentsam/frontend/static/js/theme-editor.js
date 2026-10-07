@@ -169,6 +169,9 @@
   }
 
   function pageRoute(pageSlug) {
+    // Bridge Fly is a real authored R2 scene, not a publishable storefront
+    // route. Its authenticated canvas can still be previewed in this editor.
+    if (pageSlug === 'bridge-fly') return '/admin/bridge-fly-preview';
     const authoritative = pages.find(function(page) { return page.slug === pageSlug; });
     if (authoritative?.live_route) return authoritative.live_route;
     if (window.PAGE_ROUTES && window.PAGE_ROUTES[pageSlug]) return window.PAGE_ROUTES[pageSlug];
@@ -249,11 +252,14 @@
   function syncPublishCapability() {
     const button = byId('te-publish');
     if (!button) return;
-    const previewOnly = selectedTheme !== 'heuristic';
+    const sceneOnly = slug === 'bridge-fly';
+    const previewOnly = selectedTheme !== 'heuristic' || sceneOnly;
     button.disabled = previewOnly || liveUnimported;
-    button.title = previewOnly
-      ? 'Preview only: this visual theme has not passed the publish/rollback gate.'
-      : liveUnimported ? 'Import the live storefront before publishing.' : 'Publish the current CMS page and changed global sections';
+    button.title = sceneOnly
+      ? 'Scene source preview only. A storefront publication adapter is not approved.'
+      : previewOnly
+        ? 'Preview only: this visual theme has not passed the publish/rollback gate.'
+        : liveUnimported ? 'Import the live storefront before publishing.' : 'Publish the current CMS page and changed global sections';
   }
 
   function currentSection() {
@@ -599,6 +605,19 @@
     });
     byId('te-section-cancel')?.addEventListener('click', function() { menu.hidden = true; add.hidden = false; });
     byId('te-section-search')?.addEventListener('input', function(event) { renderCatalog(event.target.value); });
+    // Preserve old atlas links without maintaining another source editor.
+    // This opens the one canonical cross-theme section catalog in place.
+    if (new URLSearchParams(location.search).get('catalog') === 'revise') {
+      add?.click();
+      const search = byId('te-section-search');
+      if (search) {
+        search.value = 'revise';
+        renderCatalog('revise');
+      }
+      const cleaned = new URL(location.href);
+      cleaned.searchParams.delete('catalog');
+      history.replaceState(null, '', cleaned);
+    }
 
     let draggedKey = null;
     byId('te-tree').querySelectorAll('.te-tree-row[draggable="true"]').forEach(function(row) {
@@ -754,6 +773,9 @@
         '</section>';
     }).join('');
 
+    if (section.key === 'header' && sectionOwner(section) === 'site') {
+      html = '<div class="te-managed-preferences"><strong>Shared storefront settings</strong><p>Storefront logo, navigation and announcements are managed in Online Store Preferences. This Header inspector can still preview theme-draft changes.</p><a href="/admin/preferences">Open Store Preferences →</a></div>' + html;
+    }
     const settings = currentSettings();
     if (settings.length) {
       const byGroup = {};
@@ -1540,7 +1562,9 @@
     byId('theme-preview').removeAttribute('srcdoc');
     byId('theme-preview').src = route + separator + (liveUnimported ? '_=' : 'preview=1&_=' ) + Date.now();
     byId('te-open-tab').href = liveUnimported ? route : route + separator + 'preview=1';
-    byId('te-preview-label').textContent = liveUnimported ? 'Live storefront — source inspection' : 'Heuristic draft preview — ' + ((pageData && pageData.title) || humanize(slug));
+    byId('te-preview-label').textContent = slug === 'bridge-fly'
+      ? 'Aviation scene · authenticated preview only'
+      : liveUnimported ? 'Live storefront — source inspection' : 'Heuristic draft preview — ' + ((pageData && pageData.title) || humanize(slug));
   }
 
   function schedulePreview() {

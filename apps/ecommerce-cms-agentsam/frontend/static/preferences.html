@@ -35,7 +35,7 @@ renderShell("/admin/preferences", `
           <svg class="prefs-row-icon" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.6"/></svg>
           <div>
             <div class="prefs-row-title">Password protection</div>
-            <div class="prefs-row-desc">Restrict access to visitors with the password.</div>
+            <div class="prefs-row-desc">Storewide password rules are saved in preferences but are not yet enforced on the public storefront. Use <a href="/admin/scene-lab">Aviation Scene Lab</a> for the separate reviewer-password experience. Do not rely on this switch for access control.</div>
             <div class="prefs-password-field" id="password-field" hidden>
               <div class="prefs-field">
                 <label for="store-password">Store password</label>
@@ -44,7 +44,7 @@ renderShell("/admin/preferences", `
             </div>
           </div>
         </div>
-        <label class="prefs-switch"><input type="checkbox" id="password-protection" data-pref="passwordProtection"><span class="prefs-switch-slider"></span></label>
+        <label class="prefs-switch" title="Not available until public-storefront gate is installed"><input type="checkbox" id="password-protection" data-pref="passwordProtection" disabled><span class="prefs-switch-slider"></span></label>
       </div>
       <div class="prefs-row">
         <div class="prefs-row-copy">
@@ -59,10 +59,10 @@ renderShell("/admin/preferences", `
     </section>
 
     <section class="prefs-card">
-      <h2>Social sharing image and SEO</h2>
+      <h2>Search appearance and social sharing</h2><p>Set the page title and description search engines receive, and choose a real image from your media library. The preview is a guide, not a guarantee of how a platform displays your page.</p>
       <div class="prefs-seo-grid">
         <div class="prefs-social-preview">
-          <img id="social-image" src="" alt="">
+          <img id="social-image" src="" alt="Chosen social sharing graphic" hidden><div class="prefs-social-placeholder" id="social-placeholder">Choose a sharing image to preview your store’s social card.</div>
           <div class="prefs-social-meta">
             <div class="prefs-social-domain" id="social-domain">FUELNFREETIME.COM</div>
             <div class="prefs-social-title" id="social-preview-title">Fuel &amp; Free Time</div>
@@ -81,8 +81,15 @@ renderShell("/admin/preferences", `
             <div class="prefs-counter"><span id="meta-count">0</span> of 320 characters used</div>
           </div>
           <div class="prefs-field">
-            <label for="social-image-url">Social sharing image URL</label>
-            <input type="url" id="social-image-url" data-pref="socialImageUrl">
+            <label>Sharing image <span class="prefs-optional">Recommended 1200 × 630 px (1.91:1)</span></label>
+            <div class="prefs-media-choice">
+              <img id="social-asset-thumb" alt="" hidden>
+              <div class="prefs-media-choice__info"><strong id="social-asset-name">No image selected</strong><span>Use an existing logo, cover artwork, or upload a new image.</span></div>
+              <button type="button" class="btn ghost small" data-pick-asset="social">Choose image</button>
+              <button type="button" class="btn ghost small" data-clear-asset="social" aria-label="Remove sharing image">Remove</button>
+            </div>
+            <input type="hidden" id="social-image-url" data-pref="socialImageUrl">
+            <details class="prefs-advanced"><summary>Advanced image URL</summary><label for="social-image-url-advanced">Image address</label><input type="text" id="social-image-url-advanced" placeholder="/media/…" autocomplete="off"><p>Usually you won't need this. Use Choose image above.</p></details>
           </div>
         </div>
       </div>
@@ -90,11 +97,13 @@ renderShell("/admin/preferences", `
 
     <section class="prefs-card">
       <h2>Site navigation</h2>
-      <p>Header and footer use this same ordered route list. Add, hide, move, or remove a page here and both public shell surfaces update together.</p>
+      <p>Manage the pages visitors see in your header and footer. Choose your logo above, then rename, reorder or hide navigation links below.</p>
       <div class="prefs-seo-grid" style="grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
         <div class="prefs-field">
-          <label for="nav-logo-url">Logo URL</label>
-          <input type="url" id="nav-logo-url" placeholder="https://…">
+          <label>Storefront logo</label>
+          <div class="prefs-media-choice prefs-media-choice--logo"><img id="nav-asset-thumb" alt="Storefront logo preview" hidden><div class="prefs-media-choice__info"><strong id="nav-asset-name">Use current logo</strong><span>PNG, SVG, WEBP or transparent artwork</span></div><button type="button" class="btn ghost small" data-pick-asset="nav">Choose logo</button><button type="button" class="btn ghost small" data-clear-asset="nav" aria-label="Remove custom logo">Remove</button></div>
+          <input type="hidden" id="nav-logo-url">
+          <details class="prefs-advanced"><summary>Advanced logo URL</summary><label for="nav-logo-url-advanced">Logo address</label><input type="text" id="nav-logo-url-advanced" placeholder="/media/…" autocomplete="off"></details>
         </div>
         <div class="prefs-field">
           <label for="nav-logo-height">Logo height (px)</label>
@@ -116,12 +125,16 @@ renderShell("/admin/preferences", `
     <section class="prefs-card">
       <h2>Announcement banner</h2>
       <div class="prefs-row">
-        <div class="prefs-row-copy"><div><div class="prefs-row-title">Show announcement</div><div class="prefs-row-desc">Displays a compact orange banner above the public header.</div></div></div>
+        <div class="prefs-row-copy"><div><div class="prefs-row-title">Show announcement</div><div class="prefs-row-desc">Use a calm fixed message or a seamless scrolling announcement. Preview the appearance before saving.</div></div></div>
         <label class="prefs-switch"><input type="checkbox" id="announcement-enabled"><span class="prefs-switch-slider"></span></label>
       </div>
+      <div class="prefs-announcement-preview" id="announcement-preview" aria-label="Announcement preview"><span id="announcement-preview-copy">Your announcement will appear here</span></div>
       <div class="prefs-seo-grid prefs-seo-grid--equal">
-        <div class="prefs-field"><label for="announcement-text">Message</label><input type="text" id="announcement-text" maxlength="160" placeholder="Free shipping on orders over $100"></div>
-        <div class="prefs-field"><label for="announcement-href">Link</label><input type="text" id="announcement-href" placeholder="/shop"></div>
+        <div class="prefs-field"><label for="announcement-text">Announcement message</label><input type="text" id="announcement-text" maxlength="160" placeholder="Built in Lafayette · Fuel hard. Live free."></div>
+        <div class="prefs-field"><label for="announcement-href">Where it links</label><input type="text" id="announcement-href" placeholder="/shop"></div>
+        <div class="prefs-field"><label for="announcement-style">Display</label><select id="announcement-style"><option value="static">Simple banner</option><option value="marquee">Subtle scrolling marquee</option></select></div>
+        <div class="prefs-field prefs-color-field"><label for="announcement-bg">Background color</label><input type="color" id="announcement-bg" value="#161616"></div>
+        <div class="prefs-field prefs-color-field"><label for="announcement-color">Text color</label><input type="color" id="announcement-color" value="#ffffff"></div>
       </div>
     </section>
 
@@ -151,7 +164,7 @@ renderShell("/admin/preferences", `
 
     <section class="prefs-card">
       <h2>Spam protection</h2>
-      <p>Enabling hCaptcha can protect your store from spam. Some customers may need to complete the hCaptcha task.</p>
+      <p>This screen currently stores protection preferences, but does not yet verify challenge responses. These options are not active security defenses until server-side verification is connected. <strong>Do not treat an enabled switch as protection.</strong></p><div class="prefs-warning">Status: verification integration required. Existing choices are shown for planning only.</div>
       <div class="prefs-row">
         <div class="prefs-row-copy">
           <svg class="prefs-row-icon" viewBox="0 0 24 24" fill="none"><path d="M4 6h16v12H4z" stroke="currentColor" stroke-width="1.6"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.6"/></svg>
@@ -159,7 +172,7 @@ renderShell("/admin/preferences", `
             <div class="prefs-row-title">Enable on contact and comment forms</div>
           </div>
         </div>
-        <label class="prefs-switch"><input type="checkbox" id="hcaptcha-contact" data-pref="hcaptchaContact"><span class="prefs-switch-slider"></span></label>
+        <label class="prefs-switch" title="Challenge verification not installed"><input type="checkbox" id="hcaptcha-contact" data-pref="hcaptchaContact" disabled><span class="prefs-switch-slider"></span></label>
       </div>
       <div class="prefs-row">
         <div class="prefs-row-copy">
@@ -168,28 +181,33 @@ renderShell("/admin/preferences", `
             <div class="prefs-row-title">Enable on login, create account and password recovery pages</div>
           </div>
         </div>
-        <label class="prefs-switch"><input type="checkbox" id="hcaptcha-account" data-pref="hcaptchaAccount"><span class="prefs-switch-slider"></span></label>
+        <label class="prefs-switch" title="Challenge verification not installed"><input type="checkbox" id="hcaptcha-account" data-pref="hcaptchaAccount" disabled><span class="prefs-switch-slider"></span></label>
       </div>
     </section>
 
     <section class="prefs-card">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
         <div>
-          <h2 style="margin-bottom:6px;">Crawler access</h2>
-          <p style="margin:0;">Authorize external tools to crawl your store. Copy the full values for Signature, Signature-Input, and Signature-Agent, then paste them into your HTTP crawler requests.</p>
+          <h2 style="margin-bottom:6px;">Crawler access</h2><p style="margin:0;">Crawler authorization is not enabled. The signature request and verification service have not been implemented yet. This will require short-lived credentials, signed requests, scope limits and audit logs before merchants can issue access.</p>
         </div>
-        <button type="button" class="btn ghost small" id="create-signature-btn">Create signature</button>
+        <span class="prefs-status-pill">Not configured</span>
       </div>
       <div class="prefs-tabs" role="tablist">
         <button type="button" class="prefs-tab is-active" data-tab="all">All</button>
         <button type="button" class="prefs-tab" data-tab="active">Active</button>
         <button type="button" class="prefs-tab" data-tab="expired">Expired</button>
       </div>
-      <div class="prefs-empty" id="crawler-empty">No crawler signatures yet.</div>
+      <div class="prefs-empty" id="crawler-empty">No crawler credentials issued. This feature is not active.</div>
     </section>
 
     <div class="prefs-note" id="prefs-note"></div>
   </div>
+  <dialog class="prefs-assets-dialog" id="prefs-assets-dialog" aria-labelledby="prefs-assets-title">
+    <div class="prefs-assets-header"><div><small>FNF media library</small><h2 id="prefs-assets-title">Choose an image</h2></div><button type="button" id="prefs-assets-close" class="btn ghost small" aria-label="Close media library">Close</button></div>
+    <div class="prefs-assets-tools"><input type="search" id="prefs-assets-search" placeholder="Search uploaded graphics, logos, and artwork" aria-label="Search media"><label class="btn ghost small prefs-upload-button">Upload new image<input type="file" id="prefs-assets-upload" accept="image/*" multiple hidden></label></div>
+    <div class="prefs-assets-grid" id="prefs-assets-grid" role="list"></div>
+    <p class="prefs-assets-status" id="prefs-assets-status" role="status"></p>
+  </dialog>
 
   <footer class="prefs-savebar">
     <button type="button" class="btn primary" id="save-prefs-btn" disabled>Save</button>
@@ -235,10 +253,47 @@ function updateCounters() {
     meta || "Enter a description to be shown on search engines like Google.";
 }
 
+function setChosenAsset(kind, url, { notify = true } = {}) {
+  const input = document.getElementById(kind === "nav" ? "nav-logo-url" : "social-image-url");
+  const preview = document.getElementById(kind === "nav" ? "nav-asset-thumb" : "social-asset-thumb");
+  const name = document.getElementById(kind === "nav" ? "nav-asset-name" : "social-asset-name");
+  const advanced = document.getElementById(kind === "nav" ? "nav-logo-url-advanced" : "social-image-url-advanced");
+  input.value = url || "";
+  advanced.value = url || "";
+  preview.hidden = !url;
+  if (url) preview.src = url;
+  else preview.removeAttribute("src");
+  name.textContent = url ? decodeURIComponent(url.split("/").pop().split("?")[0] || "Selected asset") :
+    (kind === "nav" ? "Use current logo" : "No image selected");
+  if (kind === "social") updateSocialImage();
+  if (notify) setDirty(true);
+}
+
 function updateSocialImage() {
   const url = document.getElementById("social-image-url").value.trim();
   const img = document.getElementById("social-image");
+  img.hidden = !url;
+  document.getElementById("social-placeholder").hidden = !!url;
   if (url) img.src = url;
+  else img.removeAttribute("src");
+}
+
+function updateAnnouncementPreview() {
+  const element = document.getElementById("announcement-preview");
+  const value = document.getElementById("announcement-text").value.trim() || "Your announcement will appear here";
+  const marquee = document.getElementById("announcement-style").value === "marquee";
+  element.style.backgroundColor = document.getElementById("announcement-bg").value;
+  element.style.color = document.getElementById("announcement-color").value;
+  element.dataset.style = marquee ? "marquee" : "static";
+  element.replaceChildren();
+  const track = document.createElement("span");
+  track.className = "prefs-announcement-preview__track";
+  for (let i = 0; i < (marquee ? 4 : 1); i++) {
+    const segment = document.createElement("span");
+    segment.textContent = value;
+    track.appendChild(segment);
+  }
+  element.appendChild(track);
 }
 
 function togglePasswordField() {
@@ -266,13 +321,10 @@ function renderNavItems() {
         <input type="text" class="nav-label" value="${escapeAttr(item.label)}" maxlength="40">
       </div>
       <div class="prefs-field" style="margin:0">
-        <label>Link (href)</label>
+        <label>Destination</label>
         <input type="text" class="nav-href" value="${escapeAttr(item.href)}" placeholder="/about">
       </div>
-      <div class="prefs-field" style="margin:0">
-        <label>Match prefixes (comma-separated)</label>
-        <input type="text" class="nav-prefixes" value="${escapeAttr((item.matchPrefixes || []).join(", "))}" placeholder="/about">
-      </div>
+      <details class="prefs-nav-advanced"><summary>Advanced: active menu paths</summary><label>Additional matching paths</label><input type="text" class="nav-prefixes" value="${escapeAttr((item.matchPrefixes || []).join(", "))}" placeholder="/about"><span>Only needed when several URLs share one navigation item.</span></details>
       <label class="prefs-switch" title="Visible in menu" style="margin-bottom:.35rem"><input type="checkbox" class="nav-visible" ${item.visible !== false ? "checked" : ""}><span class="prefs-switch-slider"></span></label>
       <div class="prefs-nav-actions"><button type="button" class="btn ghost small nav-up" aria-label="Move up" ${idx === 0 ? "disabled" : ""}>↑</button><button type="button" class="btn ghost small nav-down" aria-label="Move down" ${idx === navItems.length - 1 ? "disabled" : ""}>↓</button><button type="button" class="btn ghost small nav-remove" aria-label="Remove">×</button></div>
     </div>`
@@ -331,17 +383,21 @@ function applySettings(data) {
 
   document.getElementById("home-title").value = settings.homeTitle || "";
   document.getElementById("meta-description").value = settings.metaDescription || "";
-  document.getElementById("social-image-url").value = settings.socialImageUrl || "";
+  setChosenAsset("social", settings.socialImageUrl || "", { notify: false });
   document.getElementById("store-password").value = settings.storePassword || "";
 
-  document.getElementById("nav-logo-url").value = data.nav?.logoUrl || settings.navLogoUrl || "";
+  setChosenAsset("nav", settings.navLogoUrl || data.nav?.logoUrl || "", { notify: false });
   document.getElementById("nav-logo-height").value = data.nav?.logoHeight || settings.navLogoHeight || 68;
   document.getElementById("nav-brand-accent").value = data.nav?.brandAccent || settings.navBrandAccent || "#ff4500";
   document.getElementById("nav-brand-accent-light").value =
     data.nav?.brandAccentLight || settings.navBrandAccentLight || "#E5A558";
   document.getElementById("announcement-enabled").checked = data.nav?.announcement?.enabled === true;
   document.getElementById("announcement-text").value = data.nav?.announcement?.text || "";
-  document.getElementById("announcement-href").value = data.nav?.announcement?.href || "";
+  document.getElementById("announcement-href").value = settings.announcementHref || data.nav?.announcement?.href || "";
+  document.getElementById("announcement-style").value = settings.announcementStyle === "marquee" ? "marquee" : "static";
+  document.getElementById("announcement-bg").value = /^#[0-9a-f]{6}$/i.test(settings.announcementBgColor || "") ? settings.announcementBgColor : "#161616";
+  document.getElementById("announcement-color").value = /^#[0-9a-f]{6}$/i.test(settings.announcementTextColor || "") ? settings.announcementTextColor : "#ffffff";
+  updateAnnouncementPreview();
 
   renderNavItems();
   togglePasswordField();
@@ -370,6 +426,9 @@ function collectSettings() {
     announcementEnabled: document.getElementById("announcement-enabled").checked,
     announcementText: document.getElementById("announcement-text").value.trim(),
     announcementHref: document.getElementById("announcement-href").value.trim(),
+    announcementStyle: document.getElementById("announcement-style").value,
+    announcementBgColor: document.getElementById("announcement-bg").value,
+    announcementTextColor: document.getElementById("announcement-color").value,
   };
 }
 
@@ -390,9 +449,9 @@ document.getElementById("nav-add-item")?.addEventListener("click", () => {
   document.getElementById(id)?.addEventListener("change", () => setDirty(true));
 });
 
-["announcement-enabled", "announcement-text", "announcement-href"].forEach((id) => {
-  document.getElementById(id)?.addEventListener("input", () => setDirty(true));
-  document.getElementById(id)?.addEventListener("change", () => setDirty(true));
+["announcement-enabled", "announcement-text", "announcement-href", "announcement-style", "announcement-bg", "announcement-color"].forEach((id) => {
+  document.getElementById(id)?.addEventListener("input", () => { setDirty(true); updateAnnouncementPreview(); });
+  document.getElementById(id)?.addEventListener("change", () => { setDirty(true); updateAnnouncementPreview(); });
 });
 
 document.querySelectorAll("[data-pref]").forEach((el) => {
@@ -424,17 +483,100 @@ document.getElementById("save-prefs-btn").addEventListener("click", async () => 
   }
 });
 
-document.getElementById("create-signature-btn").addEventListener("click", () => {
-  alert("Crawler signature creation is coming soon.");
-});
+// Crawler and challenge verification need real server-side integration. No
+// misleading 'create signature' action is exposed before the service exists.
 
-document.querySelectorAll(".prefs-tab").forEach((tab) => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll(".prefs-tab").forEach((t) => t.classList.remove("is-active"));
-    tab.classList.add("is-active");
+
+
+const assetDialog = document.getElementById("prefs-assets-dialog");
+let pickerKind = "social";
+let availableAssets = [];
+
+function showAssetStatus(message) {
+  document.getElementById("prefs-assets-status").textContent = message || "";
+}
+function renderAvailableAssets(query = "") {
+  const list = document.getElementById("prefs-assets-grid");
+  const needle = query.trim().toLowerCase();
+  const assets = availableAssets.filter((asset) =>
+    String(asset.content_type || "").startsWith("image/") &&
+    ((asset.filename || "") + " " + (asset.folder || "")).toLowerCase().includes(needle));
+  list.replaceChildren();
+  if (!assets.length) {
+    const empty = document.createElement("p");
+    empty.className = "prefs-assets-empty";
+    empty.textContent = availableAssets.length ? "No matching images." : "No images in the library yet. Upload one to begin.";
+    list.appendChild(empty);
+    return;
+  }
+  for (const asset of assets) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "prefs-asset-tile";
+    button.setAttribute("role", "listitem");
+    const img = document.createElement("img");
+    img.src = asset.url;
+    img.loading = "lazy";
+    img.alt = "";
+    const label = document.createElement("span");
+    label.textContent = asset.filename || "Uploaded asset";
+    button.append(img, label);
+    button.addEventListener("click", () => {
+      setChosenAsset(pickerKind, asset.url);
+      assetDialog.close();
+    });
+    list.append(button);
+  }
+}
+async function loadAvailableAssets() {
+  showAssetStatus("Loading your uploaded media…");
+  const data = await adminFetch("/api/admin/media?limit=120");
+  availableAssets = data.assets || data.items || [];
+  renderAvailableAssets(document.getElementById("prefs-assets-search").value);
+  showAssetStatus(availableAssets.length + " assets available.");
+}
+document.querySelectorAll("[data-pick-asset]").forEach((button) => button.addEventListener("click", async () => {
+  pickerKind = button.dataset.pickAsset;
+  document.getElementById("prefs-assets-title").textContent = pickerKind === "nav" ? "Choose a storefront logo" : "Choose a social sharing image";
+  assetDialog.showModal();
+  try { await loadAvailableAssets(); } catch (error) { showAssetStatus(error.message || "Unable to load media."); }
+}));
+document.getElementById("prefs-assets-close").addEventListener("click", () => assetDialog.close());
+document.getElementById("prefs-assets-search").addEventListener("input", (event) => renderAvailableAssets(event.target.value));
+document.querySelectorAll("[data-clear-asset]").forEach((button) => button.addEventListener("click", () => {
+  setChosenAsset(button.dataset.clearAsset, "");
+}));
+["social", "nav"].forEach((kind) => {
+  const id = kind === "social" ? "social-image-url-advanced" : "nav-logo-url-advanced";
+  document.getElementById(id).addEventListener("change", (event) => {
+    const value = event.target.value.trim();
+    if (value && !value.startsWith("/") && !/^https:\/\//i.test(value)) {
+      showNote("Image URL must be an internal path or an HTTPS address.", "error");
+      return;
+    }
+    setChosenAsset(kind, value);
   });
 });
-
+document.getElementById("prefs-assets-upload").addEventListener("change", async (event) => {
+  const files = Array.from(event.target.files || []);
+  if (!files.length) return;
+  if (files.some((file) => !file.type.startsWith("image/"))) {
+    showAssetStatus("Please choose image files only."); return;
+  }
+  const form = new FormData();
+  for (const file of files) form.append("files", file);
+  form.append("prefix", "uploads/store-preferences/");
+  showAssetStatus("Uploading your image…");
+  try {
+    const response = await fetch("/api/admin/media", { method: "POST", credentials: "include", body: form });
+    if (!response.ok) throw new Error("Upload failed (" + response.status + ")");
+    const data = await response.json();
+    availableAssets = (data.assets || []).concat(availableAssets);
+    renderAvailableAssets();
+    showAssetStatus("Uploaded. Select the image to use it.");
+  } catch (error) { showAssetStatus(error.message || "Upload failed."); }
+  finally { event.target.value = ""; }
+});
 (async function () {
   try {
     const d = await adminFetch("/api/admin/store/preferences");

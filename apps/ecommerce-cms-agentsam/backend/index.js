@@ -19,6 +19,7 @@ import { handleAttributionApi } from "./attribution/api.js";
 import { handlePublicCmsApi } from "./cms/api.js";
 import { handleStudioCmsBridge } from "./cms/studio-bridge.js";
 import { handleCmsWarmInternal } from "./cms/deploy.js";
+import { handleSceneReview } from "./admin/scene-review.js";
 import {
   serveStorefrontPage,
   slugForAssetPath,
@@ -288,8 +289,19 @@ export default {
     if (path.startsWith("/api/internal/studio-cms/")) {
       return noStore(await handleStudioCmsBridge(request, env));
     }
+    if (path === "/api/admin/scene-review") {
+      const user = await getSessionUser(request, env);
+      if (!user) return noStore(Response.json({ error: "Unauthorized" }, { status: 401 }));
+      if (request.method !== "GET" && !["admin", "owner"].includes(user.role)) {
+        return noStore(Response.json({ error: "Not authorized to change review access" }, { status: 403 }));
+      }
+      return noStore(await handleSceneReview(request, env, url));
+    }
     if (path.startsWith("/api/admin/")) {
       return noStore(await handleAdminApi(request, env, url, ctx));
+    }
+    if (path === "/review/bridge-fly" || path.startsWith("/review/bridge-fly/")) {
+      return noStore(await handleSceneReview(request, env, url));
     }
 
     if (path.startsWith("/media/")) {
@@ -304,6 +316,12 @@ export default {
     // Legacy discounts scaffold URL → /admin/discounts
     if (path === "/admin/scaffold" && url.searchParams.get("view") === "discounts") {
       return noStore(Response.redirect(new URL("/admin/discounts", request.url), 301));
+    }
+
+    // The donor atlas is now a catalog in the canonical Theme Editor, not a
+    // second merchant editor. Keep old links working with a clean redirect.
+    if (path === "/admin/revise-atlas") {
+      return noStore(Response.redirect(new URL("/admin/theme-editor?slug=home&catalog=revise", request.url), 302));
     }
 
     // Clean admin URLs — /admin/login, /admin/home, …

@@ -65,6 +65,9 @@ test("aviation lab is a session-gated CMS review page with a cross-origin isolat
   assert.match(page, /src="https:\/\/assets\.fuelnfreetime\.com\/media\/cms\/pages\/bridge-fly\/index\.html"/);
   assert.match(page, /sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-fullscreen"/);
   assert.match(page, /Golden Gate bridge flyover prototype/);
-  assert.match(page, /No publishing action is available/);
+  assert.match(page, /This workbench preserves the original scene/);
+  assert.match(page, /id="scene-review-save"/);
+  assert.match(page, /id="scene-review-copy"/);
+  assert.match(page, /not full archival privacy/i);
   assert.doesNotMatch(page, /<button[^>]*id="publish"/);
 });

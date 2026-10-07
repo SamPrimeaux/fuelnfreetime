@@ -131,6 +131,14 @@ export async function transformStorefrontHtml(response, env, slug, request) {
 
   const preview = request ? new URL(request.url).searchParams.has("preview") : false;
   const head = await buildHeadContext(env, slug);
+  // Open Graph and Twitter require an absolute image URL to reliably fetch
+  // the chosen R2-backed image from social crawlers.
+  if (head.socialImageUrl) {
+    try {
+      const resolved = new URL(head.socialImageUrl, request?.url || "https://fuelnfreetime.com");
+      head.socialImageUrl = resolved.protocol === "https:" ? resolved.href : "";
+    } catch { head.socialImageUrl = ""; }
+  }
 
   let rewriter = new HTMLRewriter()
     .on("title", new TitleHandler(head.title))

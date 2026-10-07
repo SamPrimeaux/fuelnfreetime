@@ -49,6 +49,12 @@ const PACKAGE_STORE_DEFAULTS = {
   announcementEnabled: false,
   announcementText: "",
   announcementHref: "",
+  announcementStyle: "static",
+  announcementAuthority: "cms",
+  navigationAuthority: "cms",
+  logoAuthority: "cms",
+  announcementBgColor: "#161616",
+  announcementTextColor: "#ffffff",
   storePasswordHash: null,
   storePasswordSalt: null,
 };
@@ -64,6 +70,7 @@ function publicSettings(settings) {
     storePasswordHash: _h,
     storePasswordSalt: _s,
     storePassword: _p,
+    sceneReview: _scene,
     ...rest
   } = settings || {};
   return {
@@ -155,7 +162,10 @@ async function saveStorePreferences(env, incoming) {
     socialImageUrl: String(incoming.socialImageUrl ?? current.socialImageUrl).slice(0, 2048),
   };
 
-  if (incoming.navLogoUrl != null) next.navLogoUrl = String(incoming.navLogoUrl).slice(0, 2048);
+  if (incoming.navLogoUrl != null) {
+    next.navLogoUrl = String(incoming.navLogoUrl).slice(0, 2048);
+    next.logoAuthority = "preferences";
+  }
   if (incoming.navLogoHeight != null) {
     next.navLogoHeight = Math.min(120, Math.max(40, Number(incoming.navLogoHeight) || 58));
   }
@@ -163,13 +173,29 @@ async function saveStorePreferences(env, incoming) {
   if (incoming.navBrandAccentLight != null) {
     next.navBrandAccentLight = String(incoming.navBrandAccentLight).slice(0, 32);
   }
-  if (incoming.navItems != null) next.navItems = sanitizeNavItems(incoming.navItems);
-  if (incoming.announcementEnabled != null) next.announcementEnabled = incoming.announcementEnabled === true;
+  if (incoming.navItems != null) {
+    next.navItems = sanitizeNavItems(incoming.navItems);
+    next.navigationAuthority = "preferences";
+  }
+  if (incoming.announcementEnabled != null) {
+    next.announcementEnabled = incoming.announcementEnabled === true;
+    next.announcementAuthority = "preferences";
+  }
   if (incoming.announcementText != null) {
     next.announcementText = String(incoming.announcementText).trim().slice(0, 160);
   }
   if (incoming.announcementHref != null) {
     next.announcementHref = String(incoming.announcementHref).trim().slice(0, 512);
+  }
+  if (incoming.announcementStyle != null) {
+    next.announcementStyle = incoming.announcementStyle === "marquee" ? "marquee" : "static";
+  }
+  for (const key of ["announcementBgColor", "announcementTextColor"]) {
+    if (incoming[key] != null) {
+      const color = String(incoming[key]);
+      if (!/^#[0-9a-f]{6}$/i.test(color)) return { ok: false, error: "invalid_announcement_color" };
+      next[key] = color;
+    }
   }
 
   if (incoming.storePassword != null && incoming.storePassword !== "" && incoming.storePassword !== "••••••••") {
@@ -280,6 +306,18 @@ async function resolveStorePerformance(env) {
 
 export { loadStorePreferences, resolveNavConfig, PACKAGE_STORE_DEFAULTS };
 
+/** Update only the scene review key without rewriting merchant preferences. */
+export async function saveSceneReviewSettings(env, sceneReview) {
+  if (!env.DB) throw new Error("Store database unavailable");
+  const result = await env.DB.prepare(
+    "UPDATE store_settings SET settings_json = json_set(COALESCE(settings_json, '{}'), '$.sceneReview', json(?)), updated_at = datetime('now') WHERE id = 1"
+  ).bind(JSON.stringify(sceneReview)).run();
+  if (!(result.meta?.changes > 0)) throw new Error("Store settings not initialized");
+  if (env.CMS_CACHE) await env.CMS_CACHE.delete(KV_PREFS_KEY);
+  return true;
+}
+
+
 export async function getStoreNav(env) {
   const loaded = await loadStorePreferences(env);
   if (!loaded.ok) return json({ ok: false, error: loaded.error }, { status: 503 });
@@ -318,11 +356,25 @@ export async function postStorePreferences(request, env) {
   }
 
   const incoming = body?.settings || body;
+  // The picker normally supplies these URLs. The server must enforce safe
+  // destinations independently of the admin browser.
+  const validAssetUrl = (value) => {
+    const s = String(value ?? "").trim();
+    return !s || (/^\/(?!\/)[^\s\\]+$/.test(s) && !/[\u0000-\u001f]/.test(s)) || /^https:\/\/[^\s]+$/i.test(s);
+  };
+  if (!validAssetUrl(incoming.socialImageUrl) || !validAssetUrl(incoming.navLogoUrl)) {
+    return json({ error: "Images must use a local path or HTTPS URL." }, { status: 400 });
+  }
+  for (const key of ["announcementBgColor", "announcementTextColor"]) {
+    if (incoming[key] != null && !/^#[0-9a-f]{6}$/i.test(String(incoming[key]))) {
+      return json({ error: "Announcement colors must use a six-digit hex value." }, { status: 400 });
+    }
+  }
   if (incoming.announcementEnabled === true) {
     const announcementText = String(incoming.announcementText ?? "").trim();
     const announcementHref = String(incoming.announcementHref ?? "").trim();
     const validHref =
-      announcementHref.startsWith("/") ||
+      (announcementHref.startsWith("/") && !announcementHref.startsWith("//")) ||
       announcementHref.startsWith("#") ||
       announcementHref.startsWith("https://");
     if (!announcementText) {
