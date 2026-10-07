@@ -190,5 +190,31 @@
     "legacy_feature_manifests": "../../features/*/agentsam.feature.json",
     "note": "Legacy feature manifests remain readable during the Apps/core-surface refactor. They are compatibility contracts, not the canonical ownership model."
   },
-  "notes": "Reusable Ecommerce + CMS application contract. Core admin UI is defined by frontend/admin.surface.json. Bundled Apps are defined by apps/registry.json. Customer brand/data/credentials/resource bindings belong to the host installation."
+  "notes": "Reusable Ecommerce + CMS application contract. Core admin UI is defined by frontend/admin.surface.json. Bundled Apps are defined by apps/registry.json. Customer brand/data/credentials/resource bindings belong to the host installation.",
+  "accounts": {
+    "maxDepth": 3,
+    "kinds": [
+      "organization",
+      "reseller",
+      "client"
+    ],
+    "roles": [
+      "owner",
+      "admin",
+      "editor",
+      "viewer"
+    ],
+    "plans": {
+      "free": {
+        "entitlements": {
+          "brand.powered_by.visible": true
+        }
+      },
+      "agency": {
+        "entitlements": {
+          "brand.powered_by.visible": false
+        }
+      }
+    }
+  }
 }
