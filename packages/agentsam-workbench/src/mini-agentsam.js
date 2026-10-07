@@ -23,10 +23,10 @@ export function createMiniAgentSam(host) {
     .outline{position:fixed;border:2px solid var(--accent);border-radius:6px;background:#8b5cf60c;box-shadow:0 0 0 1px #ffffff35 inset;pointer-events:none;transition:left .08s ease,top .08s ease,width .08s ease,height .08s ease}
     .hint{position:fixed;top:72px;left:50%;transform:translateX(-50%);max-width:min(520px,calc(100vw - 28px));padding:9px 14px;border:1px solid #ffffff2c;border-radius:999px;background:#211b30e8;backdrop-filter:blur(18px);box-shadow:0 10px 34px #160c3430;color:#eee7fb;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .composer{position:fixed;width:240px;min-height:44px;padding:6px;border:1px solid #ffffff2a;border-radius:24px;background:#211b30eb;backdrop-filter:blur(18px);box-shadow:0 12px 36px #160c342e;pointer-events:auto}
-    .composer.expanded{width:min(360px,calc(100vw - 24px));border-radius:18px}
+    .composer.expanded{border-radius:18px}
     .row{display:flex;align-items:center;gap:5px}.icon{width:24px;height:24px;border-radius:50%;flex:none}
-    textarea{font:13px/1.4 system-ui;color:inherit;background:transparent;border:0;resize:none;width:100%;height:30px;padding:6px 0;outline:none}textarea::placeholder{color:#cac0dc}.expanded textarea{height:88px}
-    button{border:0;background:transparent;color:#c5a5ff;cursor:pointer;min-width:28px;min-height:30px;border-radius:50%;font:inherit;padding:3px}.send{background:var(--accent);color:white;width:30px;flex:none}button:disabled{opacity:.45;cursor:wait}
+    textarea{font:13px/1.4 system-ui;color:inherit;background:transparent;border:0;resize:none;width:100%;height:30px;padding:6px 0;outline:none}textarea::placeholder{color:#cac0dc}.expanded textarea{height:52px}
+    button{border:0;background:transparent;color:#c5a5ff;cursor:pointer;min-width:28px;min-height:30px;border-radius:50%;font:inherit;padding:3px}.more{font-size:17px;line-height:1;color:#d8caef}.send{background:var(--accent);color:white;width:30px;flex:none}button:disabled{opacity:.45;cursor:wait}
     .tools{display:flex;align-items:center;gap:6px;margin-top:6px}.tools button{border-radius:8px}.tools .dismiss{margin-left:auto}.status{color:#d3bfff;margin:6px 8px 2px;overflow-wrap:anywhere}
     .thinking{background:linear-gradient(100deg,#b08aff 20%,#f3e9ff 45%,#a17bf7 70%);background-size:200%;color:transparent;background-clip:text;animation:shimmer 1.8s linear infinite}
     .attachments{display:flex;flex-wrap:wrap;gap:4px}.attachments button{font-size:11px;max-width:100%;overflow:hidden;text-overflow:ellipsis;border-radius:8px}
@@ -41,6 +41,7 @@ export function createMiniAgentSam(host) {
     <div class="row">
       <img class="icon" src="${miniAgentSamTokens.icon}" alt="AgentSam">
       <textarea aria-label="Ask for changes" placeholder="Ask for changes"></textarea>
+      <button class="more" aria-label="More miniAgentSam tools" aria-expanded="false">…</button>
       <button class="send" aria-label="Send message">↑</button>
     </div>
     <div class="tools" hidden>
@@ -137,10 +138,11 @@ export function createMiniAgentSam(host) {
     position();
   }
 
-  function expand() {
-    expanded = true;
-    composer.classList.add('expanded');
-    root.querySelector('.tools').hidden = false;
+  function setExpanded(next) {
+    expanded = Boolean(next);
+    composer.classList.toggle('expanded', expanded);
+    root.querySelector('.tools').hidden = !expanded;
+    root.querySelector('.more').setAttribute('aria-expanded', String(expanded));
     position();
   }
 
@@ -154,6 +156,7 @@ export function createMiniAgentSam(host) {
 
   function close() {
     request?.abort();
+    setExpanded(false);
     composer.hidden = true;
     outline.hidden = true;
     hint.hidden = true;
@@ -241,7 +244,6 @@ export function createMiniAgentSam(host) {
     }
   }
 
-  input.addEventListener('focus', expand);
   input.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') close();
     if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
@@ -251,6 +253,7 @@ export function createMiniAgentSam(host) {
   });
 
   root.querySelector('.send').onclick = send;
+  root.querySelector('.more').onclick = () => setExpanded(!expanded);
   root.querySelector('.dismiss').onclick = close;
   root.querySelector('.mic').hidden = !host.voice;
   root.querySelector('.mic').onclick = async () => {
@@ -307,9 +310,7 @@ export function createMiniAgentSam(host) {
       hint.hidden = true;
       composer.hidden = false;
       outline.hidden = false;
-      expanded = false;
-      composer.classList.remove('expanded');
-      root.querySelector('.tools').hidden = true;
+      setExpanded(false);
       input.value = '';
       input.placeholder = 'Ask for changes';
       showStatus('');

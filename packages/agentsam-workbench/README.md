@@ -1,7 +1,37 @@
-# miniAgentSam
+# @inneranimalmedia/agentsam-workbench
 
-`@inneranimalmedia/agentsam-workbench` exports framework-neutral browser modules, allowing existing HTML/JS and React hosts to use one implementation without a second framework runtime. Package is locally packable, not npm-published.
+Portable, framework-neutral AgentSam interaction UI for browser hosts.
 
-`createMiniAgentSam(host)` returns `select(resource, getBounds)`, `close()` and `destroy()`. The host supplies `send({prompt, resource, capabilities, attachments, signal, onPhase})`, optional capability/attachment/voice controllers, and `generationMount()`. `send` must resolve only when execution finishes and reject errors. Call `onPhase({phase:'generating'})` only on real generation events. The pseudo-code preview never displays source, secrets or tool payloads.
+The package owns:
+- contextual resource selection feedback and positioning
+- the compact miniAgentSam composer
+- capability selection and attachments
+- optional voice and generation-preview hooks
+- reusable media workbench primitives
 
-`attachCapabilityMenu` and `createAttachmentController` are shared composer capabilities. The host must authorize all selected resources server-side; DOM selection is not authorization. Never pass a whole application instance. Selection positioning, responsive layout, thinking state, errors, attachments and the dark/purple UI live here. Store resource selection and drawer/thread integration live in the application's adapter.
+The host owns:
+- resource discovery
+- resource identity
+- authorization
+- AgentSam transport/runtime
+- persistence and mutations
+
+createMiniAgentSam(host) accepts a host contract with send({ prompt, resource, capabilities, attachments, signal, onPhase }). A DOM selection is context only; the server must authorize every resource and operation.
+
+The composer stays compact when its textarea receives focus. Extra tools are revealed only by an explicit user action.
+
+## Package contracts
+
+- agentsam.app.json — canonical package/application contract.
+- .agentsam/app.json — compatibility mirror; it must match the canonical manifest.
+- agentsam.feature.json — extracted agentsam.mini-composer feature contract.
+- package.json — package version and JavaScript export authority.
+
+Do not encode host routes, tenant IDs, customer names, credentials, or resource bindings in this package.
+
+## Exports
+
+- @inneranimalmedia/agentsam-workbench
+- @inneranimalmedia/agentsam-workbench/mini
+- @inneranimalmedia/agentsam-workbench/composer
+- @inneranimalmedia/agentsam-workbench/media
