@@ -61,6 +61,43 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
   };
   const selectedIds = new Set();
   let lastSelectedId = null;
+  let openMenuId = null;
+  let detailFetchSerial = 0;
+
+  function assetFromLocation() {
+    const raw = new URL(location.href).searchParams.get('asset');
+    const id = Number(raw);
+    return raw && Number.isSafeInteger(id) && id > 0 ? id : null;
+  }
+
+  function updateDetailUrl(id, mode = 'push') {
+    const url = new URL(location.href);
+    if (id) url.searchParams.set('asset', String(id));
+    else url.searchParams.delete('asset');
+    if (String(url) !== location.href) history[mode === 'replace' ? 'replaceState' : 'pushState']({ mediaAssetId: id || null }, '', url);
+  }
+
+  async function syncAssetFromLocation() {
+    const id = assetFromLocation();
+    const serial = ++detailFetchSerial;
+    if (!id) { closeDrawer({ updateHistory: false }); return; }
+    try {
+      const inPage = assets.find(asset => Number(asset.id) === id);
+      let asset = inPage;
+      if (!asset) {
+        const result = await adminFetch(`/api/admin/media/${id}`);
+        asset = result.asset;
+      }
+      if (serial !== detailFetchSerial) return;
+      if (!asset) throw new Error('This asset could not be found.');
+      openDrawer(asset, { updateHistory: false });
+    } catch (error) {
+      if (serial !== detailFetchSerial) return;
+      closeDrawer({ updateHistory: false });
+      els.grid?.insertAdjacentHTML('afterbegin', '<div class="admin-note" role="alert">Unable to open this asset. Return to the media library and select another image.</div>');
+      console.warn('Media detail unavailable:', error.message || error);
+    }
+  }
   let searchTimer = null;
 
   const els = {};
@@ -252,6 +289,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
       renderGrid();
       renderBatchBar();
       renderPagination();
+      if (assetFromLocation()) await syncAssetFromLocation();
     } catch (err) {
       els.grid.innerHTML = `<div class="admin-empty">${err.message}</div>`;
     }
@@ -326,6 +364,36 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
       const item = event.target.closest(".media-item[data-id]");
       if (!item || !els.grid.contains(item) || item.classList.contains("is-dragging")) return;
       const id = item.dataset.id;
+      const asset = assets.find(a => String(a.id) === id);
+      const trigger = event.target.closest('[data-media-actions]');
+      if (trigger) {
+        const wasOpen = openMenuId === id;
+        closeCardMenu();
+        if (!wasOpen) {
+          openMenuId = id;
+          item.classList.add('has-open-menu');
+          const menu = item.querySelector('.media-card-menu');
+          menu.hidden = false;
+          trigger.setAttribute('aria-expanded', 'true');
+          menu.querySelector('button')?.focus();
+        }
+        return;
+      }
+      const action = event.target.closest('[data-media-action]');
+      if (action) {
+        closeCardMenu();
+        switch (action.dataset.mediaAction) {
+          case 'view': openDrawer(asset); break;
+          case 'edit': openDrawer(asset); els.fieldFilename?.focus(); break;
+          case 'gallery': if (!selectedIds.has(Number(id))) toggleSelection(id, false); openGalleryDialog(); break;
+          case 'download': if (asset) {
+            const a = document.createElement('a'); a.href = mediaUrl(asset); a.download = asset.filename || 'image'; a.rel = 'noopener'; document.body.append(a); a.click(); a.remove();
+          } break;
+          case 'delete': selected = asset; void deleteSelected(); break;
+        }
+        return;
+      }
+      closeCardMenu();
       if (event.target.closest("[data-media-select]") || event.metaKey || event.ctrlKey || event.shiftKey) {
         event.preventDefault();
         toggleSelection(id, event.shiftKey);
@@ -334,6 +402,8 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
       openDrawer(assets.find((asset) => String(asset.id) === id));
     });
     mountListener(els.grid, "keydown", (event) => {
+      // Let nested menu/selection controls handle Enter and Space natively.
+      if (event.target.closest('button, a, input, select, textarea')) return;
       const item = event.target.closest(".media-item[data-id]");
       if (!item || !els.grid.contains(item)) return;
       if (event.key !== "Enter" && event.key !== " ") return;
@@ -842,6 +912,17 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
 
   window.getSelectedMediaAssetIds = () => [...selectedIds];
 
+  function closeCardMenu() {
+    if (openMenuId === null) return;
+    openMenuId = null;
+    els.grid?.querySelectorAll('.has-open-menu').forEach(item => {
+      item.classList.remove('has-open-menu');
+      const menu = item.querySelector('.media-card-menu');
+      if (menu) menu.hidden = true;
+      item.querySelector('[data-media-actions]')?.setAttribute('aria-expanded', 'false');
+    });
+  }
+
   function renderGrid() {
     const list = visibleAssets();
     if (!list.length) {
@@ -865,6 +946,14 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
           <button type="button" class="media-select-toggle${selectedIds.has(Number(a.id)) ? " is-selected" : ""}" data-media-select="${a.id}" aria-label="${selectedIds.has(Number(a.id)) ? "Deselect" : "Select"} ${a.filename}" aria-pressed="${selectedIds.has(Number(a.id)) ? "true" : "false"}">
             ${selectedIds.has(Number(a.id)) ? "✓" : ""}
           </button>
+          <button type="button" class="media-card-menu-trigger" data-media-actions="${a.id}" aria-label="Actions for ${escapeHtml(a.filename)}" aria-haspopup="menu" aria-expanded="false">⋮</button>
+          <div class="media-card-menu" role="menu" aria-label="Asset actions" hidden>
+            <button type="button" role="menuitem" data-media-action="view">View image</button>
+            <button type="button" role="menuitem" data-media-action="edit">Edit details</button>
+            <button type="button" role="menuitem" data-media-action="gallery">Add to gallery</button>
+            <button type="button" role="menuitem" data-media-action="download">Download original</button>
+            <button type="button" role="menuitem" data-media-action="delete">Delete image</button>
+          </div>
           ${thumbHtml(a)}${
           (a.status === "processing" || a.status === "uploading")
             ? '<span class="media-status-badge is-processing">Processing…</span>'
@@ -1384,7 +1473,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     const index = assets.findIndex((asset) => Number(asset.id) === Number(selected.id));
     if (index < 0) return;
     const next = assets[index + delta];
-    if (next) openDrawer(next);
+    if (next) openDrawer(next, { historyMode: 'replace' });
   }
 
   function renderSeoReview(asset) {
@@ -1494,8 +1583,9 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     }
   }
 
-  function openDrawer(asset) {
+  function openDrawer(asset, { updateHistory = true, historyMode = 'push' } = {}) {
     if (!asset) return;
+    closeCardMenu();
     selected = asset;
     mediaWorkbench?.setAsset(asset);
     previewPresetId = "original";
@@ -1639,17 +1729,21 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
       }
     }
 
-    document.body.classList.add("media-inspector-open");
-    els.backdrop.classList.add("is-open");
-    els.drawer.classList.add("is-open");
+    document.body.classList.add('media-detail-active');
+    els.detailPage.hidden = false;
+    document.title = `${asset.filename || 'Image'} — Media | Fuel & Free Time`;
+    if (updateHistory) updateDetailUrl(asset.id, historyMode);
+    window.scrollTo({ top: 0, behavior: 'instant' });
   }
 
-  function closeDrawer() {
+  function closeDrawer({ updateHistory = true } = {}) {
     selected = null;
     mediaWorkbench?.setAsset(null);
-    document.body.classList.remove("media-inspector-open");
-    els.backdrop.classList.remove("is-open");
-    els.drawer.classList.remove("is-open");
+    document.body.classList.remove('media-detail-active');
+    if (els.detailPage) els.detailPage.hidden = true;
+    document.title = 'Content — Fuel & Free Time Admin';
+    if (updateHistory) updateDetailUrl(null, 'replace');
+    closeCardMenu();
   }
 
   async function saveDrawer() {
@@ -1874,7 +1968,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     els.batchBar = document.getElementById("media-batch-bar");
     els.paginationTop = document.getElementById("media-pagination-top");
     els.pagination = document.getElementById("media-pagination");
-    els.backdrop = document.getElementById("media-drawer-backdrop");
+    els.detailPage = document.getElementById('media-detail-page');
     els.drawer = document.getElementById("media-drawer");
     els.drawerPreview = document.getElementById("media-drawer-preview");
     els.drawerPreviewShell = document.getElementById("media-drawer-preview-shell");
@@ -1913,8 +2007,8 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
       ["drop zone", els.dropZone],
       ["file input", els.fileInput],
       ["upload button", els.uploadBtn],
-      ["drawer", els.drawer],
-      ["drawer backdrop", els.backdrop],
+      ["media detail view", els.drawer],
+      ["media detail page", els.detailPage],
     ];
     const missing = required.filter(([, element]) => !element).map(([name]) => name);
     if (missing.length) {
@@ -2017,7 +2111,15 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
       const tab = event.target.closest("[data-media-inspector-tab]");
       if (tab) setInspectorTab(tab.dataset.mediaInspectorTab);
     });
-    mountListener(els.backdrop, "click", closeDrawer);
+    mountListener(window, 'popstate', () => { void syncAssetFromLocation(); });
+    mountListener(document, 'click', event => {
+      if (!event.target.closest('.media-card-menu,.media-card-menu-trigger')) closeCardMenu();
+    });
+    mountListener(document, 'keydown', event => {
+      if (event.key === 'Escape' && openMenuId !== null) closeCardMenu();
+    });
+    const backLink = document.getElementById('media-detail-back');
+    mountListener(backLink, 'click', event => { event.preventDefault(); closeDrawer(); });
     bindDelegatedLibraryInteractions();
 
     bindUpload();

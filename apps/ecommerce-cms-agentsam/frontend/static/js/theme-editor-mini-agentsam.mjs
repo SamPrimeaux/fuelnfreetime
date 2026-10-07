@@ -4,6 +4,7 @@ import { createMiniAgentSam } from '/admin/workbench/mini-agentsam.js';
 export function createThemeEditorMiniAgentSam({ onProposal }) {
   const conversations = new Map();
   const mini = createMiniAgentSam({
+    preferAbove: true,
     resultStatus: 'Proposal ready for review',
     capabilities: { list: () => [] },
     async send({ prompt, resource, signal }) {

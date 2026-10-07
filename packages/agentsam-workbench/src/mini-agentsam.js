@@ -41,7 +41,7 @@ export function createMiniAgentSam(host) {
     <div class="row">
       <img class="icon" src="${miniAgentSamTokens.icon}" alt="AgentSam">
       <textarea aria-label="Ask for changes" placeholder="Ask for changes"></textarea>
-      <button class="send" aria-label="Send">↓</button>
+      <button class="send" aria-label="Send message">↑</button>
     </div>
     <div class="tools" hidden>
       <button class="attach" aria-label="Attach files">＋</button>
@@ -102,14 +102,13 @@ export function createMiniAgentSam(host) {
       12,
       Math.min(innerWidth - width - 12, r.left + r.width / 2 - width / 2),
     );
-    const below = r.top + r.height + 12;
-    const top = Math.max(
-      12,
-      Math.min(
-        innerHeight - height - 12,
-        below + height < innerHeight ? below : r.top - height - 12,
-      ),
-    );
+    const below = r.top + r.height + 10;
+    const above = r.top - height - 10;
+    const preferAbove = host.preferAbove === true;
+    const desiredTop = preferAbove
+      ? (above >= 12 ? above : below)
+      : (below + height <= innerHeight - 12 ? below : above);
+    const top = Math.max(12, Math.min(innerHeight - height - 12, desiredTop));
     Object.assign(composer.style, { left: `${left}px`, top: `${top}px` });
   }
 

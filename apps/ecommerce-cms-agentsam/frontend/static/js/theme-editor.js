@@ -20,6 +20,36 @@
   let miniAgentSam = null;
   let miniAgentSamPromise = null;
   let miniAgentSamSelectionTick = 0;
+  let miniAnchor = null;
+
+  function setMiniAnchor(element, frame, event) {
+    if (!element) { miniAnchor = null; return; }
+    const rect = element.getBoundingClientRect();
+    const rx = event && rect.width ? Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width)) : null;
+    const ry = event && rect.height ? Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height)) : null;
+    miniAnchor = { element, frame: frame || null, rx, ry, fallbackX: event?.clientX ?? rect.left + rect.width / 2, fallbackY: event?.clientY ?? rect.top };
+  }
+
+  function selectedMiniBounds() {
+    const anchor = miniAnchor;
+    const element = anchor?.element?.isConnected ? anchor.element : null;
+    if (!element && anchor?.fallbackX != null && !anchor.frame) return {
+      left: anchor.fallbackX, top: anchor.fallbackY, width: 2, height: 2,
+    };
+    const resolved = element || byId('te-agent-open');
+    if (!resolved) return { left: 12, top: 72, width: 30, height: 25 };
+    const rect = resolved.getBoundingClientRect();
+    const x = anchor?.rx !== null && anchor?.rx !== undefined ? rect.left + rect.width * anchor.rx : rect.left + rect.width / 2;
+    const y = anchor?.ry !== null && anchor?.ry !== undefined ? rect.top + rect.height * anchor.ry : rect.top;
+    const frame = anchor?.frame;
+    if (frame && frame.isConnected) {
+      const outer = frame.getBoundingClientRect();
+      const sx = outer.width / Math.max(frame.clientWidth, 1);
+      const sy = outer.height / Math.max(frame.clientHeight, 1);
+      return { left: outer.left + x * sx, top: outer.top + y * sy, width: 2, height: 2 };
+    }
+    return { left: x, top: y, width: 2, height: 2 };
+  }
   let pendingAgentProposal = null;
   let patchTimer = null;
   let refreshTimer = null;
@@ -504,12 +534,14 @@
       });
     });
     byId('te-tree').querySelectorAll('[data-select-section]').forEach(function(button) {
-      button.addEventListener('click', function() {
+      button.addEventListener('click', function(event) {
+        setMiniAnchor(button, null, event);
         selectSection(button.dataset.selectSection, null, true, button.dataset.sectionOwner);
       });
     });
     byId('te-tree').querySelectorAll('[data-select-block]').forEach(function(button) {
-      button.addEventListener('click', function() {
+      button.addEventListener('click', function(event) {
+        setMiniAnchor(button, null, event);
         selectBlock(button.dataset.blockSection, button.dataset.selectBlock, null, true, button.dataset.blockOwner);
       });
     });
@@ -816,6 +848,7 @@
     document.querySelectorAll('[data-field-input]').forEach(function(input) {
       input.addEventListener('focus', function() {
         activeFieldKey = input.dataset.fieldInput;
+        setMiniAnchor(input);
         byId('te-selected-path').textContent = (activeSectionOwner === 'site' ? 'Global' : slug) + ' / ' + activeSectionKey + ' / ' + activeFieldKey;
         highlightPreviewSelection();
         closeAgentProposal();
@@ -1331,10 +1364,7 @@
       miniAgentSam = await miniAgentSamPromise;
       if (tick !== miniAgentSamSelectionTick) return;
       // Anchor to the visible CMS inspector rather than the browser's generic annotation mode.
-      miniAgentSam.select(selection, function() {
-        const anchor = byId('te-agent-open') || byId('te-inspector-title');
-        return anchor.getBoundingClientRect();
-      });
+      miniAgentSam.select(selection, selectedMiniBounds);
     } catch (error) {
       setNote('miniAgentSam could not load: ' + (error.message || String(error)), 'error');
     }
@@ -1422,6 +1452,7 @@
     if (doc.documentElement.dataset.fnfThemeEditorBound !== '1') {
       doc.documentElement.dataset.fnfThemeEditorBound = '1';
       doc.addEventListener('click', function(event) {
+        if (window.__fnfGlobalInspectMode) return;
         const target = event.target && event.target.closest && event.target.closest('[data-cms], [data-cms-block], [data-cms-section], [data-section-id]');
         if (!target) return;
 
@@ -1443,6 +1474,7 @@
 
         event.preventDefault();
         event.stopImmediatePropagation();
+        setMiniAnchor(target, frame, event);
         if (blockId) selectBlock(sectionKey, blockId, fieldKey || null, false, owner);
         else selectSection(sectionKey, fieldKey || null, false, owner);
       }, true);
@@ -1520,6 +1552,7 @@
   async function loadPage() {
     miniAgentSamSelectionTick += 1;
     miniAgentSam?.close();
+    miniAnchor = null;
     closeAgentProposal();
     setNote('');
     setSaveState('Loading');
@@ -2008,7 +2041,10 @@
   byId('te-import-live').addEventListener('click', function() {
     return liveUnimported ? importLiveSource() : stageMissingSourceSections();
   });
-  byId('te-agent-open').addEventListener('click', function() { void openMiniAgentSam(); });
+  byId('te-agent-open').addEventListener('click', function() {
+    if (!miniAnchor?.element?.isConnected) setMiniAnchor(byId('te-agent-open'));
+    void openMiniAgentSam();
+  });
   byId('te-agent-discard').addEventListener('click', closeAgentProposal);
   byId('te-agent-copy').addEventListener('click', function() {
     if (!pendingAgentProposal) return;

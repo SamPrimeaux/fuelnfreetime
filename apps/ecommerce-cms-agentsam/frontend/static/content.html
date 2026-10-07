@@ -253,9 +253,10 @@ renderShell("/admin/content", `
     <div class="brand-picker-grid" id="brand-picker-grid"></div>\n    <div class="brand-picker-footer"><span id="brand-picker-page-status" role="status"></span><button type="button" class="btn small" id="brand-picker-more" hidden>Load more</button></div>
   </section>
 
-  <div class="media-drawer-backdrop" id="media-drawer-backdrop"></div>
-  <aside class="media-drawer" id="media-drawer" aria-label="Asset details">
+  <section class="media-detail-page" id="media-detail-page" aria-label="Image details" hidden>
+  <div class="media-detail-workspace" id="media-drawer" aria-label="Image details">
     <div class="media-drawer-head">
+      <a class="media-detail-back" id="media-detail-back" href="/admin/content" aria-label="Back to media library">← All media</a>
       <div class="media-drawer-title">
         <strong id="media-drawer-title">Asset</strong>
         <span class="media-status-pill" id="media-drawer-status">Ready</span>
@@ -263,7 +264,7 @@ renderShell("/admin/content", `
       <div class="media-drawer-nav">
         <button type="button" class="btn ghost small" id="media-drawer-prev" aria-label="Previous asset">‹</button>
         <button type="button" class="btn ghost small" id="media-drawer-next" aria-label="Next asset">›</button>
-        <button type="button" class="btn ghost small" id="media-drawer-close">Close</button>
+        <button type="button" class="btn ghost small" id="media-drawer-close">Back to library</button>
       </div>
     </div>
     <div class="media-drawer-body media-workspace-body">
@@ -379,7 +380,8 @@ renderShell("/admin/content", `
         <button type="button" class="btn primary small" id="media-drawer-save">Save</button>
       </div>
     </div>
-  </aside>
+  </div>
+  </section>
 `, { onReady: async () => { const media = await import("/admin/js/media-library.js"); media.initMediaLibrary(); initBrandWorkspace(); } });
 </script>
 </body>

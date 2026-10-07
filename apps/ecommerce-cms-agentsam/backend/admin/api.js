@@ -33,6 +33,7 @@ import {
   uploadMedia,
   addMediaReviewComment,
   listMedia,
+  getMediaAsset,
   listMediaAlbums,
   createMediaAlbum,
   updateMediaAlbum,
@@ -774,6 +775,7 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   if (m && method === "POST") return addMediaReviewComment(request, env, m[1], user);
 
   m = path.match(/^\/api\/admin\/media\/(\d+)$/);
+  if (m && method === "GET") return getMediaAsset(request, env, m[1]);
   if (m && method === "PATCH") return updateMedia(request, env, m[1]);
   if (m && method === "DELETE") return deleteMedia(request, env, m[1]);
 

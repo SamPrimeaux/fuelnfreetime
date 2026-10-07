@@ -933,6 +933,15 @@ export async function listMedia(request, env, url) {
   });
 }
 
+/** Single-asset detail lookup, scoped to the authenticated merchant admin route. */
+export async function getMediaAsset(request, env, id) {
+  const assetId = Number(id);
+  if (!Number.isSafeInteger(assetId) || assetId <= 0) return json({ error: 'Invalid media asset' }, { status: 400 });
+  const row = await env.DB.prepare(`${MEDIA_SELECT} WHERE m.id = ? AND ${browsableMediaSql('m')}`).bind(assetId).first();
+  if (!row) return json({ error: 'Media asset not found' }, { status: 404 });
+  return json({ ok: true, asset: rowToAsset(row), capabilities: mediaCapabilitySummary(env) });
+}
+
 export async function batchMedia(request, env) {
   const body = await readJson(request);
   const ids = Array.isArray(body?.ids)

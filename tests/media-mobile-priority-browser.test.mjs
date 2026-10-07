@@ -31,6 +31,7 @@ const html = read('apps/ecommerce-cms-agentsam/frontend/static/content.html').re
    window.addEventListener('unhandledrejection',e=>window.__errors.push(String(e.reason)));
    window.adminFetch=async (url,options)=>{
      if(url.startsWith('/api/admin/media?')) return ${JSON.stringify(fixture)};
+     if(url==='/api/admin/media/99') return {ok:true,asset:{id:99,filename:'direct-linked-image.svg',url:'/mock-image.svg',r2_key:'media/direct-linked-image.svg',content_type:'image/svg+xml',status:'ready',size_bytes:1400,folder:'images'}};
      if(url.startsWith('/api/admin/brand')) return {ok:true,company:{name:'Test'},roles:[],profile:{}};
      throw new Error('Unknown test route '+url);
    };
@@ -134,6 +135,12 @@ try{
       await evaluate(`document.querySelector('[data-media-album-create]').click()`);
       const dialogOpened=await evaluate(`document.getElementById('media-album-dialog').open`);
       assert.equal(dialogOpened,true,'Creating a new album should open the actual form');
+      if(width===390){
+        const mobileDetail = await evaluate(`(()=>{document.getElementById('media-album-dialog').close();document.querySelector('#media-grid .media-item[data-id]').click();return {detail:!document.getElementById('media-detail-page').hidden,docWidth:document.documentElement.scrollWidth,viewport:innerWidth,stageWidth:Math.round(document.getElementById('media-drawer-preview-shell').getBoundingClientRect().width),inspectorWidth:Math.round(document.querySelector('.media-workspace-settings').getBoundingClientRect().width)}})()`);
+        assert.equal(mobileDetail.detail,true,'Mobile selection must open the dedicated page');
+        assert.ok(mobileDetail.docWidth <= mobileDetail.viewport+2, 'Mobile image-detail must not overflow viewport: '+JSON.stringify(mobileDetail));
+        assert.ok(mobileDetail.stageWidth > 220, 'Mobile image stage must remain large enough to inspect');
+      }
     }else{
       assert.equal(metrics.filtersToggleVisible,false);
       assert.equal(metrics.filtersHidden,false);
@@ -142,7 +149,7 @@ try{
       const assistant = await evaluate(`(()=>{
         document.querySelector('#media-grid .media-item[data-id]').click();
         const bar=document.querySelector('#media-agent-workbench .media-agent');
-        return { visible:bar&&!bar.hidden, drawer:document.getElementById('media-drawer').classList.contains('is-open'),
+        return { visible:bar&&!bar.hidden, detailPage:!document.getElementById('media-detail-page').hidden, url:location.search, overlay:document.querySelector('.media-drawer-backdrop'),
           commentEnabled:!bar.querySelector('[data-media-tool="comment"]').disabled,
           workspaceCols:getComputedStyle(document.querySelector('.media-workspace-body')).gridTemplateColumns.split(' ').length,
           imagePanelWidth:Math.round(document.querySelector('.media-workspace-canvas').getBoundingClientRect().width),
@@ -151,7 +158,13 @@ try{
           removeBgDisabled:bar.querySelector('[data-media-tool="remove-bg"]').disabled };
       })()`);
       assert.equal(assistant.visible,true,'miniAgentSam should appear for every selected image');
-      assert.equal(assistant.drawer,true,'selected media must open in asset inspector');
+      assert.equal(assistant.detailPage,true,'selected asset must open dedicated detail page');
+      assert.match(assistant.url,/asset=1/,'asset deep link must reflect current image');
+      assert.equal(assistant.overlay,null,'the old overlay/backdrop must be removed');
+      const details = await evaluate(`({ tabsHidden:getComputedStyle(document.querySelector('.content-product-tabs')).display==='none', libraryHidden:getComputedStyle(document.getElementById('content-view-library')).display==='none', backLink:!!document.getElementById('media-detail-back') })`);
+      assert.equal(details.tabsHidden,true,'Asset detail must replace media library as a page, not overlay it');
+      assert.equal(details.libraryHidden,true,'Media library must not remain visible behind detail');
+      assert.equal(details.backLink,true,'Dedicated image page needs back-to-library navigation');
       assert.equal(assistant.workspaceCols,2,'Desktop asset detail should show a two-column canvas and inspector');
       assert.ok(assistant.imagePanelWidth>420,'Media preview must have a useful editing surface: '+JSON.stringify(assistant));
       assert.ok(assistant.settingsPanelWidth>260,'Inspector needs an independent settings pane: '+JSON.stringify(assistant));
@@ -159,6 +172,28 @@ try{
       assert.match(read('apps/ecommerce-cms-agentsam/frontend/static/js/media-library.js'), /surface: "content-library"/);
       assert.equal(assistant.markupDisabled,true,'vector source cannot silently rasterize into an editable original');
       assert.equal(assistant.removeBgDisabled,true,'unsupported background removal must remain unavailable');
+      const back = await evaluate(`(()=>{document.getElementById('media-detail-back').click(); const trigger=document.querySelector('[data-media-actions="1"]'); trigger.click(); const menu=trigger.closest('.media-item').querySelector('.media-card-menu'); return {returned:!document.body.classList.contains('media-detail-active'), url:location.search, menuOpen:!menu.hidden, expanded:trigger.getAttribute('aria-expanded')};})()`);
+      assert.equal(back.returned,true,'Back must restore the media library without a modal');
+      assert.doesNotMatch(back.url,/asset=/,'Back must clear detail deep link');
+      assert.equal(back.menuOpen,true,'Three-dot menu must open on its own card');
+      assert.equal(back.expanded,'true','Three-dot menu must expose accessibility state');
+      const fromMenu = await evaluate(`(()=>{document.querySelector('[data-media-action="view"]').click();return {detail:!document.getElementById('media-detail-page').hidden,url:location.search};})()`);
+      assert.equal(fromMenu.detail,true,'View image menu action must open dedicated page');
+      assert.match(fromMenu.url,/asset=1/,'View image menu action must update shareable URL');
+      await evaluate(`history.back()`);
+      for(let retry=0;retry<15;retry++){if(await evaluate(`!document.body.classList.contains('media-detail-active')`))break; await new Promise(done=>setTimeout(done,120));}
+      assert.equal(await evaluate(`document.body.classList.contains('media-detail-active')`),false,'Browser Back should return to gallery');
+    }
+    if(width===1440){
+      await c('Page.navigate',{url:'http://127.0.0.1:'+server.address().port+'/admin/content?asset=99'});
+      let direct=null;
+      for(let attempt=0;attempt<40;attempt++){
+        await new Promise(done=>setTimeout(done,120));
+        direct=await evaluate(`!document.getElementById('media-detail-page')?.hidden && document.getElementById('media-drawer-title')?.textContent==='direct-linked-image.svg' ? {asset:document.getElementById('media-drawer-title').textContent,url:location.search} : null`);
+        if(direct)break;
+      }
+      assert.ok(direct,'Direct image link must load an asset outside the initial gallery page');
+      assert.match(direct.url,/asset=99/);
     }
     console.log('PASS',width+'px','grid at +'+Math.round(metrics.gridOffset)+'px','cards '+metrics.gridCards);
   }

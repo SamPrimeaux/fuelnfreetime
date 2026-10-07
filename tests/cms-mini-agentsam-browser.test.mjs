@@ -44,6 +44,9 @@ const probe=`<script>(async function(){
   const portal=await until(()=>{const p=document.querySelector('[data-mini-agentsam]');return p&&!p.shadowRoot.querySelector('.composer').hidden?p:null});
   const mini=portal.shadowRoot;
   const caption=document.getElementById('te-selected-path').textContent;
+  const sourceRect=document.getElementById('te-field-hero-headline').getBoundingClientRect();
+  const initialComposerRect=mini.querySelector('.composer').getBoundingClientRect();
+  const arrow=mini.querySelector('.send').textContent.trim();
   mini.querySelector('textarea').value='Rewrite the selected headline to sound more compelling.';
   mini.querySelector('.send').click();
   const review=await until(()=>{const el=document.getElementById('te-agent-review');return el&&!el.hidden?el:null});
@@ -59,7 +62,7 @@ const probe=`<script>(async function(){
   document.getElementById('te-save').click();
   await until(()=>window.__writes.length===1);
   const miniRect=mini.querySelector('.composer').getBoundingClientRect();
-  const result={initialValue,caption,composerVisible:true,proposed,canApply,beforeField,beforeWrites,fieldAfter,dirty,afterApplyWrites,savedWrites:window.__writes.length,saved:window.__writes[0],chatCount:window.__chatCount,viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,composerRect:{left:miniRect.left,right:miniRect.right,top:miniRect.top,bottom:miniRect.bottom},errors:window.__agentErrors};
+  const result={initialValue,caption,composerVisible:true,sourceRect:{left:sourceRect.left,right:sourceRect.right,top:sourceRect.top,bottom:sourceRect.bottom},initialComposerRect:{left:initialComposerRect.left,right:initialComposerRect.right,top:initialComposerRect.top,bottom:initialComposerRect.bottom},arrow,proposed,canApply,beforeField,beforeWrites,fieldAfter,dirty,afterApplyWrites,savedWrites:window.__writes.length,saved:window.__writes[0],chatCount:window.__chatCount,viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,composerRect:{left:miniRect.left,right:miniRect.right,top:miniRect.top,bottom:miniRect.bottom},errors:window.__agentErrors};
   const pre=document.createElement('pre');pre.id='mini-result';pre.textContent=JSON.stringify(result);document.body.append(pre);
  }catch(error){const pre=document.createElement('pre');pre.id='mini-result';pre.textContent=JSON.stringify({fatal:String(error),note:document.getElementById('te-note')?.textContent,errors:window.__agentErrors,html:document.getElementById('te-inspector-body')?.innerText?.slice(0,150)});document.body.append(pre);}
 })()</script>`;
@@ -105,6 +108,9 @@ try{
  console.log(JSON.stringify(result,null,2));
  assert.equal(result.fatal,undefined);
  assert.equal(result.composerVisible,true);
+ assert.equal(result.arrow,'↑','Send must be an upward arrow');
+ assert.ok(result.initialComposerRect.right>=result.sourceRect.left-10 && result.initialComposerRect.left<=result.sourceRect.right+10, 'Composer must anchor horizontally beside the selected field');
+ assert.ok(Math.abs(result.initialComposerRect.bottom-result.sourceRect.top)<150 || Math.abs(result.initialComposerRect.top-result.sourceRect.bottom)<150, 'Composer must appear near the selected field, not the header button');
  assert.match(result.caption,/hero.*headline/i);
  assert.equal(result.proposed,message);
  assert.equal(result.canApply,true);

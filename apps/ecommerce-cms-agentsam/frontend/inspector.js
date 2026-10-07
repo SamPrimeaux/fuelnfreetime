@@ -90,6 +90,7 @@
   function deactivate({ close = false } = {}) {
     active = false;
     button?.setAttribute('aria-pressed', 'false');
+    window.__fnfGlobalInspectMode = false;
     if (close) instance?.close();
     else instance?.stopSelecting();
   }
@@ -122,6 +123,7 @@
   function activate() {
     if (!instance || !button || button.disabled) return;
     active = true;
+    window.__fnfGlobalInspectMode = true;
     button.setAttribute('aria-pressed', 'true');
     instance.startSelecting('Click a storefront preview element to annotate · Esc to exit');
   }
@@ -186,8 +188,7 @@
     if (
       mounted ||
       !location.pathname.startsWith('/admin/') ||
-      location.pathname === '/admin/login' ||
-      location.pathname === '/admin/theme-editor' // Theme Studio owns contextual selection and miniAgentSam.
+      location.pathname === '/admin/login'
     ) return;
 
     const bar = document.querySelector('.console-topbar-actions');
@@ -242,6 +243,7 @@
         document.querySelector('.theme-editor-panel, .ps-panel, .console-main'),
       onClose: () => {
         active = false;
+        window.__fnfGlobalInspectMode = false;
         button?.setAttribute('aria-pressed', 'false');
       },
       send: async ({ prompt, resource, capabilities, attachments: files, signal }) => {
