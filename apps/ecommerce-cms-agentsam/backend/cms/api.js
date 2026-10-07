@@ -1234,7 +1234,7 @@ export async function acceptGeneratedSection(env, slug, accountId, body = {}) {
     .bind(page.id,sectionKey).first();
   await env.DB.prepare(`INSERT INTO cms_page_sections
     (account_id,page_id,legacy_section_id,section_key,section_type,sort_order,status,content_r2_key,content_version,content_hash,metadata_json)
-    VALUES (?,?,?,?,?,?,'draft',?,?,?,?,?)
+    VALUES (?,?,?,?,?,?,'draft',?,?,?,?)
     ON CONFLICT(page_id,section_key) DO UPDATE SET section_type=excluded.section_type,
       sort_order=excluded.sort_order,status='draft',content_r2_key=excluded.content_r2_key,
       content_version=excluded.content_version,content_hash=excluded.content_hash,
