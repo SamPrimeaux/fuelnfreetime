@@ -60,6 +60,12 @@ const probe = "<script>setTimeout(function(){" +
  "before.catalog={modal:!!catalog?.open,cards:catalog?.querySelectorAll('[data-catalog-template]').length||0};" +
  "document.getElementById('te-section-cancel')?.click();" +
  "before.catalog.closed=!catalog?.open;" +
+ "document.querySelector('[data-add-block-section=collections]')?.click();" +
+ "var blockCatalog=document.querySelector('dialog.te-block-picker');" +
+ "before.blockCatalog={open:!!blockCatalog?.open,collectionCard:!!blockCatalog?.querySelector('[data-choose-block=collection-card]')," +
+ "noNestedSelector:!document.querySelector('[data-block-menu]')};" +
+ "blockCatalog?.querySelector('[data-close-block-catalog]')?.click();" +
+ "before.blockCatalog.closed=!blockCatalog?.open;" +
  "if(window.innerWidth>900){" +
  "var blockButton=document.querySelector('[data-select-block=card3][data-block-section=collections]');" +
  "if(blockButton){" +
@@ -166,6 +172,8 @@ assert.equal(result.before.toolbar.noOverflow,true);
 assert.equal(result.before.catalog.modal,true,"Section picker should open in a native dialog");
 assert.ok(result.before.catalog.cards>0,"Section picker must show registered choices");
 assert.equal(result.before.catalog.closed,true,"Section picker must close without losing the editor");
+assert.deepEqual(result.before.blockCatalog,{open:true,collectionCard:true,noNestedSelector:true,closed:true},
+  "Add Block must open the same accessible picker and show only compatible block definitions");
 assert.equal(results.get(1000).before.toolbar.noOverflow,true,"Mid-size desktop should fit all three editor panes");
 assert.ok(result.before.blockInspector,"The real collection card must remain selectable");
 assert.match(result.before.blockInspector.title,/Collection card/i);
