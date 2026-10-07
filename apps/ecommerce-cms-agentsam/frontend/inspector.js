@@ -186,7 +186,8 @@
     if (
       mounted ||
       !location.pathname.startsWith('/admin/') ||
-      location.pathname === '/admin/login'
+      location.pathname === '/admin/login' ||
+      location.pathname === '/admin/theme-editor' // Theme Studio owns contextual selection and miniAgentSam.
     ) return;
 
     const bar = document.querySelector('.console-topbar-actions');

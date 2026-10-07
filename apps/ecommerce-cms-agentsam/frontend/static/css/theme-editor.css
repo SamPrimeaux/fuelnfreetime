@@ -1572,3 +1572,20 @@
 .te-library-browse strong { font-size: 13px; }
 .te-library-browse small { font-size: 11px; color: #65785b; line-height: 1.4; }
 .te-library-browse:hover,.te-library-browse:focus-visible { background: #e7f0df; outline: 2px solid #71965a; outline-offset: 1px; }
+
+/* Contextual miniAgentSam uses the existing shared workbench and CMS field authority. */
+.te-inspector-tools { display:flex; align-items:center; gap:7px; min-width:0; }
+.te-agent-open { min-height:32px; border:1px solid #d6d0e8; background:#f4f0ff; color:#55409d; border-radius:9px; padding:5px 9px; cursor:pointer; font:700 10px/1.2 system-ui; white-space:nowrap; }
+.te-agent-open:hover,.te-agent-open:focus-visible { background:#ebe3ff; outline:2px solid #ab95df; outline-offset:1px; }
+.te-agent-review { position:relative; z-index:6; border-top:1px solid #ded7f2; padding:12px 13px; background:#faf8ff; color:#2c2442; box-shadow:0 -7px 18px #3628590a; max-height:min(42vh,380px); overflow:auto; }
+.te-agent-review[hidden] { display:none; }
+.te-agent-review__head,.te-agent-review__actions { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.te-agent-review__head strong { font-size:12px; }
+.te-agent-review__head button { background:transparent; border:0; min-width:28px; min-height:28px; font-size:20px; cursor:pointer; }
+.te-agent-review p { font-size:11px; line-height:1.55; color:#615877; }
+.te-agent-review textarea { box-sizing:border-box; display:block; width:100%; max-width:100%; padding:10px; min-height:85px; resize:vertical; background:#fff; border:1px solid #d6cbe9; border-radius:9px; font:12px/1.5 system-ui; }
+.te-agent-review__actions { justify-content:flex-end; margin-top:8px; }
+.te-agent-review__actions button { min-height:35px; padding:7px 12px; border:1px solid #ddd5e8; background:#fff; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; }
+.te-agent-review__actions #te-agent-apply { color:#fff; background:#503a9e; border-color:#503a9e; }
+.te-agent-review__actions #te-agent-apply:disabled { opacity:.45; cursor:not-allowed; }
+@media(max-width:900px) { .te-inspector-head { height:auto; min-height:51px; flex-wrap:wrap; padding-block:7px; } .te-agent-review { max-height:36dvh; } }

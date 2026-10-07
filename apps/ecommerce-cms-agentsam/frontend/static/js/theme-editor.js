@@ -17,6 +17,10 @@
   let unmanagedLiveSections = [];
   let activeBlockId = null;
   let activeFieldKey = null;
+  let miniAgentSam = null;
+  let miniAgentSamPromise = null;
+  let miniAgentSamSelectionTick = 0;
+  let pendingAgentProposal = null;
   let patchTimer = null;
   let refreshTimer = null;
   let mediaLibrary = [];
@@ -98,8 +102,9 @@
             '<div class="te-preview-status"><span class="te-preview-mode">Local draft preview</span><span class="te-selected-path" id="te-selected-path">Select a section in the preview or tree</span></div>',
           '</main>',
           '<aside class="theme-editor-panel">',
-            '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><span class="te-badge" id="te-section-status">draft</span></div>',
+            '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><div class="te-inspector-tools"><button type="button" id="te-agent-open" class="te-agent-open" aria-label="Ask miniAgentSam about the selected section">✦ Ask AgentSam</button><span class="te-badge" id="te-section-status">draft</span></div></div>',
             '<div class="te-inspector-body" id="te-inspector-body"></div>',
+            '<section class="te-agent-review" id="te-agent-review" aria-label="AgentSam proposed change" hidden><div class="te-agent-review__head"><strong>✦ miniAgentSam · proposal</strong><button type="button" id="te-agent-discard" aria-label="Discard AgentSam proposal">×</button></div><p id="te-agent-review-note">Review before applying. Nothing is saved automatically.</p><textarea id="te-agent-proposal" rows="4" aria-label="Review proposed AgentSam text"></textarea><div class="te-agent-review__actions"><button type="button" id="te-agent-copy">Copy</button><button type="button" id="te-agent-apply">Apply to draft</button></div></section>',
             '<div class="te-inspector-save"><button type="button" class="te-toolbar-btn is-primary" id="te-save">Save draft</button><p class="te-note" id="te-note"></p></div>',
           '</aside>',
         '</div>',
@@ -811,7 +816,10 @@
     document.querySelectorAll('[data-field-input]').forEach(function(input) {
       input.addEventListener('focus', function() {
         activeFieldKey = input.dataset.fieldInput;
+        byId('te-selected-path').textContent = (activeSectionOwner === 'site' ? 'Global' : slug) + ' / ' + activeSectionKey + ' / ' + activeFieldKey;
         highlightPreviewSelection();
+        closeAgentProposal();
+        void openMiniAgentSam();
       });
       input.addEventListener('input', function() {
         const field = fieldByKey(input.dataset.fieldInput);
@@ -1264,6 +1272,74 @@
     patchTimer = setTimeout(pushLocalPreview, 80);
   }
 
+  function selectedAgentResource() {
+    const section = currentSection();
+    if (!section) return null;
+    const field = activeFieldKey ? fieldByKey(activeFieldKey) : null;
+    const value = field ? valueForField(section, field) : null;
+    const owner = sectionOwner(section);
+    return {
+      type: 'section', id: section.key, sectionKey: section.key,
+      ownerSlug: owner, page: pageRoute(slug) || '/' + slug,
+      surface: 'theme-studio', label: (currentSectionSchema()?.label || humanize(section.key)),
+      fieldKey: field?.key || null,
+      currentValue: typeof value === 'string' ? value : null,
+      sectionVersion: Number(section.version || 0),
+      linked: !liveUnimported,
+    };
+  }
+
+  function mayApplyAgentText(selection) {
+    if (!selection?.fieldKey || liveUnimported || selection.ownerSlug !== activeSectionOwner || selection.sectionKey !== activeSectionKey) return false;
+    const field = fieldByKey(selection.fieldKey);
+    if (!field || ['json', 'number', 'range', 'boolean', 'media', 'video', 'link', 'product', 'collection', 'variant'].includes(field.type)) return false;
+    if (/(href|url|src|image|video|color|font|size|style|css|sku)$/i.test(field.key)) return false;
+    const section = currentSection();
+    return Boolean(section && Number(section.version || 0) === selection.sectionVersion &&
+      String(valueForField(section, field) ?? '') === String(selection.currentValue ?? ''));
+  }
+
+  function presentAgentProposal(proposal) {
+    pendingAgentProposal = proposal;
+    const panel = byId('te-agent-review');
+    const isEditable = mayApplyAgentText(proposal.selection);
+    byId('te-agent-proposal').value = proposal.text;
+    byId('te-agent-review-note').textContent = isEditable
+      ? 'Proposed field text. Review or adjust it, then explicitly apply to the unsaved CMS draft.'
+      : 'Suggested guidance for the selected section. No changes have been made. Select an editable text field in a CMS draft to request an applicable rewrite.';
+    byId('te-agent-apply').disabled = !isEditable;
+    panel.hidden = false;
+    panel.scrollIntoView({ block: 'nearest' });
+  }
+
+  function closeAgentProposal() {
+    pendingAgentProposal = null;
+    const panel = byId('te-agent-review');
+    if (panel) panel.hidden = true;
+  }
+
+  async function openMiniAgentSam() {
+    const selection = selectedAgentResource();
+    if (!selection) { setNote('Select a section or editable field before asking AgentSam.'); return; }
+    const tick = ++miniAgentSamSelectionTick;
+    if (!miniAgentSamPromise) {
+      miniAgentSamPromise = import('/admin/js/theme-editor-mini-agentsam.mjs')
+        .then(function(module) { return module.createThemeEditorMiniAgentSam({ onProposal: presentAgentProposal }); })
+        .catch(function(error) { miniAgentSamPromise = null; throw error; });
+    }
+    try {
+      miniAgentSam = await miniAgentSamPromise;
+      if (tick !== miniAgentSamSelectionTick) return;
+      // Anchor to the visible CMS inspector rather than the browser's generic annotation mode.
+      miniAgentSam.select(selection, function() {
+        const anchor = byId('te-agent-open') || byId('te-inspector-title');
+        return anchor.getBoundingClientRect();
+      });
+    } catch (error) {
+      setNote('miniAgentSam could not load: ' + (error.message || String(error)), 'error');
+    }
+  }
+
   function selectSection(sectionKey, fieldKey, scrollPreview, ownerSlug) {
     const section = findSection(sectionKey, ownerSlug);
     if (!section) return;
@@ -1286,6 +1362,8 @@
       } catch {}
     }
     highlightPreviewSelection();
+    closeAgentProposal();
+    void openMiniAgentSam();
   }
 
   function selectBlock(sectionKey, blockId, fieldKey, scrollPreview, ownerSlug) {
@@ -1318,6 +1396,8 @@
       } catch {}
     }
     highlightPreviewSelection();
+    closeAgentProposal();
+    void openMiniAgentSam();
   }
 
   function bindPreviewSelection() {
@@ -1438,6 +1518,9 @@
   }
 
   async function loadPage() {
+    miniAgentSamSelectionTick += 1;
+    miniAgentSam?.close();
+    closeAgentProposal();
     setNote('');
     setSaveState('Loading');
     try {
@@ -1924,6 +2007,27 @@
   byId('te-refresh').addEventListener('click', refreshPreview);
   byId('te-import-live').addEventListener('click', function() {
     return liveUnimported ? importLiveSource() : stageMissingSourceSections();
+  });
+  byId('te-agent-open').addEventListener('click', function() { void openMiniAgentSam(); });
+  byId('te-agent-discard').addEventListener('click', closeAgentProposal);
+  byId('te-agent-copy').addEventListener('click', function() {
+    if (!pendingAgentProposal) return;
+    navigator.clipboard?.writeText(byId('te-agent-proposal').value).catch(function() {
+      setNote('Copy is unavailable in this browser.', 'error');
+    });
+  });
+  byId('te-agent-apply').addEventListener('click', function() {
+    if (!pendingAgentProposal || !mayApplyAgentText(pendingAgentProposal.selection)) {
+      setNote('This field changed or is not editable. Select the field and request a new proposal.', 'error');
+      return;
+    }
+    const field = fieldByKey(pendingAgentProposal.selection.fieldKey);
+    const value = byId('te-agent-proposal').value.trim();
+    if (!field || !value) { setNote('Proposed text is empty. Nothing was changed.', 'error'); return; }
+    setFieldValue(field, value);
+    closeAgentProposal();
+    renderInspector();
+    setNote('AgentSam proposal applied locally. Review the preview and choose Save draft when ready.', 'success');
   });
   byId('te-save').addEventListener('click', saveDraft);
   byId('te-publish').addEventListener('click', publishPage);

@@ -225,7 +225,7 @@ export function createMiniAgentSam(host) {
       input.placeholder = 'Add follow-up instructions…';
       host.attachments?.clear();
       renderAttachments();
-      showStatus('Reply in AgentSam');
+      showStatus(host.resultStatus || 'Reply in AgentSam');
       host.onResult?.(result);
     } catch (error) {
       if (!controller.signal.aborted) {
