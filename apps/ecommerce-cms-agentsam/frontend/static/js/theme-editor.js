@@ -1896,6 +1896,8 @@
           const section = findSection(item.key, item.owner);
           if (section) {
             section.status = 'draft';
+            section.source = 'r2';
+            missingSourceSections = missingSourceSections.filter(function(key) { return key !== section.key; });
             section.version = result.version ?? section.version;
             section.updated_at = result.updated_at || section.updated_at;
           }
@@ -1976,6 +1978,35 @@
     }
   }
 
+  const pendingNativeSections = new Map();
+
+  // Registry-backed sections are visible and editable before their first write.
+  // Structural operations need a real private D1 row; create it on demand,
+  // never by overwriting another section's existing draft or publishing.
+  async function ensureNativeSection(sectionKey, owner = slug) {
+    if (owner !== slug) return;
+    const section = findSection(sectionKey, owner);
+    if (!section || section.source !== 'registry') return;
+    const id = owner + ':' + sectionKey;
+    if (pendingNativeSections.has(id)) return pendingNativeSections.get(id);
+    const task = (async function() {
+      if ((dirty || saveInFlight) && !(await saveDraft())) throw new Error('Save the current changes before moving this section.');
+      if (section.source !== 'registry') return;
+      const index = ownerSections(owner).findIndex(function(item) { return item.key === sectionKey; });
+      const result = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(owner) + '/sections', {
+        method: 'POST',
+        body: JSON.stringify({ templateKey: sectionKey, toIndex: Math.max(0, index) })
+      });
+      if (result.section_key !== sectionKey) throw new Error('Section identity changed during draft initialization. Reload to review.');
+      section.source = 'r2';
+      section.status = 'draft';
+      section.version = result.version ?? 1;
+      missingSourceSections = missingSourceSections.filter(function(key) { return key !== sectionKey; });
+    })();
+    pendingNativeSections.set(id, task);
+    try { await task; } finally { pendingNativeSections.delete(id); }
+  }
+
   async function insertSection(templateKey, themePreset) {
     if (liveUnimported) { setNote('Start editing page to create a private draft before changing its sections.'); return false; }
     setNote('Adding section…');
@@ -2004,6 +2035,7 @@
     if (liveUnimported) { setNote('Start editing page to create a private draft before changing its sections.'); return false; }
     setNote('Duplicating section…');
     try {
+      await ensureNativeSection(sectionKey);
       const result = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/duplicate', {
         method: 'POST',
         body: JSON.stringify({})
@@ -2023,6 +2055,7 @@
   async function moveSection(sectionKey, toIndex) {
     if (liveUnimported) { setNote('Start editing page to create a private draft before changing its sections.'); return false; }
     try {
+      await ensureNativeSection(sectionKey);
       await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey) + '/move', {
         method: 'POST',
         body: JSON.stringify({ toIndex: toIndex })
@@ -2040,6 +2073,7 @@
     if (liveUnimported) { setNote('Start editing page to create a private draft before changing its sections.'); return false; }
     const owner = ownerSlug || slug;
     try {
+      await ensureNativeSection(sectionKey, owner);
       await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(owner) + '/sections/' + encodeURIComponent(sectionKey) + '/visibility', {
         method: 'PUT',
         body: JSON.stringify({ enabled: enabled })
@@ -2061,6 +2095,7 @@
     if (!confirm('Remove "' + label + '" from this page? You can add it again later.')) return;
 
     try {
+      await ensureNativeSection(sectionKey);
       await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections/' + encodeURIComponent(sectionKey), {
         method: 'DELETE'
       });
@@ -2081,6 +2116,7 @@
     try {
       const section = findSection(sectionKey, owner);
       const blocks = section?.content?.__editor?.blocks || [];
+      await ensureNativeSection(sectionKey, owner);
       const result = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(owner) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks', {
         method: 'POST',
         body: JSON.stringify({ templateKey: templateKey, toIndex: blocks.length })
@@ -2103,6 +2139,7 @@
     const owner = ownerSlug || slug;
     setNote('Duplicating block…');
     try {
+      await ensureNativeSection(sectionKey, owner);
       const result = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(owner) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId) + '/duplicate', {
         method: 'POST',
         body: JSON.stringify({})
@@ -2124,6 +2161,7 @@
     if (liveUnimported) { setNote('Start editing page to create a private draft before changing its sections.'); return false; }
     const owner = ownerSlug || slug;
     try {
+      await ensureNativeSection(sectionKey, owner);
       await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(owner) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId) + '/move', {
         method: 'POST',
         body: JSON.stringify({ toIndex: toIndex })
@@ -2147,6 +2185,7 @@
     if (!confirm('Remove "' + label + '" from this section?')) return;
 
     try {
+      await ensureNativeSection(sectionKey, owner);
       await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(owner) + '/sections/' + encodeURIComponent(sectionKey) + '/blocks/' + encodeURIComponent(blockId), {
         method: 'DELETE'
       });
