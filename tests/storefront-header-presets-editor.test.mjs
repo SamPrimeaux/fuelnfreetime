@@ -72,7 +72,7 @@ test("theme editor is the visual editor and page edit is presented as page setti
   assert.match(themeEditor, /Appearance and layout/);
   assert.match(themeEditor, /function renderInspectorGroups/);
   assert.doesNotMatch(themeEditor, /id="te-tabs"/);
-  assert.match(themeEditor, /Page content &amp; settings/);
+  assert.match(themeEditor, /Page content & settings/);
 
   assert.match(pageEditor, /Page Editor — Fuel & Free Time Admin/);
   assert.match(pageEditor, />Edit visually</);
