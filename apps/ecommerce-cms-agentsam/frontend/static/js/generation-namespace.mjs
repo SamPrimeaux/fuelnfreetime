@@ -225,3 +225,10 @@ export function gateGeneratedSave(body) {
   if (!lint.ok) return { ok: false, status: 422, error: lint.violations.join("; "), violations: lint.violations };
   return { ok: true };
 }
+
+export async function guardSectionWrite(body, write) {
+  const gate = gateGeneratedSave(body);
+  if (!gate.ok) return { ok: false, status: gate.status, error: gate.error, written: false };
+  if (typeof write === "function") await write(body);
+  return { ok: true, written: true };
+}

@@ -4,8 +4,15 @@ function event(name, data) {
   return encoder.encode("event: " + name + "\ndata: " + JSON.stringify(data) + "\n\n");
 }
 
-export function generateBlockStream(request) {
+export function generateBlockStream(request, upstream) {
   const signal = request.signal;
+  const upstreamAbort = new AbortController();
+  const stopUpstream = () => upstreamAbort.abort();
+  if (signal) {
+    if (signal.aborted) stopUpstream();
+    else signal.addEventListener("abort", stopUpstream, { once: true });
+  }
+  if (typeof upstream === "function") upstream(upstreamAbort.signal);
   const stream = new ReadableStream({
     start(controller) {
       const send = (name, data) => controller.enqueue(event(name, data));

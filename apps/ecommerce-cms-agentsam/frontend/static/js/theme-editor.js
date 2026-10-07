@@ -876,6 +876,7 @@
     });
     wireFields();
     wireInspectorPreferences();
+    paintGeneratedSettings(panel, section);
     if (liveUnimported) {
       panel.querySelectorAll('input, textarea, select, button:not(#te-inspector-parent)').forEach(function(control) { control.disabled = true; });
     }
@@ -892,6 +893,27 @@
     }
   }
 
+
+  function paintGeneratedSettings(panel, section) {
+    const generatedSettings = section.content && section.content.__editor && section.content.__editor.generatedSettings;
+    if (!generationInspector || !generatedSettings) return;
+    const host = document.createElement('div');
+    host.id = 'te-generated-settings';
+    generationInspector.renderGeneratedSettings(host, generatedSettings);
+    panel.appendChild(host);
+    const wrapper = document.querySelector('[data-agentsam-block]') || { style: { setProperty() {} }, dataset: {} };
+    generationInspector.bindGeneratedSettings(host, wrapper, null);
+  }
+
+  function beginGenerating() {
+    const tree = byId('te-tree');
+    if (generationInspector && tree) generationInspector.insertGeneratingNode(tree);
+  }
+
+  function endGenerating() {
+    const tree = byId('te-tree');
+    if (generationInspector && tree) generationInspector.removeGeneratingNode(tree);
+  }
   function wireFields() {
     document.querySelectorAll('[data-field-input]').forEach(function(input) {
       input.addEventListener('focus', function() {
@@ -2088,7 +2110,9 @@
 
   let editorLeaving = false;
 
+  let generationInspector = null;
   const generationLock = { locked: function() { return false; } };
+  import('/admin/js/generation-inspector.mjs').then(function(mod) { generationInspector = mod; }).catch(function() {});
   import('/admin/js/generation-lock.mjs').then(function(mod) {
     const lock = mod.createGenerationLock();
     generationLock.start = lock.start.bind(lock);
@@ -2338,6 +2362,7 @@
     }).catch(function() { return { ok: false, fatal: false }; });
   }).catch(function() {});
 
+  window.AgentSamEditorGeneration = { beginGenerating: beginGenerating, endGenerating: endGenerating };
   setDevice(device);
   setEditorDrawer('sections');
   loadThemeIdentity();
