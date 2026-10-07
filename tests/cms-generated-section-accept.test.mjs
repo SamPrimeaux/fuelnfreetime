@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
-import { acceptGeneratedSection, getPageAdmin, publishPage, getPublishedPage, updateSection } from "../apps/ecommerce-cms-agentsam/backend/cms/api.js";
+import { acceptGeneratedSection, getPageAdmin, publishPage, getPublishedPage, updateSection, listGeneratedRevisions, restoreGeneratedRevision } from "../apps/ecommerce-cms-agentsam/backend/cms/api.js";
 import { attachCmsDefinitions, listCmsDefinitions } from "../apps/ecommerce-cms-agentsam/backend/cms/definition-registry.mjs";
 
 function fixture() {
@@ -25,7 +25,7 @@ function fixture() {
       inline_content_json TEXT DEFAULT '{}',content_r2_key TEXT,content_version INTEGER,content_hash TEXT,metadata_json TEXT NOT NULL,
       updated_at TEXT DEFAULT (datetime('now')),UNIQUE(page_id,section_key));
     CREATE TABLE cms_revisions (id TEXT PRIMARY KEY DEFAULT ('cmsr_'||lower(hex(randomblob(8)))),account_id TEXT NOT NULL,entity_type TEXT NOT NULL,entity_id TEXT NOT NULL,
-      revision_number INTEGER NOT NULL,revision_kind TEXT NOT NULL,content_r2_key TEXT,content_hash TEXT,snapshot_json TEXT NOT NULL,metadata_json TEXT NOT NULL);
+      revision_number INTEGER NOT NULL,revision_kind TEXT NOT NULL,content_r2_key TEXT,content_hash TEXT,snapshot_json TEXT NOT NULL,metadata_json TEXT NOT NULL,created_at TEXT DEFAULT (datetime('now')));
     INSERT INTO pages (id,slug,title,status) VALUES (1,'shop','Shop','draft');
     INSERT INTO cms_pages (id,account_id,slug) VALUES ('cmsp_shop','acct_alpha','shop');
   `);
@@ -146,4 +146,34 @@ test("unsafe generated code and script injection are rejected before D1/R2 write
     assert.equal(fx.db.prepare("SELECT COUNT(*) AS n FROM cms_page_sections").get().n,0);
     assert.equal(fx.objects.size,0);
   } finally { fx.db.close(); }
+});
+
+test("merchant can restore an earlier generated section revision privately without overwriting publication",async()=>{
+  const fx=fixture();
+  try {
+    const initial=await acceptGeneratedSection(fx.env,"shop","acct_alpha",{record:record("Original headline")});
+    assert.equal(initial.ok,true);
+    const admin=await getPageAdmin(fx.env,"shop");
+    const target=admin.page.sections.find((s)=>s.key===initial.section_key);
+    const edited=structuredClone(target.content);
+    edited.headline="Draft headline changed";
+    const saved=await updateSection(fx.env,"shop",initial.section_key,{content:edited,expected_version:target.version});
+    assert.equal(saved.ok,true);
+    const revisions=await listGeneratedRevisions(fx.env,"shop",initial.section_key,"acct_alpha");
+    assert.deepEqual(revisions.revisions.map((r)=>r.number),[2,1]);
+    const denied=await listGeneratedRevisions(fx.env,"shop",initial.section_key,"acct_other");
+    assert.equal(denied.status,404);
+    const stale=await restoreGeneratedRevision(fx.env,"shop",initial.section_key,"acct_alpha",{revisionNumber:1,expectedVersion:target.version});
+    assert.equal(stale.status,409);
+    const restored=await restoreGeneratedRevision(fx.env,"shop",initial.section_key,"acct_alpha",
+      {revisionNumber:1,expectedVersion:saved.version});
+    assert.equal(restored.ok,true,JSON.stringify(restored));
+    assert.equal(restored.published,false);
+    assert.equal(restored.revision_number,3);
+    const after=await getPageAdmin(fx.env,"shop");
+    assert.equal(after.page.sections.find((s)=>s.key===initial.section_key).content.headline,"Original headline");
+    assert.equal(fx.db.prepare("SELECT content_version FROM cms_page_sections").get().content_version,restored.version);
+    assert.equal(fx.db.prepare("SELECT COUNT(*) AS n FROM cms_revisions").get().n,3);
+    assert.equal(fx.cache.size,0,"Rollback must not publish");
+  } finally {fx.db.close();}
 });
