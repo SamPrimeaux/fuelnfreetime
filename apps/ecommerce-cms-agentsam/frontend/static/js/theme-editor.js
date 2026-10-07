@@ -60,6 +60,10 @@
   const resourceCache = Object.create(null);
   let dirty = false;
   const dirtySections = new Set();
+  const dirtyVersions = new Map();
+  let autosaveTimer = null;
+  let saveInFlight = null;
+  let autosaveFailed = false;
   let device = localStorage.getItem('fnf-theme-editor-device') || 'desktop';
   let showOutlines = localStorage.getItem('fnf-theme-editor-outlines') !== '0';
   let autoPreview = localStorage.getItem('fnf-theme-editor-auto-preview') !== '0';
@@ -365,9 +369,7 @@
       next = Boolean(value);
     }
     cmsSetPath(section.content, field.key, next);
-    dirtySections.add(dirtyRef(section));
-    if (sectionOwner(section) === 'site') siteDraftTouched = true;
-    setDirty(true);
+    markSectionDirty(section);
     scheduleLocalPreview();
     byId('te-selected-path').textContent = (sectionOwner(section) === 'site' ? 'Global' : slug) + ' / ' + section.key + ' / ' + field.key;
   }
@@ -384,13 +386,32 @@
     el.className = 'te-save-state' + (state ? ' is-' + state : '');
   }
 
+  function schedulePrivateAutosave() {
+    clearTimeout(autosaveTimer);
+    if (!dirty || liveUnimported || autosaveFailed) return;
+    autosaveTimer = setTimeout(function() {
+      void saveDraft({ automatic: true });
+    }, 900);
+  }
+
+  function markSectionDirty(section) {
+    const ref = dirtyRef(section);
+    dirtySections.add(ref);
+    dirtyVersions.set(ref, (dirtyVersions.get(ref) || 0) + 1);
+    if (sectionOwner(section) === 'site') siteDraftTouched = true;
+    autosaveFailed = false;
+    setDirty(true);
+  }
+
   function setDirty(value) {
     dirty = Boolean(value);
     const save = byId('te-save');
     if (save) save.disabled = liveUnimported || !dirty;
     if (liveUnimported) setSaveState('Live preview · no draft changes');
     else if (dirty) setSaveState('Unpublished changes', 'dirty');
-    else setSaveState(pageData && pageData.status === 'published' ? 'Published' : 'Draft saved', 'saved');
+    else setSaveState(pageData && pageData.status === 'published' ? 'Published' : 'Saved privately', 'saved');
+    if (dirty) schedulePrivateAutosave();
+    else clearTimeout(autosaveTimer);
   }
 
   function renderPageOptions(query) {
@@ -1143,9 +1164,7 @@
     if (!section) return;
     cmsSetPath(section.content, fieldKey, url);
     activeFieldKey = fieldKey;
-    setDirty(true);
-    dirtySections.add(dirtyRef(section));
-    if (sectionOwner(section) === 'site') siteDraftTouched = true;
+    markSectionDirty(section);
     renderInspector();
     scheduleLocalPreview();
     closeMediaPicker();
@@ -1746,6 +1765,8 @@
       renderTree();
       renderInspector();
       dirtySections.clear();
+      dirtyVersions.clear();
+      autosaveFailed = false;
       setDirty(false);
       refreshPreview();
     } catch (error) {
@@ -1755,50 +1776,93 @@
     }
   }
 
-  async function saveDraft() {
-    if (generationLock.locked()) { setNote('Wait for generation to finish.'); return false; }
-    if (liveUnimported) {
-      setNote('This is a read-only live preview. Choose Start editing page to create a CMS draft before making changes.');
+  // Serialize writes and snapshot each section before awaiting the network. A later
+  // keystroke must remain dirty even if an earlier autosave finishes afterward.
+  async function saveDraft({ automatic = false } = {}) {
+    if (saveInFlight) {
+      const previousSaved = await saveInFlight;
+      if (!previousSaved) return false;
+      return dirty ? saveDraft({ automatic }) : true;
+    }
+    if (generationLock.locked()) {
+      if (!automatic) setNote('Wait for generation to finish.');
       return false;
     }
-    // A Save with no edited fields must never write or alter a section.
+    if (liveUnimported) {
+      if (!automatic) setNote('This live page needs a private working revision before editing.', 'error');
+      return false;
+    }
+    clearTimeout(autosaveTimer);
     const refs = Array.from(dirtySections);
     if (!dirty || !refs.length) return true;
+    const snapshots = refs.map(function(ref) {
+      const parsed = parseDirtyRef(ref);
+      const section = findSection(parsed.key, parsed.owner);
+      return section ? {
+        ref, owner: parsed.owner, key: section.key,
+        content: structuredClone(section.content),
+        version: Number(section.version || 0),
+        editVersion: dirtyVersions.get(ref)
+      } : { ref, missing: true };
+    });
     const button = byId('te-save');
-    button.disabled = true;
-    setNote('Saving…');
-    try {
-      for (const ref of refs) {
-        const parsed = parseDirtyRef(ref);
-        const section = findSection(parsed.key, parsed.owner);
-        if (!section) continue;
-        const result = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(parsed.owner) + '/sections/' + encodeURIComponent(section.key), {
-          method: 'PUT',
-          body: JSON.stringify({
-            content: section.content,
-            expected_version: Number(section.version || 0)
-          })
-        });
-        section.status = 'draft';
-        section.version = result.version ?? section.version;
-        section.updated_at = result.updated_at || section.updated_at;
-        if (parsed.owner === 'site') siteData.status = 'draft';
-        else pageData.status = 'draft';
+    if (button) button.disabled = true;
+    setSaveState('Saving…');
+    if (!automatic) setNote('Saving…');
+    const operation = (async function() {
+      try {
+        for (const item of snapshots) {
+          if (item.missing) {
+            dirtySections.delete(item.ref);
+            dirtyVersions.delete(item.ref);
+            continue;
+          }
+          const result = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(item.owner) + '/sections/' + encodeURIComponent(item.key), {
+            method: 'PUT',
+            body: JSON.stringify({
+              content: item.content,
+              expected_version: item.version
+            })
+          });
+          const section = findSection(item.key, item.owner);
+          if (section) {
+            section.status = 'draft';
+            section.version = result.version ?? section.version;
+            section.updated_at = result.updated_at || section.updated_at;
+          }
+          if (item.owner === 'site') siteData.status = 'draft';
+          else pageData.status = 'draft';
+          // Do not clear a newer edit made while the request was in flight.
+          if (dirtyVersions.get(item.ref) === item.editVersion) {
+            dirtySections.delete(item.ref);
+            dirtyVersions.delete(item.ref);
+          }
+        }
+        autosaveFailed = false;
+        setDirty(dirtySections.size > 0);
+        if (!automatic) setNote('Draft saved privately.', 'success');
+        if (!dirty) {
+          renderTree();
+          if (!automatic) renderInspector();
+          schedulePreview();
+        }
+        return true;
+      } catch (error) {
+        autosaveFailed = true;
+        const conflict = error?.status === 409;
+        setNote(conflict ? 'This content changed in another tab. Your edits are still here; reload only after preserving them.' : (error.message || String(error)), 'error');
+        setSaveState(conflict ? 'Save conflict' : 'Save failed — Retry', 'error');
+        return false;
+      } finally {
+        if (button) button.disabled = !dirty;
       }
-      dirtySections.clear();
-      setDirty(false);
-      setNote(refs.length > 1 ? refs.length + ' section drafts saved.' : 'Draft saved.', 'success');
-      renderTree();
-      renderInspector();
-      schedulePreview();
-      return true;
-    } catch (error) {
-      const conflict = error?.status === 409;
-      setNote(conflict ? 'This content changed in another tab. Reload before saving.' : (error.message || String(error)), 'error');
-      setSaveState(conflict ? 'Reload required' : 'Save failed', 'error');
-      return false;
+    })();
+    saveInFlight = operation;
+    try {
+      return await operation;
     } finally {
-      button.disabled = false;
+      saveInFlight = null;
+      if (dirty && !autosaveFailed) schedulePrivateAutosave();
     }
   }
 
@@ -1816,7 +1880,8 @@
     button.disabled = true;
     button.textContent = 'Publishing…';
     try {
-      if (dirty && !(await saveDraft())) throw new Error('Could not save draft before publishing');
+      if ((dirty || saveInFlight) && !(await saveDraft())) throw new Error('Could not save draft before publishing');
+      if (dirty) throw new Error('New edits are still pending; publish again after they are saved.');
       let siteResult = null;
       if (!host && siteDraftTouched) {
         siteResult = await adminFetch('/api/admin/cms/pages/site/publish', { method: 'POST' });
@@ -2036,7 +2101,10 @@
       closePageMenu();
       return;
     }
-    if (dirty && !confirm('You have unsaved changes in this section. Switch pages anyway?')) return;
+    if ((dirty || saveInFlight) && !(await saveDraft())) {
+      setNote('Save failed. Stay on this page so your edits are not lost.', 'error');
+      return;
+    }
     slug = nextSlug;
     activeSectionOwner = slug;
     activeSectionKey = null;
