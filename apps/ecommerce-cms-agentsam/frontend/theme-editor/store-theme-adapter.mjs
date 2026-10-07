@@ -135,6 +135,26 @@ export function createStoreThemeWorkspaceAdapter(options = {}) {
     listPages,
     getPage,
 
+    async getThemeIdentity() {
+      try {
+        const data = await responseJson(await fetch(`${base}`, { credentials: "include" }));
+        const themeRecord = data.theme || data;
+        if (themeRecord && (themeRecord.name || themeRecord.state || themeRecord.status)) {
+          return {
+            name: themeRecord.name || theme,
+            status: themeRecord.state || themeRecord.status || "",
+          };
+        }
+      } catch {}
+      const store = await responseJson(await fetch("/api/admin/store", { credentials: "include" }));
+      const active = store.active_theme || null;
+      return {
+        name: active?.name || theme,
+        status: active?.state || active?.status || "",
+      };
+    },
+
+
     async saveDraft(slug, sectionKey, content) {
       const currentVersion = versions.get(slug) || 1;
       const data = await responseJson(await fetch(`${base}/pages/${encodeURIComponent(slug)}`, {

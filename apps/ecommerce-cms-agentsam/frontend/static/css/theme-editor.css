@@ -1582,3 +1582,77 @@
 .te-agent-open { min-height:32px; border:1px solid #d6d0e8; background:#f4f0ff; color:#55409d; border-radius:9px; padding:5px 9px; cursor:pointer; font:700 10px/1.2 system-ui; white-space:nowrap; }
 .te-agent-open:hover,.te-agent-open:focus-visible { background:#ebe3ff; outline:2px solid #ab95df; outline-offset:1px; }
 @media(max-width:900px) { .te-inspector-head { height:auto; min-height:51px; flex-wrap:wrap; padding-block:7px; } }
+
+
+/* Slice A: dedicated editor shell + one drawer */
+body.shell-mode-theme-editor .console-topbar,
+body.shell-mode-theme-editor .console-sidenav.admin-sidebar,
+body.shell-mode-theme-editor .console-nav-ghost-toggle {
+  display: none !important;
+}
+body.shell-mode-theme-editor .console-body,
+body.shell-mode-theme-editor .console-workspace,
+body.shell-mode-theme-editor .console-main {
+  min-height: 0;
+  height: 100%;
+}
+body.shell-mode-theme-editor .theme-studio {
+  height: 100dvh;
+}
+.te-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+}
+.te-mode-btn.is-active {
+  background: #eceae4;
+}
+.te-theme-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  user-select: none;
+}
+.te-theme-status {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #eceae4;
+}
+.te-theme-status[data-status="draft"] { background: #f3ead8; }
+.te-theme-status[data-status="active"],
+.te-theme-status[data-status="wired"],
+.te-theme-status[data-status="published"] { background: #e5f0e6; }
+.theme-studio-tree {
+  width: 320px;
+  min-width: 280px;
+  max-width: 360px;
+}
+.theme-studio[data-editor-drawer="closed"] .theme-studio-workspace {
+  grid-template-columns: 0 minmax(0, 1fr) 328px;
+}
+.theme-studio[data-editor-drawer="closed"] .theme-studio-tree {
+  display: none;
+}
+.te-drawer-panel[hidden] { display: none; }
+.te-theme-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 8px 16px;
+}
+@media (max-width: 1024px) {
+  .theme-studio-tree {
+    width: min(320px, 86vw);
+  }
+}

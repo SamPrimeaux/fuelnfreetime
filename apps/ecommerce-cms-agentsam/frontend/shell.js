@@ -92,6 +92,16 @@ const NAV = {
 // expand/collapse the way the old per-render DOM-class toggling did.
 const navToggleState = new Map();
 
+const SHELL_MODES = {
+  admin: { id: "admin", hideAdminNav: false },
+  "theme-editor": { id: "theme-editor", hideAdminNav: true },
+};
+
+function resolveShellMode(options = {}) {
+  const requested = options.shellMode;
+  return (requested && SHELL_MODES[requested]) || SHELL_MODES.admin;
+}
+
 function ensureConsoleAssets() {
   document.body.classList.add("console-theme");
   if (!document.getElementById("console-css")) {
@@ -446,9 +456,12 @@ function stabilizeShellDrawers() {
 
 function renderShell(activeHref, mainHtml, options = {}) {
   const { fullBleed = false, onReady, includeMobileDrawer = false } = options;
+  const shellMode = resolveShellMode(options);
   ensureConsoleAssets();
   ensureConsoleLayout();
 
+  document.body.dataset.shellMode = shellMode.id;
+  document.body.classList.toggle("shell-mode-theme-editor", shellMode.id === "theme-editor");
   document.body.classList.remove("agentsam-open", "admin-nav-open", "console-body-bleed", "admin-body-bleed");
   document.body.classList.add("console-shell-loading");
 
@@ -470,8 +483,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
   const mobileDrawerTrigger = includeMobileDrawer ? `<button type="button" class="console-nav-ghost-toggle admin-menu-toggle" id="admin-menu-toggle" aria-label="Show sidebar" title="Show sidebar" aria-expanded="false" aria-controls="admin-drawer">
           ${icon("textAlignStart", 21, "console-nav-ghost-icon")}
         </button>` : "";
-  document.getElementById("console-app").innerHTML = `
-    <div class="console-shell admin-shell" data-nav-packages="persistent-frosted-rail${includeMobileDrawer ? " mobile-glass-drawer" : ""}">
+  const adminChrome = shellMode.hideAdminNav ? "" : `
       <header class="console-topbar">
         <div class="console-topbar-spacer" aria-hidden="true"></div>
         <div class="console-search-wrap">
@@ -491,13 +503,15 @@ function renderShell(activeHref, mainHtml, options = {}) {
           </button>
         </div>
       </header>
+`;
+  document.getElementById("console-app").innerHTML = `
+    <div class="console-shell admin-shell${shellMode.hideAdminNav ? " is-editor-mode" : ""}" data-shell-mode="${shellMode.id}" data-nav-packages="persistent-frosted-rail${includeMobileDrawer ? " mobile-glass-drawer" : ""}">
+      ${adminChrome}
       <div class="console-body">
-        <aside class="console-sidenav admin-sidebar" data-nav-package="persistent-frosted-rail">${renderSideNav(activeHref)}</aside>
-        ${mobileDrawerTrigger}
-        <button type="button" class="console-nav-ghost-toggle console-nav-ghost-toggle--persistent" data-console-nav-toggle aria-label="Show sidebar" title="Show sidebar">
-          ${icon("textAlignStart", 21, "console-nav-ghost-icon")}
-        </button>
-        ${mobileDrawerMarkup}
+        ${shellMode.hideAdminNav ? "" : `<aside class="console-sidenav admin-sidebar" data-nav-package="persistent-frosted-rail">${renderSideNav(activeHref)}</aside>`}
+        ${shellMode.hideAdminNav ? "" : mobileDrawerTrigger}
+        ${shellMode.hideAdminNav ? "" : `<button type="button" class="console-nav-ghost-toggle console-nav-ghost-toggle--persistent" data-console-nav-toggle aria-label="Show sidebar" title="Show sidebar">${icon("textAlignStart", 21, "console-nav-ghost-icon")}</button>`}
+        ${shellMode.hideAdminNav ? "" : mobileDrawerMarkup}
         <div class="console-workspace">
           <main class="${mainClass}">${mainHtml}</main>
           <aside id="agentsam-dock" class="agentsam-dock" aria-hidden="true"></aside>
@@ -526,9 +540,9 @@ function renderShell(activeHref, mainHtml, options = {}) {
   // bindConsoleGlobalHandlers() now handles every [data-toggle] click for
   // the life of the page, across any number of innerHTML replacements.
 
-  if (window.__shellUser) hydrateShellProfile(window.__shellUser);
+  if (!shellMode.hideAdminNav && window.__shellUser) hydrateShellProfile(window.__shellUser);
 
-  loadShellUser()
+  if (!shellMode.hideAdminNav) loadShellUser()
     .then((d) => {
       if (d) {
         hydrateShellNav(d, activeHref);
@@ -545,7 +559,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
       }
     });
 
-  initPersistentNav();
+  if (!shellMode.hideAdminNav) initPersistentNav();
   if (includeMobileDrawer) initMobileNav();
   window.initEcommerceInspector?.();
   if (!window.initEcommerceInspector && !document.getElementById("ecommerce-inspector-script")) {
@@ -774,3 +788,4 @@ function initMobileNav() {
 window.hydrateShellProfile = hydrateShellProfile;
 window.hydrateShellNav = hydrateShellNav;
 window.loadShellUser = loadShellUser;
+window.AgentSamShell = { modes: SHELL_MODES, resolveShellMode };
