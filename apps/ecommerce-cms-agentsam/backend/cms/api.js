@@ -570,6 +570,73 @@ export async function updatePageMeta(env, slug, body) {
   return { ok: true };
 }
 
+async function syncGeneratedRevision(env, slug, key, content, meta, metadata = {}) {
+  const instance=await env.DB.prepare(`SELECT s.id,s.account_id FROM cms_page_sections s
+    JOIN cms_pages p ON p.id=s.page_id AND p.account_id=s.account_id
+    WHERE p.slug=? AND s.section_key=?`).bind(slug,key).first();
+  if (!instance) throw new Error("Canonical generated section is missing");
+  await env.DB.prepare(`UPDATE cms_page_sections SET status='draft',content_r2_key=?,
+    content_version=?,content_hash=?,updated_at=datetime('now') WHERE id=? AND account_id=?`)
+    .bind(meta.key,meta.version,meta.content_hash,instance.id,instance.account_id).run();
+  const previous=await env.DB.prepare(`SELECT COALESCE(MAX(revision_number),0) AS n FROM cms_revisions
+    WHERE account_id=? AND entity_type='section' AND entity_id=?`)
+    .bind(instance.account_id,instance.id).first();
+  const next=Number(previous?.n||0)+1;
+  await env.DB.prepare(`INSERT INTO cms_revisions
+    (account_id,entity_type,entity_id,revision_number,revision_kind,content_r2_key,content_hash,snapshot_json,metadata_json)
+    VALUES (?,'section',? ,?,'draft',?,?,?,?)`)
+    .bind(instance.account_id,instance.id,next,meta.key,meta.content_hash,
+      JSON.stringify({content,artifactId:content.__editor.artifactId,definitionKey:content.__editor.definitionKey}),
+      JSON.stringify({source:"agentsam",...metadata})).run();
+  return next;
+}
+
+export async function listGeneratedRevisions(env,slug,key,accountId) {
+  if (!accountId) return {error:"Account required",status:403};
+  const instance=await env.DB.prepare(`SELECT s.id FROM cms_page_sections s JOIN cms_pages p ON p.id=s.page_id
+    WHERE s.account_id=? AND p.account_id=? AND p.slug=? AND s.section_key=?`)
+    .bind(accountId,accountId,slug,key).first();
+  if (!instance) return {error:"Generated section not found",status:404};
+  const response=await env.DB.prepare(`SELECT revision_number,content_hash,created_at,metadata_json FROM cms_revisions
+    WHERE account_id=? AND entity_type='section' AND entity_id=? ORDER BY revision_number DESC LIMIT 50`)
+    .bind(accountId,instance.id).all();
+  return {ok:true,revisions:(response.results||[]).map((revision)=>({
+    number:revision.revision_number,createdAt:revision.created_at,hash:revision.content_hash,
+    metadata:JSON.parse(revision.metadata_json||"{}"),
+  }))};
+}
+
+export async function restoreGeneratedRevision(env,slug,key,accountId,body={}) {
+  if (!accountId) return {error:"Account required",status:403};
+  const number=Number(body.revisionNumber);
+  if (!Number.isInteger(number)||number<1) return {error:"Invalid revision number",status:422};
+  const target=await env.DB.prepare(`SELECT s.id,s.legacy_section_id FROM cms_page_sections s
+    JOIN cms_pages p ON p.id=s.page_id AND p.account_id=s.account_id
+    WHERE s.account_id=? AND p.slug=? AND s.section_key=?`)
+    .bind(accountId,slug,key).first();
+  if (!target) return {error:"Generated section not found",status:404};
+  const row=await env.DB.prepare(`SELECT ps.content_version,ps.sort_order,ps.status,ps.page_id FROM page_sections ps
+    JOIN pages p ON p.id=ps.page_id WHERE ps.id=? AND p.slug=?`)
+    .bind(target.legacy_section_id,slug).first();
+  if (!row||row.status==="removed") return {error:"Section not editable",status:409};
+  if (Number(body.expectedVersion)!==Number(row.content_version)) return {error:"Draft changed since revision load",status:409};
+  const old=await env.DB.prepare(`SELECT snapshot_json FROM cms_revisions WHERE account_id=?
+    AND entity_type='section' AND entity_id=? AND revision_number=? LIMIT 1`)
+    .bind(accountId,target.id,number).first();
+  if (!old) return {error:"Revision not found",status:404};
+  let saved;
+  try {saved=JSON.parse(old.snapshot_json);} catch {return {error:"Invalid revision snapshot",status:409};}
+  if (!saved.content?.__editor?.generated || !saved.artifactId) return {error:"Not a generated revision",status:409};
+  const artifact=await env.DB.prepare("SELECT id FROM cms_artifacts WHERE account_id=? AND id=? AND status='ready'")
+    .bind(accountId,saved.artifactId).first();
+  if (!artifact) return {error:"Revision artifact unavailable",status:409};
+  const meta=await persistSectionDraft(env,slug,row.page_id,key,saved.content,row.sort_order,{expectedVersion:row.content_version});
+  if (meta.error) return meta;
+  const revision=await syncGeneratedRevision(env,slug,key,saved.content,meta,{restoredFrom:number});
+  await markPageDraft(env,row.page_id,slug);
+  return {ok:true,published:false,section_key:key,version:meta.version,revision_number:revision};
+}
+
 export async function updateSection(env, slug, sectionKey, body) {
   let page = await loadPageRow(env, slug);
   let seededNow = false;
@@ -585,12 +652,34 @@ export async function updateSection(env, slug, sectionKey, body) {
     return { error: "content object required", status: 400 };
   }
 
+  // Generated code/semantic type cannot be changed by ordinary inspector autosave.
+  let generated = false;
+  if (content.__editor?.generated) {
+    const existing = await env.DB.prepare(`SELECT content_r2_key FROM page_sections
+      WHERE page_id=? AND section_key=? AND status!='removed'`).bind(page.id,sectionKey).first();
+    if (!existing) return {error:"Generated section not found",status:404};
+    const original=await readSectionContent(env,slug,sectionKey,{key:existing.content_r2_key});
+    const previous=original?.content;
+    if (!previous?.__editor?.generated ||
+      previous.__editor.artifactId!==content.__editor.artifactId ||
+      previous.__editor.definitionKey!==content.__editor.definitionKey ||
+      previous.__editor.templateKey!==content.__editor.templateKey) {
+      return {error:"Generated code is immutable in field editor",status:409};
+    }
+    const keys=Object.keys(previous).filter((key)=>key!=="__editor");
+    if (Object.keys(content).filter((key)=>key!=="__editor").some((key)=>!keys.includes(key)) ||
+      keys.some((key)=>typeof content[key]!==typeof previous[key])) {
+      return {error:"Generated settings must preserve their schema",status:422};
+    }
+    generated=true;
+  }
   const meta = await persistSectionDraft(env, slug, page.id, sectionKey, content, 0, {
     // A registry-only page reports version 0 to the browser. Seeding creates v1 inside
     // this request, so the first real user save must not conflict with that initialization.
     expectedVersion: seededNow ? null : body?.expected_version,
   });
   if (meta.error) return meta;
+  if (generated) await syncGeneratedRevision(env,slug,sectionKey,content,meta);
 
   await env.DB.prepare(`UPDATE pages SET status = 'draft', updated_at = datetime('now') WHERE id = ?`)
     .bind(page.id)
