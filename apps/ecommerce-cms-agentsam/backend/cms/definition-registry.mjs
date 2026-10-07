@@ -86,6 +86,26 @@ export function attachCmsDefinitions(registry, definitions) {
     }
   }
   for (const page of Object.values(pages)) {
+    // Generated definitions are installable only when a validated, ready R2
+    // implementation exists. They share the same typed inspector contract.
+    // The editor's native catalog remains restricted to known insertable
+    // templates; a generated definition is installed via explicit acceptance.
+    for (const definition of indexed.values()) {
+      if (definition.origin !== "generated" || !definition.artifact || page.sections?.[definition.key]) continue;
+      const fields = Object.entries(definition.fields || {}).map(([key, spec]) => ({
+        key, label: String(spec?.label || key), type: spec?.type || "text",
+      }));
+      if (!fields.length) continue;
+      page.sections[definition.key] = {
+        sortOrder: 1000,
+        label: definition.label,
+        icon: "section",
+        capabilities: { edit:true,media:true,settings:true,reorder:true,duplicate:true,remove:true,blocks:false },
+        fields, blocks:[],settings:[],guardrails:{ allowRawCss:false,allowRawHtml:false },
+        definitionKey:definition.key, definitionVersion:definition.version,
+        definitionOrigin:"generated", definitionId:definition.id,
+      };
+    }
     for (const [key, section] of Object.entries(page.sections || {})) {
       const definition = indexed.get(key);
       if (!definition) continue;
