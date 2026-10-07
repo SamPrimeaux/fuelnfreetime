@@ -54,6 +54,11 @@ const probe = "<script>setTimeout(function(){" +
  "before.toolbar.settingsOpened=!document.querySelector('[data-drawer-panel=\\\"theme-settings\\\"]').hidden;" +
  "before.toolbar.options=document.querySelectorAll('[data-theme-preview]').length;" +
  "document.querySelector('[data-drawer-mode=\\\"sections\\\"]')?.click();" +
+ "document.getElementById('te-add-section')?.click();" +
+ "var catalog=document.getElementById('te-section-menu');" +
+ "before.catalog={modal:!!catalog?.open,cards:catalog?.querySelectorAll('[data-catalog-template]').length||0};" +
+ "document.getElementById('te-section-cancel')?.click();" +
+ "before.catalog.closed=!catalog?.open;" +
  "if(window.innerWidth>900){" +
  "var blockButton=document.querySelector('[data-select-block=card3][data-block-section=collections]');" +
  "if(blockButton){" +
@@ -150,6 +155,9 @@ assert.equal(result.before.toolbar.pageVisible,true);
 assert.equal(result.before.toolbar.settingsOpened,true);
 assert.equal(result.before.toolbar.options,3);
 assert.equal(result.before.toolbar.noOverflow,true);
+assert.equal(result.before.catalog.modal,true,"Section picker should open in a native dialog");
+assert.ok(result.before.catalog.cards>0,"Section picker must show registered choices");
+assert.equal(result.before.catalog.closed,true,"Section picker must close without losing the editor");
 assert.equal(results.get(1000).before.toolbar.noOverflow,true,"Mid-size desktop should fit all three editor panes");
 assert.ok(result.before.blockInspector,"The real collection card must remain selectable");
 assert.match(result.before.blockInspector.title,/Collection card/i);
@@ -190,6 +198,8 @@ for(const width of [744,390]){
  assert.equal(mobile.backToPreview,true);
  assert.equal(mobile.treeHasAdd,true);
  assert.equal(mobile.noOverflow,true, "Editor must have no horizontal page overflow");
+ assert.equal(results.get(width).before.catalog.modal,true,"Mobile catalog should open in a modal");
+ assert.equal(results.get(width).before.catalog.closed,true,"Mobile catalog should close normally");
  assert.equal(results.get(width).before.toolbar.legacyTabs,0);
  assert.equal(results.get(width).before.toolbar.pageVisible,true);
  assert.equal(results.get(width).before.toolbar.settingsOpened,true);
