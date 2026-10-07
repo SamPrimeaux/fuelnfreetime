@@ -1108,6 +1108,13 @@ export async function publishPage(env, slug) {
     page = await loadPageRow(env, slug);
   }
 
+  // A missing or corrupted immutable generated implementation must block
+  // publication before mutating D1 status or the last public R2 snapshot.
+  const proposed = await attachGeneratedImplementations(env,slug,await loadSectionsFromDb(env,slug,page.id));
+  if (proposed.some((section)=>section.status!=="removed" &&
+      section.content?.__editor?.generated && !section.implementation)) {
+    return {error:"Generated section implementation is not verified in R2",status:409};
+  }
   await publishSectionsToR2(env, slug, page.id);
 
   await env.DB.prepare(
@@ -1352,6 +1359,19 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
   if (path === "/api/admin/cms/warm" && method === "POST") {
     const { warmAllCmsPages } = await import("./deploy.js");
     return json(await warmAllCmsPages(env));
+  }
+
+  const historyMatch = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections\/([a-z0-9-]+)\/generated-revisions$/);
+  if (historyMatch && method === "GET") {
+    const result=await listGeneratedRevisions(env,historyMatch[1],historyMatch[2],context.accountId);
+    return json(result,{status:result.status||200});
+  }
+  const restoreMatch = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections\/([a-z0-9-]+)\/generated-restore$/);
+  if (restoreMatch && method === "POST") {
+    let body;
+    try {body=await request.json();} catch {return json({error:"Invalid JSON"},{status:400});}
+    const result=await restoreGeneratedRevision(env,restoreMatch[1],restoreMatch[2],context.accountId,body);
+    return json(result,{status:result.status||200});
   }
 
   const generatedMatch = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/generated-accept$/);
