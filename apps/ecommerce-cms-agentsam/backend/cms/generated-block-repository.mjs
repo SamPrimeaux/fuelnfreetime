@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { lintGeneratedBlock, nsForms, resolveUidToken } from "../../frontend/static/js/generation-namespace.mjs";
 
 const TABLES = {
@@ -120,9 +120,14 @@ export function createGeneratedBlockRepository(sql, objects, options = {}) {
       if (!/^[a-z][a-z0-9-]{1,63}$/.test(semanticType)) {
         return { ok: false, status: 422, error: "invalid generated semantic type", written: false };
       }
+      const blockId = input.blockId || ("cmsb_" + randomUUID().replace(/-/g, "").slice(0, 16));
       if (canonical) {
-        const forms = nsForms(input.blockKey || input.blockId || "block", picked.namespace);
-        const resolved = { html: resolveUidToken(canonical.html || "", forms.blockId, picked.namespace), css: resolveUidToken(canonical.css || "", forms.blockId, picked.namespace), js: resolveUidToken(canonical.js || "", forms.blockId, picked.namespace) };
+        const forms = nsForms(blockId, picked.namespace);
+        const resolved = {
+          html: resolveUidToken(canonical.html || "", blockId, picked.namespace),
+          css: resolveUidToken(canonical.css || "", blockId, picked.namespace),
+          js: resolveUidToken(canonical.js || "", blockId, picked.namespace),
+        };
         const lint = lintGeneratedBlock(resolved, forms);
         if (!lint.ok) return { ok: false, status: 422, error: lint.violations.join("; "), written: false };
       }
@@ -134,16 +139,25 @@ export function createGeneratedBlockRepository(sql, objects, options = {}) {
       const hash16 = digest.slice(0, 16);
       const key = "cms/artifacts/block/" + hash16 + "/manifest.json";
       await objects.put(key, JSON.stringify(canonical || input.manifest));
+      const supplied = input.provenance || {};
+      const promptHash = supplied.prompt_hash || supplied.promptHash || digest.slice(0, 8);
+      const createdAt = supplied.created_at || supplied.createdAt || new Date().toISOString();
       const provenance = {
-        generator: (input.provenance && input.provenance.generator) || "agentsam",
+        generator: supplied.generator || "agentsam",
         namespace: picked.namespace,
+        generation_id: supplied.generation_id || supplied.generationId || "",
+        source_agent: supplied.source_agent || supplied.sourceAgent || "agentsam",
         capability: picked.capability,
-        provider: picked.provider,
-        model: picked.model,
-        promptHash: (input.provenance && input.provenance.promptHash) || digest.slice(0, 8),
-        createdAt: new Date().toISOString(),
+        provider: supplied.provider || picked.provider,
+        model: supplied.model || picked.model,
+        prompt_hash: promptHash,
+        source_ref: supplied.source_ref || supplied.sourceRef || "",
+        normalized_by: supplied.normalized_by || supplied.normalizedBy || "agentsam.theme-authoring.v1",
+        created_at: createdAt,
+        // Compatibility aliases for older receipts/readers.
+        promptHash,
+        createdAt,
       };
-      const blockId = input.blockId || ("cmsb_" + hash16);
       try {
         await sql.batch([
           { sql: "INSERT INTO " + TABLES.artifacts + " (id, account_id, artifact_key, artifact_type, version, r2_prefix, manifest_r2_key, content_hash, content_mode, status, source_kind, source_ref, metadata_json) VALUES (?, ?, ?, 'embed', '1', ?, ?, ?, 'component', 'ready', 'generator', ?, ?) ON CONFLICT(account_id, artifact_key, version) DO UPDATE SET manifest_r2_key = excluded.manifest_r2_key, content_hash = excluded.content_hash, source_ref = excluded.source_ref, metadata_json = excluded.metadata_json", params: ["cmsa_" + hash16, input.accountId, "block/" + hash16, "cms/artifacts/block/" + hash16 + "/", key, digest, picked.capability, JSON.stringify(provenance)] },
@@ -212,11 +226,11 @@ export function createGeneratedBlockRepository(sql, objects, options = {}) {
         const raw = await objects.get(artifact.manifest_r2_key);
         const canonical = JSON.parse(raw);
         const resolved = {
-          html: resolveUidToken(canonical.html || "", row.block_key),
-          css: resolveUidToken(canonical.css || "", row.block_key),
-          js: resolveUidToken(canonical.js || "", row.block_key),
+          html: resolveUidToken(canonical.html || "", row.id),
+          css: resolveUidToken(canonical.css || "", row.id),
+          js: resolveUidToken(canonical.js || "", row.id),
         };
-        const lint = lintGeneratedBlock(resolved, nsForms(row.block_key));
+        const lint = lintGeneratedBlock(resolved, nsForms(row.id));
         if (!lint.ok) return { ok: false, error: lint.violations.join("; ") };
         output.push(resolved);
       }

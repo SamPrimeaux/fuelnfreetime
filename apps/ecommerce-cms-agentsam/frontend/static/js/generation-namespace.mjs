@@ -19,18 +19,22 @@ export function sanitizeBlockId(blockId) {
   return raw.slice(0, BLOCK_ID_MAX).replace(/-$/g, "") || "block";
 }
 
-export function nsForms(blockId, namespace = DEFAULT_NAMESPACE) {
+export function nsForms(instanceId, namespace = DEFAULT_NAMESPACE) {
   const ns = sanitizeNamespace(namespace);
-  const id = sanitizeBlockId(blockId);
+  const id = sanitizeBlockId(instanceId);
   const js = ns + "_gen_" + id.replace(/-/g, "_");
   const css = ns + "-gen-" + id;
   return {
     namespace: ns,
+    instanceId: id,
+    // Compatibility alias for callers written before the placed-instance
+    // identity contract was made explicit.
     blockId: id,
     js,
     css,
     customElement: css,
     cssVarPrefix: "--" + css + "-",
+    settingVarPrefix: "--" + css + "-setting-",
     scope: '[data-agentsam-block="' + id + '"]',
     token: UID_TOKEN,
   };
@@ -89,12 +93,22 @@ function hashPrompt(prompt) {
 }
 
 export function provenanceRecord(input = {}) {
+  const promptHash = String(input.prompt_hash || input.promptHash || hashPrompt(input.prompt || ""));
+  const createdAt = input.created_at || input.createdAt || new Date().toISOString();
   return {
     generator: "agentsam",
     namespace: sanitizeNamespace(input.namespace || DEFAULT_NAMESPACE),
+    generation_id: String(input.generation_id || input.generationId || ""),
+    source_agent: String(input.source_agent || input.sourceAgent || "agentsam"),
+    provider: String(input.provider || ""),
     model: String(input.model || ""),
-    promptHash: hashPrompt(input.prompt || ""),
-    createdAt: input.createdAt || new Date().toISOString(),
+    prompt_hash: promptHash,
+    source_ref: String(input.source_ref || input.sourceRef || ""),
+    normalized_by: String(input.normalized_by || input.normalizedBy || "agentsam.theme-authoring.v1"),
+    created_at: createdAt,
+    // v1 compatibility aliases. New storage should use the snake_case fields above.
+    promptHash,
+    createdAt,
   };
 }
 
@@ -106,6 +120,61 @@ export function detectProvenance(code) {
 }
 
 const GLOBAL_SELECTOR = /(^|[,{]\s*)(body|html|header|footer|main|:root|\*)\b/;
+
+function matchingBrace(source, openIndex) {
+  let depth = 0;
+  for (let i = openIndex; i < source.length; i += 1) {
+    if (source[i] === "{") depth += 1;
+    if (source[i] === "}") {
+      depth -= 1;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
+export function lintScopedCss(css, forms) {
+  const violations = [];
+  const source = String(css || "").replace(/\/\*[\s\S]*?\*\//g, "");
+  const walk = function(body) {
+    let cursor = 0;
+    while (cursor < body.length) {
+      while (cursor < body.length && /[\s;]/.test(body[cursor])) cursor += 1;
+      if (cursor >= body.length) break;
+      const open = body.indexOf("{", cursor);
+      if (open === -1) {
+        if (body.slice(cursor).trim()) violations.push("malformed css rule");
+        break;
+      }
+      const close = matchingBrace(body, open);
+      if (close === -1) {
+        violations.push("unclosed css rule");
+        break;
+      }
+      const prelude = body.slice(cursor, open).trim();
+      const inner = body.slice(open + 1, close);
+      if (!prelude) {
+        violations.push("empty css selector");
+      } else if (prelude.startsWith("@")) {
+        const keyframes = prelude.match(/^@(?:-webkit-)?keyframes\s+([a-zA-Z0-9_-]+)/);
+        if (keyframes) {
+          if (!keyframes[1].startsWith(forms.css)) violations.push("keyframes missing namespace: " + keyframes[1]);
+        } else if (/^@(media|supports|container|layer)\b/.test(prelude)) {
+          walk(inner);
+        } else {
+          violations.push("unsupported at-rule: " + prelude.split(/\s+/)[0]);
+        }
+      } else {
+        prelude.split(",").map((selector) => selector.trim()).filter(Boolean).forEach((selector) => {
+          if (!selector.startsWith(forms.scope)) violations.push("selector must be rooted in " + forms.scope + ": " + selector);
+        });
+      }
+      cursor = close + 1;
+    }
+  };
+  walk(source);
+  return violations;
+}
 
 export function lintGeneratedBlock(resolved, forms) {
   const violations = [];
@@ -134,7 +203,7 @@ export function lintGeneratedBlock(resolved, forms) {
     if (!name.startsWith(forms.cssVarPrefix.slice(0, -1)) && !name.startsWith(forms.cssVarPrefix)) violations.push("css var missing namespace: " + name);
   });
   if (GLOBAL_SELECTOR.test(css)) violations.push("bare global selector");
-  if (!css.includes(forms.scope) && css.trim()) violations.push("css must be scoped under " + forms.scope);
+  violations.push(...lintScopedCss(css, forms));
   const trimmedJs = js.trim();
   if (trimmedJs && !/^\(\s*function\b|^\(\s*\(\s*\)\s*=>|^export\b/.test(trimmedJs)) violations.push("js must be an IIFE or module");
   if (/(^|\n)\s*(var|let|const)\s+[A-Za-z_$]/.test(trimmedJs) && !/^\(/.test(trimmedJs) && !trimmedJs.startsWith("export")) violations.push("top-level binding");
@@ -161,12 +230,13 @@ export function lintGeneratedBlock(resolved, forms) {
 }
 
 export function acceptGeneratedBlock(canonical, options = {}) {
-  const forms = nsForms(options.blockId, options.namespace);
+  const instanceId = options.instanceId || options.blockId;
+  const forms = nsForms(instanceId, options.namespace);
   const resolve = function(code) {
     return {
-      html: resolveUidToken(code.html, options.blockId, options.namespace),
-      css: resolveUidToken(code.css, options.blockId, options.namespace),
-      js: resolveUidToken(code.js, options.blockId, options.namespace),
+      html: resolveUidToken(code.html, instanceId, options.namespace),
+      css: resolveUidToken(code.css, instanceId, options.namespace),
+      js: resolveUidToken(code.js, instanceId, options.namespace),
     };
   };
   let current = canonical;
@@ -187,7 +257,16 @@ export function acceptGeneratedBlock(canonical, options = {}) {
     canonical: current,
     resolved: resolve(current),
     forms,
-    provenance: provenanceRecord({ namespace: forms.namespace, model: options.model, prompt: options.prompt }),
+    provenance: provenanceRecord({
+      namespace: forms.namespace,
+      generation_id: options.generation_id || options.generationId || "",
+      source_agent: options.source_agent || options.sourceAgent || "agentsam",
+      provider: options.provider || "",
+      model: options.model || "",
+      prompt: options.prompt || "",
+      source_ref: options.source_ref || options.sourceRef || "",
+      normalized_by: options.normalized_by || options.normalizedBy || "agentsam.theme-authoring.v1",
+    }),
   };
 }
 
@@ -213,9 +292,9 @@ export async function persistScanReport(report, write) {
 export function gateGeneratedSave(body) {
   const blob = JSON.stringify(body || {});
   if (detectProvenance(blob) !== "agentsam") return { ok: true };
-  const blockId = (body && (body.blockId || body.block_key)) || "block";
+  const instanceId = (body && (body.instanceId || body.blockId || body.block_id || body.block_key)) || "block";
   const namespace = body && (body.namespace || (body.provenance && body.provenance.namespace));
-  const forms = nsForms(blockId, namespace);
+  const forms = nsForms(instanceId, namespace);
   const code = (body && (body.code || body.canonical)) || { html: blob, css: "", js: "" };
   const lint = lintGeneratedBlock({
     html: code.html || "",
