@@ -4,13 +4,13 @@
  */
 (function () {
   if (customElements.get("miniagentsam-codepreview")) return;
-  const TOKEN = /(<!--[\s\S]*?-->|\/\*.*?\*\/|\/\/.*$|\{\{.*?\}\}|\{%.*?%\}|<\/?[a-z][\w:-]*|[a-zA-Z_:][-\w:.]*(?=\s*=)|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|--?[a-zA-Z][\w-]*(?=\s*:))/g;
+  const TOKEN = /(<!--[\s\S]*?-->|\/\*.*?\*\/|\/\/.*$|\{\{.*?\}\}|\{%.*?%\}|<\/?[a-z][\w:-]*|[a-zA-Z_:][-\w:.]*(?=\s*=)|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|(?:--)?[a-zA-Z][\w-]*(?=\s*:))/g;
   function category(text, line, offset) {
     if (text.startsWith("<!--") || text.startsWith("/*") || text.startsWith("//")) return "comment";
     if (text.startsWith("{{") || text.startsWith("{%")) return "template";
     if (text.startsWith("<")) return "tag";
     if (/^["']/.test(text)) return "string";
-    if (/^--?[a-zA-Z]/.test(text) && /^\s*:/.test(line.slice(offset + text.length))) return "prop";
+    if (/^(?:--)?[a-zA-Z]/.test(text) && /^\s*:/.test(line.slice(offset + text.length))) return "prop";
     if (/=\s*/.test(line.slice(offset + text.length))) return "attr";
     return "";
   }
