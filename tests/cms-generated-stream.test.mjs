@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createGenerationSession } from "../apps/ecommerce-cms-agentsam/frontend/static/js/generation-stream.mjs";
 import { inspectGeneratedSection } from "../apps/ecommerce-cms-agentsam/backend/cms/generated-section.mjs";
-const code=['<<<definition>>>{"kind":"section","type":"featured-story","label":"Featured story"}',
+const code=['<<<definition>>>{"kind":"section","type":"featured-story","label":"Featured story","settings":{"headline":{"type":"text","label":"Headline"}}}',
   '<<<markup>>><section data-agentsam-block="__UID__" class="__UID__"><h2 data-cms="headline">Story</h2></section>',
   '<<<css>>>[data-agentsam-block="__UID__"] h2 { color: #fff; }',
   '<<<js>>>','<<<settings>>>headline=Story'].join("");

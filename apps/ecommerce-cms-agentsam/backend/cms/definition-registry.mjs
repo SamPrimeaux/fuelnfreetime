@@ -94,6 +94,12 @@ export function attachCmsDefinitions(registry, definitions) {
       if (definition.origin !== "generated" || !definition.artifact || page.sections?.[definition.key]) continue;
       const fields = Object.entries(definition.fields || {}).map(([key, spec]) => ({
         key, label: String(spec?.label || key), type: spec?.type || "text",
+        ...(spec?.min!=null?{min:spec.min}:{}),
+        ...(spec?.max!=null?{max:spec.max}:{}),
+        ...(spec?.step!=null?{step:spec.step}:{}),
+        ...(Array.isArray(spec?.options)?{options:spec.options}:{}),
+        ...(spec?.binding?{binding:spec.binding}:{}),
+        ...(spec?.description?{description:spec.description}:{}),
       }));
       if (!fields.length) continue;
       page.sections[definition.key] = {

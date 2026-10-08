@@ -97,7 +97,7 @@ export function provenanceRecord(input = {}) {
   const createdAt = input.created_at || input.createdAt || new Date().toISOString();
   return {
     generator: "agentsam",
-    namespace: sanitizeNamespace(input.namespace || DEFAULT_NAMESPACE),
+    namespace: DEFAULT_NAMESPACE,
     generation_id: String(input.generation_id || input.generationId || ""),
     source_agent: String(input.source_agent || input.sourceAgent || "agentsam"),
     provider: String(input.provider || ""),
@@ -158,7 +158,9 @@ export function lintScopedCss(css, forms) {
       } else if (prelude.startsWith("@")) {
         const keyframes = prelude.match(/^@(?:-webkit-)?keyframes\s+([a-zA-Z0-9_-]+)/);
         if (keyframes) {
-          if (!keyframes[1].startsWith(forms.css)) violations.push("keyframes missing namespace: " + keyframes[1]);
+          if (!keyframes[1].startsWith(forms.css + "-")) violations.push("keyframes missing namespace: " + keyframes[1]);
+          if (!/^(?:\s*(?:from|to|\d+%)\s*\{[^{}]*\}\s*)+$/.test(inner))
+            violations.push("invalid scoped keyframe body");
         } else if (/^@(media|supports|container|layer)\b/.test(prelude)) {
           walk(inner);
         } else {
@@ -166,7 +168,9 @@ export function lintScopedCss(css, forms) {
         }
       } else {
         prelude.split(",").map((selector) => selector.trim()).filter(Boolean).forEach((selector) => {
-          if (!selector.startsWith(forms.scope)) violations.push("selector must be rooted in " + forms.scope + ": " + selector);
+          if (!(selector === forms.scope ||
+          (selector.startsWith(forms.scope) && /^[\s:>+~\[]/.test(selector.slice(forms.scope.length)))))
+            violations.push("selector must be rooted in " + forms.scope + ": " + selector);
         });
       }
       cursor = close + 1;
@@ -200,7 +204,12 @@ export function lintGeneratedBlock(resolved, forms) {
   });
   const vars = css.match(/--[a-z0-9-]+/g) || [];
   vars.forEach(function(name) {
-    if (!name.startsWith(forms.cssVarPrefix.slice(0, -1)) && !name.startsWith(forms.cssVarPrefix)) violations.push("css var missing namespace: " + name);
+    // Theme/global tokens may be *read* through var(), but a generated
+    // artifact cannot declare or overwrite those globally-owned variables.
+    const themeRead = /^--(?:font|typography|color|spacing|radius)-[a-z0-9-]+$/.test(name) &&
+      css.includes('var(' + name + ')') && !css.includes(name + ':');
+    if (!name.startsWith(forms.cssVarPrefix.slice(0, -1)) && !themeRead)
+      violations.push("css var missing namespace: " + name);
   });
   if (GLOBAL_SELECTOR.test(css)) violations.push("bare global selector");
   violations.push(...lintScopedCss(css, forms));

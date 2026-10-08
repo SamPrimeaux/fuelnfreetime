@@ -6,7 +6,8 @@
  * Execution policy v1: safe, scoped HTML/CSS only. Generated JavaScript is
  * rejected rather than executed in the merchant storefront.
  */
-import { acceptGeneratedBlock, nsForms } from "../../frontend/static/js/generation-namespace.mjs";
+import { acceptGeneratedBlock, nsForms, resolveUidToken } from "../../frontend/static/js/generation-namespace.mjs";
+import { normalizeSettingFields, settingCssValue } from "../../frontend/static/js/generated-settings-schema.mjs";
 import { readR2Json, writeR2Json } from "./r2-store.js";
 
 const KEY = /^[a-z][a-z0-9-]{1,39}$/;
@@ -24,15 +25,16 @@ export function inspectGeneratedSection(record, sectionKey = "preview-section") 
   if (!settings || typeof settings !== "object" || Array.isArray(settings) || !Object.keys(settings).length) {
     return { error:"At least one editable setting is required", status:422 };
   }
-  const fields = {};
-  for (const [key,value] of Object.entries(settings)) {
-    if (!FIELD.test(key) || !["string","number","boolean"].includes(typeof value) ||
-      (typeof value === "string" && value.length > 2000) || (typeof value === "number" && !Number.isFinite(value))) {
-      return { error:"Invalid generated setting: " + key, status:422 };
-    }
-    const declared = definition.settings?.[key];
-    fields[key] = { type: typeof value === "boolean" ? "boolean" : typeof value === "number" ? "number" : "text",
-      label: typeof declared?.label === "string" ? declared.label.slice(0,80) : key.replace(/([A-Z])/g," $1") };
+  let fields, values;
+  try {
+    const normalized=normalizeSettingFields(definition.settings,settings);
+    fields=normalized.fields;values=normalized.settings;
+  }catch(error){return {error:error.message,status:422};}
+  if (record?.implementation_class && record.implementation_class !== 'artifact_static') {
+    return {error:'Only artifact_static sections may enter the static artifact acceptance lane',status:422};
+  }
+  if (definition.implementation_class && definition.implementation_class !== 'artifact_static') {
+    return {error:'Native primitives require no generated artifact; interactive artifacts need a separate gated runtime',status:422};
   }
   const canonical = record?.canonical || {};
   const html = String(canonical.html || "");
@@ -67,8 +69,13 @@ export function inspectGeneratedSection(record, sectionKey = "preview-section") 
   }
   if (cleaned.includes("<") || cleaned.includes(">")) return { error:"Invalid generated HTML", status:422 };
   if (!html.includes('data-agentsam-block="__UID__"')) return { error:"Missing section scope", status:422 };
-  for (const key of Object.keys(fields)) {
-    if (!html.includes('data-cms="' + key + '"')) return { error:"Generated setting has no editable markup binding: " + key, status:422 };
+  for (const [key,field] of Object.entries(fields)) {
+    if (field.binding==='style') {
+      if (!css.includes('var(--__UID__-setting-' + key + ')'))
+        return {error:'Generated visual setting has no scoped CSS variable binding: '+key,status:422};
+    } else if (!html.includes('data-cms="' + key + '"')) {
+      return { error:'Generated setting has no editable markup binding: ' + key, status:422 };
+    }
   }
   if (/@|url\s*\(|expression\s*\(|:has\s*\(|!important|position\s*:\s*fixed/i.test(css)) {
     return { error:"Unsupported or unsafe generated CSS", status:422 };
@@ -83,14 +90,35 @@ export function inspectGeneratedSection(record, sectionKey = "preview-section") 
   const accepted = acceptGeneratedBlock({html:scopedHtml,css:scopedCss,js:""}, {blockId:sectionKey,namespace:"agentsam"});
   if (!accepted.ok) return { error:accepted.error,status:422 };
   const scoped = '[data-agentsam-block="' + forms.blockId + '"]';
-  for (const rule of accepted.resolved.css.split("}")) {
-    if (!rule.trim()) continue;
-    const at = rule.indexOf("{");
-    if (at === -1 || !rule.slice(0,at).split(",").every((selector)=>selector.trim().startsWith(scoped))) {
-      return { error:"Every CSS selector must be scoped to the generated section",status:422 };
-    }
-  }
-  return { ok:true,type,fields,settings,canonical:{html,css,js:""},definition:{kind:"section",type,label:String(definition.label || type).slice(0,100)} };
+  return { ok:true,type,fields,settings:values,canonical:{html,css,js:""},
+    definition:{kind:"section",type,label:String(definition.label || type).slice(0,100),
+      implementation_class:'artifact_static',settings:fields} };
+}
+
+/** Resolve an immutable static artifact for one placed CMS instance.
+ * The artifact never changes with merchant values. Content bindings retain
+ * the existing edge hydration authority; visual bindings become typed CSS
+ * custom properties rooted under THIS instance, not a global stylesheet.
+ */
+export function materializeGeneratedStatic(record,{instanceId,sectionKey}={}) {
+  if(!instanceId||!sectionKey)throw Error('Placed section instanceId and sectionKey are required');
+  const checked=inspectGeneratedSection(record,instanceId);
+  if(!checked.ok)throw Error(checked.error);
+  const forms=nsForms(instanceId,'agentsam');
+  const root='data-agentsam-block="__UID__"';
+  const placed='data-agentsam-block="'+forms.blockId+'"';
+  let html=resolveUidToken(checked.canonical.html.replaceAll(root,placed),forms.blockId,'agentsam');
+  const css=resolveUidToken(checked.canonical.css.replaceAll('[data-agentsam-block="__UID__"]',forms.scope),forms.blockId,'agentsam');
+  // Existing edge HTMLRewriter expects `section_key.field` paths.
+  for(const [key,field] of Object.entries(checked.fields))if(field.binding==='content')
+    html=html.replaceAll('data-cms="'+key+'"','data-cms="'+sectionKey+'.'+key+'"');
+  const bindings=Object.entries(checked.fields).filter(([,field])=>field.binding==='style')
+    .map(([key,field])=>forms.settingVarPrefix+key+': '+settingCssValue(checked.settings[key],field)+';');
+  const variables=bindings.length?forms.scope+' { '+bindings.join(' ')+' }\n':'';
+  const resolved={html,css:variables+css,js:''};
+  const inspected=acceptGeneratedBlock({html,css:variables+css,js:''},{instanceId,namespace:'agentsam'});
+  if(!inspected.ok)throw Error('Materialized CSS failed the shared scope contract: '+inspected.error);
+  return resolved;
 }
 
 export async function persistGeneratedImplementation(env, accountId, record, sectionKey, provenance = {}) {
@@ -112,7 +140,14 @@ export async function persistGeneratedImplementation(env, accountId, record, sec
   if (!prior) await writeR2Json(env,key,manifest);
   const stored = await readR2Json(env,key);
   if (!stored || JSON.stringify(stored) !== JSON.stringify(manifest)) return {error:"R2 artifact verification failed",status:502};
-  const meta = JSON.stringify({generator:"agentsam",namespace:"agentsam",provider:String(provenance.provider||"").slice(0,80),model:String(provenance.model||"").slice(0,120)});
+  const meta = JSON.stringify({generator:"agentsam",namespace:"agentsam",
+    generation_id:String(provenance.generation_id||provenance.generationId||'').slice(0,128),
+    source_agent:String(provenance.source_agent||provenance.sourceAgent||'').slice(0,128),
+    provider:String(provenance.provider||"").slice(0,80),model:String(provenance.model||"").slice(0,120),
+    prompt_hash:String(provenance.prompt_hash||provenance.promptHash||'').slice(0,128),
+    source_ref:String(provenance.source_ref||provenance.sourceRef||'').slice(0,300),
+    normalized_by:String(provenance.normalized_by||provenance.normalizedBy||'agentsam').slice(0,128),
+    created_at:provenance.created_at||new Date().toISOString(),implementation_class:'artifact_static'});
   await env.DB.batch([
     env.DB.prepare(`INSERT INTO cms_artifacts (id,account_id,artifact_key,artifact_type,version,r2_prefix,manifest_r2_key,content_hash,content_mode,status,source_kind,source_ref,metadata_json)
       VALUES (?,? ,?,'section',?,?,?,?,'component','ready','generator','code.generate',?)
@@ -143,9 +178,19 @@ export async function attachGeneratedImplementations(env, slug, sections, accoun
     const manifest = await readR2Json(env,artifact.manifest_r2_key);
     if (!manifest || manifest.schema !== "cms.generated-implementation.v1") return section;
     const settings = Object.fromEntries(Object.entries(section.content).filter(([key])=>key !== "__editor"));
-    const checked = inspectGeneratedSection({canonical:manifest.canonical,definition:manifest.definition,settings},section.key);
+    const checked = inspectGeneratedSection({canonical:manifest.canonical,definition:{...manifest.definition,settings:manifest.fields},settings},section.key);
     if (!checked.ok) return section;
     if (await sha256(JSON.stringify(manifest)) !== artifact.content_hash) return section;
-    return {...section,implementation:manifest.canonical};
+    const placed=await env.DB.prepare(`SELECT s.id FROM cms_page_sections s JOIN cms_pages p ON p.id=s.page_id
+      WHERE p.account_id=? AND p.slug=? AND s.section_key=? LIMIT 1`)
+      .bind(tenant,slug,section.key).first();
+    if(!placed?.id)return section;
+    try {
+      const renderedImplementation=materializeGeneratedStatic(
+        {canonical:manifest.canonical,definition:{...manifest.definition,settings:manifest.fields},settings},
+        {instanceId:placed.id,sectionKey:section.key});
+      return {...section,implementation:manifest.canonical,renderedImplementation};
+    }catch{return section;}
+
   }));
 }

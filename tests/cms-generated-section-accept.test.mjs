@@ -56,7 +56,7 @@ function fixture() {
   return {db,env,objects,cache};
 }
 const record = (label = "Featured story") => ({
-  definition:{kind:"section",type:"featured-story",label,settings:{headline:{label:"Headline"}}},
+  definition:{kind:"section",type:"featured-story",label,settings:{headline:{type:"text",label:"Headline"},eyebrow:{type:"text",label:"Eyebrow"}}},
   settings:{headline:label,eyebrow:"Made for the hours you've earned"},
   canonical:{
     html:'<section data-agentsam-block="__UID__" class="__UID__"><p data-cms="eyebrow">Earned hours</p><h2 data-cms="headline">Featured story</h2></section>',
@@ -88,6 +88,9 @@ test("accepting a semantic AgentSam section commits immutable R2, D1 definition,
     const found=admin.page.sections.find((s)=>s.key===added.section_key);
     assert.equal(found.content.headline,"Featured story");
     assert.match(found.implementation.html,/data-agentsam-block/);
+    assert.match(found.renderedImplementation.html,/data-cms="[a-z0-9-]+\.headline"/);
+    assert.equal(found.renderedImplementation.html.includes('__UID__'),false);
+    assert.equal(found.renderedImplementation.css.includes('__UID__'),false);
     const registry=attachCmsDefinitions({pages:{shop:{title:"Shop",sections:{}}}},await listCmsDefinitions(fx.env,"acct_alpha",{status:"active"}));
     assert.equal(registry.pages.shop.sections["featured-story"].fields[0].key,"headline");
     assert.equal(registry.definitions[0].origin,"generated");

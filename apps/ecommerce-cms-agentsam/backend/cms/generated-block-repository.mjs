@@ -18,7 +18,7 @@ function selection(manifest) {
     capability: generation.capability || "code.generate",
     provider: generation.provider || "",
     model: generation.model || "",
-    namespace: generation.namespace || "agentsam",
+    namespace: "agentsam",
   };
 }
 
@@ -120,31 +120,46 @@ export function createGeneratedBlockRepository(sql, objects, options = {}) {
       if (!/^[a-z][a-z0-9-]{1,63}$/.test(semanticType)) {
         return { ok: false, status: 422, error: "invalid generated semantic type", written: false };
       }
-      const blockId = input.blockId || ("cmsb_" + randomUUID().replace(/-/g, "").slice(0, 16));
-      if (canonical) {
-        const forms = nsForms(blockId, picked.namespace);
-        const resolved = {
-          html: resolveUidToken(canonical.html || "", blockId, picked.namespace),
-          css: resolveUidToken(canonical.css || "", blockId, picked.namespace),
-          js: resolveUidToken(canonical.js || "", blockId, picked.namespace),
-        };
-        const lint = lintGeneratedBlock(resolved, forms);
-        if (!lint.ok) return { ok: false, status: 422, error: lint.violations.join("; "), written: false };
-      }
       const account = await assertAccount(input.accountId, input.sectionId, input.parentBlockId);
       if (account && account.ok === false) return account;
+      const blockKey=String(input.blockKey || input.instanceId || input.blockId || semanticType);
+      const prior=await sql.first("SELECT id FROM " + TABLES.blocks + " WHERE account_id = ? AND section_id = ? AND block_key = ?",
+        [input.accountId, input.sectionId, blockKey]);
+      const blockId=prior?.id || input.instanceId || input.blockId || ("cmsb_" + randomUUID().replace(/-/g, "").slice(0, 16));
+      const owner=await blockRow(input.accountId,blockId);
+      if(owner && (owner.section_id!==input.sectionId || owner.block_key!==blockKey))return {ok:false,status:409,error:"placed block instance belongs to another section"};
+      const stableCanonical=canonical && {...canonical};
+      // Convert historical block_key wrappers once; canonical artifact remains
+      // reusable as __UID__ even when placed repeatedly across sections.
+      if(stableCanonical){
+        const from='data-agentsam-block="'+blockKey+'"';
+        if(stableCanonical.html?.includes(from)){
+          stableCanonical.html=stableCanonical.html.replaceAll(from,'data-agentsam-block="__UID__"');
+          stableCanonical.css=String(stableCanonical.css||'').replaceAll(from,'data-agentsam-block="__UID__"');
+        }
+        const forms=nsForms(blockId,"agentsam");
+        const wrapper='data-agentsam-block="__UID__"';
+        const placed='data-agentsam-block="'+forms.blockId+'"';
+        const resolved={
+          html:resolveUidToken(String(stableCanonical.html||'').replaceAll(wrapper,placed),blockId,"agentsam"),
+          css:resolveUidToken(String(stableCanonical.css||'').replaceAll(wrapper,placed),blockId,"agentsam"),
+          js:resolveUidToken(stableCanonical.js||'',blockId,"agentsam"),
+        };
+        const lint=lintGeneratedBlock(resolved,forms);
+        if(!lint.ok)return {ok:false,status:422,error:lint.violations.join('; '),written:false};
+      }
       const depth = await depthOf(input.accountId, input.parentBlockId);
       if (depth > maxDepth(input.manifest)) return { ok: false, status: 422, error: "depth cap" };
-      const digest = hashManifest(canonical || input.manifest);
+      const digest = hashManifest(stableCanonical || input.manifest);
       const hash16 = digest.slice(0, 16);
       const key = "cms/artifacts/block/" + hash16 + "/manifest.json";
-      await objects.put(key, JSON.stringify(canonical || input.manifest));
+      await objects.put(key, JSON.stringify(stableCanonical || input.manifest));
       const supplied = input.provenance || {};
       const promptHash = supplied.prompt_hash || supplied.promptHash || digest.slice(0, 8);
       const createdAt = supplied.created_at || supplied.createdAt || new Date().toISOString();
       const provenance = {
         generator: supplied.generator || "agentsam",
-        namespace: picked.namespace,
+        namespace: "agentsam",
         generation_id: supplied.generation_id || supplied.generationId || "",
         source_agent: supplied.source_agent || supplied.sourceAgent || "agentsam",
         capability: picked.capability,
@@ -161,13 +176,13 @@ export function createGeneratedBlockRepository(sql, objects, options = {}) {
       try {
         await sql.batch([
           { sql: "INSERT INTO " + TABLES.artifacts + " (id, account_id, artifact_key, artifact_type, version, r2_prefix, manifest_r2_key, content_hash, content_mode, status, source_kind, source_ref, metadata_json) VALUES (?, ?, ?, 'embed', '1', ?, ?, ?, 'component', 'ready', 'generator', ?, ?) ON CONFLICT(account_id, artifact_key, version) DO UPDATE SET manifest_r2_key = excluded.manifest_r2_key, content_hash = excluded.content_hash, source_ref = excluded.source_ref, metadata_json = excluded.metadata_json", params: ["cmsa_" + hash16, input.accountId, "block/" + hash16, "cms/artifacts/block/" + hash16 + "/", key, digest, picked.capability, JSON.stringify(provenance)] },
-          { sql: "INSERT INTO " + TABLES.blocks + " (id, account_id, section_id, parent_block_id, block_key, block_type, sort_order, status, content_json, artifact_id, metadata_json) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?) ON CONFLICT(section_id, block_key) DO UPDATE SET block_type = excluded.block_type, content_json = excluded.content_json, artifact_id = excluded.artifact_id, metadata_json = excluded.metadata_json, parent_block_id = excluded.parent_block_id, updated_at = datetime('now')", params: [blockId, input.accountId, input.sectionId, input.parentBlockId || null, input.blockKey || blockId, semanticType, input.index || 0, JSON.stringify(input.settingsValues || {}), "cmsa_" + hash16, JSON.stringify({ generated: true, definition: definition || { type: semanticType }, provenance })] },
-          { sql: "INSERT INTO " + TABLES.revisions + " (account_id, entity_type, entity_id, revision_number, revision_kind, content_hash, snapshot_json, metadata_json) SELECT ?, 'block', ?, COALESCE(MAX(revision_number), 0) + 1, 'draft', ?, ?, ? FROM " + TABLES.revisions + " WHERE account_id = ? AND entity_type = 'block' AND entity_id = ?", params: [input.accountId, blockId, digest, JSON.stringify({ artifactId: "cmsa_" + hash16, settings: input.settingsValues || {}, canonical }), JSON.stringify(provenance), input.accountId, blockId] },
+          { sql: "INSERT INTO " + TABLES.blocks + " (id, account_id, section_id, parent_block_id, block_key, block_type, sort_order, status, content_json, artifact_id, metadata_json) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?) ON CONFLICT(section_id, block_key) DO UPDATE SET block_type = excluded.block_type, content_json = excluded.content_json, artifact_id = excluded.artifact_id, metadata_json = excluded.metadata_json, parent_block_id = excluded.parent_block_id, updated_at = datetime('now')", params: [blockId, input.accountId, input.sectionId, input.parentBlockId || null, blockKey, semanticType, input.index || 0, JSON.stringify(input.settingsValues || {}), "cmsa_" + hash16, JSON.stringify({ generated: true, definition: definition || { type: semanticType }, provenance })] },
+          { sql: "INSERT INTO " + TABLES.revisions + " (account_id, entity_type, entity_id, revision_number, revision_kind, content_hash, snapshot_json, metadata_json) SELECT ?, 'block', ?, COALESCE(MAX(revision_number), 0) + 1, 'draft', ?, ?, ? FROM " + TABLES.revisions + " WHERE account_id = ? AND entity_type = 'block' AND entity_id = ?", params: [input.accountId, blockId, digest, JSON.stringify({ artifactId: "cmsa_" + hash16, settings: input.settingsValues || {}, canonical: stableCanonical }), JSON.stringify(provenance), input.accountId, blockId] },
         ]);
       } catch (error) {
         return { ok: false, status: 500, error: error.message, orphan: key };
       }
-      return { ok: true, blockId, artifactId: "cmsa_" + hash16, key };
+      return { ok: true, blockId, instanceId:blockId, artifactId: "cmsa_" + hash16, key };
     },
     loadBlock(accountId, blockId) { return blockRow(accountId, blockId); },
     async loadBlockTree(accountId, sectionId) {
@@ -225,9 +240,11 @@ export function createGeneratedBlockRepository(sql, objects, options = {}) {
         if (!artifact?.manifest_r2_key) return { ok: false, error: "artifact manifest missing" };
         const raw = await objects.get(artifact.manifest_r2_key);
         const canonical = JSON.parse(raw);
+        const wrapper='data-agentsam-block="__UID__"';
+        const placed='data-agentsam-block="'+nsForms(row.id).blockId+'"';
         const resolved = {
-          html: resolveUidToken(canonical.html || "", row.id),
-          css: resolveUidToken(canonical.css || "", row.id),
+          html: resolveUidToken(String(canonical.html || "").replaceAll(wrapper,placed), row.id),
+          css: resolveUidToken(String(canonical.css || "").replaceAll(wrapper,placed), row.id),
           js: resolveUidToken(canonical.js || "", row.id),
         };
         const lint = lintGeneratedBlock(resolved, nsForms(row.id));

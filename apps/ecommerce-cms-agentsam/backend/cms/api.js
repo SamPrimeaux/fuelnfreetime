@@ -1,6 +1,7 @@
 import { ROUTE_MANIFEST } from "../lib/route-manifest.js";
 import { attachCmsDefinitions, listCmsDefinitions } from "./definition-registry.mjs";
 import { attachGeneratedImplementations, inspectGeneratedSection, persistGeneratedImplementation } from "./generated-section.mjs";
+import {normalizeSettingFields} from "../../frontend/static/js/generated-settings-schema.mjs";
 import { guardSectionWrite } from "../../frontend/static/js/generation-namespace.mjs";
 import { cmsStorefrontRoutes, resolvePageAuthority } from "./page-authority.js";
 import {
@@ -670,6 +671,18 @@ export async function updateSection(env, slug, sectionKey, body) {
     if (Object.keys(content).filter((key)=>key!=="__editor").some((key)=>!keys.includes(key)) ||
       keys.some((key)=>typeof content[key]!==typeof previous[key])) {
       return {error:"Generated settings must preserve their schema",status:422};
+    }
+    const declared=previous.__editor?.generatedSettingsSchema;
+    if(declared && Object.keys(declared).length){
+      if(JSON.stringify(content.__editor?.generatedSettingsSchema||{})!==JSON.stringify(declared))
+        return {error:'Generated definition schema cannot be altered by instance editing',status:422};
+      try {
+        const instance=Object.fromEntries(Object.entries(content).filter(([key])=>key!=='__editor'));
+        const {settings:validated}=normalizeSettingFields(declared,instance);
+        // The instance's top-level settings are authoritative values. The
+        // inspector cache is a projection and must follow them on every save.
+        content.__editor.generatedSettings={...validated};
+      }catch(error){return {error:error.message,status:422};}
     }
     generated=true;
   }
@@ -1361,6 +1374,9 @@ export async function acceptGeneratedSection(env, slug, accountId, body = {}) {
       definitionKey: written.type,
       definitionVersion: written.version,
       artifactId: written.artifactId,
+      generatedSettingsSchema: written.fields,
+      generatedSettings: written.settings,
+      implementationClass: 'artifact_static',
       generated: true,
       source:"agentsam",
       visibility: current?.draft?.content?.__editor?.visibility || {enabled:true},

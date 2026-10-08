@@ -20,7 +20,8 @@ export const GENERATION_PROMPT_PREFIX = [
   "Do not add a namespace yourself; the installed renderer resolves __UID__ per instance.",
   "For this release the <<<js>>> section MUST be empty. Do not emit script tags, event handlers, inline styles, eval, fetch, or external assets.",
   "Use only structural HTML, scoped CSS and same-site relative links/images. No global selectors or CSS imports.",
-  "Declare settings as simple key=value lines and connect every setting to a data-cms=\"key\" attribute in the markup.",
+  "Declare definition.settings as typed fields (type, label, numeric bounds, select options, and optional default). The settings lines are instance values only; never infer public schema from sample values.",
+  "Use data-cms=\"key\" for content/attribute settings, or var(--__UID__-setting-key) in scoped CSS for visual settings (padding, color, font-role, etc.). Every declared setting must have exactly one supported binding.",
   "Always preserve the existing semantic type when the request revises a generated section.",
 ].join(" ");
 
@@ -97,8 +98,11 @@ export function createSectionParser() {
         if (open === -1) {
           const rest = input.slice(i);
           if (rest.endsWith("<") || rest.endsWith("<<")) {
-            pending = rest.slice(rest.lastIndexOf("<"));
-            const head = rest.slice(0, rest.lastIndexOf("<"));
+            // A delimiter may split as `<<` + `<settings>>>`. Preserve
+            // BOTH leading brackets rather than dropping the first one.
+            const suffixLength = rest.endsWith('<<') ? 2 : 1;
+            pending = rest.slice(-suffixLength);
+            const head = rest.slice(0, -suffixLength);
             if (section && head) {
               parts[section] += head;
               events.push({ section, text: head });

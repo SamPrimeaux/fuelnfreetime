@@ -990,10 +990,18 @@
     if (!generationInspector || !generatedSettings) return;
     const host = document.createElement('div');
     host.id = 'te-generated-settings';
-    generationInspector.renderGeneratedSettings(host, generatedSettings);
+    const schema=section.content.__editor.generatedSettingsSchema || {};
+    generationInspector.renderGeneratedSettings(host, generatedSettings, schema);
     panel.appendChild(host);
-    const wrapper = document.querySelector('[data-agentsam-block]') || { style: { setProperty() {} }, dataset: {} };
-    generationInspector.bindGeneratedSettings(host, wrapper, null);
+    const wrapper = document.querySelector('[data-agentsam-block="'+section.key+'"]') || { style: { setProperty() {} }, dataset: {} };
+    generationInspector.bindGeneratedSettings(host, wrapper, {onChange:function(key,value) {
+      if(liveUnimported)return;
+      section.content[key]=value;
+      section.content.__editor.generatedSettings[key]=value;
+      activeFieldKey=key;
+      markSectionDirty(section);
+      scheduleLocalPreview();
+    }},schema);
   }
 
   function beginGenerating() {
