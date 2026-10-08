@@ -6,7 +6,9 @@
  */
 import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
-import { spawnSync } from "node:child_process";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+const runBrowser = promisify(execFile);
 import { createServer } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -126,31 +128,35 @@ const server = createServer((req, res) => {
   }
   res.writeHead(404); res.end("Not found");
 });
-server.listen(0, "127.0.0.1", () => {
+server.listen(0, "127.0.0.1", async () => {
   const url = "http://127.0.0.1:" + server.address().port;
-  const browser = spawnSync(chrome, [
-    "--headless", "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
-    "--disable-background-networking", "--no-first-run", "--virtual-time-budget=2800",
-    "--window-size=1100,820", "--dump-dom", url
-  ], { encoding:"utf8", timeout:20000, maxBuffer:4 * 1024 * 1024 });
-  server.close();
-  if (browser.error || browser.status !== 0) {
-    console.error("Browser launch failed:", browser.error || browser.stderr.slice(-700));
-    process.exitCode = 1; return;
-  }
-  const match = browser.stdout.match(/AGENT_MENU_SMOKE:({[^<]+})/);
-  if (!match) {
-    console.error("No smoke result:", browser.stdout.slice(-1100));
-    process.exitCode = 1; return;
-  }
-  const parsed = JSON.parse(match[1].replace(/&quot;/g,'"').replace(/&amp;/g,'&'));
-  for (const [name, ok] of Object.entries(parsed.checks)) {
-    console.log((ok ? "PASS" : "FAIL") + " " + name);
-  }
-  if(parsed.errors.length) console.error(parsed.errors.join("\n"));
-  const failed = Object.entries(parsed.checks).filter(([, ok])=>!ok);
-  if (failed.length || parsed.errors.length) {
-    console.error(failed.length + " menu interactions failed.");
+  try {
+    // Must be asynchronous: spawnSync blocks the Node HTTP fixture server.
+    const browser = await runBrowser(chrome, [
+      "--headless", "--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
+      "--disable-background-networking", "--no-first-run", "--virtual-time-budget=2800",
+      "--window-size=1100,820", "--dump-dom", url
+    ], { encoding:"utf8", timeout:20000, maxBuffer:4 * 1024 * 1024 });
+    const match = browser.stdout.match(/AGENT_MENU_SMOKE:({[^<]+})/);
+    if (!match) {
+      console.error("No smoke result:", browser.stdout.slice(-1100));
+      process.exitCode = 1;
+      return;
+    }
+    const parsed = JSON.parse(match[1].replace(/&quot;/g,'"').replace(/&amp;/g,'&'));
+    for (const [name, ok] of Object.entries(parsed.checks)) {
+      console.log((ok ? "PASS" : "FAIL") + " " + name);
+    }
+    if(parsed.errors.length) console.error(parsed.errors.join("\n"));
+    const failed = Object.entries(parsed.checks).filter(([, ok])=>!ok);
+    if (failed.length || parsed.errors.length || Object.keys(parsed.checks).length < 10) {
+      console.error(failed.length + " menu interactions failed.");
+      process.exitCode = 1;
+    }
+  } catch (error) {
+    console.error("Browser smoke failed:", error.message);
     process.exitCode = 1;
+  } finally {
+    server.close();
   }
 });
