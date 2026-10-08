@@ -64,7 +64,7 @@ function findEvidence(pkg){
     for(let i=0;i<f.lines.length;i++){
       const line=f.lines[i];
       if(tokens.some(token=>line.includes(token)) && /(from |import\(|require\(|join\(|cp\(|entryPoints|export \* from|path\.resolve|\/admin\/)/.test(line)){
-        out.push(f.file+":"+(i+1));break;
+        out.push(f.file);break;
       }
     }
     if(out.length===4)break;
