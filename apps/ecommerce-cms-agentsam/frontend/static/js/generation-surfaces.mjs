@@ -117,6 +117,53 @@ export function createGenerationFlow(regions) {
       retry.addEventListener("click", () => this.openRequest());
       regions.panel.replaceChildren(error, retry);
     },
+    review(record, accept) {
+      state.generating = false;
+      removeGeneratingNode(regions.tree);
+      regions.panel.setAttribute("data-panel-state", "review");
+      regions.panel.replaceChildren();
+      const doc = regions.panel.ownerDocument;
+      const title = doc.createElement("strong");
+      title.textContent = "Review " + (record.definition?.label || record.definition?.type || "generated section");
+      const note = doc.createElement("p");
+      note.textContent = "Script-free preview. Nothing has been saved or published yet.";
+      const preview = doc.createElement("iframe");
+      preview.className = "te-generated-sandbox";
+      preview.setAttribute("title", "Generated section preview");
+      preview.setAttribute("sandbox", "");
+      preview.referrerPolicy = "no-referrer";
+      const section = String(record.canonical?.html || "").replaceAll("__UID__","agentsam-gen-preview");
+      const css = String(record.canonical?.css || "").replaceAll("__UID__","agentsam-gen-preview");
+      preview.srcdoc = '<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src data:;"><style>' +
+        css.replaceAll("</style","<\\/style") + '</style></head><body>' + section + '</body></html>';
+      const acceptButton = doc.createElement("button");
+      acceptButton.type = "button";
+      acceptButton.setAttribute("data-accept-generated", "true");
+      acceptButton.textContent = "Accept into private draft";
+      const edit = doc.createElement("button");
+      edit.type = "button";
+      edit.textContent = "Revise request";
+      edit.addEventListener("click", () => this.openRequest());
+      acceptButton.addEventListener("click", async () => {
+        acceptButton.disabled = true;
+        acceptButton.textContent = "Installing…";
+        try {
+          const saved = await accept();
+          if (!saved?.ok) throw new Error(saved?.error || "Unable to install section");
+          regions.panel.setAttribute("data-panel-state", "installed");
+          regions.panel.replaceChildren();
+          const message = doc.createElement("p");
+          message.textContent = "Added to private draft. Open the section inspector to edit its settings. Publish remains separate.";
+          regions.panel.append(message);
+        } catch (error) {
+          acceptButton.disabled = false;
+          acceptButton.textContent = "Retry installation";
+          note.textContent = error.message || String(error);
+          note.setAttribute("role","alert");
+        }
+      });
+      regions.panel.append(title,note,preview,acceptButton,edit);
+    },
     complete(settings, provenance) {
       state.generating = false;
       removeGeneratingNode(regions.tree);

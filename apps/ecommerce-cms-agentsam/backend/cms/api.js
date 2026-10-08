@@ -1,5 +1,6 @@
 import { ROUTE_MANIFEST } from "../lib/route-manifest.js";
 import { attachCmsDefinitions, listCmsDefinitions } from "./definition-registry.mjs";
+import { attachGeneratedImplementations, inspectGeneratedSection, persistGeneratedImplementation } from "./generated-section.mjs";
 import { guardSectionWrite } from "../../frontend/static/js/generation-namespace.mjs";
 import { cmsStorefrontRoutes, resolvePageAuthority } from "./page-authority.js";
 import {
@@ -257,7 +258,8 @@ export async function buildPublishedSnapshot(env, slug) {
   const page = await loadPageRow(env, slug);
   if (!page || page.status !== "published") return null;
 
-  const sections = await loadSectionsFromDb(env, slug, page.id, { publishedOnly: true });
+  const sections = await attachGeneratedImplementations(env, slug,
+    await loadSectionsFromDb(env, slug, page.id, { publishedOnly: true }));
   if (!sections.length) return null;
 
   return {
@@ -265,12 +267,13 @@ export async function buildPublishedSnapshot(env, slug) {
     title: page.title,
     status: page.status,
     updated_at: page.updated_at,
-    sections: sections.map(({ key, sort_order, status, content, updated_at }) => ({
+    sections: sections.map(({ key, sort_order, status, content, updated_at, implementation }) => ({
       key,
       sort_order,
       status,
       content,
       updated_at,
+      ...(implementation ? { implementation } : {}),
     })),
     source: "r2",
   };
@@ -338,7 +341,7 @@ export async function getPreviewPage(env, slug) {
     title: page.title,
     status: page.status,
     updated_at: page.updated_at,
-    sections: mergeWithRegistry(slug, sections),
+    sections: await attachGeneratedImplementations(env, slug, mergeWithRegistry(slug, sections)),
     source: "preview",
   };
 }
@@ -406,7 +409,7 @@ export async function getPageAdmin(env, slug) {
     };
   }
 
-  const sections = await loadSectionsFromDb(env, slug, page.id);
+  const sections = await attachGeneratedImplementations(env, slug, await loadSectionsFromDb(env, slug, page.id));
   // This is factual D1 inventory, not synthetic registry content. An editor may
   // explicitly stage missing source-backed sections as private drafts without
   // replacing the already published snapshot or modifying existing rows.
@@ -567,6 +570,73 @@ export async function updatePageMeta(env, slug, body) {
   return { ok: true };
 }
 
+async function syncGeneratedRevision(env, slug, key, content, meta, metadata = {}) {
+  const instance=await env.DB.prepare(`SELECT s.id,s.account_id FROM cms_page_sections s
+    JOIN cms_pages p ON p.id=s.page_id AND p.account_id=s.account_id
+    WHERE p.slug=? AND s.section_key=?`).bind(slug,key).first();
+  if (!instance) throw new Error("Canonical generated section is missing");
+  await env.DB.prepare(`UPDATE cms_page_sections SET status='draft',content_r2_key=?,
+    content_version=?,content_hash=?,updated_at=datetime('now') WHERE id=? AND account_id=?`)
+    .bind(meta.key,meta.version,meta.content_hash,instance.id,instance.account_id).run();
+  const previous=await env.DB.prepare(`SELECT COALESCE(MAX(revision_number),0) AS n FROM cms_revisions
+    WHERE account_id=? AND entity_type='section' AND entity_id=?`)
+    .bind(instance.account_id,instance.id).first();
+  const next=Number(previous?.n||0)+1;
+  await env.DB.prepare(`INSERT INTO cms_revisions
+    (account_id,entity_type,entity_id,revision_number,revision_kind,content_r2_key,content_hash,snapshot_json,metadata_json)
+    VALUES (?,'section',? ,?,'draft',?,?,?,?)`)
+    .bind(instance.account_id,instance.id,next,meta.key,meta.content_hash,
+      JSON.stringify({content,artifactId:content.__editor.artifactId,definitionKey:content.__editor.definitionKey}),
+      JSON.stringify({source:"agentsam",...metadata})).run();
+  return next;
+}
+
+export async function listGeneratedRevisions(env,slug,key,accountId) {
+  if (!accountId) return {error:"Account required",status:403};
+  const instance=await env.DB.prepare(`SELECT s.id FROM cms_page_sections s JOIN cms_pages p ON p.id=s.page_id
+    WHERE s.account_id=? AND p.account_id=? AND p.slug=? AND s.section_key=?`)
+    .bind(accountId,accountId,slug,key).first();
+  if (!instance) return {error:"Generated section not found",status:404};
+  const response=await env.DB.prepare(`SELECT revision_number,content_hash,created_at,metadata_json FROM cms_revisions
+    WHERE account_id=? AND entity_type='section' AND entity_id=? ORDER BY revision_number DESC LIMIT 50`)
+    .bind(accountId,instance.id).all();
+  return {ok:true,revisions:(response.results||[]).map((revision)=>({
+    number:revision.revision_number,createdAt:revision.created_at,hash:revision.content_hash,
+    metadata:JSON.parse(revision.metadata_json||"{}"),
+  }))};
+}
+
+export async function restoreGeneratedRevision(env,slug,key,accountId,body={}) {
+  if (!accountId) return {error:"Account required",status:403};
+  const number=Number(body.revisionNumber);
+  if (!Number.isInteger(number)||number<1) return {error:"Invalid revision number",status:422};
+  const target=await env.DB.prepare(`SELECT s.id,s.legacy_section_id FROM cms_page_sections s
+    JOIN cms_pages p ON p.id=s.page_id AND p.account_id=s.account_id
+    WHERE s.account_id=? AND p.slug=? AND s.section_key=?`)
+    .bind(accountId,slug,key).first();
+  if (!target) return {error:"Generated section not found",status:404};
+  const row=await env.DB.prepare(`SELECT ps.content_version,ps.sort_order,ps.status,ps.page_id FROM page_sections ps
+    JOIN pages p ON p.id=ps.page_id WHERE ps.id=? AND p.slug=?`)
+    .bind(target.legacy_section_id,slug).first();
+  if (!row||row.status==="removed") return {error:"Section not editable",status:409};
+  if (Number(body.expectedVersion)!==Number(row.content_version)) return {error:"Draft changed since revision load",status:409};
+  const old=await env.DB.prepare(`SELECT snapshot_json FROM cms_revisions WHERE account_id=?
+    AND entity_type='section' AND entity_id=? AND revision_number=? LIMIT 1`)
+    .bind(accountId,target.id,number).first();
+  if (!old) return {error:"Revision not found",status:404};
+  let saved;
+  try {saved=JSON.parse(old.snapshot_json);} catch {return {error:"Invalid revision snapshot",status:409};}
+  if (!saved.content?.__editor?.generated || !saved.artifactId) return {error:"Not a generated revision",status:409};
+  const artifact=await env.DB.prepare("SELECT id FROM cms_artifacts WHERE account_id=? AND id=? AND status='ready'")
+    .bind(accountId,saved.artifactId).first();
+  if (!artifact) return {error:"Revision artifact unavailable",status:409};
+  const meta=await persistSectionDraft(env,slug,row.page_id,key,saved.content,row.sort_order,{expectedVersion:row.content_version});
+  if (meta.error) return meta;
+  const revision=await syncGeneratedRevision(env,slug,key,saved.content,meta,{restoredFrom:number});
+  await markPageDraft(env,row.page_id,slug);
+  return {ok:true,published:false,section_key:key,version:meta.version,revision_number:revision};
+}
+
 export async function updateSection(env, slug, sectionKey, body) {
   let page = await loadPageRow(env, slug);
   let seededNow = false;
@@ -582,12 +652,34 @@ export async function updateSection(env, slug, sectionKey, body) {
     return { error: "content object required", status: 400 };
   }
 
+  // Generated code/semantic type cannot be changed by ordinary inspector autosave.
+  let generated = false;
+  if (content.__editor?.generated) {
+    const existing = await env.DB.prepare(`SELECT content_r2_key FROM page_sections
+      WHERE page_id=? AND section_key=? AND status!='removed'`).bind(page.id,sectionKey).first();
+    if (!existing) return {error:"Generated section not found",status:404};
+    const original=await readSectionContent(env,slug,sectionKey,{key:existing.content_r2_key});
+    const previous=original?.content;
+    if (!previous?.__editor?.generated ||
+      previous.__editor.artifactId!==content.__editor.artifactId ||
+      previous.__editor.definitionKey!==content.__editor.definitionKey ||
+      previous.__editor.templateKey!==content.__editor.templateKey) {
+      return {error:"Generated code is immutable in field editor",status:409};
+    }
+    const keys=Object.keys(previous).filter((key)=>key!=="__editor");
+    if (Object.keys(content).filter((key)=>key!=="__editor").some((key)=>!keys.includes(key)) ||
+      keys.some((key)=>typeof content[key]!==typeof previous[key])) {
+      return {error:"Generated settings must preserve their schema",status:422};
+    }
+    generated=true;
+  }
   const meta = await persistSectionDraft(env, slug, page.id, sectionKey, content, 0, {
     // A registry-only page reports version 0 to the browser. Seeding creates v1 inside
     // this request, so the first real user save must not conflict with that initialization.
     expectedVersion: seededNow ? null : body?.expected_version,
   });
   if (meta.error) return meta;
+  if (generated) await syncGeneratedRevision(env,slug,sectionKey,content,meta);
 
   await env.DB.prepare(`UPDATE pages SET status = 'draft', updated_at = datetime('now') WHERE id = ?`)
     .bind(page.id)
@@ -627,10 +719,13 @@ async function orderedSectionRows(env, pageId) {
 
 async function markPageDraft(env, pageId, slug) {
   await env.DB.prepare(`UPDATE pages SET status = 'draft', updated_at = datetime('now') WHERE id = ?`)
-    .bind(pageId)
-    .run();
-  // Keep the last published KV snapshot live while a draft is being edited.
-  // Publishing replaces it atomically via writePublishedSnapshot().
+    .bind(pageId).run();
+  // Canonical page identity is resolved through the existing legacy section
+  // bridge, so no other tenant's similarly named page can be affected.
+  await env.DB.prepare(`UPDATE cms_pages SET status='draft',updated_at=datetime('now')
+    WHERE id IN (SELECT page_id FROM cms_page_sections WHERE legacy_section_id IN
+      (SELECT id FROM page_sections WHERE page_id=?))`).bind(pageId).run();
+  // Keep the last public KV/R2 snapshot unchanged until explicit Publish.
   void slug;
 }
 
@@ -640,6 +735,10 @@ async function rewriteSectionOrder(env, pageId, orderedKeys) {
     await env.DB.prepare(
       `UPDATE page_sections SET sort_order = ?, updated_at = datetime('now') WHERE page_id = ? AND section_key = ?`
     ).bind(order, pageId, key).run();
+    // Keep the canonical D1 presentation order aligned for installed instances.
+    await env.DB.prepare(`UPDATE cms_page_sections SET sort_order=?,updated_at=datetime('now')
+      WHERE legacy_section_id=(SELECT id FROM page_sections WHERE page_id=? AND section_key=?)`)
+      .bind(order,pageId,key).run();
     order += 10;
   }
 }
@@ -731,7 +830,18 @@ export async function duplicateSection(env, slug, sectionKey, body = {}) {
   const source = await sectionContentForRow(env, slug, sourceRow);
   const portable = source.__editor?.templateKey === "portable" ? PORTABLE.get(source.__editor?.themePreset) : null;
   const templateKey = portable ? "portable" : (source.__editor?.templateKey || (PAGE_REGISTRY[slug]?.sections?.[sectionKey] ? sectionKey : null));
-  if (!templateKey || (!portable && !PAGE_REGISTRY[slug]?.sections?.[templateKey])) {
+  const generated = source.__editor?.generated === true;
+  let canonicalSource = null;
+  if (generated) {
+    canonicalSource = await env.DB.prepare(`SELECT s.account_id,s.page_id FROM cms_page_sections s
+      JOIN cms_pages p ON p.id=s.page_id AND p.account_id=s.account_id
+      WHERE s.legacy_section_id=? AND p.slug=?`).bind(sourceRow.id,slug).first();
+    if (!canonicalSource) return {error:"Canonical generated section is missing",status:409};
+    const verified = await env.DB.prepare("SELECT id FROM cms_artifacts WHERE id=? AND account_id=? AND status='ready'")
+      .bind(source.__editor.artifactId,canonicalSource.account_id).first();
+    if (!verified) return {error:"Generated implementation is not available",status:409};
+  }
+  if (!templateKey || (!generated && !portable && !PAGE_REGISTRY[slug]?.sections?.[templateKey])) {
     return { error: "Section template is not registered", status: 409 };
   }
 
@@ -745,6 +855,17 @@ export async function duplicateSection(env, slug, sectionKey, body = {}) {
 
   const saved = await persistSectionDraft(env, slug, page.id, newKey, content, Number(sourceRow.sort_order || 0) + 5);
   if (saved.error) return saved;
+  if (generated) {
+    const created=await env.DB.prepare("SELECT id FROM page_sections WHERE page_id=? AND section_key=?")
+      .bind(page.id,newKey).first();
+    await env.DB.prepare(`INSERT INTO cms_page_sections
+      (account_id,page_id,legacy_section_id,section_key,section_type,sort_order,status,content_r2_key,content_version,content_hash,metadata_json)
+      VALUES (?,?,?,?,?,?,'draft',?,?,?,?)`)
+      .bind(canonicalSource.account_id,canonicalSource.page_id,created.id,newKey,templateKey,
+        Number(sourceRow.sort_order||0)+5,saved.key,saved.version,saved.content_hash,
+        JSON.stringify({artifactId:source.__editor.artifactId,definitionKey:templateKey})).run();
+    await syncGeneratedRevision(env,slug,newKey,content,saved,{duplicatedFrom:sectionKey});
+  }
   const activeKeys = (await orderedSectionRows(env, page.id))
     .filter((row) => row.status !== "removed")
     .map((row) => row.section_key);
@@ -794,7 +915,9 @@ export async function setSectionVisibility(env, slug, sectionKey, body = {}) {
       enabled: body.enabled !== false,
     },
   };
-  await persistSectionDraft(env, slug, page.id, sectionKey, content, row.sort_order);
+  const saved=await persistSectionDraft(env, slug, page.id, sectionKey, content, row.sort_order);
+  if (saved.error) return saved;
+  if (content.__editor?.generated) await syncGeneratedRevision(env,slug,sectionKey,content,saved);
   await markPageDraft(env, page.id, slug);
 
   return { ok: true, section_key: sectionKey, enabled: body.enabled !== false };
@@ -814,10 +937,16 @@ export async function removeSection(env, slug, sectionKey) {
     removed: true,
     visibility: { ...(content.__editor?.visibility || {}), enabled: false },
   };
-  await persistSectionDraft(env, slug, page.id, sectionKey, content, row.sort_order);
+  const saved=await persistSectionDraft(env, slug, page.id, sectionKey, content, row.sort_order);
+  if (saved.error) return saved;
+  if (content.__editor?.generated) await syncGeneratedRevision(env,slug,sectionKey,content,saved,{removed:true});
   await env.DB.prepare(
     `UPDATE page_sections SET status = 'removed', updated_at = datetime('now') WHERE page_id = ? AND section_key = ?`
   ).bind(page.id, sectionKey).run();
+  if (content.__editor?.generated) {
+    await env.DB.prepare(`UPDATE cms_page_sections SET status='removed' WHERE legacy_section_id=?`)
+      .bind(row.id).run();
+  }
   await markPageDraft(env, page.id, slug);
 
   return { ok: true, section_key: sectionKey, removed: true };
@@ -1016,6 +1145,13 @@ export async function publishPage(env, slug) {
     page = await loadPageRow(env, slug);
   }
 
+  // A missing or corrupted immutable generated implementation must block
+  // publication before mutating D1 status or the last public R2 snapshot.
+  const proposed = await attachGeneratedImplementations(env,slug,await loadSectionsFromDb(env,slug,page.id));
+  if (proposed.some((section)=>section.status!=="removed" &&
+      section.content?.__editor?.generated && !section.implementation)) {
+    return {error:"Generated section implementation is not verified in R2",status:409};
+  }
   await publishSectionsToR2(env, slug, page.id);
 
   await env.DB.prepare(
@@ -1031,6 +1167,15 @@ export async function publishPage(env, slug) {
     .run();
 
   const snapshot = await writePublishedSnapshot(env, slug);
+  if (snapshot) {
+    await env.DB.prepare(`UPDATE cms_page_sections SET status='published',updated_at=datetime('now')
+      WHERE legacy_section_id IN (SELECT id FROM page_sections WHERE page_id=? AND status!='removed')`)
+      .bind(page.id).run();
+    await env.DB.prepare(`UPDATE cms_pages SET status='published',updated_at=datetime('now')
+      WHERE id IN (SELECT page_id FROM cms_page_sections
+        WHERE legacy_section_id IN (SELECT id FROM page_sections WHERE page_id=?))`)
+      .bind(page.id).run();
+  }
   return { ok: true, published_at: snapshot?.updated_at || null };
 }
 
@@ -1175,6 +1320,84 @@ export async function handlePublicCmsApi(request, env, url) {
   );
 }
 
+/**
+ * Install or revise a semantic section in the existing private draft.
+ * The generator stream itself never writes D1 or publishes anything.
+ */
+export async function acceptGeneratedSection(env, slug, accountId, body = {}) {
+  if (!accountId) return { error:"Account required",status:403 };
+  const page = await loadPageRow(env,slug);
+  if (!page) return { error:"Open a private working draft before installing generated sections",status:409 };
+  const canonical = await env.DB.prepare("SELECT id FROM cms_pages WHERE account_id = ? AND slug = ?").bind(accountId,slug).first();
+  if (!canonical) return {error:"Canonical CMS page is not available for this account",status:409};
+
+  const existingKey = String(body.sectionKey || "");
+  const replacing = Boolean(existingKey);
+  let current = null;
+  if (replacing) {
+    if (!/^[a-z][a-z0-9-]{1,63}$/.test(existingKey)) return {error:"Invalid section key",status:422};
+    const row = await env.DB.prepare("SELECT id,content_version,sort_order FROM page_sections WHERE page_id = ? AND section_key = ? AND status != 'removed'")
+      .bind(page.id,existingKey).first();
+    if (!row) return {error:"Generated section not found",status:404};
+    const draft = await readSectionContent(env,slug,existingKey);
+    if (!draft?.content?.__editor?.generated) return {error:"Cannot replace a built-in section with generated code",status:409};
+    if (Number(body.expectedVersion) !== Number(row.content_version)) return {error:"Draft changed since last edit",status:409};
+    if (draft.content.__editor.definitionKey !== body.record?.definition?.type) return {error:"Changing the semantic section type is not supported",status:422};
+    current = { row, draft };
+  }
+  const type = String(body.record?.definition?.type || "");
+  const sectionKey = existingKey || (type.slice(0,28) + "-" + crypto.randomUUID().slice(0,8));
+  let written;
+  try {
+    written = await persistGeneratedImplementation(env,accountId,body.record,sectionKey,body.provenance || {});
+  } catch(error) {
+    return {error:"Unable to persist generated artifact: " + error.message,status:500};
+  }
+  if (!written.ok) return written;
+  const content = { ...written.settings,
+    __editor: {
+      ...(current?.draft?.content?.__editor || {}),
+      templateKey: written.type,
+      definitionKey: written.type,
+      definitionVersion: written.version,
+      artifactId: written.artifactId,
+      generated: true,
+      source:"agentsam",
+      visibility: current?.draft?.content?.__editor?.visibility || {enabled:true},
+    },
+  };
+  const position = current?.row?.sort_order ??
+    (Number((await env.DB.prepare("SELECT MAX(sort_order) AS n FROM page_sections WHERE page_id = ?").bind(page.id).first())?.n || 0) + 10);
+  const meta = await persistSectionDraft(env,slug,page.id,sectionKey,content,position,
+    {expectedVersion: replacing ? body.expectedVersion : 0});
+  if (meta.error) return meta;
+
+  const legacy = await env.DB.prepare("SELECT id FROM page_sections WHERE page_id = ? AND section_key = ?")
+    .bind(page.id,sectionKey).first();
+  await env.DB.prepare(`INSERT INTO cms_page_sections
+    (account_id,page_id,legacy_section_id,section_key,section_type,sort_order,status,content_r2_key,content_version,content_hash,metadata_json)
+    VALUES (?,?,?,?,?,?,'draft',?,?,?,?)
+    ON CONFLICT(page_id,section_key) DO UPDATE SET section_type=excluded.section_type,
+      sort_order=excluded.sort_order,status='draft',content_r2_key=excluded.content_r2_key,
+      content_version=excluded.content_version,content_hash=excluded.content_hash,
+      metadata_json=excluded.metadata_json,updated_at=datetime('now')`)
+    .bind(accountId,canonical.id,legacy?.id ?? null,sectionKey,written.type,position,
+      meta.key,meta.version,meta.content_hash,JSON.stringify({definitionKey:written.type,artifactId:written.artifactId})).run();
+  const section = await env.DB.prepare("SELECT id FROM cms_page_sections WHERE account_id = ? AND page_id = ? AND section_key = ?")
+    .bind(accountId,canonical.id,sectionKey).first();
+  const latest = await env.DB.prepare("SELECT COALESCE(MAX(revision_number),0) AS n FROM cms_revisions WHERE account_id = ? AND entity_type = 'section' AND entity_id = ?")
+    .bind(accountId,section.id).first();
+  await env.DB.prepare(`INSERT INTO cms_revisions
+    (account_id,entity_type,entity_id,revision_number,revision_kind,content_r2_key,content_hash,snapshot_json,metadata_json)
+    VALUES (?,'section',?,?,'draft',?,?,?,?)`)
+    .bind(accountId,section.id,Number(latest?.n||0)+1,meta.key,meta.content_hash,
+      JSON.stringify({content,artifactId:written.artifactId,definitionKey:written.type}),
+      JSON.stringify({source:"agentsam",version:written.version})).run();
+  await markPageDraft(env,page.id,slug);
+  return {ok:true,published:false,section_key:sectionKey,artifact_id:written.artifactId,
+    definition_key:written.type,version:meta.version,revision_number:Number(latest?.n||0)+1};
+}
+
 export async function handleAdminCmsApi(request, env, url, context = {}) {
   const path = url.pathname;
   const method = request.method;
@@ -1182,6 +1405,28 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
   if (path === "/api/admin/cms/warm" && method === "POST") {
     const { warmAllCmsPages } = await import("./deploy.js");
     return json(await warmAllCmsPages(env));
+  }
+
+  const historyMatch = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections\/([a-z0-9-]+)\/generated-revisions$/);
+  if (historyMatch && method === "GET") {
+    const result=await listGeneratedRevisions(env,historyMatch[1],historyMatch[2],context.accountId);
+    return json(result,{status:result.status||200});
+  }
+  const restoreMatch = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections\/([a-z0-9-]+)\/generated-restore$/);
+  if (restoreMatch && method === "POST") {
+    let body;
+    try {body=await request.json();} catch {return json({error:"Invalid JSON"},{status:400});}
+    const result=await restoreGeneratedRevision(env,restoreMatch[1],restoreMatch[2],context.accountId,body);
+    return json(result,{status:result.status||200});
+  }
+
+  const generatedMatch = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/generated-accept$/);
+  if (generatedMatch && method === "POST") {
+    let body;
+    try { body = await request.json(); }
+    catch { return json({error:"Invalid JSON"}, {status:400}); }
+    const result = await acceptGeneratedSection(env,generatedMatch[1],context.accountId,body);
+    return json(result,{status:result.status || 200});
   }
 
   if (path === "/api/admin/cms/registry" && method === "GET") {

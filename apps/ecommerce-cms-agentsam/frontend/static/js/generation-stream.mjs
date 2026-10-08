@@ -1,4 +1,4 @@
-import { acceptGeneratedBlock, createTokenResolver } from "./generation-namespace.mjs";
+import { acceptGeneratedBlock, createTokenResolver, nsForms } from "./generation-namespace.mjs";
 
 export const SECTION_ORDER = ["definition", "markup", "css", "js", "settings"];
 export const PHASE_LABELS = {
@@ -14,11 +14,14 @@ export const PHASE_LABELS = {
 };
 export const GENERATION_PROMPT_PREFIX = [
   "Output tagged sections in order: <<<definition>>>, <<<markup>>>, <<<css>>>, <<<js>>>, <<<settings>>>.",
-  "In <<<definition>>> emit one JSON object with kind ('section' or 'block'), a stable kebab-case type, a merchant-facing label, and optional settings schema.",
-  "Write the literal token __UID__ for every generated id, class, custom element, and css variable.",
-  "Do not write a namespace prefix. Do not emit eval, fetch, document.write, external src, or window.parent.",
-  "Wrap markup in data-agentsam-block. Scope css under that wrapper. Wrap js in an IIFE.",
-  "Declare settings as key=value lines. Reference every setting from css or markup.",
+  "In <<<definition>>> emit one JSON object with kind='section', a stable kebab-case semantic type, a merchant-facing label, and optional settings schema.",
+  "Write the literal token __UID__ in every generated id, class, custom element and CSS variable.",
+  "The root must be <section data-agentsam-block=\"__UID__\">, and EVERY CSS selector must begin with [data-agentsam-block=\"__UID__\"].",
+  "Do not add a namespace yourself; the installed renderer resolves __UID__ per instance.",
+  "For this release the <<<js>>> section MUST be empty. Do not emit script tags, event handlers, inline styles, eval, fetch, or external assets.",
+  "Use only structural HTML, scoped CSS and same-site relative links/images. No global selectors or CSS imports.",
+  "Declare settings as simple key=value lines and connect every setting to a data-cms=\"key\" attribute in the markup.",
+  "Always preserve the existing semantic type when the request revises a generated section.",
 ].join(" ");
 
 export function parseGeneratedDefinition(text, fallback = {}) {
@@ -169,11 +172,18 @@ export function createGenerationSession(options) {
           sink.append(resolver.flush());
           if (aborted) return { ok: false, aborted: true, record: null, saved: false };
           phases.push(PHASE_LABELS.checking);
-          const accepted = acceptGeneratedBlock({
-            html: parser.parts.markup,
-            css: parser.parts.css,
+          // The model must emit portable __UID__ tokens; validation needs a
+          // concrete, per-instance wrapper scope. Restore the tokens after
+          // validation so the immutable artifact remains reusable/duplicable.
+          const forms = nsForms(options.blockId,options.namespace);
+          const scopedAttribute = 'data-agentsam-block="' + forms.blockId + '"';
+          const scopeSelector = '[data-agentsam-block="' + forms.blockId + '"]';
+          const checkedInput = {
+            html: parser.parts.markup.replaceAll('data-agentsam-block="__UID__"',scopedAttribute),
+            css: parser.parts.css.replaceAll('[data-agentsam-block="__UID__"]',scopeSelector),
             js: parser.parts.js,
-          }, {
+          };
+          const accepted = acceptGeneratedBlock(checkedInput, {
             blockId: options.blockId,
             namespace: options.namespace,
             model: options.model || "",
@@ -187,7 +197,11 @@ export function createGenerationSession(options) {
           if (accepted.repaired) phases.push(PHASE_LABELS.repairing);
           record = {
             blockId: options.blockId,
-            canonical: accepted.canonical,
+            canonical: {
+              html: accepted.canonical.html.replaceAll(scopedAttribute,'data-agentsam-block="__UID__"'),
+              css: accepted.canonical.css.replaceAll(scopeSelector,'[data-agentsam-block="__UID__"]'),
+              js: accepted.canonical.js,
+            },
             provenance: { ...accepted.provenance, ...(response?.provenance || {}) },
             definition: parseGeneratedDefinition(parser.parts.definition, {
               type: options.semanticType,
@@ -196,7 +210,9 @@ export function createGenerationSession(options) {
             settings: parseGeneratedSettings(parser.parts.settings),
           };
           phases.push(PHASE_LABELS.ready);
-          return { ok: true, saved: true, record, phases };
+          // Generation produced a validated candidate, not a persisted draft.
+          // Installation happens only after the merchant accepts the preview.
+          return { ok: true, saved: false, record, phases };
         } finally {
           if (aborted) record = null;
         }

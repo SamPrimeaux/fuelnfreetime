@@ -196,6 +196,58 @@
     });
   }
 
+  function mountGeneratedSections(sections) {
+    const active = new Set();
+    for (const section of sections) {
+      const canonical = section.implementation;
+      if (!section.content?.__editor?.generated || !canonical?.html) continue;
+      const key = String(section.key || "");
+      if (!/^[a-z][a-z0-9-]{1,63}$/.test(key)) continue;
+      active.add(key);
+      const instance = key.slice(0, 40).replace(/-$/,"");
+      const scope = 'data-agentsam-block="' + instance + '"';
+      const cssScope = '[data-agentsam-block="' + instance + '"]';
+      const token = 'agentsam-gen-' + instance;
+      const html = String(canonical.html)
+        .replaceAll('data-agentsam-block="__UID__"', scope)
+        .replaceAll('__UID__', token);
+      const css = String(canonical.css || "")
+        .replaceAll('[data-agentsam-block="__UID__"]', cssScope)
+        .replaceAll('__UID__', token);
+      const template = document.createElement("template");
+      template.innerHTML = html;
+      const node = template.content.firstElementChild;
+      if (!node || node.getAttribute("data-agentsam-block") !== instance) continue;
+      node.dataset.cmsSection = key;
+      node.dataset.cmsGenerated = "true";
+      const old = Array.from(document.querySelectorAll("[data-cms-section]"))
+        .find((candidate) => candidate.dataset.cmsSection === key);
+      if (old) old.replaceWith(node);
+      else {
+        const root = document.querySelector("[data-cms-page-content]") ||
+          document.querySelector("main") || document.body;
+        const footer = root === document.body && document.querySelector("#fnf-footer-mount");
+        if (footer?.parentNode === root) root.insertBefore(node,footer);
+        else root.appendChild(node);
+      }
+      const styleId = "cms-generated-" + key;
+      let style = document.getElementById(styleId);
+      if (!style) {
+        style = document.createElement("style");
+        style.id = styleId;
+        style.dataset.cmsGeneratedStyle = key;
+        document.head.appendChild(style);
+      }
+      style.textContent = css;
+    }
+    document.querySelectorAll('[data-cms-generated="true"]').forEach((node) => {
+      if (!active.has(node.dataset.cmsSection)) node.remove();
+    });
+    document.querySelectorAll("[data-cms-generated-style]").forEach((style) => {
+      if (!active.has(style.dataset.cmsGeneratedStyle)) style.remove();
+    });
+  }
+
   function ensureDynamicSections(sections) {
     const existing = new Map(
       Array.from(document.querySelectorAll("[data-cms-section]")).map((el) => [el.dataset.cmsSection, el])
@@ -332,6 +384,7 @@
     const byKey = Object.fromEntries(sections.map((section) => [section.key, section.content || {}]));
 
     mountPortableSections(sections);
+    mountGeneratedSections(sections);
     ensureDynamicSections(sections);
     applySectionOrder(sections);
 

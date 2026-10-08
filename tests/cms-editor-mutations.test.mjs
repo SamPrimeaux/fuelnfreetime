@@ -46,6 +46,12 @@ function fixture() {
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE(page_id, section_key)
     );
+    -- Legacy fixtures carry empty canonical mirrors, matching the migrated
+    -- production schema while legacy CMS paths remain compatible.
+    CREATE TABLE cms_pages (id TEXT PRIMARY KEY,account_id TEXT,slug TEXT,status TEXT DEFAULT 'draft',updated_at TEXT DEFAULT (datetime('now')));
+    CREATE TABLE cms_page_sections (id TEXT PRIMARY KEY,account_id TEXT,page_id TEXT,legacy_section_id INTEGER,section_key TEXT,
+      section_type TEXT,sort_order INTEGER DEFAULT 0,status TEXT DEFAULT 'draft',content_r2_key TEXT,
+      content_version INTEGER DEFAULT 0,content_hash TEXT,metadata_json TEXT DEFAULT '{}',updated_at TEXT DEFAULT (datetime('now')));
     INSERT INTO pages (id, slug, title, status) VALUES (1, 'shop', 'Shop', 'published');
     INSERT INTO page_sections
       (page_id, section_key, sort_order, content_json, content_r2_key, content_version, status)

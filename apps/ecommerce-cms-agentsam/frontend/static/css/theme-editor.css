@@ -1816,3 +1816,48 @@ dialog.te-section-menu .te-section-catalog-item small {
 @media (prefers-reduced-motion: reduce) {
   dialog.te-section-menu .te-section-catalog-item { transition: none; }
 }
+
+/* Generated sections use existing Theme Studio hierarchy and inspector. */
+.theme-studio .te-generated-sandbox {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: clamp(220px,36vh,440px);
+  border: 1px solid var(--te-border);
+  border-radius: 12px;
+  background: var(--te-panel);
+}
+.theme-studio .te-generated-history-action {
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--te-border);
+  border-radius: 9px;
+  background: var(--te-soft);
+  color: var(--te-text);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+dialog.te-generated-history .te-generated-revision-list {
+  overflow-y: auto;
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+dialog.te-generated-history .te-generated-revision {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--te-border);
+  border-radius: 9px;
+}
+dialog.te-generated-history button { cursor: pointer; }
+dialog.te-generated-history button:disabled { cursor: wait; }
+@media (max-width:640px) {
+  dialog.te-generated-history .te-generated-revision button { width: 100%; }
+}

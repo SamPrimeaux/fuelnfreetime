@@ -287,6 +287,26 @@
 
   function schemaForSection(section) {
     if (!section) return null;
+    // Generated instances bind their precise immutable definition version;
+    // a later generated revision must not rewrite an older inspector schema.
+    if (section.content?.__editor?.generated) {
+      const key = section.content.__editor.definitionKey;
+      const version = section.content.__editor.definitionVersion;
+      const def = (window.cmsRegistry?.definitions || []).find(function(entry) {
+        return entry.key === key && entry.version === version && entry.kind === 'section' &&
+          entry.origin === 'generated' && entry.artifact;
+      });
+      if (!def) return null;
+      return {
+        label: def.label,
+        icon: 'section',
+        capabilities: { edit:true,media:true,settings:true,reorder:true,duplicate:true,remove:true,blocks:false },
+        fields: Object.entries(def.fields || {}).map(function([name,field]) {
+          return { key:name,label:field.label || humanize(name),type:field.type || 'text' };
+        }),
+        blocks:[],settings:[],
+      };
+    }
     if (section.content?.__editor?.templateKey === 'portable') {
       return window.ThemePortableSections?.schema(section.content.__editor.themePreset) || null;
     }
@@ -1573,6 +1593,8 @@
       block_id: activeBlockId,
       block_type: block?.templateKey || null,
       field_key: activeFieldKey,
+      generated: Boolean(section?.content?.__editor?.generated),
+      version: section?.version ?? 0,
     };
   }
 
@@ -2581,6 +2603,48 @@
     endGenerating: endGenerating,
     context: generationSelectionContext,
     wrapper: generationPreviewWrapper,
+    currentGenerated: function() {
+      const section = currentSection();
+      if (!section?.content?.__editor?.generated) return null;
+      return {
+        definition: {type:section.content.__editor.definitionKey},
+        settings: Object.fromEntries(Object.entries(section.content).filter(function([key]) { return key !== '__editor'; })),
+        canonical: section.implementation || null,
+      };
+    },
+    restoreGenerated: async function(revisionNumber,expectedVersion) {
+      const key = activeSectionKey;
+      const response = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) +
+        '/sections/' + encodeURIComponent(key) + '/generated-restore',{
+          method:'POST',body:JSON.stringify({revisionNumber,expectedVersion}),
+        });
+      if (!response.ok) throw new Error(response.error || 'Restore failed');
+      await loadPage();
+      selectSection(key,null,true,slug);
+      setNote('Previous section revision restored privately. Publish separately when ready.','success');
+      return response;
+    },
+    acceptGenerated: async function(record, provenance, options = {}) {
+      if (host) throw new Error('Generated section installation requires the native FNF CMS host.');
+      if (liveUnimported) throw new Error('Open the private page draft before installing a generated section.');
+      if (dirty || saveInFlight) {
+        if (!(await saveDraft())) throw new Error('Save existing edits before installing.');
+      }
+      const response = await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/generated-accept', {
+        method: 'POST',
+        body: JSON.stringify({ record, provenance, sectionKey: options.sectionKey,
+          expectedVersion: options.expectedVersion }),
+      });
+      if (!response.ok) throw new Error(response.error || 'Generated section installation failed');
+      activeSectionOwner = slug;
+      activeSectionKey = response.section_key;
+      activeBlockId = null;
+      activeFieldKey = null;
+      await loadPage();
+      selectSection(response.section_key,null,true,slug);
+      setNote('AgentSam section installed privately. Review the storefront preview before publishing.', 'success');
+      return response;
+    },
   };
   setDevice(device);
   setEditorDrawer('sections');
