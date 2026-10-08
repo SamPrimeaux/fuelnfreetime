@@ -707,7 +707,7 @@ export async function agentsamChat(request, env, executionCtx = null) {
     return json({
       ok: true,
       reply:
-        "Agent Sam is ready but Workers AI (AGENTSAM_WAI) is not bound in this environment. Routing and workflows are live — bind AGENTSAM_WAI in wrangler.toml for AI responses.",
+        "AgentSam cannot answer yet: this project needs either its Workers AI binding or its configured OpenAI API credential.",
       stub: true,
       routing,
       mcp: { bridge: bridgeConfigured(env), github_context: !!mcpContext },
@@ -795,7 +795,7 @@ export async function agentsamChat(request, env, executionCtx = null) {
     console.error("agentsam chat ai failure", ai.error);
     return json(
       {
-        error: "Agent Sam could not reach Workers AI. Try again in a moment.",
+        error: "AgentSam could not reach a configured AI model. Try again in a moment.",
         detail: ai.error,
         analytics: { session_id: ids.session_id, message_id: ids.message_id, tracked: true },
       },

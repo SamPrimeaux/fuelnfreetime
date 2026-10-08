@@ -30,6 +30,7 @@ test('miniAgentSam stays compact on focus and expands tools only by explicit act
     "const tools=shadow.querySelector('.tools');",
     "const before=composer.getBoundingClientRect();",
     "const inputWidth=Math.round(input.getBoundingClientRect().width);",
+    "const inputCss=getComputedStyle(input);const scrollbarHidden=inputCss.scrollbarWidth==='none';",
     "const buttons=[...shadow.querySelectorAll('.row button')].map(button=>button.getBoundingClientRect());",
     "const doesOverlap=buttons.some((button,i)=>i>0 && button.left < buttons[i-1].right);",
     "input.focus(); await wait(40); const focused=composer.getBoundingClientRect();",
@@ -46,7 +47,7 @@ test('miniAgentSam stays compact on focus and expands tools only by explicit act
     "mini.select({type:'test.resource',id:'two'},()=>({left:innerWidth-8,top:innerHeight-8,width:3,height:3}));await wait(30);",
     "const edge=composer.getBoundingClientRect();const edgeInside=edge.left>=12&&edge.right<=innerWidth-12&&edge.top>=12&&edge.bottom<=innerHeight-12;",
     "const beforeClose=composer.hidden;shadow.querySelector('.more').click();const expandedBeforeClose=mini.expanded;mini.close();const afterClose={hidden:composer.hidden,expanded:mini.expanded,portalCount:document.querySelectorAll('[data-mini-agentsam]').length};",
-    "const result={samePortalCount,edgeInside,beforeClose,expandedBeforeClose,afterClose,beforeWidth:Math.round(before.width),inputWidth,doesOverlap,viewport:innerWidth,focusedWidth:Math.round(focused.width),explicitWidth:Math.round(explicit.width),focusedExpanded,explicitExpanded:expandedHeight===88,expandedHeight:Math.round(expandedHeight),toolsVisible:expandedToolsVisible,expandAria:expandedAria,toolsAria:expandedToolsAria,afterSend,afterFailure,position:{left:before.left,right:before.right,top:before.top,bottom:before.bottom}};",
+    "const result={scrollbarHidden,samePortalCount,edgeInside,beforeClose,expandedBeforeClose,afterClose,beforeWidth:Math.round(before.width),inputWidth,doesOverlap,viewport:innerWidth,focusedWidth:Math.round(focused.width),explicitWidth:Math.round(explicit.width),focusedExpanded,explicitExpanded:expandedHeight===88,expandedHeight:Math.round(expandedHeight),toolsVisible:expandedToolsVisible,expandAria:expandedAria,toolsAria:expandedToolsAria,afterSend,afterFailure,position:{left:before.left,right:before.right,top:before.top,bottom:before.bottom}};",
     "const pre=document.createElement('pre'); pre.id='result'; pre.textContent=JSON.stringify(result); document.body.append(pre);"
   ].join('\n');
   const server=http.createServer((req,res)=>{
@@ -67,6 +68,7 @@ test('miniAgentSam stays compact on focus and expands tools only by explicit act
     assert.equal(result.beforeWidth,416);
     assert.ok(result.inputWidth>=180,`Text input too narrow: ${result.inputWidth}px`);
     assert.equal(result.doesOverlap,false,'toolbar controls must not collide');
+    assert.equal(result.scrollbarHidden,true,'No internal scrollbar in the miniAgentSam textarea');
     assert.equal(result.samePortalCount,1,'Repeat selection must reuse existing composer');
     assert.equal(result.edgeInside,true,'Composer must clamp inside viewport at right/bottom edges');
     assert.equal(result.beforeClose,false);

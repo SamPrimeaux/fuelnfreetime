@@ -173,6 +173,33 @@ function buildVisionPayload(model, systemPrompt, userMessage, routing, defaults)
   };
 }
 
+/** OpenAI Responses API transport; the model is selected by the same D1
+ * registry as Workers AI. No built-in platform keys or hardcoded model lists.
+ */
+export async function executeOpenAiChat(env, model, systemPrompt, userMessage, routing, defaults = {}) {
+  if (!env.OPENAI_API_KEY) throw new Error('openai_credentials_unavailable');
+  if (!model?.model_id || !/^[a-zA-Z0-9][a-zA-Z0-9._:-]{1,120}$/.test(model.model_id))
+    throw new Error('invalid_registered_openai_model');
+  const messages = Array.isArray(routing.messages) && routing.messages.length
+    ? routing.messages : [{role:'system',content:trimSystem(systemPrompt)},{role:'user',content:String(userMessage||'').slice(0,4000)}];
+  const body={model:model.model_id,input:messages.map(item=>({role:item.role,content:item.content})),
+    max_output_tokens:Math.min(4096,Math.max(128,Number(defaults.max_output_tokens || defaults.max_tokens || 1024)))};
+  // External requests are server-side only. Never expose user keys to HTML.
+  const response=await fetch('https://api.openai.com/v1/responses',{
+    method:'POST',headers:{authorization:`Bearer ${env.OPENAI_API_KEY}`,'content-type':'application/json'},
+    body:JSON.stringify(body),signal:AbortSignal.timeout(45000),
+  });
+  if(!response.ok){
+    const code=response.status;
+    throw new Error('openai_responses_http_'+code);
+  }
+  const data=await response.json();
+  const parts=(data.output||[]).flatMap(item=>(item.content||[]).filter(part=>part.type==='output_text').map(part=>part.text||''));
+  const reply=String(data.output_text || parts.join('\n')).trim();
+  if(!reply)throw new Error('openai_empty_response');
+  return {reply,tool_calls:[]};
+}
+
 async function executeModel(env, model, systemPrompt, userMessage, routing) {
   const defaults =
     model.request_defaults ||
@@ -217,6 +244,14 @@ async function executeModel(env, model, systemPrompt, userMessage, routing) {
     }
     throw new Error("empty_b64_response: " + rawText.slice(0, 200));
   }
+
+  if (model.provider === 'openai' && taskType !== 'image_generation') {
+    if (!['text_generation','code_generation'].includes(taskType))
+      throw new Error('openai_task_not_implemented');
+    return executeOpenAiChat(env,model,systemPrompt,userMessage,routing,defaults);
+  }
+  if (model.provider !== 'workers_ai' || !env.AGENTSAM_WAI?.run)
+    throw new Error('workers_ai_provider_unavailable');
 
   if (taskType === "image_to_text") {
     const payload = buildVisionPayload(model, systemPrompt, userMessage, routing, defaults);
@@ -347,8 +382,8 @@ async function runTextFallback(env, systemPrompt, userMessage, routing, trackOpt
 }
 
 export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}) {
-  if (!env.AGENTSAM_WAI) {
-    return { ok: false, stub: true, error: "AGENTSAM_WAI not bound" };
+  if (!env.AGENTSAM_WAI?.run && !env.OPENAI_API_KEY) {
+    return { ok: false, stub: true, error: "No configured AI provider credentials" };
   }
 
   const normalized = normalizeChatRouting(routing);
@@ -367,11 +402,13 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
   const chain = await getFallbackChain(env, normalized);
   const wantsTools =
     Array.isArray(normalized.tool_definitions) && normalized.tool_definitions.length > 0;
-  const compatibleChain = chain.filter(
-    (m) =>
-      isModelCompatible(m, normalized.task_type, normalized) &&
-      (!wantsTools || m.supports_tools),
-  );
+  // Optional tool declarations must not discard every conversational model.
+  // Prefer tool-capable models; text-only models still return reviewable advice
+  // with no tool execution or implied writes.
+  const compatible = chain.filter((m) => isModelCompatible(m, normalized.task_type, normalized));
+  const compatibleChain = wantsTools
+    ? [...compatible.filter((m) => m.supports_tools), ...compatible.filter((m) => !m.supports_tools)]
+    : compatible;
 
   const attemptedModels = [];
   let selectedModel = null;
@@ -428,7 +465,7 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
           event_type: "ai_model",
           event_name: "model_selected",
           status: "success",
-          provider: "workers_ai",
+          provider: model.provider || "workers_ai",
           model_id: model.model_id,
           model_lane: model.lane,
           task_type: normalized.task_type,
@@ -488,7 +525,7 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
           event_type: "ai_model",
           event_name: "model_fallback",
           status: "fallback",
-          provider: "workers_ai",
+          provider: model.provider || "workers_ai",
           model_id: model.model_id,
           model_lane: model.lane,
           task_type: normalized.task_type,

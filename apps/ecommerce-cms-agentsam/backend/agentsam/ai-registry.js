@@ -256,20 +256,17 @@ export async function getAIModels(env, options = {}) {
 export async function getFallbackChain(env, routing = {}) {
   const normalized = normalizeChatRouting(routing);
   const { task_type, lane, workflow_key, message } = normalized;
-  const models = await getAIModels(env, {
-    task_type,
-    lane,
-    fallbackOnly: true,
-  });
-
-  let chain = models.filter((m) => matchesWorkflow(m, workflow_key));
-
-  if (!chain.length && lane !== "general") {
-    const broader = await getAIModels(env, { task_type, fallbackOnly: true });
-    chain = broader.filter((m) => matchesWorkflow(m, workflow_key));
-  }
-
-  chain = sortModels(chain, message);
+  // D1 is authoritative for configured models, INCLUDING the default.
+  // A fallback-only query incorrectly excludes is_default=1 rows, and a
+  // lane-only query can strand working alternate lanes after a runtime error.
+  const registered = await getAIModels(env, {task_type});
+  const allowed = registered.filter((model) => matchesWorkflow(model, workflow_key));
+  // The registry's default is primary even when a task's default lane
+  // differs from the request's conversational lane (e.g. standard/general).
+  const defaults = sortModels(allowed.filter((model) => model.is_default), message);
+  const laneModels = sortModels(allowed.filter((model) => !model.is_default && model.lane === lane), message);
+  const alternate = sortModels(allowed.filter((model) => !model.is_default && model.lane !== lane && model.is_fallback), message);
+  const chain = [...defaults, ...laneModels, ...alternate];
 
   if (!chain.length) {
     console.warn('[agentsam] no models found for routing', { task_type, lane, workflow_key });
@@ -307,9 +304,10 @@ export async function getDefaultModelId(env, taskType, lane) {
 }
 
 export async function getAIRegistryStatus(env) {
-  const bindingConfigured = Boolean(env.AGENTSAM_WAI);
+  const bindingConfigured = Boolean(env.AGENTSAM_WAI?.run);
 
   let aiRegistryCount = 0;
+  let openAiRegisteredCount = 0;
   let disabledModelCount = 0;
 
   try {
@@ -320,6 +318,10 @@ export async function getAIRegistryStatus(env) {
         .bind(FNF_ACCOUNT_ID)
         .first();
       aiRegistryCount = total?.n ?? 0;
+      const openAiModels = await env.DB.prepare(
+        `SELECT COUNT(*) AS n FROM agentsam_ai WHERE account_id = ? AND provider = 'openai' AND status IN ('active','experimental')`
+      ).bind(FNF_ACCOUNT_ID).first();
+      openAiRegisteredCount = openAiModels?.n ?? 0;
 
       const disabled = await env.DB.prepare(
         `SELECT COUNT(*) AS n FROM agentsam_ai WHERE account_id = ? AND status = 'disabled'`
@@ -346,6 +348,8 @@ export async function getAIRegistryStatus(env) {
 
   return {
     ai_binding_configured: bindingConfigured,
+    openai_key_configured: Boolean(env.OPENAI_API_KEY),
+    openai_registered_models: openAiRegisteredCount,
     ai_registry_count: aiRegistryCount,
     default_text_model: defaultTextModel,
     default_code_model: defaultCodeModel,
