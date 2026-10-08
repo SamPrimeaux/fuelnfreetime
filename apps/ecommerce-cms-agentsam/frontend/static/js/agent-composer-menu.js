@@ -11,20 +11,35 @@
   const MAX_TEXT = 12000;
   const labels = { files: "Files", target: "Target", mention: "Mention", skills: "Skills", apps: "Apps" };
   const glyphs = {
-    files: "▤", upload: "↑", target: "⌖", mention: "@", skills: "⌁",
-    apps: "▦", arrow: "›", back: "←", connected: "●",
+    files: "files", upload: "upload", target: "target", mention: "mention", skills: "skills",
+    apps: "apps", arrow: "›", back: "back", connected: "connected",
   };
+  const icons = {
+    files: '<path d="M5 5h9l5 5v9H5z"/><path d="M14 5v5h5M8 14h8M8 17h6"/>',
+    upload: '<path d="M12 16V4m-4 4 4-4 4 4M4 17v3h16v-3"/>',
+    target: '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/>',
+    mention: '<circle cx="12" cy="12" r="9"/><path d="M16 16c-2 1-3-1-3-2m0 0a4 4 0 1 0-3-1 3 3 0 0 0 3 1l1-5"/>',
+    skills: '<path d="m12 2 2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4L12 2Z"/>',
+    apps: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M17.5 13v8m-4-4h8"/>',
+    connected: '<circle cx="12" cy="12" r="7"/><path d="m8 12 3 3 5-6"/>',
+    back: '<path d="m14 5-7 7 7 7M7 12h14"/>'
+  };
+  function iconMarkup(name) {
+    const paths = icons[name];
+    return paths ? '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + paths + '</svg>' : '';
+  }
   const targets = [
     ["This page", "current", "Current admin context"],
     ["Storefront", "storefront", "Published store"],
     ["Products", "products", "Catalog overview"],
     ["Orders", "orders", "Order overview"],
     ["Customers", "customers", "Customer overview"],
+    ["Collections", "collections", "Collection overview"],
     ["Content", "content", "Media and CMS content"]
   ];
   const targetHref = {
     storefront: "/", products: "/admin/products", orders: "/admin/orders",
-    customers: "/admin/customers", content: "/admin/content"
+    customers: "/admin/customers", collections: "/admin/collections", content: "/admin/content"
   };
   function escapeText(s) { return String(s == null ? "" : s); }
   function notify() { for (const fn of controls) fn(); }
@@ -156,7 +171,7 @@
       btn.disabled = disabled;
       const mark = document.createElement("span");
       mark.className = "asm-menu-row__icon";
-      mark.textContent = icon;
+      mark.innerHTML = iconMarkup(icon);
       const content = document.createElement("span");
       content.className = "asm-menu-row__content";
       const title = document.createElement("span");
@@ -231,13 +246,26 @@
         menu.append(header("Files"), row("Upload from device", glyphs.upload, () => { close(); fileInput.click(); }, { hint: "Images and text documents" }));
         if (draft.attachments.length) menu.append(row("Remove attachments", "×", () => { clearFiles(); close(); }, { hint: draft.attachments.length + " attached" }));
       } else if (page === "target" || page === "mention") {
-        menu.append(header(page === "target" ? "Select a target" : "Mention a resource"));
+        menu.append(header(page === "target" ? "Search resources" : "Mention"));
+        const search = document.createElement("input");
+        search.type = "search";
+        search.className = "asm-menu-search";
+        search.placeholder = "Search resources";
+        search.setAttribute("aria-label", "Filter resource categories");
+        menu.append(search);
+        const targetRows = [];
         for (const [label, id, hint] of targets) {
-          menu.append(row(label, page === "target" ? glyphs.target : glyphs.mention, () => {
+          const item = row(label, page === "target" ? glyphs.target : glyphs.mention, () => {
             if (page === "target") selectTarget(label, id);
             else { addMention(input, "@" + (id === "current" ? "page" : id)); close(); }
-          }, { hint }));
+          }, { hint, arrow: page === "target" });
+          targetRows.push({ item, label });
+          menu.append(item);
         }
+        search.addEventListener("input", () => {
+          const filter = search.value.trim().toLowerCase();
+          for (const { item, label } of targetRows) item.hidden = !label.toLowerCase().includes(filter);
+        });
       } else if (page === "skills") {
         menu.append(header("Skills"));
         if (!skills) menu.append(row("Loading skills…", glyphs.skills, () => {}, { disabled: true }));
