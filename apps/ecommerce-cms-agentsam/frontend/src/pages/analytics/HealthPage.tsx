@@ -24,7 +24,7 @@ function SmallMetric({label,value,unit,source,muted=false}:{label:string;value:n
  return <div className="card" style={{padding:15,minWidth:0}}>
    <div className="muted text-xs" style={{letterSpacing:".05em",textTransform:"uppercase"}}>{label}</div>
    <div className="mono fw-600" style={{fontSize:"clamp(22px,2.3vw,29px)",marginTop:10,color:muted?"var(--muted)":"inherit"}}>
-     {textOrDash(value,label==="Error rate"?2:label==="Operations latency"?1:0)}{value!=null&&<span className="muted text-xs" style={{paddingLeft:5}}>{unit}</span>}
+     {textOrDash(value,label==="Error rate"?2:label==="Operations latency"?1:label==="Estimated model cost"?4:0)}{value!=null&&<span className="muted text-xs" style={{paddingLeft:5}}>{unit}</span>}
    </div>
    <div className="muted text-xs" style={{marginTop:12}}>{value==null?"Unavailable · "+source:source}</div>
  </div>;
@@ -43,7 +43,7 @@ export default function HealthPage({range}:PageProps){
  const [alertsOpen,setAlertsOpen]=useState(false);
  const reload=useCallback(()=>setRefresh(v=>v+1),[]);
  useEffect(()=>{
-  const ctl=new AbortController();setLoading(true);setError(null);
+  const ctl=new AbortController();setLoading(true);setError(null);setData(null);
   adminFetch<HealthResponse>("/api/admin/analytics/health?range="+encodeURIComponent(range),{signal:ctl.signal})
    .then(value=>{if(!ctl.signal.aborted)setData(value)})
    .catch(err=>{if(!ctl.signal.aborted)setError(err?.message||"Health data unavailable")})
@@ -63,7 +63,7 @@ export default function HealthPage({range}:PageProps){
    <div><h1 className="page-title">Health</h1>
     <p className="page-sub">Observed operations, Cloudflare traffic and repository quality · {range} · 30-minute health probe</p></div>
    <div className="page-actions">
-    <Status ready={Boolean(data?.edge.available&&data?.app.available)} label={data?"Real data · "+(visibility?"partial/available":"unavailable"):"Loading sources"}/>
+    <Status ready={Boolean(data?.edge.available&&data?.app.available)} label={data?(data.edge.available&&data.app.available?"Sources connected":visibility?"Partial telemetry":"Telemetry unavailable"):"Loading sources"}/>
     <button type="button" className="btn" onClick={reload} disabled={loading}><Icon name="refresh" size={12}/> {loading?"Refreshing…":"Refresh"}</button>
     <button type="button" className="btn" aria-expanded={alertsOpen} onClick={()=>setAlertsOpen(v=>!v)}><Icon name="bell" size={12}/> Failures {failureCount!=null?"("+failureCount+")":""}</button>
    </div>
