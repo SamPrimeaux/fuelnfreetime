@@ -226,11 +226,11 @@ export function createGeneratedBlockRepository(sql, objects, options = {}) {
         const raw = await objects.get(artifact.manifest_r2_key);
         const canonical = JSON.parse(raw);
         const resolved = {
-          html: resolveUidToken(canonical.html || "", row.block_key),
-          css: resolveUidToken(canonical.css || "", row.block_key),
-          js: resolveUidToken(canonical.js || "", row.block_key),
+          html: resolveUidToken(canonical.html || "", row.id),
+          css: resolveUidToken(canonical.css || "", row.id),
+          js: resolveUidToken(canonical.js || "", row.id),
         };
-        const lint = lintGeneratedBlock(resolved, nsForms(row.block_key));
+        const lint = lintGeneratedBlock(resolved, nsForms(row.id));
         if (!lint.ok) return { ok: false, error: lint.violations.join("; ") };
         output.push(resolved);
       }
