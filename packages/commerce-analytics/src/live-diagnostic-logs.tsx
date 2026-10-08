@@ -1,3 +1,4 @@
+import "./live-diagnostic-logs.css";
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import {diagnosticContext,formatDiagnosticLog,normalizeDiagnosticLog} from "./diagnostic-log.js";
 import type {DiagnosticLogContext} from "./diagnostic-log.js";
