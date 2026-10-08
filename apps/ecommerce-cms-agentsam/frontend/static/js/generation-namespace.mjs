@@ -97,7 +97,7 @@ export function provenanceRecord(input = {}) {
   const createdAt = input.created_at || input.createdAt || new Date().toISOString();
   return {
     generator: "agentsam",
-    namespace: sanitizeNamespace(input.namespace || DEFAULT_NAMESPACE),
+    namespace: DEFAULT_NAMESPACE,
     generation_id: String(input.generation_id || input.generationId || ""),
     source_agent: String(input.source_agent || input.sourceAgent || "agentsam"),
     provider: String(input.provider || ""),
