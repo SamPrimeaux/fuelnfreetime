@@ -9,3 +9,6 @@ export {
 } from "./analytics-ui";
 export { fmtNum } from "./format";
 export type { ChartSeries, DonutSlice, RangeKey } from "./types";
+
+export { BasinOverviewPanel } from './basin-overview';
+export type { BasinOverview } from './basin-overview';

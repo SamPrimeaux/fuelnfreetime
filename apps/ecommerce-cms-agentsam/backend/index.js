@@ -10,6 +10,7 @@
  */
 
 import { handleAdminApi } from "./admin/api.js";
+import { recordScheduledHealthProbe } from "./admin/analytics-health.js";
 import { serveCatalogImage } from "./completeful/images.js";
 import { runAgentsamCompaction } from "./agentsam/compaction.js";
 import { drainAssetJobs, processAssetJobById } from "./assets/product-optimize.js";
@@ -507,6 +508,12 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
+    // Explicit cron routing: do not let health probes trigger compaction.
+    if (event.cron === "*/30 * * * *") {
+      ctx.waitUntil(recordScheduledHealthProbe(env).catch(err =>
+        console.error("health probe failed", err?.message || err)));
+      return;
+    }
     // Hourly stale-job recovery — Queue is the primary asset processor.
     if (event.cron === "0 * * * *" || String(event.cron || "").startsWith("0 *")) {
       ctx.waitUntil(
@@ -521,6 +528,7 @@ export default {
       );
       return;
     }
+    if (event.cron !== "0 4 * * *") return;
     ctx.waitUntil(
       runAgentsamCompaction(env, {
         trigger_source: "cron",
