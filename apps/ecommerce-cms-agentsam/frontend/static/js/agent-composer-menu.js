@@ -1,0 +1,300 @@
+/* AgentSam capability menu: one implementation shared by home and the side/focus chat.
+ * D1 plugin/skill authority stays on the server. Never pretend ChatGPT sessions
+ * or unconnected integrations are installed in this app.
+ */
+(function () {
+  "use strict";
+  if (window.AgentSamComposerMenu) return;
+  const draft = window.AgentSamDraft || (window.AgentSamDraft = { attachments: [], selected_resource: null });
+  const controls = new Set();
+  const MAX_FILES = 6;
+  const MAX_TEXT = 12000;
+  const labels = { files: "Files", target: "Target", mention: "Mention", skills: "Skills", apps: "Apps" };
+  const glyphs = {
+    files: "▤", upload: "↑", target: "⌖", mention: "@", skills: "⌁",
+    apps: "▦", arrow: "›", back: "←", connected: "●",
+  };
+  const targets = [
+    ["This page", "current", "Current admin context"],
+    ["Storefront", "storefront", "Published store"],
+    ["Products", "products", "Catalog overview"],
+    ["Orders", "orders", "Order overview"],
+    ["Customers", "customers", "Customer overview"],
+    ["Content", "content", "Media and CMS content"]
+  ];
+  const targetHref = {
+    storefront: "/", products: "/admin/products", orders: "/admin/orders",
+    customers: "/admin/customers", content: "/admin/content"
+  };
+  function escapeText(s) { return String(s == null ? "" : s); }
+  function notify() { for (const fn of controls) fn(); }
+  function removeAttachment(index) {
+    draft.attachments.splice(index, 1);
+    notify();
+  }
+  function renderDrafts(root) {
+    const holder = root.querySelector(".fnf-home-composer__attachments, .agentsam-attachment-list");
+    if (!holder) return;
+    holder.replaceChildren();
+    const chips = [];
+    if (draft.selected_resource) chips.push({ text: draft.selected_resource.label, context: true });
+    draft.attachments.forEach((item, index) => chips.push({ text: item.name, index }));
+    chips.forEach((item) => {
+      const chip = document.createElement("span");
+      chip.className = "asm-attachment-chip";
+      chip.textContent = item.text;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = "×";
+      button.setAttribute("aria-label", "Remove " + item.text);
+      button.addEventListener("click", () => {
+        if (item.context) draft.selected_resource = null;
+        else removeAttachment(item.index);
+        notify();
+      });
+      chip.append(button);
+      holder.append(chip);
+    });
+  }
+  function addMention(input, value) {
+    const a = input.selectionStart ?? input.value.length;
+    const b = input.selectionEnd ?? a;
+    const lead = a && !/\s/.test(input.value[a - 1]) ? " " : "";
+    input.setRangeText(lead + value + " ", a, b, "end");
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.focus();
+  }
+  function fileReader(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("Could not read " + file.name));
+      reader.readAsDataURL(file);
+    });
+  }
+  async function collectFiles(files, onNotice) {
+    for (const file of Array.from(files || [])) {
+      if (draft.attachments.length >= MAX_FILES) { onNotice("Up to 6 files per message."); break; }
+      const image = /^image\/(png|jpeg|webp)$/.test(file.type);
+      const text = /^(text\/(plain|csv|markdown)|application\/json)$/.test(file.type)
+        || /\.(txt|md|json|csv)$/i.test(file.name);
+      if (!image && !text) { onNotice("Use PNG, JPEG, WebP, TXT, MD, JSON or CSV files."); continue; }
+      if (image && file.size > 3 * 1024 * 1024) { onNotice(file.name + " exceeds the 3 MB image limit."); continue; }
+      if (text && file.size > 512 * 1024) { onNotice(file.name + " exceeds the 512 KB text limit."); continue; }
+      try {
+        const record = { name: file.name.slice(0, 255), size_bytes: file.size, mime_type: file.type || "text/plain", kind: image ? "image" : "text" };
+        if (image) record.image_base64 = (await fileReader(file)).split(",")[1];
+        else {
+          const contents = await file.text();
+          record.text_content = contents.slice(0, MAX_TEXT);
+          if (contents.length > MAX_TEXT) onNotice(file.name + " is limited to its first 12,000 characters.");
+        }
+        draft.attachments.push(record);
+      } catch (error) { onNotice(error.message); }
+    }
+    notify();
+  }
+  function context() { return draft.selected_resource ? { selected_resource: draft.selected_resource } : {}; }
+  function clearFiles() { draft.attachments = []; notify(); }
+  function attach(root, button, input) {
+    if (!root || !button || !input || button.dataset.agentMenuWired) return;
+    button.dataset.agentMenuWired = "1";
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = ".txt,.md,.json,.csv,image/png,image/jpeg,image/webp";
+    fileInput.multiple = true;
+    fileInput.hidden = true;
+    fileInput.setAttribute("aria-label", "Attach files to AgentSam");
+    root.append(fileInput);
+    const menu = document.createElement("div");
+    menu.className = "asm-capability-popover";
+    menu.setAttribute("role", "menu");
+    menu.setAttribute("aria-label", "AgentSam capabilities");
+    menu.hidden = true;
+    document.body.append(menu);
+    let page = "root";
+    let status = null;
+    let skills = null;
+    let loading = false;
+    let noticeTimeout = null;
+    const update = () => renderDrafts(root);
+    controls.add(update);
+    update();
+    function onNotice(message) {
+      const toast = document.createElement("div");
+      toast.className = "asm-capability-notice";
+      toast.setAttribute("role", "status");
+      toast.textContent = message;
+      menu.append(toast);
+      clearTimeout(noticeTimeout);
+      noticeTimeout = setTimeout(() => toast.remove(), 3500);
+    }
+    fileInput.addEventListener("change", async () => {
+      await collectFiles(fileInput.files, onNotice);
+      fileInput.value = "";
+    });
+    function place() {
+      if (menu.hidden) return;
+      const rect = button.getBoundingClientRect();
+      const width = 234;
+      const left = Math.max(8, Math.min(innerWidth - width - 8, rect.right - width + 20));
+      menu.style.left = left + "px";
+      const menuHeight = menu.getBoundingClientRect().height || 250;
+      const spaceBelow = innerHeight - rect.bottom - 12;
+      menu.style.top = (spaceBelow >= menuHeight ? rect.bottom + 7 : Math.max(8, rect.top - menuHeight - 8)) + "px";
+    }
+    function close() {
+      menu.hidden = true;
+      button.setAttribute("aria-expanded", "false");
+      page = "root";
+    }
+    function row(label, icon, action, { hint = "", arrow = false, disabled = false } = {}) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "asm-menu-row";
+      btn.setAttribute("role", "menuitem");
+      btn.disabled = disabled;
+      const mark = document.createElement("span");
+      mark.className = "asm-menu-row__icon";
+      mark.textContent = icon;
+      const content = document.createElement("span");
+      content.className = "asm-menu-row__content";
+      const title = document.createElement("span");
+      title.textContent = label;
+      content.append(title);
+      if (hint) {
+        const note = document.createElement("small");
+        note.textContent = hint;
+        content.append(note);
+      }
+      const end = document.createElement("span");
+      end.className = "asm-menu-row__arrow";
+      end.textContent = arrow ? glyphs.arrow : "";
+      btn.append(mark, content, end);
+      btn.addEventListener("click", action);
+      return btn;
+    }
+    function header(title) {
+      const back = row(title, glyphs.back, () => { page = "root"; render(); });
+      back.classList.add("asm-menu-back");
+      return back;
+    }
+    function divider() {
+      const el = document.createElement("div");
+      el.className = "asm-menu-divider";
+      el.setAttribute("role", "separator");
+      return el;
+    }
+    async function getStatus() {
+      try {
+        const res = await fetch("/api/admin/agentsam/status", { credentials: "include" });
+        const obj = await res.json();
+        if (res.ok && obj.ok) status = obj;
+      } catch { /* disconnected is not evidence of no plugins */ }
+    }
+    async function getSkills() {
+      if (skills || loading) return;
+      loading = true;
+      try {
+        const res = await fetch("/api/admin/agentsam/skills", { credentials: "include" });
+        const obj = await res.json();
+        skills = res.ok && obj.ok && Array.isArray(obj.skills) ? obj.skills : [];
+      } catch { skills = []; }
+      finally { loading = false; if (!menu.hidden && page === "skills") render(); }
+    }
+    function selectTarget(label, id) {
+      const href = id === "current" ? location.pathname : targetHref[id];
+      draft.selected_resource = {
+        type: "admin_surface",
+        surface: "fnf-admin",
+        label,
+        path: href
+      };
+      notify();
+      close();
+      input.focus();
+    }
+    function render() {
+      menu.replaceChildren();
+      if (page === "root") {
+        menu.append(
+          row("Files", glyphs.files, () => { page = "files"; render(); }, { arrow: true }),
+          row("Upload from device", glyphs.upload, () => { close(); fileInput.click(); }),
+          divider(),
+          row("Target", glyphs.target, () => { page = "target"; render(); }, { arrow: true }),
+          row("Mention", glyphs.mention, () => { page = "mention"; render(); }, { arrow: true }),
+          row("Skills", glyphs.skills, () => { page = "skills"; render(); getSkills(); }, { arrow: true }),
+          divider(),
+          row("Apps", glyphs.apps, () => { page = "apps"; render(); getStatus().then(() => { if (page === "apps" && !menu.hidden) render(); }); }, { arrow: true })
+        );
+      } else if (page === "files") {
+        menu.append(header("Files"), row("Upload from device", glyphs.upload, () => { close(); fileInput.click(); }, { hint: "Images and text documents" }));
+        if (draft.attachments.length) menu.append(row("Remove attachments", "×", () => { clearFiles(); close(); }, { hint: draft.attachments.length + " attached" }));
+      } else if (page === "target" || page === "mention") {
+        menu.append(header(page === "target" ? "Select a target" : "Mention a resource"));
+        for (const [label, id, hint] of targets) {
+          menu.append(row(label, page === "target" ? glyphs.target : glyphs.mention, () => {
+            if (page === "target") selectTarget(label, id);
+            else { addMention(input, "@" + (id === "current" ? "page" : id)); close(); }
+          }, { hint }));
+        }
+      } else if (page === "skills") {
+        menu.append(header("Skills"));
+        if (!skills) menu.append(row("Loading skills…", glyphs.skills, () => {}, { disabled: true }));
+        else if (!skills.length) menu.append(row("No skills available", glyphs.skills, () => {}, { hint: "Check the FNF skill registry", disabled: true }));
+        else {
+          skills.slice(0, 16).forEach((skill) => {
+            const slug = String(skill.slug || "").replace(/[^a-z0-9-]/g, "");
+            if (!slug) return;
+            menu.append(row(skill.name || slug, glyphs.skills, () => { addMention(input, "/" + slug); close(); }, { hint: skill.description ? String(skill.description).slice(0, 65) : "Add skill to prompt" }));
+          });
+        }
+        menu.append(divider(), row("Create new skill", "+", () => {
+          onNotice("Creating skills requires the authorized write API; existing skills are available above.");
+        }, { hint: "Not available in this version" }));
+      } else if (page === "apps") {
+        menu.append(header("Apps"));
+        if (!status) menu.append(row("Checking connections…", glyphs.apps, () => {}, { disabled: true }));
+        const apps = Array.isArray(status?.mcp_servers) ? status.mcp_servers : [];
+        if (status && !apps.length) menu.append(row("No linked app tools", glyphs.apps, () => {}, { hint: "No verified integrations available", disabled: true }));
+        for (const app of apps) {
+          const connected = Boolean(app.connected);
+          menu.append(row(app.display_name || app.slug || "Integration", connected ? glyphs.connected : glyphs.apps, () => {
+            if (!connected) { onNotice("This app requires its own authorized connection."); return; }
+            addMention(input, "@" + String(app.slug || "app").replace(/[^a-z0-9_-]/gi, ""));
+            close();
+          }, { hint: connected ? "Connected · mention in prompt" : "Needs connection" }));
+        }
+        menu.append(divider(), row("About connections", "ⓘ", () => onNotice("ChatGPT plugin authorization and FNF app authorization are separate connections.")));
+      }
+      place();
+    }
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (!menu.hidden) { close(); return; }
+      page = "root";
+      menu.hidden = false;
+      button.setAttribute("aria-expanded", "true");
+      render();
+      menu.querySelector("button:not([disabled])")?.focus();
+    });
+    document.addEventListener("pointerdown", (event) => {
+      if (!menu.hidden && !menu.contains(event.target) && !button.contains(event.target)) close();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (menu.hidden) return;
+      if (event.key === "Escape") { event.preventDefault(); close(); button.focus(); }
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        const buttons = [...menu.querySelectorAll(".asm-menu-row:not(:disabled)")];
+        if (!buttons.length) return;
+        event.preventDefault();
+        const index = buttons.indexOf(document.activeElement);
+        buttons[(index + (event.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length].focus();
+      }
+    });
+    window.addEventListener("resize", place);
+    document.addEventListener("scroll", place, true);
+    return { close, getAttachments: () => draft.attachments.slice(), context, clearFiles };
+  }
+  window.AgentSamComposerMenu = { mount: attach, draft, context, clearFiles, notify };
+})();
