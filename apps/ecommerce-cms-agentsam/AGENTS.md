@@ -48,13 +48,16 @@ The left drawer navigates, the preview renders the real section, and the context
 ## AgentSam generate/edit/normalize workflow
 
 1. Inspect the intended page, selected node, existing owners, settings, and applicable contracts.
-2. Propose a semantic reusable definition. **Never** introduce generic `custom`/`ai_section` as the permanent type.
-3. Extract typed merchant settings and resource pickers. Keep code and data separate.
+2. Classify the implementation as `native`, `artifact_static`, `artifact_interactive`, or `app`; reuse an existing semantic definition before proposing one. **Never** introduce generic `custom`/`ai_section` as the permanent type.
+3. Treat the definition's declared, versioned settings schema as the public API. Initial values do not define field types. Extract merchant settings and resource references; keep code and data separate.
 4. Create a temporary tree item during generation; stream honest phases and allow cancellation.
-5. Validate markup, CSS, JS, namespace and code safety; repair before acceptance.
-6. Namespace per-instance behavior with `agentsam_gen_` identifiers and instance-scoped selectors/properties; avoid globals and cross-instance collisions.
-7. Store implementation as an immutable artifact; register/version the definition and insert a normal section/block instance.
-8. Select the resulting normal tree row. Render its inspector from the definition schema. Follow-up edits produce a new artifact version under the same semantic key unless the component's meaning changes.
+5. The current production acceptance lane is `artifact_static`: bounded, script-free HTML/CSS only. Reject JS. `artifact_interactive` is **not installable** until an explicit production runtime/capability contract is implemented; the older generated-block harness is not evidence of production support.
+6. Root every CSS selector under the placed-instance scope; use `data-cms` for content and the contract's instance-scoped CSS custom-property pattern for visual values. Prefer shared theme/global tokens.
+7. Keep semantic definition keys unprefixed. `agentsam_gen_` is reserved for per-instance implementation isolation; a duplicate gets a new stable instance identity while reusing the immutable artifact.
+8. Store implementation as an immutable, versioned artifact; register/version the definition and insert a normal section/block instance. Preserve generation or refurbishment provenance, including source repo/commit/path/hash and license/ownership evidence when mining code.
+9. Select the resulting normal tree row. Render its inspector from the definition schema. Follow-up edits produce a new artifact version under the same semantic key unless the component's meaning changes.
+
+Generic repository/machine crawling and code mining belong to the shared AgentSam Machine/Repository layer, not the FNF Worker. FNF consumes deterministic crawl receipts and relationship evidence as inputs to this normalization contract; discovery must not automatically mutate a source repository or promote unverified code.
 
 The generator may use any authorized provider; neither the UI nor this guide may hardcode one model. A generated section must survive the same duplicate, hide, reorder, nested-block, reload and publish path as stock.
 

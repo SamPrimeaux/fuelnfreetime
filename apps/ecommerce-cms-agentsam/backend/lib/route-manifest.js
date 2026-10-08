@@ -13,14 +13,14 @@ const SESSION_POLICY = { auth: "session", cache: "private-no-store" };
 const PUBLIC_POLICY = { auth: "public", cache: "private-no-store" };
 
 const STORE_ROUTES = [
-  { id: "store.home", path: "/", surface: "storefront", handler: "cms-page", page: "home", context: "cms.page", legacy: ["/index.html"] },
-  { id: "store.shop", path: "/shop", surface: "storefront", handler: "cms-page", page: "shop", context: "cms.page", legacy: ["/shop.html", "/pages/shop", "/pages/shop/"] },
-  { id: "store.about", path: "/about", surface: "storefront", handler: "cms-page", page: "about", context: "cms.page", legacy: ["/about.html", "/pages/about", "/pages/about/"] },
-  { id: "store.community", path: "/community", surface: "storefront", handler: "cms-page", page: "community", context: "cms.page", legacy: ["/community.html", "/pages/community", "/pages/community/"] },
-  { id: "store.collaborate", path: "/collaborate", surface: "storefront", handler: "cms-page", page: "collaborate", context: "cms.page", legacy: ["/collaborate.html", "/pages/collaborate", "/pages/collaborate/"] },
-  { id: "store.policies", path: "/policies", surface: "storefront", handler: "cms-page", page: "policies", context: "cms.page", legacy: ["/policies.html", "/pages/policies", "/pages/policies/"] },
-  { id: "store.terms", path: "/terms", surface: "storefront", handler: "cms-page", page: "terms", context: "cms.page", legacy: ["/terms.html", "/pages/terms", "/pages/terms/"] },
-  { id: "store.cart", path: "/cart", surface: "storefront", handler: "static", page: "cart", context: "commerce.cart", legacy: ["/cart.html", "/pages/cart", "/pages/cart/"] },
+  { id: "store.home", path: "/", surface: "storefront", handler: "cms-page", page: "home", context: "cms.page", indexable: true, legacy: ["/index.html"] },
+  { id: "store.shop", path: "/shop", surface: "storefront", handler: "cms-page", page: "shop", context: "cms.page", indexable: true, legacy: ["/shop.html", "/pages/shop", "/pages/shop/"] },
+  { id: "store.about", path: "/about", surface: "storefront", handler: "cms-page", page: "about", context: "cms.page", indexable: true, legacy: ["/about.html", "/pages/about", "/pages/about/"] },
+  { id: "store.community", path: "/community", surface: "storefront", handler: "cms-page", page: "community", context: "cms.page", indexable: true, legacy: ["/community.html", "/pages/community", "/pages/community/"] },
+  { id: "store.collaborate", path: "/collaborate", surface: "storefront", handler: "cms-page", page: "collaborate", context: "cms.page", indexable: true, legacy: ["/collaborate.html", "/pages/collaborate", "/pages/collaborate/"] },
+  { id: "store.policies", path: "/policies", surface: "storefront", handler: "cms-page", page: "policies", context: "cms.page", indexable: true, legacy: ["/policies.html", "/pages/policies", "/pages/policies/"] },
+  { id: "store.terms", path: "/terms", surface: "storefront", handler: "cms-page", page: "terms", context: "cms.page", indexable: true, legacy: ["/terms.html", "/pages/terms", "/pages/terms/"] },
+  { id: "store.cart", path: "/cart", surface: "storefront", handler: "static", page: "cart", context: "commerce.cart", indexable: false, legacy: ["/cart.html", "/pages/cart", "/pages/cart/"] },
 ];
 
 const coreAdmin = (route) => ({
@@ -129,6 +129,9 @@ export const ADMIN_ROUTE_MANIFEST = [
 ];
 
 export const ROUTE_MANIFEST = [...STORE_ROUTES, ...ADMIN_ROUTE_MANIFEST];
+
+/** Public storefront paths that are intentionally eligible for search indexing. */
+export const INDEXABLE_STORE_ROUTES = STORE_ROUTES.filter((route) => route.indexable === true);
 
 function compileLegacyRedirects(routes) {
   const htmlToClean = new Map();

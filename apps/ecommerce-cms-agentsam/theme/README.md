@@ -1,4 +1,4 @@
-# FNF Theme Authoring Contract v1
+# FNF Theme Authoring Contract v1.1
 
 This contract specifies the target authoring model for the **existing** FNF Theme Studio. It is not a statement that every capability is implemented. Implementations and side agents must check live migrations, API contracts, and current code before making database changes.
 
@@ -14,6 +14,25 @@ This contract specifies the target authoring model for the **existing** FNF Them
 - `media_assets`: media authority, separate from CMS tables
 
 A definition describes **what the component is**. An instance describes **where it is used and what the merchant configured**. A storefront resource (product, collection, customer, order) is bound by reference; do not duplicate business data into section JSON.
+
+## Shopify-inspired, provider-neutral implementation classes
+
+This is the FNF equivalent of a theme-authoring guide: it captures ownership and allowed edit paths, not Liquid or Shopify runtime behavior. The machine-readable authority is [`authoring.contract.json`](./authoring.contract.json).
+
+| Class | Meaning | Current status |
+| --- | --- | --- |
+| `native` | Existing semantic theme/editor primitive; no generated artifact is required. | Supported |
+| `artifact_static` | Reusable semantic definition backed by immutable HTML/CSS; no executable JS. | Current generated-section acceptance lane |
+| `artifact_interactive` | Artifact with explicitly declared runtime capabilities. | **Unavailable** until one production acceptance/rendering contract is wired; do not assume the older block harness makes it installable. |
+| `app` | Provider/widget-owned surface under its app contract. | Separate app contract |
+
+`definition_key` is semantic and stable. `agentsam_gen_` is only per-placed-instance implementation isolation; duplicating an instance creates a new instance identity while reusing its immutable artifact. Definition-owned static slots remain editable but cannot be removed/reordered; dynamic slots are merchant-managed within the definition's allowed-block and maximum-count rules. Verify those policies against runtime code before relying on them.
+
+A definition's declared typed settings schema—not initial values—is the public API. Content bindings use `data-cms`; visual values target instance-scoped CSS custom properties (`--__UID__-setting-<key>`). The complete field vocabulary and style-variable convention are contract targets; reject a field or binding the current editor/renderer does not implement. Prefer shared theme/global tokens for typography, colors, radii, and spacing.
+
+## Code-mining / refurbishment boundary
+
+The deterministic repository or machine crawler belongs to shared AgentSam Machine/Repository adapters, not this storefront Worker. It should emit bounded discovery receipts and relationship evidence; indexing and inspection consume that graph, and refurbishment proposes changes without mutating source repositories. This FNF contract is the promotion gate for a mined theme component: resolve the existing owner, classify it, preserve source repo/commit/path/hash and license/ownership evidence, normalize it to a semantic definition plus artifact, verify it, then require explicit approval before promotion. Never create an FNF-specific repository crawler or treat discovered code as automatically trusted.
 
 ## Mandatory normalization intake
 

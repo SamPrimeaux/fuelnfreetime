@@ -21,6 +21,7 @@ import { handlePublicCmsApi } from "./cms/api.js";
 import { handleStudioCmsBridge } from "./cms/studio-bridge.js";
 import { handleCmsWarmInternal } from "./cms/deploy.js";
 import { handleSceneReview } from "./admin/scene-review.js";
+import { handlePublicSearchDiscovery } from "./store/search-discovery.js";
 import {
   serveStorefrontPage,
   slugForAssetPath,
@@ -199,6 +200,8 @@ export default {
 
     const url = new URL(request.url);
     const path = url.pathname;
+    const searchDiscovery = await handlePublicSearchDiscovery(request, env, url);
+    if (searchDiscovery) return searchDiscovery;
     if (path === "/catalog-image") return serveCatalogImage(request, env, ctx);
 
     if (path === "/api/health") {

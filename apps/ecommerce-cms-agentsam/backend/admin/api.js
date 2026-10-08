@@ -98,6 +98,7 @@ import { handleDiscountsApi } from "./discounts.js";
 import { handleCompletefulAdminApi } from "./completeful.js";
 import { handleProductStudioAdminApi } from "./product-studio.js";
 import { getBrandWorkspace, patchBrandWorkspace, searchBrandAssets } from "./brand.js";
+import { getStoreSearchDiscovery } from "./search-discovery.js";
 import { handleGenerateBlockRequest } from "./generate-block-stream.js";
 import { handleWorkersAiCodeProvider } from "./code-provider-workers-ai.js";
 
@@ -720,6 +721,9 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   }
   if (path === "/api/admin/store/preferences" && method === "POST") {
     return postStorePreferences(request, env);
+  }
+  if (path === "/api/admin/store/crawler" && method === "GET") {
+    return getStoreSearchDiscovery(env);
   }
 
   let themePageMatch = path.match(/^\/api\/admin\/store\/themes\/([^/]+)\/pages$/);

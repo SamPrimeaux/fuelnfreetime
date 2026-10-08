@@ -46,11 +46,11 @@ The hCaptcha flags were only saved preference booleans; no actual hCaptcha verif
 
 Implement a provider-neutral challenge verifier with **Cloudflare Turnstile** as a likely FNF adapter. Inventory real protected forms first: newsletter, contact, login, signup, reset, comments and community submissions. Only enable a toggle when a valid site key, Worker-only secret, frontend challenge widget, and backend siteverify request are installed on that route. Validate hostname/action, expiration and replay. Provide accessible/error fallbacks, edge abuse limits, real audit events and invalid-token tests. Avoid accidental restrictions on checkout and existing customers.
 
-### Crawler access
+### Crawler access and public discovery
 
-The original Create Signature button only alerted "coming soon" and there was no authorized issue/verify lifecycle. It is now a factual not-configured status, not a fake working tab.
+FNF does not issue crawler credentials, implement request signatures, or own a crawl queue. Public search discovery is provided by the storefront's `robots.txt` and `sitemap.xml` endpoints, plus canonical metadata and real HTML. The reusable `site.scrape` capability in `SamPrimeaux/agentsam-sdk` is the crawler authority. FNF Preferences reports public URL counts and does not imply that refreshing the panel starts a crawl.
 
-For public indexing, prioritize robots.txt, sitemap, canonical tags, complete metadata and real HTML without requiring authorization. For a truly private crawler/API use case, define allowed route scopes, expirations and purpose first. Then build public-key-based RFC 9421 HTTP message signature registration, verified request-target/digest/timestamps, nonce replay protection, audit logs and key rotation/revocation. Private signing keys belong to the crawler operator, not in the CMS UI. Never generate pretend header values.
+The SDK package is not present as a runtime binding or callable API in this FNF checkout; do not invent an invocation protocol. A real crawl action/run-history integration needs a documented SDK runtime contract and shared run receipts first. Crawler execution, authorization, host scheduling, fetch history and evidence remain with the shared AgentSam platform. Do not add FNF-specific signatures, credentials, nonces, crawler audit logs, or D1 crawler tables. See [`FNF-SITE-SCRAPE-BOUNDARY.md`](FNF-SITE-SCRAPE-BOUNDARY.md).
 
 ## Ownership and portability
 
@@ -65,4 +65,4 @@ FNF has its own Worker, D1 and R2. Current configuration remains isolated to tha
 - After review, merge/deploy safely; then authenticated CMS save/reload and guest review with a password in a separate session.
 - **Do not claim the original scene is confidential while its old public R2 URLs remain accessible.**
 
-Remaining asset-privacy migration, spam verification, crawler signature service and true storewide password protection are tracked work, not shipped capabilities.
+Asset-privacy migration, spam verification, a callable shared SDK crawler integration, and true storewide password protection remain tracked work; the Preferences discovery panel does not imply these capabilities are shipped.

@@ -46,6 +46,7 @@ This file is the entry point for human and AI collaborators (including Connor's 
 | **Agent Sam skills (R2 + D1)** | [`docs/AGENTSAM-SKILLS.md`](docs/AGENTSAM-SKILLS.md) | Sync with `npm run agentsam:skills:sync` |
 | **Project context** | D1 `agentsam_project_context.id = ctx_fuelnfreetime` | Worker + IAM registry — `npm run db:seed:ctx-fuelnfreetime:all` |
 | **CMS** — pages, sections, publish, KV, R2 bodies, live editor | [`docs/FNF-CMS-SPRINT-2026-06-20.md`](docs/FNF-CMS-SPRINT-2026-06-20.md) | Live |
+| **Theme authoring / code refurbishment** — portable Shopify-inspired ownership, definitions, artifacts, settings, provenance and verification | [`apps/ecommerce-cms-agentsam/theme/authoring.contract.json`](apps/ecommerce-cms-agentsam/theme/authoring.contract.json) + [`apps/ecommerce-cms-agentsam/theme/README.md`](apps/ecommerce-cms-agentsam/theme/README.md) | Contract v1.1.0; interactive artifact lane unavailable; generic crawl belongs to AgentSam Machine/Repository |
 
 If a feature does not fit an existing contract, **update the contract first** (or in the same PR), then implement.
 
