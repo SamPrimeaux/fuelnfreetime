@@ -175,8 +175,6 @@ export default function HealthPage({range}:PageProps){
     <NoSource reason={data?.app.available?"No failures recorded in this period.":"No D1 event records available."}/>}
    </div>
   </div>
-  <LiveDiagnosticLogs range={range} poll={fetchLogs}
-   onAsk={(selected,context)=>askAgentSamAboutLogs(selected,context as unknown as Record<string,unknown>)}/>
   {data?.basin.enabled&&<BasinOverviewPanel basin={data.basin}/>}
   {alertsOpen&&<section className="card" role="region" aria-label="Observed failures" style={{marginTop:14}}>
    <div className="card-head"><div><div className="card-title">Failure details</div><div className="card-sub">Recent recorded failures · {range}</div></div></div>
@@ -184,5 +182,9 @@ export default function HealthPage({range}:PageProps){
      <strong>{f.operation}</strong> <span className="muted">· {f.domain} · {f.error_code||"No error code"} · {new Date(f.occurred_at*1000).toLocaleString()}</span></div>):
     <NoSource reason="No failure details have been recorded."/>}
   </section>}
+  <div style={{marginTop:14}}>
+  <LiveDiagnosticLogs range={range} poll={fetchLogs}
+   onAsk={(selected,context)=>askAgentSamAboutLogs(selected,context as unknown as Record<string,unknown>)}/>
+  </div>
  </>;
 }
