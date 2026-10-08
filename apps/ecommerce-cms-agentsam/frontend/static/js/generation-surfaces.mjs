@@ -1,4 +1,4 @@
-import { insertGeneratingNode, removeGeneratingNode, renderGeneratedSettings } from "./generation-inspector.mjs";
+import { insertGeneratingNode, removeGeneratingNode } from "./generation-inspector.mjs";
 import { presentAgentsamProposal, renderAssistantHeader, renderProvenanceCard } from "./side-assistant.mjs";
 
 export function mountComposer(slot, placement) {
@@ -215,12 +215,8 @@ export function createGenerationFlow(regions) {
       message.className = "te-generation-installed";
       message.textContent = "Installed in your private draft. Edit its settings in the inspector, or send a follow-up. Publish separately.";
       regions.panel.append(message);
-      // The host's native inspector owns settings after installation. Only
-      // create fallback demo fields when no host inspector fields are mounted.
-      if (!regions.inspector.querySelector(".te-field, [data-field-key], [data-setting-key]") &&
-          !regions.inspector.querySelector("[data-generated-history]")) {
-        renderGeneratedSettings(regions.inspector, settings);
-      }
+      // The host's native inspector owns settings. Never render synthetic
+      // fields from model output in parallel to the page's section schema.
       regions.inspector.querySelector("[data-ai-generated]")?.remove();
       regions.inspector.querySelector("[data-followup]")?.remove();
       const card = renderProvenanceCard(provenance, false);
