@@ -53,6 +53,7 @@ import { planProductAssetOptimization } from "../assets/product-optimize.js";
 import { groupProductInventory, resolveProductSource, validateInventoryAdjustment } from "../../../../packages/agentsam-merch/src/product-spine.js";
 import { handleAdminCmsApi } from "../cms/api.js";
 import { getFinanceAnalytics } from "./analytics-finance.js";
+import { getHealthAnalytics } from "./analytics-health.js";
 import {
   agentsamChat,
   agentsamAiModelsList,
@@ -968,6 +969,9 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   }
   if (path === "/api/admin/agentsam/compaction/run" && method === "POST") {
     return agentsamCompactionRun(request, env, executionCtx);
+  }
+  if (path === "/api/admin/analytics/health" && method === "GET") {
+    return json(await getHealthAnalytics(env, url.searchParams.get("range") || "30d"));
   }
   if (path === "/api/admin/analytics/finance" && method === "GET") {
     const range = url.searchParams.get("range") || "30d";
