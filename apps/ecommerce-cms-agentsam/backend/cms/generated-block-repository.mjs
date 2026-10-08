@@ -120,9 +120,14 @@ export function createGeneratedBlockRepository(sql, objects, options = {}) {
       if (!/^[a-z][a-z0-9-]{1,63}$/.test(semanticType)) {
         return { ok: false, status: 422, error: "invalid generated semantic type", written: false };
       }
+      const blockId = input.blockId || ("cmsb_" + randomUUID().replace(/-/g, "").slice(0, 16));
       if (canonical) {
-        const forms = nsForms(input.blockKey || input.blockId || "block", picked.namespace);
-        const resolved = { html: resolveUidToken(canonical.html || "", forms.blockId, picked.namespace), css: resolveUidToken(canonical.css || "", forms.blockId, picked.namespace), js: resolveUidToken(canonical.js || "", forms.blockId, picked.namespace) };
+        const forms = nsForms(blockId, picked.namespace);
+        const resolved = {
+          html: resolveUidToken(canonical.html || "", blockId, picked.namespace),
+          css: resolveUidToken(canonical.css || "", blockId, picked.namespace),
+          js: resolveUidToken(canonical.js || "", blockId, picked.namespace),
+        };
         const lint = lintGeneratedBlock(resolved, forms);
         if (!lint.ok) return { ok: false, status: 422, error: lint.violations.join("; "), written: false };
       }
