@@ -26,6 +26,7 @@ on:
       - packages/heuristic-theme/storefront/shop.html
       - tests/cms-live-source-browser-smoke.mjs
       - tests/cms-generated-section-accept.test.mjs
+      - tests/cms-generated-stream.test.mjs
       - tests/cms-generated-storefront-browser-smoke.mjs
       - tests/cms-generated-approval-browser-smoke.mjs
       - apps/ecommerce-cms-agentsam/backend/cms/generated-section.mjs
@@ -65,7 +66,7 @@ jobs:
           node --check apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor-generation-bootstrap.mjs
           node --check apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor.js
       - name: Real renderer and shared catalog checks
-        run: node --test tests/portable-sections.test.mjs tests/revise-atlas-contract.test.mjs tests/theme-studio-universal.test.mjs tests/cms-editor-mutations.test.mjs tests/cms-generated-section-accept.test.mjs tests/cms-definition-registry.test.mjs tests/storefront-header-presets-editor.test.mjs
+        run: node --test tests/portable-sections.test.mjs tests/revise-atlas-contract.test.mjs tests/theme-studio-universal.test.mjs tests/cms-editor-mutations.test.mjs tests/cms-generated-section-accept.test.mjs tests/cms-generated-stream.test.mjs tests/cms-definition-registry.test.mjs tests/storefront-header-presets-editor.test.mjs
       - name: Actual Chrome public DOM and live editor preview proof
         run: node tests/portable-sections-browser-smoke.mjs
       - name: Real Home-page composer browser proof
