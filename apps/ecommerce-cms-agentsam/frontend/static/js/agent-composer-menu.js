@@ -113,7 +113,7 @@
   function clearFiles() { draft.attachments = []; notify(); }
   function attach(root, button, input) {
     if (!root || !button || !input || button.dataset.agentMenuWired) return;
-    button.dataset.agentMenuWired = "1";
+    button.dataset.agentMenuInitializing = "1";
     const fileInput = document.createElement("input");
     fileInput.type = "file";
     fileInput.accept = ".txt,.md,.json,.csv,image/png,image/jpeg,image/webp";
@@ -327,6 +327,8 @@
     });
     window.addEventListener("resize", place);
     document.addEventListener("scroll", place, true);
+    button.dataset.agentMenuWired = "1";
+    delete button.dataset.agentMenuInitializing;
     return { close, getAttachments: () => draft.attachments.slice(), context, clearFiles };
   }
   window.AgentSamComposerMenu = { mount: attach, draft, context, clearFiles, notify };
