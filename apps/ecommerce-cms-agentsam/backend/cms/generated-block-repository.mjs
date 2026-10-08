@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { lintGeneratedBlock, nsForms, resolveUidToken } from "../../frontend/static/js/generation-namespace.mjs";
 
 const TABLES = {
