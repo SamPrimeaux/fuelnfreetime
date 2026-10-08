@@ -189,7 +189,7 @@ export function createGeneratedBlockRepository(sql, objects, options = {}) {
       } catch (error) {
         return { ok: false, status: 500, error: error.message, orphan: key };
       }
-      return { ok: true, blockId, artifactId: "cmsa_" + hash16, key };
+      return { ok: true, blockId, instanceId:blockId, artifactId: "cmsa_" + hash16, key };
     },
     loadBlock(accountId, blockId) { return blockRow(accountId, blockId); },
     async loadBlockTree(accountId, sectionId) {
