@@ -2,6 +2,10 @@
  * AgentSam Side Assistant — docked admin chat (/api/admin/agentsam/chat)
  */
 
+const ASSISTANT_NEW_CHAT_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L9 17l-4 1 1-4Z"/></svg>';
+const ASSISTANT_EXPAND_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3M21 16v3a2 2 0 0 1-2 2h-3"/></svg>';
+const ASSISTANT_COLLAPSE_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 8 3 3M16 8 21 3M8 16 3 21M16 16 21 21M8 3v5H3M16 3v5h5M8 21v-5H3M16 21v-5h5"/></svg>';
+
 let agentsamDockMode = "docked";
 
 function agentsamMount() {
@@ -26,7 +30,7 @@ function renderAgentsamShell() {
             <span id="agentsam-status">Context-aware admin chat</span>
           </div>
         </div>
-        <div data-assistant-actions="true"><button type="button" data-assistant-action="New chat" aria-label="Start a new chat" title="Start a new chat">＋</button><button type="button" data-assistant-action="Expand" aria-label="Expand Side Assistant" title="Expand Side Assistant">⤢</button></div>
+        <div data-assistant-actions="true"><button type="button" data-assistant-action="New chat" aria-label="Start a new chat" title="Start a new chat">${ASSISTANT_NEW_CHAT_ICON}</button><button type="button" data-assistant-action="Expand" aria-label="Expand Side Assistant" title="Expand Side Assistant">${ASSISTANT_EXPAND_ICON}</button></div>
         <span data-context-chip="true"></span>
         <button type="button" class="agentsam-close" id="agentsam-close" aria-label="Close AgentSam Side Assistant">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
@@ -316,7 +320,7 @@ function bindAgentsamStaticHandlers() {
       target.setAttribute("data-assistant-action", expanded ? "Collapse" : "Expand");
       target.setAttribute("aria-label", expanded ? "Dock Side Assistant" : "Expand Side Assistant");
       target.title = expanded ? "Dock Side Assistant" : "Expand Side Assistant";
-      target.textContent = expanded ? "⤡" : "⤢";
+      target.innerHTML = expanded ? ASSISTANT_COLLAPSE_ICON : ASSISTANT_EXPAND_ICON;
     }
   });
 
