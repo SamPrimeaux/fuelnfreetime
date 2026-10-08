@@ -292,9 +292,9 @@ export async function persistScanReport(report, write) {
 export function gateGeneratedSave(body) {
   const blob = JSON.stringify(body || {});
   if (detectProvenance(blob) !== "agentsam") return { ok: true };
-  const blockId = (body && (body.blockId || body.block_key)) || "block";
+  const instanceId = (body && (body.instanceId || body.blockId || body.block_id || body.block_key)) || "block";
   const namespace = body && (body.namespace || (body.provenance && body.provenance.namespace));
-  const forms = nsForms(blockId, namespace);
+  const forms = nsForms(instanceId, namespace);
   const code = (body && (body.code || body.canonical)) || { html: blob, css: "", js: "" };
   const lint = lintGeneratedBlock({
     html: code.html || "",
