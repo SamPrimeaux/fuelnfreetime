@@ -209,7 +209,7 @@ async function init() {
     showHistoryAction(next);
     mountAssistantHeader(drawer, {
       selection: selectionLabel(next),
-      expanded: drawer.getAttribute("aria-hidden") === "false",
+      expanded: drawer.hasAttribute("data-expanded"),
     });
   });
 
