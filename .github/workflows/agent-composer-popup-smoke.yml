@@ -1,0 +1,28 @@
+name: AgentSam composer popup smoke
+
+on:
+  pull_request:
+    paths:
+      - 'apps/ecommerce-cms-agentsam/frontend/static/js/agent-composer-menu.js'
+      - 'apps/ecommerce-cms-agentsam/frontend/static/js/home-workspace.js'
+      - 'apps/ecommerce-cms-agentsam/frontend/static/js/agentsam.js'
+      - 'apps/ecommerce-cms-agentsam/frontend/static/css/agentsam.css'
+      - 'tests/agent-composer-popup-browser.test.mjs'
+      - '.github/workflows/agent-composer-popup-smoke.yml'
+
+jobs:
+  click-through:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Chromium available
+        run: |
+          test -x /usr/bin/google-chrome || test -x /usr/bin/chromium
+      - name: Real browser popup and submenu flow
+        run: node tests/agent-composer-popup-browser.test.mjs
+      - name: Existing UI contract tests
+        run: node --test tests/admin-home-agent-workspace.test.mjs
