@@ -2617,9 +2617,15 @@
       const section = currentSection();
       if (!section?.content?.__editor?.generated) return null;
       return {
-        definition: {type:section.content.__editor.definitionKey},
+        definition: {
+          kind: 'section',
+          type: section.content.__editor.definitionKey,
+          settings: section.content.__editor.generatedSettingsSchema || {},
+          implementation_class: section.content.__editor.implementationClass || 'artifact_static',
+        },
         settings: Object.fromEntries(Object.entries(section.content).filter(function([key]) { return key !== '__editor'; })),
         canonical: section.implementation || null,
+        implementation_class: section.content.__editor.implementationClass || 'artifact_static',
       };
     },
     restoreGenerated: async function(revisionNumber,expectedVersion) {
