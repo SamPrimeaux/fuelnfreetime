@@ -60,8 +60,9 @@ const server=http.createServer((req,res)=>{
 });
 await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
 try{
+ for(const width of [390,744,1440]) {
  const {stdout:dom}=await exec(chrome,["--headless=new","--disable-gpu","--no-sandbox","--disable-dev-shm-usage",
-   "--virtual-time-budget=3500","--dump-dom","http://127.0.0.1:"+server.address().port+"/"],
+   "--virtual-time-budget=3500","--window-size="+width+",900","--dump-dom","http://127.0.0.1:"+server.address().port+"/"],
    {timeout:45000,encoding:"utf8",maxBuffer:1<<20});
  const match=dom.match(/<pre id="generated-approval-proof">([^<]+)<\/pre>/);
  assert.ok(match,"Preview/accept UI did not resolve");
@@ -78,5 +79,6 @@ try{
  assert.deepEqual(proof.edit,{editable:"Revised editorial section",requests:0,placeholder:true});
  assert.deepEqual(proof.started,{requests:1,sent:"Revised editorial section",stage:"generating",side:true,assistantRight:true});
  assert.match(proof.after.message,/private draft/i);
- console.log("PASS: generation preview is script-disabled and cannot install before explicit acceptance");
+ console.log("PASS "+width+"px: mini composer→right action card→left editable request→stream→private acceptance");
+ }
 }finally{server.close();}
