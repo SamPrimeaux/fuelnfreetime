@@ -257,7 +257,16 @@ export function acceptGeneratedBlock(canonical, options = {}) {
     canonical: current,
     resolved: resolve(current),
     forms,
-    provenance: provenanceRecord({ namespace: forms.namespace, model: options.model, prompt: options.prompt }),
+    provenance: provenanceRecord({
+      namespace: forms.namespace,
+      generation_id: options.generation_id || options.generationId || "",
+      source_agent: options.source_agent || options.sourceAgent || "agentsam",
+      provider: options.provider || "",
+      model: options.model || "",
+      prompt: options.prompt || "",
+      source_ref: options.source_ref || options.sourceRef || "",
+      normalized_by: options.normalized_by || options.normalizedBy || "agentsam.theme-authoring.v1",
+    }),
   };
 }
 
