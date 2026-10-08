@@ -11,6 +11,9 @@ type = "CompiledWasm"
 globs = ["**/*.wasm"]
 fallthrough = true
 
+[analytics]
+binding = "ANALYTICS_SQL"
+
 [observability.logs]
 enabled = true
 invocation_logs = true
@@ -72,7 +75,8 @@ deleted_classes = ["CmsEditorRoom"]
 
 [triggers]
 # Daily AgentSam compaction + hourly stale asset-job recovery (Queue is primary)
-crons = ["0 4 * * *", "0 * * * *"]
+# Health probe every 30 minutes; keep daily compaction and hourly asset recovery.
+crons = ["0 4 * * *", "0 * * * *", "*/30 * * * *"]
 
 [assets]
 directory = "./dist/assets"
