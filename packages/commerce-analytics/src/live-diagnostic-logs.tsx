@@ -27,6 +27,7 @@ export function LiveDiagnosticLogs({range,poll,onAsk}:LiveLogsProps){
  const ref=useRef<HTMLDivElement>(null);
  const anchor=useRef<string|null>(null);
  const stopped=useRef(false);
+ const clearedIds=useRef(new Set<string>());
  const selectedIds=useMemo(()=>new Set(selected),[selected]);
  const visible=useMemo(()=>records.filter(r=>(filter==="all"||r.severity===filter)&&
    (!search||[r.message,r.service,r.route,r.errorCode,r.requestId,r.rayId].join(" ").toLowerCase().includes(search.toLowerCase()))),[records,filter,search]);
@@ -50,7 +51,7 @@ export function LiveDiagnosticLogs({range,poll,onAsk}:LiveLogsProps){
        const incoming=(result.logs||[]).map(normalizeDiagnosticLog).filter(Boolean) as DiagnosticLogContext[];
        setRecords(existing=>{
          const unique=new Map(existing.map(x=>[x.id,x]));
-         for(const row of incoming)unique.set(row.id,row);
+         for(const row of incoming)if(!clearedIds.current.has(row.id))unique.set(row.id,row);
          return Array.from(unique.values()).sort((a,b)=>b.timestamp.localeCompare(a.timestamp)).slice(0,LOG_CAP);
        });
      }catch(err){
@@ -94,7 +95,7 @@ export function LiveDiagnosticLogs({range,poll,onAsk}:LiveLogsProps){
    <div className="card-head" style={{gap:10,flexWrap:"wrap"}}>
      <div><div className="card-title">Live logs</div>
        <div className="card-sub">Inspect Worker/application activity on demand · {source}</div></div>
-     {!active?<button className="btn" type="button" onClick={()=>{setError("");setActive(true);}}>
+     {!active?<button className="btn" type="button" disabled={!poll} onClick={()=>{clearedIds.current.clear();setError("");setActive(true);}}>
        Start live logs</button>:
       <div className="row gap-2"><span className="pill good" role="status">● Live</span>
         <button className="btn" type="button" onClick={stop} aria-label="Stop live logs">■ Stop</button></div>}
@@ -142,7 +143,7 @@ export function LiveDiagnosticLogs({range,poll,onAsk}:LiveLogsProps){
        <span className="muted text-xs" style={{marginRight:"auto"}}>{loading?"Querying…":active?"Refreshes every 8.5s while open":"Paused"} · click / shift-click rows</span>
        <button className="btn" type="button" disabled={!chosen.length} onClick={()=>void copy()}>Copy</button>
        <button className="btn" type="button" disabled={!chosen.length} onClick={()=>ask()}>Ask AgentSam</button>
-       <button className="btn" type="button" onClick={()=>{setRecords([]);setSelected([]);setDetails([]);setMenu(null);}}>Clear</button>
+       <button className="btn" type="button" onClick={()=>{for(const r of records)clearedIds.current.add(r.id);setRecords([]);setSelected([]);setDetails([]);setMenu(null);}}>Clear</button>
      </div>
    </>}
    {error&&<div className="muted" role="alert" style={{padding:"8px 12px",color:"var(--bad)"}}>
