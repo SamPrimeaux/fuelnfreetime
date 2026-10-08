@@ -56,3 +56,7 @@
 .fnf-home-stage:focus-within .fnf-home-suggestions{max-height:230px;opacity:1;pointer-events:auto;margin-top:18px}
 @media(max-width:620px){.fnf-home-stage:focus-within .fnf-home-suggestions{max-height:320px}}
 @media(prefers-reduced-motion:reduce){.fnf-home-suggestions{transition:none}}
+
+.fnf-site-preview__link{position:absolute;inset:0;z-index:4;border-radius:inherit;outline-offset:5px}
+.fnf-site-preview:focus-within{transform:translateY(-4px) scale(1.015);filter:drop-shadow(0 16px 24px rgba(27,25,35,.2))}
+.fnf-site-preview:focus-within .fnf-site-preview__hover{opacity:1;transform:translate(-50%,0);z-index:5}
