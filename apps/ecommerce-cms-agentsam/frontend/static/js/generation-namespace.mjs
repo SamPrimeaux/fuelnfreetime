@@ -19,18 +19,22 @@ export function sanitizeBlockId(blockId) {
   return raw.slice(0, BLOCK_ID_MAX).replace(/-$/g, "") || "block";
 }
 
-export function nsForms(blockId, namespace = DEFAULT_NAMESPACE) {
+export function nsForms(instanceId, namespace = DEFAULT_NAMESPACE) {
   const ns = sanitizeNamespace(namespace);
-  const id = sanitizeBlockId(blockId);
+  const id = sanitizeBlockId(instanceId);
   const js = ns + "_gen_" + id.replace(/-/g, "_");
   const css = ns + "-gen-" + id;
   return {
     namespace: ns,
+    instanceId: id,
+    // Compatibility alias for callers written before the placed-instance
+    // identity contract was made explicit.
     blockId: id,
     js,
     css,
     customElement: css,
     cssVarPrefix: "--" + css + "-",
+    settingVarPrefix: "--" + css + "-setting-",
     scope: '[data-agentsam-block="' + id + '"]',
     token: UID_TOKEN,
   };
