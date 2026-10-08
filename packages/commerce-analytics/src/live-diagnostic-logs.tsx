@@ -87,8 +87,8 @@ export function LiveDiagnosticLogs({range,poll,onAsk}:LiveLogsProps){
    if(!subset.length)return;
    onAsk(subset,diagnosticContext(subset,{range,level:filter,search}));
  };
- const isDetails=id=>details.includes(id);
- const toggleDetails=id=>setDetails(x=>x.includes(id)?x.filter(y=>y!==id):[...x,id]);
+ const isDetails=(id:string)=>details.includes(id);
+ const toggleDetails=(id:string)=>setDetails(x=>x.includes(id)?x.filter(y=>y!==id):[...x,id]);
  return <section className="card" aria-label="Live log stream" data-logs-running={active?"true":"false"}>
    <div className="card-head" style={{gap:10,flexWrap:"wrap"}}>
      <div><div className="card-title">Live logs</div>
