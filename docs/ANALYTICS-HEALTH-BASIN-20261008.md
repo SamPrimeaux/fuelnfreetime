@@ -47,3 +47,67 @@ npm run build:admin
 ```
 
 Once deployed, verify real `/api/admin/analytics/health?range=24h` with an authenticated FNF admin session, check native source availability, and wait for two or more 30-minute probe samples before expecting a meaningful probe trend. Do not publish credentials, raw customer data, prompts or entire log messages to the browser.
+
+## Opt-in Live Logs diagnostic surface (Health addendum)
+
+The existing Health page now mounts the package-owned `@inneranimalmedia/commerce-analytics`
+`LiveDiagnosticLogs` component. It starts **inactive**. No log query, background
+polling, or new telemetry sink is started on page load or by the 30-minute
+health-probe cron.
+
+- **Start:** a browser-controlled read via the admin session-protected
+  `GET /api/admin/analytics/logs/recent?window=180`. It refreshes every
+  8.5 seconds **only while active**. The request has a bounded time window,
+  fixed FNF Worker script name, fixed Log Explorer table, and limit 80;
+  it does not accept arbitrary SQL, account IDs or script names from the browser.
+- **Source:** Cloudflare **Log Explorer**, not the Analytics SQL Worker binding.
+  The Worker queries the account-scoped `workers_trace_events` dataset via
+  Cloudflare's authenticated Logs SQL API. This requires an authorized
+  account-level `CLOUDFLARE_API_TOKEN` with **Logs Read** and an enabled,
+  queryable `workers_trace_events` dataset. Wrangler invocation-log collection
+  alone does not prove that Log Explorer has been enabled for this dataset.
+  When unavailable, the UI displays the permission/source error rather than
+  mock log lines.
+- **Privileges:** the existing admin session plus an
+  `admin/owner/super_admin` role; results are `no-store`. A bearer token
+  stays on the Worker only, and the raw provider response is never returned
+  to the browser.
+- **Stop / tab hidden / unmount:** abort the in-flight request, cancel
+  future refreshes, and stop background work. **Clear** clears the current
+  buffer and suppresses already seen events until Start is pressed again.
+- **Interactions:** click and Shift-click select individual or contiguous log
+  rows, text-select manually, filter All/Errors/Warnings, search, inspect
+  details, Copy, and Ask AgentSam. With no rows selected Copy/Ask use the
+  currently visible filtered window (Ask capped to 20 records).
+- **Ask AgentSam:** uses `window.initAgentsamDrawer`,
+  `window.setAgentsamPageContext`, and `window.openAgentsamDrawer` from the
+  **existing** assistant; its script/styles are lazily loaded into the React
+  analytics page if not already mounted. It attaches normalized, redacted log
+  records and a Health-page scope, then fills the *editable* composer with
+  a suggested diagnosis prompt. It never calls `sendAgentsamMessage` until
+  the user sends that message. Navigating away clears the page-specific log
+  context.
+- **Reusable contract:** `packages/commerce-analytics/src/diagnostic-log.js`
+  owns normalization, credential redaction, context limits, and a
+  line-oriented Copy format; `live-diagnostic-logs.tsx` owns interaction
+  and leaves provider queries/authorization and AgentSam transport with the host.
+  The app's `analytics-live-logs.js` is a narrow Cloudflare installation
+  adapter. SDK extraction is appropriate after production proof, not before.
+
+This **does not** enable persistent Workers Log Explorer ingestion, deploy
+new Cloudflare infrastructure, guarantee log query availability or provide a
+second assistant. Log Explorer may require explicit account permission and
+dataset setup before rows can appear.
+
+Verification:
+
+```sh
+node --test tests/health-live-logs.test.mjs
+node tests/health-live-logs-browser-smoke.mjs
+npm run build:admin
+```
+
+The Chrome acceptance test mounts the actual React widget and verifies
+idle → Start → Shift-select → Copy → Ask → Stop, including absence of
+post-Stop polling. Production token/dataset availability remains a separate
+authorized end-to-end check.
