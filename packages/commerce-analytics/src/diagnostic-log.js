@@ -10,6 +10,7 @@ export function redactDiagnosticText(value,max=1400){
  let s=String(value??"").replace(/\r/g,"").slice(0,max);
  s=s.replace(TEXT_RULES[0],"[AUTH REDACTED]").replace(TEXT_RULES[1],"[KEY REDACTED]")
  .replace(TEXT_RULES[2],"$1[REDACTED]").replace(TEXT_RULES[3],"$1[REDACTED]");
+ s=s.replace(/(["']?(?:authorization|proxy.authorization|cookie|set.cookie|access_token|refresh_token|client_secret|api_key|api-key|password|secret|private_key)["']?\s*[:=]\s*["']?)[^"',\s}&;]+/gi,"$1[REDACTED]");
  return s.replace(/([?&](?:token|key|secret|password|auth|signature|sig|code)=)[^&\s]+/gi,"$1[REDACTED]");
 }
 const str=(x,n=160)=>redactDiagnosticText(x,n);
