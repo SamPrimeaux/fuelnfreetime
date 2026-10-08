@@ -70,9 +70,9 @@ async function cloudflare(env, start, seconds) {
     const result=await env.ANALYTICS_SQL.query({
       query:`SELECT edgeResponseStatus AS status, COUNT(*) AS requests
         FROM events.httpRequests
-        WHERE timestamp >= $start AND clientRequestHTTPHost = $host
+        WHERE timestamp >= $start AND clientRequestHTTPHost IN ($host, $www)
         GROUP BY edgeResponseStatus ORDER BY requests DESC LIMIT 100`,
-      params:{start,host:"fuelnfreetime.com"},
+      params:{start,host:"fuelnfreetime.com",www:"www.fuelnfreetime.com"},
     });
     const rows=Array.isArray(result?.data)?result.data:null;
     if(!rows)throw new Error("analytics_sql_invalid_response");
