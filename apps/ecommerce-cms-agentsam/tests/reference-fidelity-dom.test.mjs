@@ -129,3 +129,32 @@ test("one composer module supports explicit expand and accessible right rail hea
  assert.equal(doc.querySelectorAll("#right [data-assistant-actions] button[aria-label]").length,2);
  assert.equal(doc.querySelectorAll("#right [data-context-chip]").length,1);
 });
+
+test("real Side Assistant mounts canonical mark and functional New Chat / Expand controls",()=>{
+ const dom=new JSDOM('<!doctype html><html><body><aside id="agentsam-dock"></aside></body></html>',{
+  runScripts:"dangerously",url:"https://editor.local/admin/theme-editor"
+ });
+ dom.window.fetch=async()=>({json:async()=>({ok:false})});
+ const script=readFileSync(new URL("../frontend/static/js/agentsam.js",import.meta.url),"utf8");
+ dom.window.eval(script);
+ dom.window.initAgentsamDrawer();
+ const doc=dom.window.document;
+ const drawer=doc.getElementById("agentsam-drawer");
+ assert.ok(drawer,"Real Side Assistant must mount");
+ const mark=drawer.querySelector(".agentsam-mark");
+ assert.ok(mark);
+ assert.equal(mark.querySelector("svg"),null,"No handmade sparkle vector");
+ assert.ok(drawer.querySelector("[data-context-chip]"));
+ const expand=drawer.querySelector('[data-assistant-action="Expand"]');
+ assert.ok(expand);
+ expand.click();
+ assert.equal(drawer.hasAttribute("data-expanded"),true);
+ drawer.querySelector('[data-assistant-action="Collapse"]').click();
+ assert.equal(drawer.hasAttribute("data-expanded"),false);
+ const messages=doc.getElementById("agentsam-messages");
+ dom.window.presentAgentsamProposal({title:"Old proposal",text:"old"});
+ assert.ok(messages.querySelector(".agentsam-proposal"));
+ drawer.querySelector('[data-assistant-action="New chat"]').click();
+ assert.equal(messages.querySelector(".agentsam-proposal"),null);
+ assert.match(messages.textContent,/New chat ready/);
+});
