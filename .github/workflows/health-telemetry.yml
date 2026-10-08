@@ -1,0 +1,32 @@
+name: FNF real health telemetry and Basin capability
+on:
+  pull_request:
+    paths:
+      - wrangler.toml
+      - apps/ecommerce-cms-agentsam/backend/admin/analytics-health.js
+      - apps/ecommerce-cms-agentsam/backend/admin/api.js
+      - apps/ecommerce-cms-agentsam/backend/index.js
+      - apps/ecommerce-cms-agentsam/frontend/src/pages/analytics/HealthPage.tsx
+      - packages/commerce-analytics/**
+      - tests/health-telemetry.test.mjs
+      - .github/workflows/health-telemetry.yml
+permissions:
+  contents: read
+jobs:
+  health-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+      - name: Verify source contract and no synthetic health data
+        run: |
+          node --check apps/ecommerce-cms-agentsam/backend/admin/analytics-health.js
+          node --check apps/ecommerce-cms-agentsam/backend/admin/api.js
+          node --check apps/ecommerce-cms-agentsam/backend/index.js
+          node --test tests/health-telemetry.test.mjs
+      - name: Build FNF admin and guard package boundaries
+        run: npm run build:admin
