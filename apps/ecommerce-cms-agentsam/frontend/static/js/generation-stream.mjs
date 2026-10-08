@@ -1,4 +1,4 @@
-import { acceptGeneratedBlock, createTokenResolver } from "./generation-namespace.mjs";
+import { acceptGeneratedBlock, createTokenResolver, nsForms } from "./generation-namespace.mjs";
 
 export const SECTION_ORDER = ["definition", "markup", "css", "js", "settings"];
 export const PHASE_LABELS = {
@@ -172,11 +172,18 @@ export function createGenerationSession(options) {
           sink.append(resolver.flush());
           if (aborted) return { ok: false, aborted: true, record: null, saved: false };
           phases.push(PHASE_LABELS.checking);
-          const accepted = acceptGeneratedBlock({
-            html: parser.parts.markup,
-            css: parser.parts.css,
+          // The model must emit portable __UID__ tokens; validation needs a
+          // concrete, per-instance wrapper scope. Restore the tokens after
+          // validation so the immutable artifact remains reusable/duplicable.
+          const forms = nsForms(options.blockId,options.namespace);
+          const scopedAttribute = 'data-agentsam-block="' + forms.blockId + '"';
+          const scopeSelector = '[data-agentsam-block="' + forms.blockId + '"]';
+          const checkedInput = {
+            html: parser.parts.markup.replaceAll('data-agentsam-block="__UID__"',scopedAttribute),
+            css: parser.parts.css.replaceAll('[data-agentsam-block="__UID__"]',scopeSelector),
             js: parser.parts.js,
-          }, {
+          };
+          const accepted = acceptGeneratedBlock(checkedInput, {
             blockId: options.blockId,
             namespace: options.namespace,
             model: options.model || "",
@@ -190,7 +197,11 @@ export function createGenerationSession(options) {
           if (accepted.repaired) phases.push(PHASE_LABELS.repairing);
           record = {
             blockId: options.blockId,
-            canonical: accepted.canonical,
+            canonical: {
+              html: accepted.canonical.html.replaceAll(scopedAttribute,'data-agentsam-block="__UID__"'),
+              css: accepted.canonical.css.replaceAll(scopeSelector,'[data-agentsam-block="__UID__"]'),
+              js: accepted.canonical.js,
+            },
             provenance: { ...accepted.provenance, ...(response?.provenance || {}) },
             definition: parseGeneratedDefinition(parser.parts.definition, {
               type: options.semanticType,
@@ -199,7 +210,9 @@ export function createGenerationSession(options) {
             settings: parseGeneratedSettings(parser.parts.settings),
           };
           phases.push(PHASE_LABELS.ready);
-          return { ok: true, saved: true, record, phases };
+          // Generation produced a validated candidate, not a persisted draft.
+          // Installation happens only after the merchant accepts the preview.
+          return { ok: true, saved: false, record, phases };
         } finally {
           if (aborted) record = null;
         }
