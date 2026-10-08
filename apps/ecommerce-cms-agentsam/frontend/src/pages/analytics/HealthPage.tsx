@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AreaChart, Icon, BasinOverviewPanel } from "@inneranimalmedia/commerce-analytics";
+import { AreaChart, Icon, BasinOverviewPanel, LiveDiagnosticLogs } from "@inneranimalmedia/commerce-analytics";
+import type {DiagnosticLogContext} from "@inneranimalmedia/commerce-analytics";
 import { adminFetch } from "../../lib/api";
 import type { RangeKey } from "../../lib/types";
 
@@ -36,7 +37,47 @@ function NoSource({reason}:{reason:string}){
 function Status({ready,label}:{ready:boolean;label:string}){
  return <span className={ready?"pill good":"pill"}><span className={ready?"dot":"muted"} />{label}</span>;
 }
+
+declare global {
+ interface Window {
+  openAgentsamDrawer?:()=>void;
+  initAgentsamDrawer?:()=>void;
+  setAgentsamPageContext?:(context:Record<string,unknown>)=>void;
+ }
+}
+let assistantLoader:Promise<void>|null=null;
+function ensureAssistant():Promise<void>{
+ if(window.initAgentsamDrawer && window.setAgentsamPageContext)return Promise.resolve();
+ if(!assistantLoader){
+  assistantLoader=new Promise<void>((resolve,reject)=>{
+   const script=document.createElement("script");
+   script.src="/admin/js/agentsam.js";
+   script.onload=()=>window.initAgentsamDrawer?resolve():reject(new Error("Assistant module did not initialize"));
+   script.onerror=()=>reject(new Error("Side Assistant assets could not be loaded"));
+   document.head.append(script);
+   if(!document.getElementById("health-agentsam-styles")){
+    const css=document.createElement("link");css.id="health-agentsam-styles";
+    css.rel="stylesheet";css.href="/admin/css/agentsam.css";document.head.append(css);
+   }
+  }).catch(error=>{assistantLoader=null;throw error;});
+ }
+ return assistantLoader;
+}
+export async function askAgentSamAboutLogs(logs:DiagnosticLogContext[],context:Record<string,unknown>){
+ await ensureAssistant();
+ window.initAgentsamDrawer?.();
+ window.setAgentsamPageContext?.(context);
+ window.openAgentsamDrawer?.();
+ const input=document.getElementById("agentsam-input") as HTMLTextAreaElement|null;
+ if(!input)throw new Error("Side Assistant composer unavailable");
+ input.value="Help me diagnose these selected logs. Explain what failed, the likely cause, which service/code path is involved, and the safest next check. Do not execute repairs without my approval.";
+ input.dispatchEvent(new Event("input",{bubbles:true}));
+ input.focus();
+ // Deliberately no sendAgentsamMessage call.
+}
+
 export default function HealthPage({range}:PageProps){
+ useEffect(()=>()=>{window.setAgentsamPageContext?.({selected_logs:[],context_type:null,filters:null});},[]);
  const [data,setData]=useState<HealthResponse|null>(null);
  const [error,setError]=useState<string|null>(null);
  const [loading,setLoading]=useState(false);
@@ -59,6 +100,11 @@ export default function HealthPage({range}:PageProps){
  const failures=data?.app.failures||[];
  const repo=data?.app.repository||[];
  const driftEvents=repo.filter(x=>/drift|contract|schema/i.test(x.error_code||""));
+ const fetchLogs=useCallback(async (signal:AbortSignal)=>{
+  return adminFetch<{ok:boolean;logs:DiagnosticLogContext[];source:string;error?:string}>(
+   "/api/admin/analytics/logs/recent?window=180",{signal});
+ },[]);
+
  return <>
   <div className="page-head">
    <div><h1 className="page-title">Health</h1>
@@ -136,5 +182,9 @@ export default function HealthPage({range}:PageProps){
      <strong>{f.operation}</strong> <span className="muted">· {f.domain} · {f.error_code||"No error code"} · {new Date(f.occurred_at*1000).toLocaleString()}</span></div>):
     <NoSource reason="No failure details have been recorded."/>}
   </section>}
+  <div style={{marginTop:14}}>
+  <LiveDiagnosticLogs range={range} poll={fetchLogs}
+   onAsk={(selected,context)=>askAgentSamAboutLogs(selected,context as unknown as Record<string,unknown>)}/>
+  </div>
  </>;
 }
