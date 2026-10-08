@@ -107,6 +107,17 @@ async function basin(env) {
   // Configured without a live adapter may be displayed as setup-required,
   // but must never report a connected warehouse or made-up tables.
   if(env.BASIN_WAREHOUSE)return {enabled:true,status:"permission_required",source:"Basin configuration",warehouses:[],pipelines:[],catalogTables:[],checkedAt:null};
+  // A connected installation is *not* proof that its Basin-specific API
+  // permissions are sufficient. Show the capability, never fabricate resources.
+  if (env.DB?.prepare) {
+    try {
+      const plugin=await env.DB.prepare(
+        "SELECT plugin_key, setup_status FROM agentsam_plugins WHERE account_id=? AND is_enabled=1 AND (plugin_key LIKE '%basin%' OR provider_key LIKE '%basin%') LIMIT 1"
+      ).bind(FNF_ACCOUNT_ID).first();
+      if (plugin) return {enabled:true,status:"permission_required",source:"AgentSam integration installation",
+        warehouses:[],pipelines:[],catalogTables:[],checkedAt:null};
+    } catch { /* plugin registry not deployed; absence is not connectivity */ }
+  }
   return {enabled:false,status:"unavailable",source:"not configured",warehouses:[],pipelines:[],catalogTables:[],checkedAt:null};
 }
 export async function getHealthAnalytics(env, rawRange="30d") {
