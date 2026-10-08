@@ -125,6 +125,81 @@ function updateStatusLine(extra) {
   status.textContent = extra || "Context-aware admin chat";
 }
 
+/* Render model Markdown as safe DOM text; never inject model-authored HTML. */
+function renderAgentSamMarkdown(container, content) {
+  const lines = String(content == null ? "" : content).replace(/\r\n/g, "\n").split("\n");
+  let list = null;
+  let paragraph = null;
+  let codeBlock = null;
+  function inline(parent, text) {
+    const token = /(\*\*[^*]+\*\*|\x60[^\x60]+\x60)/g;
+    let last = 0;
+    for (const match of text.matchAll(token)) {
+      if (match.index > last) parent.append(document.createTextNode(text.slice(last, match.index)));
+      const raw = match[0];
+      const bold = raw.startsWith("**");
+      const el = document.createElement(bold ? "strong" : "code");
+      el.textContent = bold ? raw.slice(2, -2) : raw.slice(1, -1);
+      parent.append(el);
+      last = match.index + raw.length;
+    }
+    if (last < text.length) parent.append(document.createTextNode(text.slice(last)));
+  }
+  for (const line of lines) {
+    if (/^\s*\x60{3}/.test(line)) {
+      if (codeBlock) codeBlock = null;
+      else {
+        const pre = document.createElement("pre");
+        const code = document.createElement("code");
+        pre.append(code);
+        container.append(pre);
+        codeBlock = code;
+      }
+      paragraph = null;
+      list = null;
+      continue;
+    }
+    if (codeBlock) {
+      codeBlock.textContent += (codeBlock.textContent ? "\n" : "") + line;
+      continue;
+    }
+    if (!line.trim()) {
+      paragraph = null;
+      list = null;
+      continue;
+    }
+    const heading = line.match(/^\s*#{1,3}\s+(.+)$/);
+    if (heading) {
+      paragraph = null;
+      list = null;
+      const headingNode = document.createElement("h4");
+      inline(headingNode, heading[1]);
+      container.append(headingNode);
+      continue;
+    }
+    const bullet = line.match(/^\s*(?:[-*]\s+|\d+[.)]\s+)(.+)$/);
+    if (bullet) {
+      const ordered = /^\s*\d+[.)]/.test(line);
+      const tag = ordered ? "ol" : "ul";
+      if (!list || list.tagName.toLowerCase() !== tag) {
+        list = document.createElement(tag);
+        container.append(list);
+      }
+      paragraph = null;
+      const item = document.createElement("li");
+      inline(item, bullet[1]);
+      list.append(item);
+      continue;
+    }
+    list = null;
+    if (!paragraph) {
+      paragraph = document.createElement("p");
+      container.append(paragraph);
+    } else paragraph.append(document.createTextNode(" "));
+    inline(paragraph, line.trim());
+  }
+}
+
 function appendMessage(role, text, routing) {
   const box = document.getElementById("agentsam-messages");
   if (!box) return;
@@ -139,7 +214,9 @@ function appendMessage(role, text, routing) {
   }
 
   const body = document.createElement("div");
-  body.textContent = text;
+  body.className = "agentsam-msg-content";
+  if (role === "assistant") renderAgentSamMarkdown(body, text);
+  else body.textContent = text;
   el.appendChild(body);
   box.appendChild(el);
   box.scrollTop = box.scrollHeight;
