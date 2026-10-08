@@ -18,7 +18,7 @@ function selection(manifest) {
     capability: generation.capability || "code.generate",
     provider: generation.provider || "",
     model: generation.model || "",
-    namespace: generation.namespace || "agentsam",
+    namespace: "agentsam",
   };
 }
 
