@@ -34,6 +34,14 @@ The intended next-merchant path is: **install existing application packages → 
 | Knowledge + Cloudflare connector | Discovery, embedding/index/retrieve engine, Vectorize provider operations | Model/index/binding, source selection, account filters |
 | Settings + Vault + Identity + Hooks | Auth/grants, installations, tools and execution capability resolution | User grants, tenant secrets, installed providers/tools |
 
+### Repository contracts and graph authority (already exists)
+
+- **Canonical owner:** SDK `@inneranimalmedia/agentsam-repository` at `agentsam-sdk/packages/agentsam-repository`, plus shared types at `packages/agentsam-contracts/src/repository.ts` and JSON schema at `protocol/repository/repository-contract.schema.json`.
+- **Existing behavior:** `createRepositoryIdentity`, `createRepositoryContract`, `createRepositoryDependency`; repository statuses, contract types (`api/schema/runtime/cli/event/receipt/package`), required versions/contract hashes, dependency criticality, failure policies (`warn/block_certification/block_deploy/degrade`), Git context, Merkle graph and persistence.
+- **Boundary:** this SDK package owns portable *repository and cross-repository dependency contract semantics*. Authenticated account ownership and deployments remain host-owned, as its README says. The SDK README currently recommends the SDK facade for external consumers pending standalone release-policy confirmation; its manifest lists version `2.6.12` as publishable. Resolve this before adding a direct FNF runtime dependency.
+- **FNF `scripts/package-authority.mjs` is only a deterministic manifest/reference evidence collector and CI documentation drift gate**. It does not define repository identity, replacement dependency policies, contract hashing, certification or deployment orchestration. If promoting this scanner into a reusable cross-repository inspector, consume/export AgentSam Repository contracts instead of creating a parallel repository graph model.
+- **Future proof:** project package inventories into repository contract/dependency records, verify required version and contract hash where applicable, and enforce failure policies centrally. That migration is not implemented by the current docs PR; do not claim certification from its `--check` output.
+
 **Same-name version trap:** FNF contains local `@inneranimalmedia/agentsam-workbench` and `@inneranimalmedia/agentsam-merch` packages at `0.1.0`; the separately inspected SDK also provides these names at `2.6.12`. Local folder presence is not evidence that FNF is running the SDK implementation. Resolve imports and bundle paths explicitly before changing any behavior.
 
 ### Application spine (do not split)
