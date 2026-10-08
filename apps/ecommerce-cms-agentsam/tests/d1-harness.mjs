@@ -10,8 +10,7 @@ function canonical(id) {
 }
 
 async function applySchema(sql) {
-  for (const statement of (stub + "
-" + schema).split(";")) {
+  for (const statement of (stub + "\n" + schema).split(";")) {
     const query = statement.trim();
     if (query) await sql.run(query);
   }

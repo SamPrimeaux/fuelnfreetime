@@ -119,7 +119,7 @@ test("D1 is preferences SSOT — KV write-only after D1 success", async () => {
 });
 
 test("CLI and compact scripts no longer require invented secrets", () => {
-  const cli = read("bin/fnf-assets");
+  const cli = read("bin/fnf-assets.mjs");
   const compact = read("scripts/agentsam-compact.mjs");
   assert.equal(cli.includes("X-Fnf-Asset-Job-Secret"), false);
   assert.equal(compact.includes("X-Agentsam-Compaction-Secret"), false);
