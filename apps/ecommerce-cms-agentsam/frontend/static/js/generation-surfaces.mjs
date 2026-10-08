@@ -20,15 +20,30 @@ export function mountAssistantHeader(dock, state) {
   }
   actions.replaceChildren();
   const labels = { "New chat": "Start a new chat", Expand: "Expand Side Assistant", Collapse: "Dock Side Assistant" };
-  const icons = {
-    "New chat": "＋",
-    Expand: "⤢",
-    Collapse: "⤡",
+  const iconPaths = {
+    "New chat": ["M12 20h9", "M16.5 3.5a2.12 2.12 0 0 1 3 3L9 17l-4 1 1-4Z"],
+    Expand: ["M8 3H5a2 2 0 0 0-2 2v3", "M16 3h3a2 2 0 0 1 2 2v3", "M3 16v3a2 2 0 0 0 2 2h3", "M21 16v3a2 2 0 0 1-2 2h-3"],
+    Collapse: ["M8 8 3 3", "M16 8 21 3", "M8 16 3 21", "M16 16 21 21", "M8 3v5H3", "M16 3v5h5", "M8 21v-5H3", "M16 21v-5h5"],
   };
   header.actions.forEach(function(label) {
     const button = dock.ownerDocument.createElement("button");
     button.type = "button";
-    button.textContent = icons[label] || label;
+    const svg = dock.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("width", "16");
+    svg.setAttribute("height", "16");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "1.8");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+    svg.setAttribute("aria-hidden", "true");
+    for (const pathData of iconPaths[label] || []) {
+      const path = dock.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", pathData);
+      svg.append(path);
+    }
+    button.append(svg);
     button.title = labels[label] || label;
     button.setAttribute("aria-label", labels[label] || label);
     button.setAttribute("data-assistant-action", label);
