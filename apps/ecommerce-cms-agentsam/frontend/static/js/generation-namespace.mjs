@@ -121,6 +121,61 @@ export function detectProvenance(code) {
 
 const GLOBAL_SELECTOR = /(^|[,{]\s*)(body|html|header|footer|main|:root|\*)\b/;
 
+function matchingBrace(source, openIndex) {
+  let depth = 0;
+  for (let i = openIndex; i < source.length; i += 1) {
+    if (source[i] === "{") depth += 1;
+    if (source[i] === "}") {
+      depth -= 1;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
+export function lintScopedCss(css, forms) {
+  const violations = [];
+  const source = String(css || "").replace(/\/\*[\s\S]*?\*\//g, "");
+  const walk = function(body) {
+    let cursor = 0;
+    while (cursor < body.length) {
+      while (cursor < body.length && /[\s;]/.test(body[cursor])) cursor += 1;
+      if (cursor >= body.length) break;
+      const open = body.indexOf("{", cursor);
+      if (open === -1) {
+        if (body.slice(cursor).trim()) violations.push("malformed css rule");
+        break;
+      }
+      const close = matchingBrace(body, open);
+      if (close === -1) {
+        violations.push("unclosed css rule");
+        break;
+      }
+      const prelude = body.slice(cursor, open).trim();
+      const inner = body.slice(open + 1, close);
+      if (!prelude) {
+        violations.push("empty css selector");
+      } else if (prelude.startsWith("@")) {
+        const keyframes = prelude.match(/^@(?:-webkit-)?keyframes\s+([a-zA-Z0-9_-]+)/);
+        if (keyframes) {
+          if (!keyframes[1].startsWith(forms.css)) violations.push("keyframes missing namespace: " + keyframes[1]);
+        } else if (/^@(media|supports|container|layer)\b/.test(prelude)) {
+          walk(inner);
+        } else {
+          violations.push("unsupported at-rule: " + prelude.split(/\s+/)[0]);
+        }
+      } else {
+        prelude.split(",").map((selector) => selector.trim()).filter(Boolean).forEach((selector) => {
+          if (!selector.startsWith(forms.scope)) violations.push("selector must be rooted in " + forms.scope + ": " + selector);
+        });
+      }
+      cursor = close + 1;
+    }
+  };
+  walk(source);
+  return violations;
+}
+
 export function lintGeneratedBlock(resolved, forms) {
   const violations = [];
   const html = String(resolved.html || "");
