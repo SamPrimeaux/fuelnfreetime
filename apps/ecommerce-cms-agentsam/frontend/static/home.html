@@ -16,12 +16,13 @@
 renderShell("/admin/home", `
   <div class="fnf-home">
     <section class="fnf-home-stage" aria-labelledby="fnf-home-heading">
-      <a class="fnf-site-preview" href="/admin/theme-editor?slug=home" aria-label="Customize Theme" title="Customize Theme">
+      <div class="fnf-site-preview">
         <span class="fnf-site-preview__label">Your store <span aria-hidden="true">↗</span></span>
         <span class="fnf-site-preview__browser"><span class="fnf-site-preview__address">fuelnfreetime.com</span><span class="fnf-site-preview__browser-dots" aria-hidden="true">···</span></span>
         <span class="fnf-site-preview__viewport"><iframe src="/" title="Published Fuel & Free Time storefront preview" loading="lazy" tabindex="-1" aria-hidden="true"></iframe></span>
         <span class="fnf-site-preview__hover">Customize Theme <span aria-hidden="true">↗</span></span>
-      </a>
+        <a class="fnf-site-preview__link" href="/admin/theme-editor?slug=home" aria-label="Customize Theme" title="Customize Theme"></a>
+      </div>
       <h1 id="fnf-home-heading">Your store is taking shape.<br>What would you like to work on next?</h1>
       <form id="home-agent-form" class="fnf-home-composer" aria-label="Ask AgentSam">
         <label class="fnf-home-composer__label" for="home-agent-input">Work with AgentSam</label>
