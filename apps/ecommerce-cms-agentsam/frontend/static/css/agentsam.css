@@ -497,3 +497,8 @@ body.agentsam-focus-mode .agentsam-mcp{max-width:min(780px,calc(100% - 32px));al
 .asm-menu-search{display:block;width:calc(100% - 12px);height:32px;margin:6px;border:1px solid #e3e0e8;border-radius:8px;outline:0;padding:5px 9px;color:#29272d;background:#fff;font:11px/1.3 var(--font,system-ui);box-sizing:border-box}
 .asm-menu-search:focus{border-color:#9c83b5;box-shadow:0 0 0 2px #b79bd020}
 .asm-capability-popover svg{display:block;flex:none}
+
+/* Focus-mode entrance: move the existing chat, never remount the conversation. */
+@keyframes asm-focus-enter{from{opacity:.72;transform:translateX(15px)}to{opacity:1;transform:translateX(0)}}
+body.agentsam-focus-mode .agentsam-drawer{animation:asm-focus-enter .26s cubic-bezier(.2,.8,.2,1) both}
+@media(prefers-reduced-motion:reduce){body.agentsam-focus-mode .agentsam-drawer{animation:none}}
