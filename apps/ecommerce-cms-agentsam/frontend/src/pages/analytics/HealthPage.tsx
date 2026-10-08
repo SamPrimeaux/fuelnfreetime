@@ -77,6 +77,7 @@ async function askAgentSamAboutLogs(logs:DiagnosticLogContext[],context:Record<s
 }
 
 export default function HealthPage({range}:PageProps){
+ useEffect(()=>()=>{window.setAgentsamPageContext?.({selected_logs:[],context_type:null,filters:null});},[]);
  const [data,setData]=useState<HealthResponse|null>(null);
  const [error,setError]=useState<string|null>(null);
  const [loading,setLoading]=useState(false);
