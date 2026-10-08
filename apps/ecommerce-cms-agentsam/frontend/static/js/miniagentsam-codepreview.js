@@ -44,8 +44,6 @@
         this.following = remaining < 12;
         this.pre.classList.toggle("is-follow", this.following);
       });
-      const lines = Number(this.getAttribute("data-lines") || 13);
-      this.style.setProperty("--agentsam-preview-lines", String(Number.isFinite(lines) ? lines : 13));
     }
     setPhase(label) { this.phaseEl.textContent = String(label || ""); }
     appendText(chunk) {
