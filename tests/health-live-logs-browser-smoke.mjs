@@ -16,7 +16,10 @@ const fixture=String.raw`
 import React from "react";
 import {createRoot} from "react-dom/client";
 import {LiveDiagnosticLogs} from "./packages/commerce-analytics/src/live-diagnostic-logs.tsx";
-window.__polls=0;window.__asked=null;window.__copied="";
+import {askAgentSamAboutLogs} from "./apps/ecommerce-cms-agentsam/frontend/src/pages/analytics/HealthPage.tsx";
+window.__polls=0;window.__asked=null;window.__copied="";window.__chatCalls=0;
+const originalFetch=window.fetch.bind(window);
+window.fetch=(...args)=>{if(String(args[0]).includes("/api/admin/agentsam/chat"))window.__chatCalls++;return originalFetch(...args);};
 Object.defineProperty(navigator,"clipboard",{configurable:true,value:{writeText:async text=>{window.__copied=text;}}});
 const logs=[
  {source:"cloudflare-workers",service:"asset.job",timestamp:"2026-10-08T01:46:30Z",
@@ -28,7 +31,9 @@ const logs=[
 ];
 function query(){window.__polls++;return Promise.resolve({ok:true,logs,source:"Cloudflare Log Explorer"});}
 createRoot(document.getElementById("root")).render(React.createElement(LiveDiagnosticLogs,
- {range:"24h",poll:query,onAsk:(selected,context)=>{window.__asked={selected,context};}}));
+ {range:"24h",poll:query,onAsk:async (selected,context)=>{
+  await askAgentSamAboutLogs(selected,context);window.__asked={selected,context};
+ }}));
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function run(){
  await sleep(250);
@@ -44,13 +49,22 @@ async function run(){
  actions.find(x=>x.textContent==="Copy"&&!x.closest(".live-log-row-actions"))?.click();
  await sleep(60);
  actions.find(x=>x.textContent==="Ask AgentSam"&&!x.closest(".live-log-row-actions"))?.click();
+ await sleep(350);
+ const drawer=document.getElementById("agentsam-drawer");
+ const input=document.getElementById("agentsam-input");
+ const assistantOpen=!!drawer&&document.body.classList.contains("agentsam-open");
+ const editablePrompt=!!input?.value.startsWith("Help me diagnose these selected logs");
+ const attachedLogs=window.__agentsamPageContext?.selected_logs?.length||0;
+ if(input)input.value="Editable diagnostic question";
+ const editedPrompt=input?.value==="Editable diagnostic question";
  document.querySelector('button[aria-label="Stop live logs"]')?.click();
  const stopped=window.__polls;
  await sleep(8700);
  const proof={initial,afterStart,selection,rows:rows.length,
   selectedLogs:window.__asked?.selected?.length||0,contextType:window.__asked?.context?.context_type,
   copied:window.__copied.includes("request_id: r-1")&&window.__copied.includes("request_id: r-2"),
-  afterStop:window.__polls,stopped,stoppedLabel:!!document.querySelector('[data-logs-running="false"]')};
+  afterStop:window.__polls,stopped,stoppedLabel:!!document.querySelector('[data-logs-running="false"]'),
+  assistantOpen,editablePrompt,attachedLogs,editedPrompt,autoChatCalls:window.__chatCalls};
  const el=document.createElement("pre");el.id="acceptance-proof";el.textContent=JSON.stringify(proof);document.body.append(el);
 }
 run();
@@ -65,6 +79,11 @@ const server=http.createServer((req,res)=>{
  if(pathname==="/")return res.writeHead(200,{"content-type":"text/html"}).end("<!doctype html><html><head><link rel='stylesheet' href='/app.css'></head><body><div id='root'></div><script src='/app.js'></script></body></html>");
  if(pathname==="/app.js")return res.writeHead(200,{"content-type":"text/javascript"}).end(js);
  if(pathname==="/app.css")return res.writeHead(200,{"content-type":"text/css"}).end(css);
+ if(pathname==="/admin/js/agentsam.js")return res.writeHead(200,{"content-type":"text/javascript"}).end(
+  fs.readFileSync(path.join(root,"apps/ecommerce-cms-agentsam/frontend/static/js/agentsam.js")));
+ if(pathname==="/admin/css/agentsam.css")return res.writeHead(200,{"content-type":"text/css"}).end(
+  fs.readFileSync(path.join(root,"apps/ecommerce-cms-agentsam/frontend/static/css/agentsam.css")));
+ if(pathname==="/api/admin/agentsam/status")return res.writeHead(200,{"content-type":"application/json"}).end('{"ok":false}');
  res.writeHead(404).end();
 });
 await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
@@ -82,6 +101,11 @@ try{
  assert.equal(proof.selection,2,"Shift-selection must select both rows");
  assert.equal(proof.selectedLogs,2);
  assert.equal(proof.contextType,"cloudflare.logs");
+ assert.equal(proof.assistantOpen,true,"Must open existing AgentSam Side Assistant");
+ assert.equal(proof.editablePrompt,true,"Must prefill a diagnostic prompt");
+ assert.equal(proof.attachedLogs,2,"Must provide structured logs via existing assistant context");
+ assert.equal(proof.editedPrompt,true,"User must be able to edit before Send");
+ assert.equal(proof.autoChatCalls,0,"Ask must not submit a chat request automatically");
  assert.equal(proof.copied,true,"Copy must serialize selected records");
  assert.equal(proof.stoppedLabel,true);
  assert.equal(proof.afterStop,proof.stopped,"Stop must halt all future polls");
