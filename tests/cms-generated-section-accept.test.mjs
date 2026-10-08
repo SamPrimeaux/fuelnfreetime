@@ -56,7 +56,10 @@ function fixture() {
   return {db,env,objects,cache};
 }
 const record = (label = "Featured story") => ({
-  definition:{kind:"section",type:"featured-story",label,settings:{headline:{label:"Headline"}}},
+  definition:{kind:"section",type:"featured-story",label,implementation_class:"artifact_static",settings:{
+    headline:{type:"text",label:"Headline"},
+    eyebrow:{type:"text",label:"Eyebrow"},
+  }},
   settings:{headline:label,eyebrow:"Made for the hours you've earned"},
   canonical:{
     html:'<section data-agentsam-block="__UID__" class="__UID__"><p data-cms="eyebrow">Earned hours</p><h2 data-cms="headline">Featured story</h2></section>',
