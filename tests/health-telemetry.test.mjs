@@ -58,6 +58,7 @@ test('only observed Cloudflare HTTP and D1 records become dashboard statistics',
  assert.equal(data.app.repository.length,1);
  assert.equal(queries.length,1);
  assert.equal(queries[0].params.host,'fuelnfreetime.com');
+ assert.equal(queries[0].params.www,'www.fuelnfreetime.com');
  assert.doesNotMatch(queries[0].query,/accountTag/);
 });
 test('Basin presence is gated by real configuration or authorized discovery',async()=>{
