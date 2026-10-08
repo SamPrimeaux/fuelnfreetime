@@ -35,8 +35,10 @@ function validFieldValue(field, value) {
       return typeof value === "number" && Number.isFinite(value) &&
         (field.min == null || value >= field.min) &&
         (field.max == null || value <= field.max) &&
-        (field.step == null || Math.abs((value - (field.min ?? 0)) / field.step -
-          Math.round((value - (field.min ?? 0)) / field.step) < 1e-7);
+        (field.step == null || Math.abs(
+          (value - (field.min ?? 0)) / field.step -
+          Math.round((value - (field.min ?? 0)) / field.step)
+        ) < 1e-7);
     case "color":
       return typeof value === "string" && COLORS.test(value);
     case "select":
