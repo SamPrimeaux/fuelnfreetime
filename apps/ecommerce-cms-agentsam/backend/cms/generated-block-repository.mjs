@@ -120,25 +120,47 @@ export function createGeneratedBlockRepository(sql, objects, options = {}) {
       if (!/^[a-z][a-z0-9-]{1,63}$/.test(semanticType)) {
         return { ok: false, status: 422, error: "invalid generated semantic type", written: false };
       }
-      const blockId = input.blockId || ("cmsb_" + randomUUID().replace(/-/g, "").slice(0, 16));
-      if (canonical) {
-        const forms = nsForms(blockId, picked.namespace);
+      const account = await assertAccount(input.accountId, input.sectionId, input.parentBlockId);
+      if (account && account.ok === false) return account;
+      const blockKey = String(input.blockKey || input.instanceId || input.blockId || semanticType);
+      const prior = await sql.first(
+        "SELECT id FROM " + TABLES.blocks + " WHERE account_id = ? AND section_id = ? AND block_key = ?",
+        [input.accountId, input.sectionId, blockKey],
+      );
+      const blockId = prior?.id || input.instanceId || input.blockId ||
+        ("cmsb_" + randomUUID().replace(/-/g, "").slice(0, 16));
+      const occupied = await blockRow(input.accountId, blockId);
+      if (occupied && (occupied.section_id !== input.sectionId || occupied.block_key !== blockKey)) {
+        return { ok:false, status:409, error:"Block instance ID already belongs to another placed block", written:false };
+      }
+      const stableCanonical = canonical ? { ...canonical } : canonical;
+      if (stableCanonical &&
+          !String(stableCanonical.html || "").includes('data-agentsam-block="__UID__"') &&
+          String(stableCanonical.html || "").includes('data-agentsam-block="' + blockKey + '"')) {
+        stableCanonical.html = String(stableCanonical.html || "")
+          .replaceAll('data-agentsam-block="' + blockKey + '"','data-agentsam-block="__UID__"');
+        stableCanonical.css = String(stableCanonical.css || "")
+          .replaceAll('data-agentsam-block="' + blockKey + '"','data-agentsam-block="__UID__"');
+      }
+      if (stableCanonical) {
+        const forms = nsForms(blockId, "agentsam");
+        const wrapper = 'data-agentsam-block="' + forms.blockId + '"';
         const resolved = {
-          html: resolveUidToken(canonical.html || "", blockId, picked.namespace),
-          css: resolveUidToken(canonical.css || "", blockId, picked.namespace),
-          js: resolveUidToken(canonical.js || "", blockId, picked.namespace),
+          html: resolveUidToken(String(stableCanonical.html || "")
+            .replaceAll('data-agentsam-block="__UID__"', wrapper), forms.instanceId, "agentsam"),
+          css: resolveUidToken(String(stableCanonical.css || "")
+            .replaceAll('[data-agentsam-block="__UID__"]', forms.scope), forms.instanceId, "agentsam"),
+          js: resolveUidToken(stableCanonical.js || "", forms.instanceId, "agentsam"),
         };
         const lint = lintGeneratedBlock(resolved, forms);
         if (!lint.ok) return { ok: false, status: 422, error: lint.violations.join("; "), written: false };
       }
-      const account = await assertAccount(input.accountId, input.sectionId, input.parentBlockId);
-      if (account && account.ok === false) return account;
       const depth = await depthOf(input.accountId, input.parentBlockId);
       if (depth > maxDepth(input.manifest)) return { ok: false, status: 422, error: "depth cap" };
-      const digest = hashManifest(canonical || input.manifest);
+      const digest = hashManifest(stableCanonical || input.manifest);
       const hash16 = digest.slice(0, 16);
       const key = "cms/artifacts/block/" + hash16 + "/manifest.json";
-      await objects.put(key, JSON.stringify(canonical || input.manifest));
+      await objects.put(key, JSON.stringify(stableCanonical || input.manifest));
       const supplied = input.provenance || {};
       const promptHash = supplied.prompt_hash || supplied.promptHash || digest.slice(0, 8);
       const createdAt = supplied.created_at || supplied.createdAt || new Date().toISOString();
