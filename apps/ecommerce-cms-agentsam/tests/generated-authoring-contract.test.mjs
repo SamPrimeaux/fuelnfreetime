@@ -4,7 +4,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {JSDOM} from 'jsdom';
 import {inspectGeneratedSection,materializeGeneratedStatic} from '../backend/cms/generated-section.mjs';
-import {normalizeSettingFields} from '../frontend/static/js/generated-settings-schema.mjs';
+import {normalizeSettingFields,settingCssValue} from '../frontend/static/js/generated-settings-schema.mjs';
 import {nsForms,lintGeneratedBlock,resolveUidToken,provenanceRecord} from '../frontend/static/js/generation-namespace.mjs';
 import {renderGeneratedSettings,bindGeneratedSettings} from '../frontend/static/js/generation-inspector.mjs';
 import {createGeneratedBlockRepository,createMemoryObjectStore,createSqlStore} from '../backend/cms/generated-block-repository.mjs';
@@ -34,6 +34,19 @@ test('declared schema wins over initial values, including range/select/color/fon
  assert.equal(checked.fields.fontRole.type,'font-role');
  assert.equal(checked.fields.heroMedia.type,'media');
  assert.equal(checked.settings.heroMedia,'687');
+});
+
+test('legacy contract spelling, bounded numeric units and unsafe CSS values resolve deterministically',()=>{
+ const fields={body:{type:'rich_text'},font:{type:'font_role'},preset:{type:'typography_preset'},padding:{type:'spacing',min:0,max:30,step:2,unit:'rem'}};
+ const {fields:canonical}=normalizeSettingFields(fields,{body:'Hello',font:'display',preset:'hero',padding:4});
+ assert.equal(canonical.body.type,'richtext');
+ assert.equal(canonical.font.type,'font-role');
+ assert.equal(canonical.preset.type,'typography-preset');
+ assert.equal(settingCssValue(4,canonical.padding),'4rem');
+ assert.equal(settingCssValue('display',canonical.font),'var(--font-display)');
+ assert.throws(()=>normalizeSettingFields(fields,{body:'Hello',font:'display',preset:'hero',padding:3}),/Invalid instance value/);
+ assert.throws(()=>normalizeSettingFields({bad:{type:'range',unit:';position:fixed'}},{bad:3}),/Invalid numeric unit/);
+ assert.throws(()=>normalizeSettingFields({bad:{type:'select',options:['ok',';body{display:none}']}},{bad:'ok'}),/Invalid select option/);
 });
 
 test('visual values need scoped CSS var consumption, not dummy data-cms nodes',()=>{

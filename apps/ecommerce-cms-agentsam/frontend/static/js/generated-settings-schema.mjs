@@ -6,6 +6,9 @@ export const SETTING_TYPES = Object.freeze([
   'variant','alignment','spacing',
 ]);
 const TYPES = new Set(SETTING_TYPES);
+const TYPE_ALIASES = Object.freeze({rich_text:'richtext','rich-text':'richtext',font_role:'font-role',typography_preset:'typography-preset'});
+const UNITS = new Set(['','px','%','rem','em','ms','s','deg','fr']);
+export const normalizeSettingType = type => TYPE_ALIASES[type]||type;
 const FIELD = /^[a-z][a-zA-Z0-9_]{0,39}$/;
 const VISUAL = new Set(['range','color','font-role','typography-preset','alignment','spacing']);
 const SAFE_STYLE = new Set(['number','range','spacing','color','alignment','select','font-role','typography-preset','boolean']);
@@ -40,9 +43,9 @@ export function normalizeSettingFields(declared,settings) {
   for(const key of Object.keys(settings))if(!Object.hasOwn(declared,key))throw Error('Undeclared instance setting: '+key);
   const fields={}, values={};
   for(const [key,input] of Object.entries(declared)){
-    if(!FIELD.test(key)||!input||typeof input!=='object'||Array.isArray(input)||!TYPES.has(input.type))
+    if(!FIELD.test(key)||!input||typeof input!=='object'||Array.isArray(input)||!TYPES.has(normalizeSettingType(input.type)))
       throw Error('Invalid declared generated setting schema: '+key);
-    const type=input.type;
+    const type=normalizeSettingType(input.type);
     const field={type,label:typeof input.label==='string'?input.label.slice(0,80):key};
     if(input.description!=null)field.description=String(input.description).slice(0,300);
     if(input.min!=null||input.max!=null||input.step!=null){
@@ -52,6 +55,11 @@ export function normalizeSettingFields(declared,settings) {
         field[prop]=input[prop];
       }
       if(field.min!=null&&field.max!=null&&field.min>field.max)throw Error('Invalid numeric range: '+key);
+    }
+    if(input.unit != null){
+      const unit=String(input.unit);
+      if(!UNITS.has(unit)||!['number','range','spacing'].includes(type))throw Error('Invalid numeric unit: '+key);
+      field.unit=unit;
     }
     if(input.maxLength!=null){if(!Number.isSafeInteger(input.maxLength)||input.maxLength<1||input.maxLength>8000)throw Error('Invalid maxLength: '+key);field.maxLength=input.maxLength;}
     if(type==='select'){
@@ -78,7 +86,7 @@ export function normalizeSettingFields(declared,settings) {
 }
 
 export function settingCssValue(value,field) {
-  if(field.type==='spacing')return String(value)+'px';
+  if(typeof value==='number')return String(value)+(field.unit ?? (field.type==='spacing'?'px':''));
   if(field.type==='font-role')return `var(--font-${value})`;
   if(field.type==='typography-preset')return `var(--typography-${value})`;
   return String(value);

@@ -993,7 +993,7 @@
     const schema=section.content.__editor.generatedSettingsSchema || {};
     generationInspector.renderGeneratedSettings(host, generatedSettings, schema);
     panel.appendChild(host);
-    const wrapper = document.querySelector('[data-agentsam-block="'+section.key+'"]') || { style: { setProperty() {} }, dataset: {} };
+    const wrapper = generationPreviewWrapper() || { style: { setProperty() {} }, dataset: {} };
     generationInspector.bindGeneratedSettings(host, wrapper, {onChange:function(key,value) {
       if(liveUnimported)return;
       section.content[key]=value;
@@ -2615,7 +2615,12 @@
       const section = currentSection();
       if (!section?.content?.__editor?.generated) return null;
       return {
-        definition: {type:section.content.__editor.definitionKey},
+        definition: {
+          kind: 'section', type:section.content.__editor.definitionKey,
+          settings:section.content.__editor.generatedSettingsSchema || {},
+          implementation_class:section.content.__editor.implementationClass || 'artifact_static',
+        },
+        implementation_class:section.content.__editor.implementationClass || 'artifact_static',
         settings: Object.fromEntries(Object.entries(section.content).filter(function([key]) { return key !== '__editor'; })),
         canonical: section.implementation || null,
       };
