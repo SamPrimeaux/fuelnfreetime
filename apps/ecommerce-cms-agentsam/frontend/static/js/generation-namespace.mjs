@@ -203,7 +203,7 @@ export function lintGeneratedBlock(resolved, forms) {
     if (!name.startsWith(forms.cssVarPrefix.slice(0, -1)) && !name.startsWith(forms.cssVarPrefix)) violations.push("css var missing namespace: " + name);
   });
   if (GLOBAL_SELECTOR.test(css)) violations.push("bare global selector");
-  if (!css.includes(forms.scope) && css.trim()) violations.push("css must be scoped under " + forms.scope);
+  violations.push(...lintScopedCss(css, forms));
   const trimmedJs = js.trim();
   if (trimmedJs && !/^\(\s*function\b|^\(\s*\(\s*\)\s*=>|^export\b/.test(trimmedJs)) violations.push("js must be an IIFE or module");
   if (/(^|\n)\s*(var|let|const)\s+[A-Za-z_$]/.test(trimmedJs) && !/^\(/.test(trimmedJs) && !trimmedJs.startsWith("export")) violations.push("top-level binding");
