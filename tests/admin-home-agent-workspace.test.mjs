@@ -68,3 +68,16 @@ test("UI JavaScript parses and new responsive CSS does not violate the grid guar
   assert.match(css, /max-width:620px/);
   assert.match(css, /focus-within/);
 });
+
+
+test("assistant Markdown renders as safe DOM nodes rather than raw model HTML", () => {
+  const drawer = read("js/agentsam.js");
+  const css = read("css/agentsam.css");
+  assert.match(drawer, /function renderAgentSamMarkdown\(container, content\)/);
+  assert.match(drawer, /document\.createTextNode/);
+  assert.match(drawer, /document\.createElement\("pre"\)/);
+  assert.match(drawer, /renderAgentSamMarkdown\(body, text\)/);
+  const renderer = drawer.slice(drawer.indexOf("function renderAgentSamMarkdown("), drawer.indexOf("function appendMessage("));
+  assert.doesNotMatch(renderer, /\.innerHTML\s*=/);
+  assert.match(css, /\.agentsam-msg-content pre/);
+});
