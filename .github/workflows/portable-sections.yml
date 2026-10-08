@@ -29,6 +29,14 @@ on:
       - tests/cms-generated-stream.test.mjs
       - tests/cms-generated-storefront-browser-smoke.mjs
       - tests/cms-generated-approval-browser-smoke.mjs
+      - apps/ecommerce-cms-agentsam/frontend/static/js/agentsam.js
+      - apps/ecommerce-cms-agentsam/frontend/static/js/agentsam-composer.js
+      - apps/ecommerce-cms-agentsam/frontend/static/js/miniagentsam-codepreview.js
+      - apps/ecommerce-cms-agentsam/frontend/static/css/agentsam.css
+      - apps/ecommerce-cms-agentsam/frontend/static/brand/agentsam-mark.svg
+      - apps/ecommerce-cms-agentsam/tests/reference-fidelity-dom.test.mjs
+      - docs/ui-reference/agentsam-side-assistant/**
+      - apps/ecommerce-cms-agentsam/AGENTS.md
       - apps/ecommerce-cms-agentsam/backend/cms/generated-section.mjs
       - apps/ecommerce-cms-agentsam/backend/cms/definition-registry.mjs
       - apps/ecommerce-cms-agentsam/frontend/static/js/generation-surfaces.mjs
@@ -64,9 +72,15 @@ jobs:
           node --check apps/ecommerce-cms-agentsam/backend/cms/api.js
           node --check apps/ecommerce-cms-agentsam/backend/cms/generated-section.mjs
           node --check apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor-generation-bootstrap.mjs
+          node --check apps/ecommerce-cms-agentsam/frontend/static/js/generation-surfaces.mjs
+          node --check apps/ecommerce-cms-agentsam/frontend/static/js/agentsam.js
+          node --check apps/ecommerce-cms-agentsam/frontend/static/js/agentsam-composer.js
+          node --check apps/ecommerce-cms-agentsam/frontend/static/js/miniagentsam-codepreview.js
           node --check apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor.js
       - name: Real renderer and shared catalog checks
         run: node --test tests/portable-sections.test.mjs tests/revise-atlas-contract.test.mjs tests/theme-studio-universal.test.mjs tests/cms-editor-mutations.test.mjs tests/cms-generated-section-accept.test.mjs tests/cms-generated-stream.test.mjs tests/cms-definition-registry.test.mjs tests/storefront-header-presets-editor.test.mjs
+      - name: Reference-fidelity Side Assistant DOM and explicit generation gate
+        run: node --test apps/ecommerce-cms-agentsam/tests/reference-fidelity-dom.test.mjs apps/ecommerce-cms-agentsam/tests/generation-surfaces.test.mjs
       - name: Actual Chrome public DOM and live editor preview proof
         run: node tests/portable-sections-browser-smoke.mjs
       - name: Real Home-page composer browser proof
