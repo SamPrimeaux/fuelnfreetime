@@ -35,6 +35,22 @@ function escapeAttr(value) {
     .replace(/</g, "&lt;");
 }
 
+/**
+ * Canonical public URL for a storefront request: origin + clean path, no
+ * query/hash, no .html suffix. Returns "" for anything that is not https.
+ */
+export function canonicalUrlFor(requestUrl) {
+  try {
+    const u = new URL(requestUrl);
+    if (u.protocol !== "https:") return "";
+    let path = u.pathname.replace(/\/index\.html$/i, "/").replace(/\.html$/i, "");
+    if (!path) path = "/";
+    return `${u.origin}${path}`;
+  } catch {
+    return "";
+  }
+}
+
 export function slugForStorefrontPath(pathname) {
   return PATH_TO_SLUG.get(pathname) || null;
 }
@@ -76,6 +92,8 @@ async function buildHeadContext(env, slug) {
     title,
     description: prefs.metaDescription || "",
     socialImageUrl: prefs.socialImageUrl || "",
+    siteName: siteTitle,
+    canonicalUrl: "",
   };
 }
 
@@ -102,9 +120,10 @@ class HeadSeoAppendHandler {
     this.head = head;
   }
   element(el) {
-    const { title, description, socialImageUrl } = this.head;
+    const { title, description, socialImageUrl, canonicalUrl, siteName } = this.head;
     const imgTags = socialImageUrl
       ? `<meta property="og:image" content="${escapeAttr(socialImageUrl)}">
+<meta property="og:image:alt" content="${escapeAttr(title)}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="${escapeAttr(socialImageUrl)}">`
       : `<meta name="twitter:card" content="summary">`;
@@ -113,7 +132,7 @@ class HeadSeoAppendHandler {
       `<meta name="cms-edge-seo" content="1">
 <meta name="description" content="${escapeAttr(description)}">
 <meta property="og:type" content="website">
-<meta property="og:title" content="${escapeAttr(title)}">
+${siteName ? `<meta property="og:site_name" content="${escapeAttr(siteName)}">\n` : ""}${canonicalUrl ? `<link rel="canonical" href="${escapeAttr(canonicalUrl)}">\n<meta property="og:url" content="${escapeAttr(canonicalUrl)}">\n` : ""}<meta property="og:title" content="${escapeAttr(title)}">
 <meta property="og:description" content="${escapeAttr(description)}">
 <meta name="twitter:title" content="${escapeAttr(title)}">
 <meta name="twitter:description" content="${escapeAttr(description)}">
@@ -131,6 +150,7 @@ export async function transformStorefrontHtml(response, env, slug, request) {
 
   const preview = request ? new URL(request.url).searchParams.has("preview") : false;
   const head = await buildHeadContext(env, slug);
+  head.canonicalUrl = preview ? "" : canonicalUrlFor(request?.url);
   // Open Graph and Twitter require an absolute image URL to reliably fetch
   // the chosen R2-backed image from social crawlers.
   if (head.socialImageUrl) {

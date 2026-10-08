@@ -61,6 +61,7 @@ renderShell("/admin/preferences", `
     <section class="prefs-card">
       <h2>Search appearance and social sharing</h2><p>Set the page title and description search engines receive, and choose a real image from your media library. The preview is a guide, not a guarantee of how a platform displays your page.</p>
       <div class="prefs-seo-grid">
+        <div class="prefs-seo-previews">
         <div class="prefs-social-preview">
           <img id="social-image" src="" alt="Chosen social sharing graphic" hidden><div class="prefs-social-placeholder" id="social-placeholder">Choose a sharing image to preview your store’s social card.</div>
           <div class="prefs-social-meta">
@@ -69,16 +70,23 @@ renderShell("/admin/preferences", `
             <div class="prefs-social-desc" id="social-preview-desc">Store description preview</div>
           </div>
         </div>
+        <div class="prefs-serp" aria-label="Search result preview">
+          <span class="prefs-serp-label">Search result preview</span>
+          <div class="prefs-serp-url" id="serp-url">fuelnfreetime.com</div>
+          <div class="prefs-serp-title" id="serp-title">Fuel &amp; Free Time</div>
+          <div class="prefs-serp-desc" id="serp-desc"></div>
+        </div>
+        </div>
         <div>
           <div class="prefs-field">
             <label for="home-title">Home page title</label>
             <input type="text" id="home-title" maxlength="70" data-pref="homeTitle">
-            <div class="prefs-counter"><span id="title-count">0</span> of 70 characters used</div>
+            <div class="prefs-counter" id="title-counter"><span id="title-count">0</span> of 70 characters used<span class="prefs-counter-hint" id="title-hint"></span></div>
           </div>
           <div class="prefs-field">
             <label for="meta-description">Meta description</label>
             <textarea id="meta-description" maxlength="320" data-pref="metaDescription" placeholder="Enter a description to be shown on search engines like Google"></textarea>
-            <div class="prefs-counter"><span id="meta-count">0</span> of 320 characters used</div>
+            <div class="prefs-counter" id="meta-counter"><span id="meta-count">0</span> of 320 characters used<span class="prefs-counter-hint" id="meta-hint"></span></div>
           </div>
           <div class="prefs-field">
             <label>Sharing image <span class="prefs-optional">Recommended 1200 × 630 px (1.91:1)</span></label>
@@ -88,6 +96,7 @@ renderShell("/admin/preferences", `
               <button type="button" class="btn ghost small" data-pick-asset="social">Choose image</button>
               <button type="button" class="btn ghost small" data-clear-asset="social" aria-label="Remove sharing image">Remove</button>
             </div>
+            <p class="prefs-image-hint" id="social-image-hint" role="status" hidden></p>
             <input type="hidden" id="social-image-url" data-pref="socialImageUrl">
             <details class="prefs-advanced"><summary>Advanced image URL</summary><label for="social-image-url-advanced">Image address</label><input type="text" id="social-image-url-advanced" placeholder="/media/…" autocomplete="off"><p>Usually you won't need this. Use Choose image above.</p></details>
           </div>
@@ -188,10 +197,10 @@ renderShell("/admin/preferences", `
     <section class="prefs-card" id="search-discovery-card" aria-labelledby="search-discovery-title">
       <div class="prefs-crawler-heading">
         <div>
-          <h2 id="search-discovery-title" style="margin-bottom:6px;">Search discovery &amp; site crawler</h2>
-          <p style="margin:0;">Public search engines use your storefront’s robots.txt and sitemap. AgentSam’s reusable <code>site.scrape</code> capability owns website harvesting; this ecommerce Worker supplies the site identity and public URL configuration.</p>
+          <h2 id="search-discovery-title" style="margin-bottom:6px;">Search engine discovery</h2>
+          <p style="margin:0;">Search engines find your store through <code>robots.txt</code> and your sitemap. Both are generated automatically from your published pages and active products &mdash; nothing to maintain by hand.</p>
         </div>
-        <span class="prefs-status-pill" id="crawler-status-pill" role="status">Loading discovery…</span>
+        <span class="prefs-status-pill" id="crawler-status-pill" role="status">Checking…</span>
       </div>
       <div class="prefs-crawler-site">
         <div><span class="prefs-crawler-label">Storefront</span><strong id="crawler-site-name">Loading store…</strong><small id="crawler-site-domain"></small></div>
@@ -201,22 +210,34 @@ renderShell("/admin/preferences", `
         </div>
       </div>
       <div class="prefs-crawler-metrics" aria-label="Public search discovery counts">
-        <div><strong id="crawler-routes-count">—</strong><span>Public storefront routes</span></div>
+        <div><strong id="crawler-routes-count">—</strong><span>Public pages</span></div>
         <div><strong id="crawler-products-count">—</strong><span>Active products</span></div>
-        <div><strong id="crawler-sitemap-count">—</strong><span>Current sitemap URLs</span></div>
-        <div><strong id="crawler-runtime-status">—</strong><span>AgentSam service binding</span></div>
+        <div><strong id="crawler-sitemap-count">—</strong><span>URLs in live sitemap</span></div>
+        <div><strong id="crawler-sync-status">—</strong><span>Sitemap vs. catalog</span></div>
       </div>
+      <ul class="prefs-check-list" id="crawler-checks" aria-live="polite">
+        <li data-check="robots"><span class="prefs-check-dot"></span><span><strong>robots.txt</strong> <em>Checking…</em></span></li>
+        <li data-check="sitemap"><span class="prefs-check-dot"></span><span><strong>sitemap.xml</strong> <em>Checking…</em></span></li>
+      </ul>
       <div class="prefs-crawler-controls">
-        <p class="prefs-crawler-run" id="crawler-runtime-note" aria-live="polite">Loading crawler integration status…</p>
-        <div class="prefs-crawler-buttons"><button type="button" class="btn ghost small" id="crawler-refresh-btn">Refresh discovery status</button></div>
+        <p class="prefs-crawler-run">Tell search engines about your sitemap so new products are picked up faster.
+          <a href="https://search.google.com/search-console" target="_blank" rel="noopener">Google Search Console</a> ·
+          <a href="https://www.bing.com/webmasters" target="_blank" rel="noopener">Bing Webmaster Tools</a></p>
+        <div class="prefs-crawler-buttons"><button type="button" class="btn ghost small" id="crawler-refresh-btn">Re-check now</button></div>
       </div>
       <div class="prefs-crawler-notice" id="crawler-notice" role="status" hidden></div>
+      <div class="prefs-import-row" data-capability="site.scrape">
+        <div>
+          <strong>Website import <span class="prefs-optional">Optional</span></strong>
+          <p id="crawler-runtime-note">Copy content and images from an existing website into your store using AgentSam’s site scraper. It runs outside this store and never affects what search engines see.</p>
+        </div>
+        <span class="prefs-status-pill" id="crawler-runtime-status">Not connected</span>
+      </div>
       <details class="prefs-crawler-help">
-        <summary>What this page publishes</summary>
+        <summary>What gets published</summary>
         <ul>
-          <li><code>robots.txt</code> is served by this Cloudflare Worker and excludes admin, API, account, cart, checkout and review routes.</li>
-          <li><code>sitemap.xml</code> is generated from the canonical public storefront route manifest and the live active-product catalog. Draft products are not listed.</li>
-          <li>This preferences page does not issue crawler credentials or maintain a second crawl queue. Run history, host scheduling, evidence and crawl authorization belong to the shared AgentSam crawler/runtime authorities.</li>
+          <li><code>robots.txt</code> keeps search engines out of admin, API, account, cart, checkout and review pages.</li>
+          <li><code>sitemap.xml</code> lists your public pages and active products. Draft products are never listed.</li>
         </ul>
       </details>
     </section>
@@ -264,14 +285,31 @@ function showNote(msg, kind) {
   el.textContent = msg;
 }
 
+const TITLE_SOFT_LIMIT = 60;
+const DESC_SOFT_LIMIT = 160;
+function clip(text, max) {
+  const t = String(text || "").trim();
+  return t.length > max ? t.slice(0, max - 1).trimEnd() + "…" : t;
+}
 function updateCounters() {
   const title = document.getElementById("home-title").value;
   const meta = document.getElementById("meta-description").value;
   document.getElementById("title-count").textContent = title.length;
   document.getElementById("meta-count").textContent = meta.length;
+  const titleLong = title.length > TITLE_SOFT_LIMIT;
+  const metaLong = meta.length > DESC_SOFT_LIMIT;
+  document.getElementById("title-counter").classList.toggle("is-long", titleLong);
+  document.getElementById("meta-counter").classList.toggle("is-long", metaLong);
+  document.getElementById("title-hint").textContent = titleLong
+    ? ` · search results usually show about ${TITLE_SOFT_LIMIT}` : "";
+  document.getElementById("meta-hint").textContent = metaLong
+    ? ` · search results usually show about ${DESC_SOFT_LIMIT}` : "";
+  const desc = meta || "Enter a description to be shown on search engines like Google.";
   document.getElementById("social-preview-title").textContent = title || domain;
-  document.getElementById("social-preview-desc").textContent =
-    meta || "Enter a description to be shown on search engines like Google.";
+  document.getElementById("social-preview-desc").textContent = desc;
+  document.getElementById("serp-url").textContent = domain;
+  document.getElementById("serp-title").textContent = clip(title || domain, TITLE_SOFT_LIMIT);
+  document.getElementById("serp-desc").textContent = clip(desc, DESC_SOFT_LIMIT);
 }
 
 function setChosenAsset(kind, url, { notify = true } = {}) {
@@ -282,6 +320,8 @@ function setChosenAsset(kind, url, { notify = true } = {}) {
   input.value = url || "";
   advanced.value = url || "";
   preview.hidden = !url;
+  preview.onerror = () => { preview.hidden = true; };
+  preview.onload = () => { preview.hidden = false; };
   if (url) preview.src = url;
   else preview.removeAttribute("src");
   name.textContent = url ? decodeURIComponent(url.split("/").pop().split("?")[0] || "Selected asset") :
@@ -290,13 +330,64 @@ function setChosenAsset(kind, url, { notify = true } = {}) {
   if (notify) setDirty(true);
 }
 
+const SOCIAL_IDEAL_RATIO = 1200 / 630;
+let socialImageToken = 0;
+async function explainImageFailure(url) {
+  try {
+    const res = await fetch(url, { method: "HEAD", credentials: "same-origin", cache: "no-store" });
+    if (res.status === 404) return "This image no longer exists in your media library. Choose another image.";
+    if (!res.ok) return `This image could not be loaded (HTTP ${res.status}). Choose another image.`;
+    const type = res.headers.get("content-type") || "";
+    if (!type.startsWith("image/")) return `This file is not an image (${type || "unknown type"}). Choose another image.`;
+    return "Your browser could not display this image file. It may be damaged or in an unsupported format. Choose another image.";
+  } catch {
+    return "This image address could not be reached. Check the address or choose another image.";
+  }
+}
 function updateSocialImage() {
   const url = document.getElementById("social-image-url").value.trim();
   const img = document.getElementById("social-image");
-  img.hidden = !url;
-  document.getElementById("social-placeholder").hidden = !!url;
-  if (url) img.src = url;
-  else img.removeAttribute("src");
+  const placeholder = document.getElementById("social-placeholder");
+  const hint = document.getElementById("social-image-hint");
+  const token = ++socialImageToken;
+  hint.hidden = true;
+  hint.className = "prefs-image-hint";
+  img.hidden = true;
+  if (!url) {
+    img.removeAttribute("src");
+    placeholder.hidden = false;
+    placeholder.textContent = "Choose a sharing image to preview your store’s social card.";
+    return;
+  }
+  placeholder.hidden = false;
+  placeholder.textContent = "Loading preview…";
+  img.onload = () => {
+    if (token !== socialImageToken) return;
+    placeholder.hidden = true;
+    img.hidden = false;
+    const w = img.naturalWidth, h = img.naturalHeight;
+    if (!w || !h) return;
+    const off = Math.abs(w / h - SOCIAL_IDEAL_RATIO) / SOCIAL_IDEAL_RATIO > 0.25;
+    const small = w < 600;
+    if (off || small) {
+      hint.textContent = `${w} × ${h} px. ` +
+        (small ? "This is small for a social card. " : "") +
+        (off ? "Platforms will crop it to a wide card, so keep the subject centered. " : "") +
+        "Recommended 1200 × 630 px.";
+      hint.classList.add("is-warning");
+      hint.hidden = false;
+    }
+  };
+  img.onerror = async () => {
+    if (token !== socialImageToken) return;
+    img.hidden = true;
+    placeholder.hidden = false;
+    placeholder.textContent = "Preview unavailable";
+    hint.textContent = await explainImageFailure(url);
+    hint.classList.add("is-error");
+    hint.hidden = false;
+  };
+  img.src = url;
 }
 
 function updateAnnouncementPreview() {
@@ -511,40 +602,80 @@ function crawlerNotice(message, kind = "info") {
   notice.className = `prefs-crawler-notice${message ? ` is-${kind}` : ""}`;
 }
 
+function setCheck(name, ok, text) {
+  const li = document.querySelector(`#crawler-checks [data-check="${name}"]`);
+  if (!li) return;
+  li.dataset.state = ok === null ? "pending" : ok ? "ok" : "bad";
+  li.querySelector("em").textContent = text;
+}
+async function verifyDiscoveryFiles(site) {
+  setCheck("robots", null, "Checking…");
+  setCheck("sitemap", null, "Checking…");
+  let sitemapUrls = null;
+  const fetchText = async (url) => {
+    const res = await fetch(url, { cache: "no-store", credentials: "omit" });
+    return { res, body: res.ok ? await res.text() : "" };
+  };
+  try {
+    const { res, body } = await fetchText(site.robots_url || "/robots.txt");
+    if (!res.ok) setCheck("robots", false, `Not reachable (HTTP ${res.status})`);
+    else if (!/user-agent/i.test(body)) setCheck("robots", false, "Reachable, but no rules found");
+    else setCheck("robots", true, /sitemap:/i.test(body) ? "Live, and points to your sitemap" : "Live, but does not list your sitemap");
+  } catch { setCheck("robots", false, "Could not be checked from this browser"); }
+  try {
+    const { res, body } = await fetchText(site.sitemap_url || "/sitemap.xml");
+    if (!res.ok) setCheck("sitemap", false, `Not reachable (HTTP ${res.status})`);
+    else {
+      sitemapUrls = (body.match(/<loc>/g) || []).length;
+      setCheck("sitemap", sitemapUrls > 0, sitemapUrls > 0 ? `Live, ${sitemapUrls} URLs` : "Reachable, but empty");
+    }
+  } catch { setCheck("sitemap", false, "Could not be checked from this browser"); }
+  return sitemapUrls;
+}
+
 async function refreshCrawlerDashboard() {
   const button = document.getElementById("crawler-refresh-btn");
+  const pill = document.getElementById("crawler-status-pill");
   if (button) button.disabled = true;
   try {
     const data = await adminFetch("/api/admin/store/crawler");
     const site = data.site || {};
     const counts = data.public_discovery || {};
     const bindingPresent = data.crawler_binding_present === true;
-    document.getElementById("crawler-status-pill").textContent = site.origin ? "Public discovery ready" : "Domain required";
-    document.getElementById("crawler-status-pill").className = `prefs-status-pill${site.origin ? " is-ready" : " is-warning"}`;
     document.getElementById("crawler-site-name").textContent = site.name || "Storefront";
     document.getElementById("crawler-site-domain").textContent = site.domain || "Configure a public HTTPS website URL in Company settings.";
     document.getElementById("crawler-robots-link").href = site.robots_url || "/robots.txt";
     document.getElementById("crawler-sitemap-link").href = site.sitemap_url || "/sitemap.xml";
+    const expected = Number(counts.sitemap_url_count || 0);
     document.getElementById("crawler-routes-count").textContent = String(Number(counts.indexable_routes || 0));
     document.getElementById("crawler-products-count").textContent = String(Number(counts.active_products || 0));
-    document.getElementById("crawler-sitemap-count").textContent = String(Number(counts.sitemap_url_count || 0));
-    document.getElementById("crawler-runtime-status").textContent = bindingPresent ? "Binding present" : "Not bound";
-    document.getElementById("crawler-runtime-note").textContent = bindingPresent
-      ? `An AGENTSAM_SITE_SCRAPE binding is configured, but this Preferences page currently publishes discovery only. Crawl actions and evidence remain owned by ${data.crawler_authority || "AgentSam SDK"}.`
-      : `Public search discovery is served by this Cloudflare Worker. The shared ${data.crawler_capability || "site.scrape"} crawler is owned by ${data.crawler_authority || "AgentSam SDK"} and is not bound into this Worker; no FNF-only crawl queue or credential store is created here.`;
+    const runtime = document.getElementById("crawler-runtime-status");
+    runtime.textContent = bindingPresent ? "Connected" : "Not connected";
+    runtime.className = `prefs-status-pill${bindingPresent ? " is-ready" : ""}`;
+    const live = await verifyDiscoveryFiles(site);
+    document.getElementById("crawler-sitemap-count").textContent = live === null ? "—" : String(live);
+    const sync = document.getElementById("crawler-sync-status");
+    if (live === null) sync.textContent = "—";
+    else sync.textContent = live === expected ? "In sync" : `${live > expected ? "+" : "−"}${Math.abs(live - expected)} off`;
+    const filesOk = document.querySelectorAll('#crawler-checks [data-state="bad"]').length === 0;
+    const ready = Boolean(site.origin) && filesOk && live !== null && live === expected;
+    pill.textContent = !site.origin ? "Domain required" : ready ? "Search-ready" : "Needs attention";
+    pill.className = `prefs-status-pill${ready ? " is-ready" : " is-warning"}`;
     crawlerNotice(counts.sitemap_truncated
       ? "The sitemap listing reached its 48,000-product cap. A sitemap index is needed before this catalog can publish more product URLs."
-      : "", counts.sitemap_truncated ? "warning" : "info");
+      : (live !== null && live !== expected
+        ? "The live sitemap does not match your catalog. Refresh in a minute; if it persists, the sitemap cache may be stale."
+        : ""), counts.sitemap_truncated || (live !== null && live !== expected) ? "warning" : "info");
   } catch (error) {
-    document.getElementById("crawler-status-pill").textContent = "Unavailable";
-    document.getElementById("crawler-status-pill").className = "prefs-status-pill is-warning";
-    if (error.status === 409) crawlerNotice("Configure a valid public HTTPS storefront domain before publishing crawler discovery files.", "warning");
+    pill.textContent = "Unavailable";
+    pill.className = "prefs-status-pill is-warning";
+    if (error.status === 409) crawlerNotice("Configure a valid public HTTPS storefront domain before publishing search discovery files.", "warning");
     else crawlerNotice(error.message || "Search discovery status could not be loaded.", "error");
-    document.getElementById("crawler-routes-count").textContent = "—";
-    document.getElementById("crawler-products-count").textContent = "—";
-    document.getElementById("crawler-sitemap-count").textContent = "—";
-    document.getElementById("crawler-runtime-status").textContent = "—";
-    document.getElementById("crawler-runtime-note").textContent = "No crawler or sitemap metrics are available until the store domain and database are configured.";
+    for (const id of ["crawler-routes-count", "crawler-products-count", "crawler-sitemap-count", "crawler-sync-status"]) {
+      document.getElementById(id).textContent = "—";
+    }
+    setCheck("robots", false, "Status unavailable");
+    setCheck("sitemap", false, "Status unavailable");
   } finally {
     if (button) button.disabled = false;
   }
