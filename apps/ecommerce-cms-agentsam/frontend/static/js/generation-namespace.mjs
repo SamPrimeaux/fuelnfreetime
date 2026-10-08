@@ -230,12 +230,13 @@ export function lintGeneratedBlock(resolved, forms) {
 }
 
 export function acceptGeneratedBlock(canonical, options = {}) {
-  const forms = nsForms(options.blockId, options.namespace);
+  const instanceId = options.instanceId || options.blockId;
+  const forms = nsForms(instanceId, options.namespace);
   const resolve = function(code) {
     return {
-      html: resolveUidToken(code.html, options.blockId, options.namespace),
-      css: resolveUidToken(code.css, options.blockId, options.namespace),
-      js: resolveUidToken(code.js, options.blockId, options.namespace),
+      html: resolveUidToken(code.html, instanceId, options.namespace),
+      css: resolveUidToken(code.css, instanceId, options.namespace),
+      js: resolveUidToken(code.js, instanceId, options.namespace),
     };
   };
   let current = canonical;
