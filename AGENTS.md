@@ -1,3 +1,15 @@
+# Canonical package and production-infrastructure law
+
+**Fuel & Free Time is customer #1 and the reference implementation of the reusable AgentSam ecommerce application, not a donor or FNF-only architecture.** Production infrastructure (R2 asset queue/optimization, Vectorize BGE-M3, CMS/D1/R2 generation, CLIs, commerce/provider integrations) already exists. Consolidate and reuse it before inventing replacements.
+
+Read **[docs/ARCHITECTURE-AUTHORITY.md](docs/ARCHITECTURE-AUTHORITY.md)** and the [machine-derived package inventory](docs/generated/package-authority.md) before changing generic tooling, data models, plugins, UI engines, media, knowledge or bins. SDK/package-first is the default: locate actual exports and consumers; inject FNF tenant configuration; add capabilities to the canonical package when missing; prove production behavioral parity before any cutover or deletion. Do not create second authorities/registries.
+
+Keep `fnf_*` for real FNF resource identity, historical D1/workflow compatibility or migration aliases. Do not implement generic Vectorize, optimization, content, skill, or plugin engines under new FNF-prefixed names. A FNF workspace package with the same name as an upstream SDK package does **not** establish code identity or version parity.
+
+**Mandatory drift gate:** `node scripts/package-authority.mjs --check` (also runs through build/worker predeploy). Refresh after legitimate manifest/evidence changes with `--write`, then review the diff. A passing test of file presence is not a proof of live deployment. Do not delete existing `bin/fnf-assets`, `lib/assets/*`, or Vectorize scripts without actual caller, parity, rollback and operator-compatibility tests.
+
+---
+
 # Current source and build ownership
 
 See `docs/PIPELINE-OWNERSHIP.md` for the complete authority map. Build assets are assembled into `dist/assets`; root `public/` contains supplementary public assets only.

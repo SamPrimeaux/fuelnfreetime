@@ -12,6 +12,29 @@ This repository is also the customer-1 proving ground for `@inneranimalmedia/eco
 
 ---
 
+## Existing production infrastructure and canonical authorities
+
+**This repo already has production infrastructure. The present goal is consolidation, package reuse, parity testing, and enforcement—not inventing infrastructure that is already implemented.** Fuel & Free Time is customer #1 and the production reference implementation of the reusable ecommerce product, not a donor or a permanent FNF-only fork.
+
+The authoritative, code-backed map is **[docs/ARCHITECTURE-AUTHORITY.md](docs/ARCHITECTURE-AUTHORITY.md)**. Its [generated package/entrypoint inventory](docs/generated/package-authority.md) distinguishes current workspace references from upstream SDK authorities and legacy compatibility scripts. Run `node scripts/package-authority.mjs --check` to detect stale claims. The authority manifest is `docs/package-authority.json`.
+
+| Already built in this repo | Existing entrypoint / binding | Preferred consolidation |
+| --- | --- | --- |
+| R2 asset intake, optimization, derivatives, classification, job retries/recovery | `bin/fnf-assets`, `lib/assets/*`, `ASSET_JOBS` | Preserve jobs, route generic behavior into existing Asset Core / Content / Media Kit / Merch packages after parity |
+| BGE-M3 1024-dimensional semantic search and content indexing | `FNF_VECTORIZE`, `fnf-vectorize.js`, `vectorize-adapter.js`, `scripts/embed-fnf-content.mjs` | AgentSam Knowledge + Cloudflare connector with FNF bindings/filter/source configuration |
+| Portable ecommerce operations | `apps/ecommerce-cms-agentsam/bin/ecommerce.mjs` | Extend its command families as delegates rather than cloning engines |
+| CMS draft/generation and real theme rendering | `backend/cms/*`, `theme-contract`, Theme Editor | Preserve one D1/R2 page/section/block authority; reuse canonical CMS/runtime and Workbench packages |
+
+**SDK/package-first:** locate real package exports and callers before implementing. If the SDK package lacks production behavior already proven by FNF, extend the existing package and keep FNF consuming it. Do **not** delete currently working processors until parity and rollback are proven.
+
+Names such as `FNF_VECTORIZE`, `fnf-agentsam-bge-m3-1024` and historical `fnf_*` tool IDs are legitimate **merchant resource/compatibility identities**; they are not a reason to build a second, FNF-specific embedding, image optimization, or AgentSam capability engine.
+
+The FNF workspace also contains some packages whose **names overlap upstream SDK packages while their local versions differ** (notably Workbench and Merch). A matching package name must not be mistaken for proof that FNF is using the SDK implementation.
+
+**Repository/contract graph authority already exists:** `@inneranimalmedia/agentsam-repository` owns repository identity, contract/dependency records, hashes, and failure policies. Our `scripts/package-authority.mjs` check is an app-local package/evidence inventory, not a new repository-contract registry. See [the contract authority section](docs/ARCHITECTURE-AUTHORITY.md#repository-contracts-and-graph-authority-already-exists).
+
+---
+
 ## Product installation relationship
 
 Fuel & Free Time is the first customer installation of `@inneranimalmedia/ecommerce-cms-agentsam`.

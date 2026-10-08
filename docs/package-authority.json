@@ -1,0 +1,259 @@
+{
+  "schema_version": 1,
+  "snapshot_date": "2026-10-08",
+  "authority_rule": "SDK/package implementation first; FNF supplies bindings, data, identity, and merchant policy.",
+  "local_roles": {
+    "@inneranimalmedia/ecommerce-cms-agentsam": "Ecommerce/CMS application composition and merchant install",
+    "@inneranimalmedia/admin-dock": "Reusable responsive admin dock",
+    "@inneranimalmedia/admin-profile-popup": "Reusable account/profile presentation",
+    "@inneranimalmedia/agentsam-merch": "Product/manufacturing preparation and product spine",
+    "@inneranimalmedia/agentsam-workbench": "Composer/miniAgentSam interaction (FNF workspace copy)",
+    "@inneranimalmedia/commerce-analytics": "Commerce analytics presentation",
+    "@inneranimalmedia/fnf-theme": "FNF merchant theme configuration/presentation",
+    "@inneranimalmedia/heuristic-theme": "Current storefront theme/runtime",
+    "@inneranimalmedia/media-kit": "Media collection and provider-neutral UI contracts",
+    "@inneranimalmedia/theme-contract": "Portable section/theme/runtime contracts"
+  },
+  "sdk_authorities": [
+    {
+      "name": "@inneranimalmedia/agentsam-assets-core",
+      "sdk_path": "packages/agentsam-assets-core",
+      "role": "Asset identity, provenance, derivative identities",
+      "status": "CONVERGING",
+      "audited_version": "2.6.12"
+    },
+    {
+      "name": "@inneranimalmedia/agentsam-content",
+      "sdk_path": "packages/agentsam-content",
+      "role": "Content lifecycle and provider representations",
+      "status": "CONVERGING",
+      "audited_version": "2.6.12"
+    },
+    {
+      "name": "@inneranimalmedia/agentsam-content-studio",
+      "sdk_path": "packages/agentsam-content-studio",
+      "role": "Content/library UI",
+      "status": "CONVERGING",
+      "audited_version": "2.6.12"
+    },
+    {
+      "name": "@inneranimalmedia/agentsam-cloudflare-images",
+      "sdk_path": "packages/agentsam-cloudflare-images",
+      "role": "Cloudflare Images provider/delivery",
+      "status": "CONVERGING",
+      "audited_version": "2.6.12"
+    },
+    {
+      "name": "@inneranimalmedia/agentsam-knowledge",
+      "sdk_path": "packages/agentsam-knowledge",
+      "role": "AutoRAG, embedding/index/retrieve adapters",
+      "status": "CONVERGING",
+      "audited_version": "2.6.12"
+    },
+    {
+      "name": "@inneranimalmedia/agentsam-connector-cloudflare",
+      "sdk_path": "packages/connectors/cfoa",
+      "role": "Cloudflare OAuth and Vectorize/R2 provider operations",
+      "status": "CONVERGING",
+      "audited_version": "2.6.12"
+    },
+    {
+      "name": "@inneranimalmedia/agentsam-settings",
+      "sdk_path": "packages/agentsam-settings",
+      "role": "Settings, integrations, skills/MCP catalog views",
+      "status": "CONVERGING",
+      "audited_version": "2.6.12"
+    },
+    {
+      "name": "@inneranimalmedia/agentsam-vault",
+      "sdk_path": "packages/agentsam-vault",
+      "role": "Encrypted credential authority",
+      "status": "CONVERGING",
+      "audited_version": "2.6.12"
+    },
+    {
+      "name": "@inneranimalmedia/agentsam-key-manager",
+      "sdk_path": "packages/agentsam-key-manager",
+      "role": "Credential/connection UI",
+      "status": "CONVERGING",
+      "audited_version": "2.6.12"
+    },
+    {
+      "name": "@inneranimalmedia/agentsam-identity",
+      "sdk_path": "packages/identity",
+      "role": "Identity/session/OAuth entry",
+      "status": "CONVERGING",
+      "audited_version": "2.6.12"
+    },
+    {
+      "name": "@inneranimalmedia/agentsam-hooks",
+      "sdk_path": "packages/agentsam-hooks",
+      "role": "Hook/MCP execution adapters",
+      "status": "CONVERGING",
+      "audited_version": "2.6.12"
+    },
+    {
+      "name": "@inneranimalmedia/agentsam-contracts",
+      "sdk_path": "packages/agentsam-contracts",
+      "role": "Cross-product execution/contracts",
+      "status": "CONVERGING",
+      "audited_version": "2.6.12"
+    },
+    {
+      "name": "@inneranimalmedia/agentsam-repository",
+      "sdk_path": "packages/agentsam-repository",
+      "role": "Canonical repository identity, contract records/hashes, dependency edges, failure policy, Git context, Merkle persistence and graph normalization. FNF package inventory remains an evidence consumer, not a new repository graph authority.",
+      "status": "CONVERGING",
+      "audited_version": "2.6.12",
+      "note": "Upstream README advises SDK facade for cross-repo use until standalone release policy stabilizes; package.json now declares publishable. Verify release/exports before direct dependency."
+    },
+    {
+      "name": "@inneranimalmedia/agentsam-errors",
+      "sdk_path": "packages/agentsam-errors",
+      "role": "Canonical error/remediation contracts",
+      "status": "AVAILABLE",
+      "audited_version": "2.6.12"
+    },
+    {
+      "name": "@inneranimalmedia/agentsam-brand",
+      "sdk_path": "packages/agentsam-brand",
+      "role": "Brand tooling",
+      "status": "AVAILABLE",
+      "audited_version": "2.6.12"
+    },
+    {
+      "name": "@inneranimalmedia/agentsam-campaign",
+      "sdk_path": "packages/agentsam-campaign",
+      "role": "Campaign/SEO intelligence",
+      "status": "AVAILABLE",
+      "audited_version": "2.6.12"
+    },
+    {
+      "name": "@inneranimalmedia/agentsam-analytics",
+      "sdk_path": "packages/agentsam-analytics",
+      "role": "Analytics read models",
+      "status": "AVAILABLE",
+      "audited_version": "2.6.12"
+    },
+    {
+      "name": "@inneranimalmedia/cms-runtime",
+      "sdk_path": "packages/cms-runtime",
+      "role": "CMS manifest, database and runtime contracts",
+      "status": "CONVERGING",
+      "audited_version": "2.6.12"
+    },
+    {
+      "name": "@inneranimalmedia/client-cms-editor",
+      "sdk_path": "apps/client-cms-editor",
+      "role": "Reusable CMS editor UI",
+      "status": "CONVERGING",
+      "audited_version": "2.6.12"
+    },
+    {
+      "name": "@inneranimalmedia/agentsam-browser-surface",
+      "sdk_path": "packages/agentsam-browser-surface",
+      "role": "Browser surface contract",
+      "status": "AVAILABLE",
+      "audited_version": "2.6.12"
+    },
+    {
+      "name": "@inneranimalmedia/agentsam-abs",
+      "sdk_path": "packages/agentsam-abs",
+      "role": "AgentSam Browser Shell product",
+      "status": "AVAILABLE",
+      "audited_version": "2.6.12"
+    },
+    {
+      "name": "@inneranimalmedia/agentsam-provider-completeful",
+      "sdk_path": "packages/providers/completeful",
+      "role": "Completeful provider adapter",
+      "status": "CONVERGING",
+      "audited_version": "2.6.12"
+    },
+    {
+      "name": "@inneranimalmedia/revise-theme",
+      "sdk_path": null,
+      "role": "Alternate packaged theme",
+      "status": "SOURCE_UNVERIFIED",
+      "audited_version": null,
+      "note": "Declared/referenced by ecommerce; source package not verified in inspected agentsam-sdk checkout. Resolve before claiming active or canonical."
+    },
+    {
+      "name": "@inneranimalmedia/section-library",
+      "sdk_path": null,
+      "role": "Reusable section primitives",
+      "status": "SOURCE_UNVERIFIED",
+      "audited_version": null,
+      "note": "Declared/referenced by ecommerce; source package not verified in inspected agentsam-sdk checkout. Resolve before claiming active or canonical."
+    },
+    {
+      "name": "@inneranimalmedia/site-contracts",
+      "sdk_path": null,
+      "role": "Site/layout contracts",
+      "status": "SOURCE_UNVERIFIED",
+      "audited_version": null,
+      "note": "Declared/referenced by ecommerce; source package not verified in inspected agentsam-sdk checkout. Resolve before claiming active or canonical."
+    },
+    {
+      "name": "@inneranimalmedia/agentsam-merch",
+      "sdk_path": "packages/agentsam-merch",
+      "role": "Upstream product/manufacturing authority; overlaps FNF local same name",
+      "status": "CONVERGING",
+      "audited_version": "2.6.12"
+    },
+    {
+      "name": "@inneranimalmedia/agentsam-workbench",
+      "sdk_path": "packages/agentsam-workbench",
+      "role": "Upstream composer/run-mode authority; overlaps FNF local same name",
+      "status": "CONVERGING",
+      "audited_version": "2.6.12"
+    }
+  ],
+  "legacy": [
+    {
+      "path": "bin/fnf-assets",
+      "status": "ACTIVE OPERATOR TOOL",
+      "note": "Production asset queue/pipeline via lib/assets; preserve CLI alias"
+    },
+    {
+      "path": "lib/assets/process-job.js",
+      "status": "ACTIVE IMPLEMENTATION",
+      "note": "Queue processing, retries, media finalization; parity gate before relocation"
+    },
+    {
+      "path": "lib/assets/worker-hook.js",
+      "status": "ACTIVE IMPLEMENTATION",
+      "note": "Worker queue intake and error/recovery"
+    },
+    {
+      "path": "apps/ecommerce-cms-agentsam/backend/assets/product-optimize.js",
+      "status": "COMPATIBILITY ADAPTER",
+      "note": "Worker-facing asset job/optimization path"
+    },
+    {
+      "path": "scripts/optimize-uploads-images.mjs",
+      "status": "COMPATIBILITY WRAPPER",
+      "note": "Already delegates to bin/fnf-assets optimize; NOT a second optimizer"
+    },
+    {
+      "path": "scripts/embed-fnf-content.mjs",
+      "status": "ACTIVE OPERATOR TOOL",
+      "note": "Local indexing orchestration; converge on Knowledge runtime only after parity"
+    },
+    {
+      "path": "apps/ecommerce-cms-agentsam/backend/agentsam/vectorize-adapter.js",
+      "status": "CONVERGING IMPLEMENTATION",
+      "note": "Already generic/config-driven but implemented locally; compare against SDK backend"
+    },
+    {
+      "path": "apps/ecommerce-cms-agentsam/backend/agentsam/fnf-vectorize.js",
+      "status": "MERCHANT ADAPTER / CONVERGING",
+      "note": "FNF Workers AI, index, scope and result formatting; strip generic logic after parity"
+    },
+    {
+      "path": "apps/ecommerce-cms-agentsam/bin/ecommerce.mjs",
+      "status": "ACTIVE OPERATOR TOOL",
+      "note": "Portable ecommerce info/doctor/preview/scaffold"
+    }
+  ]
+}
