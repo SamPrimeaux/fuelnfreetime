@@ -247,12 +247,15 @@ export function createGeneratedBlockRepository(sql, objects, options = {}) {
         if (!artifact?.manifest_r2_key) return { ok: false, error: "artifact manifest missing" };
         const raw = await objects.get(artifact.manifest_r2_key);
         const canonical = JSON.parse(raw);
+        const forms = nsForms(row.id, "agentsam");
         const resolved = {
-          html: resolveUidToken(canonical.html || "", row.id),
-          css: resolveUidToken(canonical.css || "", row.id),
-          js: resolveUidToken(canonical.js || "", row.id),
+          html: resolveUidToken(String(canonical.html || "")
+            .replaceAll('data-agentsam-block="__UID__"', 'data-agentsam-block="' + forms.blockId + '"'), forms.instanceId, "agentsam"),
+          css: resolveUidToken(String(canonical.css || "")
+            .replaceAll('[data-agentsam-block="__UID__"]', forms.scope), forms.instanceId, "agentsam"),
+          js: resolveUidToken(canonical.js || "", forms.instanceId, "agentsam"),
         };
-        const lint = lintGeneratedBlock(resolved, nsForms(row.id));
+        const lint = lintGeneratedBlock(resolved, forms);
         if (!lint.ok) return { ok: false, error: lint.violations.join("; ") };
         output.push(resolved);
       }
