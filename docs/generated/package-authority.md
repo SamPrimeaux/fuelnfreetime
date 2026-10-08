@@ -38,6 +38,7 @@ CONVERGING = upstream implementation exists, but FNF delegation/parity is not es
 | `@inneranimalmedia/agentsam-identity` | `agentsam-sdk/packages/identity` | `2.6.12` | CONVERGING | Identity/session/OAuth entry |
 | `@inneranimalmedia/agentsam-hooks` | `agentsam-sdk/packages/agentsam-hooks` | `2.6.12` | CONVERGING | Hook/MCP execution adapters |
 | `@inneranimalmedia/agentsam-contracts` | `agentsam-sdk/packages/agentsam-contracts` | `2.6.12` | CONVERGING | Cross-product execution/contracts |
+| `@inneranimalmedia/agentsam-repository` | `agentsam-sdk/packages/agentsam-repository` | `2.6.12` | CONVERGING | Canonical repository identity, contract records/hashes, dependency edges, failure policy, Git context, Merkle persistence and graph normalization. FNF package inventory remains an evidence consumer, not a new repository graph authority. — Upstream README advises SDK facade for cross-repo use until standalone release policy stabilizes; package.json now declares publishable. Verify release/exports before direct dependency. |
 | `@inneranimalmedia/agentsam-errors` | `agentsam-sdk/packages/agentsam-errors` | `2.6.12` | AVAILABLE | Canonical error/remediation contracts |
 | `@inneranimalmedia/agentsam-brand` | `agentsam-sdk/packages/agentsam-brand` | `2.6.12` | AVAILABLE | Brand tooling |
 | `@inneranimalmedia/agentsam-campaign` | `agentsam-sdk/packages/agentsam-campaign` | `2.6.12` | AVAILABLE | Campaign/SEO intelligence |
