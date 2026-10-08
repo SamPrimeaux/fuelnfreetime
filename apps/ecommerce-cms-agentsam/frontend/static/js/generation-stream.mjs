@@ -14,11 +14,14 @@ export const PHASE_LABELS = {
 };
 export const GENERATION_PROMPT_PREFIX = [
   "Output tagged sections in order: <<<definition>>>, <<<markup>>>, <<<css>>>, <<<js>>>, <<<settings>>>.",
-  "In <<<definition>>> emit one JSON object with kind ('section' or 'block'), a stable kebab-case type, a merchant-facing label, and optional settings schema.",
-  "Write the literal token __UID__ for every generated id, class, custom element, and css variable.",
-  "Do not write a namespace prefix. Do not emit eval, fetch, document.write, external src, or window.parent.",
-  "Wrap markup in data-agentsam-block. Scope css under that wrapper. Wrap js in an IIFE.",
-  "Declare settings as key=value lines. Reference every setting from css or markup.",
+  "In <<<definition>>> emit one JSON object with kind='section', a stable kebab-case semantic type, a merchant-facing label, and optional settings schema.",
+  "Write the literal token __UID__ in every generated id, class, custom element and CSS variable.",
+  "The root must be <section data-agentsam-block=\"__UID__\">, and EVERY CSS selector must begin with [data-agentsam-block=\"__UID__\"].",
+  "Do not add a namespace yourself; the installed renderer resolves __UID__ per instance.",
+  "For this release the <<<js>>> section MUST be empty. Do not emit script tags, event handlers, inline styles, eval, fetch, or external assets.",
+  "Use only structural HTML, scoped CSS and same-site relative links/images. No global selectors or CSS imports.",
+  "Declare settings as simple key=value lines and connect every setting to a data-cms=\"key\" attribute in the markup.",
+  "Always preserve the existing semantic type when the request revises a generated section.",
 ].join(" ");
 
 export function parseGeneratedDefinition(text, fallback = {}) {
