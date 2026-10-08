@@ -63,11 +63,11 @@ CONVERGING = upstream implementation exists, but FNF delegation/parity is not es
 
 | Entrypoint | Status | Next action / boundary |
 | --- | --- | --- |
-| [bin/fnf-assets.mjs](../../bin/fnf-assets.mjs) | ACTIVE OPERATOR TOOL | Production asset queue/pipeline via lib/assets; preserve CLI alias |
-| [lib/assets/process-job.js](../../lib/assets/process-job.js) | ACTIVE IMPLEMENTATION | Queue processing, retries, media finalization; parity gate before relocation |
-| [lib/assets/worker-hook.js](../../lib/assets/worker-hook.js) | ACTIVE IMPLEMENTATION | Worker queue intake and error/recovery |
+| [apps/ecommerce-cms-agentsam/bin/assets.mjs](../../apps/ecommerce-cms-agentsam/bin/assets.mjs) | ACTIVE OPERATOR TOOL | Production asset queue/pipeline via apps/ecommerce-cms-agentsam/backend/assets; preserve CLI alias |
+| [apps/ecommerce-cms-agentsam/backend/assets/process-job.js](../../apps/ecommerce-cms-agentsam/backend/assets/process-job.js) | ACTIVE IMPLEMENTATION | Queue processing, retries, media finalization; parity gate before relocation |
+| [apps/ecommerce-cms-agentsam/backend/assets/worker-hook.js](../../apps/ecommerce-cms-agentsam/backend/assets/worker-hook.js) | ACTIVE IMPLEMENTATION | Worker queue intake and error/recovery |
 | [apps/ecommerce-cms-agentsam/backend/assets/product-optimize.js](../../apps/ecommerce-cms-agentsam/backend/assets/product-optimize.js) | COMPATIBILITY ADAPTER | Worker-facing asset job/optimization path |
-| [scripts/optimize-uploads-images.mjs](../../scripts/optimize-uploads-images.mjs) | COMPATIBILITY WRAPPER | Already delegates to bin/fnf-assets.mjs optimize; NOT a second optimizer |
+| [scripts/optimize-uploads-images.mjs](../../scripts/optimize-uploads-images.mjs) | COMPATIBILITY WRAPPER | Already delegates to apps/ecommerce-cms-agentsam/bin/assets.mjs optimize; NOT a second optimizer |
 | [scripts/embed-fnf-content.mjs](../../scripts/embed-fnf-content.mjs) | ACTIVE OPERATOR TOOL | Local indexing orchestration; converge on Knowledge runtime only after parity |
 | [apps/ecommerce-cms-agentsam/backend/agentsam/vectorize-adapter.js](../../apps/ecommerce-cms-agentsam/backend/agentsam/vectorize-adapter.js) | CONVERGING IMPLEMENTATION | Already generic/config-driven but implemented locally; compare against SDK backend |
 | [apps/ecommerce-cms-agentsam/backend/agentsam/fnf-vectorize.js](../../apps/ecommerce-cms-agentsam/backend/agentsam/fnf-vectorize.js) | MERCHANT ADAPTER / CONVERGING | FNF Workers AI, index, scope and result formatting; strip generic logic after parity |

@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { classifyMediaAsset } from "../lib/assets/classify.js";
-import { planAssetIngest } from "../lib/assets/worker-hook.js";
+import { classifyMediaAsset } from "../apps/ecommerce-cms-agentsam/backend/assets/classify.js";
+import { planAssetIngest } from "../apps/ecommerce-cms-agentsam/backend/assets/worker-hook.js";
+
+import { configureAssetStorage, assetStorage } from "../apps/ecommerce-cms-agentsam/backend/assets/config.js";
+import { assetStorageFromProject, findProjectRoot } from "../apps/ecommerce-cms-agentsam/backend/assets/project-config.js";
+configureAssetStorage(assetStorageFromProject(findProjectRoot(new URL("..", import.meta.url).pathname)));
 
 test("generic production intent retains a production master without provider knowledge", () => {
   const classification = classifyMediaAsset({

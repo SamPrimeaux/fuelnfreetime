@@ -211,17 +211,17 @@
   ],
   "legacy": [
     {
-      "path": "bin/fnf-assets.mjs",
+      "path": "apps/ecommerce-cms-agentsam/bin/assets.mjs",
       "status": "ACTIVE OPERATOR TOOL",
-      "note": "Production asset queue/pipeline via lib/assets; preserve CLI alias"
+      "note": "Production asset queue/pipeline via apps/ecommerce-cms-agentsam/backend/assets; preserve CLI alias"
     },
     {
-      "path": "lib/assets/process-job.js",
+      "path": "apps/ecommerce-cms-agentsam/backend/assets/process-job.js",
       "status": "ACTIVE IMPLEMENTATION",
       "note": "Queue processing, retries, media finalization; parity gate before relocation"
     },
     {
-      "path": "lib/assets/worker-hook.js",
+      "path": "apps/ecommerce-cms-agentsam/backend/assets/worker-hook.js",
       "status": "ACTIVE IMPLEMENTATION",
       "note": "Worker queue intake and error/recovery"
     },
@@ -233,7 +233,7 @@
     {
       "path": "scripts/optimize-uploads-images.mjs",
       "status": "COMPATIBILITY WRAPPER",
-      "note": "Already delegates to bin/fnf-assets.mjs optimize; NOT a second optimizer"
+      "note": "Already delegates to apps/ecommerce-cms-agentsam/bin/assets.mjs optimize; NOT a second optimizer"
     },
     {
       "path": "scripts/embed-fnf-content.mjs",

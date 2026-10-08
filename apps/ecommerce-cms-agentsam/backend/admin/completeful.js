@@ -152,7 +152,7 @@ export async function handleCompletefulAdminApi(request, env, url) {
       return json({ ok: true, ...result });
     }
 
-    // Plan SEO/CF tags + staging keys for a product R2 image (optimize via bin/fnf-assets.mjs).
+    // Plan SEO/CF tags + staging keys for a product R2 image (optimize via apps/ecommerce-cms-agentsam/bin/assets.mjs).
     if (path === "/api/admin/completeful/assets/optimize-plan" && method === "POST") {
       const body = await readJson(request);
       const r2Key = String(body.r2_key || body.key || "").replace(/^\/+/, "");
@@ -170,7 +170,7 @@ export async function handleCompletefulAdminApi(request, env, url) {
         ...plan,
         next: {
           cli: plan.execute_cli,
-          note: "Worker plans tags/staging; run bin/fnf-assets.mjs to execute sharp optimize against R2.",
+          note: "Worker plans tags/staging; run apps/ecommerce-cms-agentsam/bin/assets.mjs to execute sharp optimize against R2.",
         },
       });
     }

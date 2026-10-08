@@ -4,7 +4,7 @@
 import { mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { ASSET_STORAGE } from "./config.js";
+import { ASSET_DEFAULTS, assetStorage } from "./config.js";
 import { listR2Objects, putObjectFromFile } from "./r2-client.js";
 import { isImageKey, optimizeImageObject } from "./image-optimize.js";
 
@@ -14,13 +14,13 @@ function stageDirsForPrefix(prefix) {
     const folder = p.replace(/^products\//, "").replace(/\/$/, "") || "general";
     const slug = folder.split("/")[0] || "general";
     return {
-      stageOptimized: `${ASSET_STORAGE.stage.products}/${slug}/optimized`,
-      stagePreview: `${ASSET_STORAGE.stage.products}/${slug}/preview`,
+      stageOptimized: `${ASSET_DEFAULTS.stage.products}/${slug}/optimized`,
+      stagePreview: `${ASSET_DEFAULTS.stage.products}/${slug}/preview`,
     };
   }
   return {
-    stageOptimized: ASSET_STORAGE.stage.optimized,
-    stagePreview: ASSET_STORAGE.stage.preview,
+    stageOptimized: ASSET_DEFAULTS.stage.optimized,
+    stagePreview: ASSET_DEFAULTS.stage.preview,
   };
 }
 /**
@@ -106,8 +106,8 @@ export async function runImageOptimizePipeline(options) {
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const report = {
     workflow_key: "fnf_image_pipeline",
-    bucket: ASSET_STORAGE.bucket,
-    binding: ASSET_STORAGE.binding,
+    bucket: assetStorage().bucket,
+    binding: assetStorage().binding,
     prefix,
     generated_at: new Date().toISOString(),
     dry_run: !!options.dryRun,
@@ -120,8 +120,8 @@ export async function runImageOptimizePipeline(options) {
     },
     retention_policy: "intake_promote_delete",
     public: {
-      custom_domain: ASSET_STORAGE.publicBaseUrl,
-      worker_media: ASSET_STORAGE.workerMediaBaseUrl,
+      custom_domain: assetStorage().publicBaseUrl,
+      worker_media: assetStorage().workerMediaBaseUrl,
     },
     results,
   };
@@ -136,7 +136,7 @@ export async function runImageOptimizePipeline(options) {
   }
 
   if (!options.dryRun) {
-    const reportKey = `${ASSET_STORAGE.stage.reports}/image-batch-${stamp}.json`;
+    const reportKey = `${ASSET_DEFAULTS.stage.reports}/image-batch-${stamp}.json`;
     const reportFile = join(workDir, "report.json");
     writeFileSync(reportFile, JSON.stringify(report, null, 2));
     putObjectFromFile(reportKey, reportFile, "application/json", {
@@ -144,7 +144,7 @@ export async function runImageOptimizePipeline(options) {
       "fnf-report": "1",
     }, { cwd });
     report.r2_report_key = reportKey;
-    log(`r2 report: ${ASSET_STORAGE.workerMediaBaseUrl}/${reportKey}`);
+    log(`r2 report: ${assetStorage().workerMediaBaseUrl}/${reportKey}`);
   }
 
   return report;

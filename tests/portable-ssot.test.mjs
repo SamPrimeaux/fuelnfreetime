@@ -7,7 +7,11 @@ import {
   classifyMediaAsset,
   planAssetIngest,
   listStaleAssetJobs,
-} from "../lib/assets/index.js";
+} from "../apps/ecommerce-cms-agentsam/backend/assets/index.js";
+
+import { configureAssetStorage, assetStorage } from "../apps/ecommerce-cms-agentsam/backend/assets/config.js";
+import { assetStorageFromProject, findProjectRoot } from "../apps/ecommerce-cms-agentsam/backend/assets/project-config.js";
+configureAssetStorage(assetStorageFromProject(findProjectRoot(new URL("..", import.meta.url).pathname)));
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 

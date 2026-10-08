@@ -17,7 +17,7 @@ import {
   deliveryUrlForKey,
   mediaPathForKey,
   publicUrlsForKey,
-  ASSET_STORAGE,
+  assetStorage,
   createAssetJob,
   enqueueAssetJob,
   processAssetJobById,
@@ -147,7 +147,7 @@ function publicUrlFields(row) {
       url: mediaPathForKey(key),
       delivery_url: deliveryUrlForKey(key, { preferWorker: true }),
       cdn_url: urls.cdn,
-      public_base_url: ASSET_STORAGE.publicBaseUrl,
+      public_base_url: assetStorage().publicBaseUrl,
     };
   }
 

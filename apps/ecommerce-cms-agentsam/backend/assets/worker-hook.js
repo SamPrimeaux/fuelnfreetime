@@ -1,9 +1,9 @@
 /**
  * Worker-safe ingest plan: classify → route pipeline → canonical URL intent.
- * Heavy sharp promote runs via bin/fnf-assets.mjs; Worker never pretends optimize finished.
+ * Heavy sharp promote runs via apps/ecommerce-cms-agentsam/bin/assets.mjs; Worker never pretends optimize finished.
  */
 
-import { ASSET_STORAGE, publicUrlsForKey, deliveryUrlForKey } from "./config.js";
+import { assetStorage, publicUrlsForKey, deliveryUrlForKey } from "./config.js";
 import {
   classifyMediaAsset,
   routePipelineWorkflow,
@@ -147,7 +147,7 @@ export function planAssetIngest(input) {
     execution: willPromote
       ? {
           mode: "cli_or_node",
-          command: `bin/fnf-assets.mjs promote --key ${key}`,
+          command: `apps/ecommerce-cms-agentsam/bin/assets.mjs promote --key ${key}`,
           note: "Promote optimized result to canonical key, then delete intake.",
         }
       : {
@@ -183,8 +183,8 @@ export function planAssetIngest(input) {
       canonical_key: canonicalKey,
       retain_master_reason: classification.retain_master_reason,
       promote_deletes_intake: classification.promote_deletes_intake,
-      public_base_url: ASSET_STORAGE.publicBaseUrl,
-      worker_media_base_url: ASSET_STORAGE.workerMediaBaseUrl,
+      public_base_url: assetStorage().publicBaseUrl,
+      worker_media_base_url: assetStorage().workerMediaBaseUrl,
       optimization: {
         status: transformState,
         planned_at: new Date().toISOString(),
