@@ -9,7 +9,65 @@
     if (!form || !input || !send || form.dataset.ready) return;
     form.dataset.ready = "1";
 
-    window.AgentSamComposerMenu?.mount(form, document.getElementById("home-agent-plus"), input);
+    const plus = document.getElementById("home-agent-plus");
+    // A visible + with an optional-chained initializer was a silent dead control
+    // when the shared script had not loaded or an asset deploy was stale.
+    // Keep the first click and open the menu as soon as initialization completes.
+    let firstClickRequested = false;
+    let menuBooting = false;
+    const onUnboundClick = (event) => {
+      if (plus.dataset.agentMenuWired === "1") return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      firstClickRequested = true;
+      ensureMenuMounted();
+    };
+    plus?.addEventListener("click", onUnboundClick);
+    function showMenuFailure(message) {
+      report(message);
+      plus?.setAttribute("aria-invalid", "true");
+      plus?.setAttribute("title", message);
+    }
+    function mountMenuNow() {
+      if (!plus || typeof window.AgentSamComposerMenu?.mount !== "function") return false;
+      window.AgentSamComposerMenu.mount(form, plus, input);
+      if (plus.dataset.agentMenuWired !== "1") return false;
+      plus.removeEventListener("click", onUnboundClick);
+      plus.removeAttribute("aria-invalid");
+      plus.setAttribute("title", "Add files, resources, skills or apps");
+      if (firstClickRequested) {
+        firstClickRequested = false;
+        plus.click();
+      }
+      return true;
+    }
+    function ensureMenuMounted() {
+      if (mountMenuNow() || menuBooting) return;
+      menuBooting = true;
+      // Reuse the head script if still loading; otherwise load with a new tag.
+      // This explicitly handles script failure instead of silently ignoring it.
+      const load = document.getElementById("agent-composer-menu-script")
+        || document.querySelector('script[src="/admin/js/agent-composer-menu.js"]');
+      const script = load || document.createElement("script");
+      let settled = false;
+      const complete = () => {
+        if (settled) return;
+        settled = true;
+        menuBooting = false;
+        if (!mountMenuNow()) showMenuFailure("AgentSam tools did not load. Please refresh and try again.");
+      };
+      script.addEventListener("load", complete, { once: true });
+      script.addEventListener("error", complete, { once: true });
+      if (!load) {
+        script.id = "agent-composer-menu-script";
+        script.src = "/admin/js/agent-composer-menu.js";
+        document.head.appendChild(script);
+      }
+      // The script tag may already have finished loading before we attached
+      // listeners (especially on a soft-navigation or cached page).
+      window.setTimeout(complete, 4500);
+    }
+    ensureMenuMounted();
     function pending(value) {
       send.disabled = value;
       input.setAttribute("aria-busy", String(value));
