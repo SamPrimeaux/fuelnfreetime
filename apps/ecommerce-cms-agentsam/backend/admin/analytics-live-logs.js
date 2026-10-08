@@ -36,7 +36,7 @@ function workerEvent(row){
  const logs=Array.isArray(rawLogs)?rawLogs:typeof rawLogs==="string"?readObject(rawLogs):[];
  const entries=Array.isArray(logs)?logs:[];
  const base={source:"cloudflare-workers",service,timestamp,route,
-   rayId:request.cf?.ray||request.rayId||"",requestId:request.headers?.["cf-ray"]||"",
+   rayId:request.cf?.ray||request.rayId||request.headers?.["cf-ray"]||"",requestId:request.headers?.["x-request-id"]||"",
    durationMs:wall!=null?Number(wall):null,metadata:meta};
  const result=entries.slice(0,16).map((log)=>{
    const raw=typeof log==="object"&&log?log:{message:log};
