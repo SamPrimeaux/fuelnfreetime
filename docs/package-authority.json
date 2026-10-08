@@ -211,7 +211,7 @@
   ],
   "legacy": [
     {
-      "path": "bin/fnf-assets",
+      "path": "bin/fnf-assets.mjs",
       "status": "ACTIVE OPERATOR TOOL",
       "note": "Production asset queue/pipeline via lib/assets; preserve CLI alias"
     },
@@ -233,7 +233,7 @@
     {
       "path": "scripts/optimize-uploads-images.mjs",
       "status": "COMPATIBILITY WRAPPER",
-      "note": "Already delegates to bin/fnf-assets optimize; NOT a second optimizer"
+      "note": "Already delegates to bin/fnf-assets.mjs optimize; NOT a second optimizer"
     },
     {
       "path": "scripts/embed-fnf-content.mjs",

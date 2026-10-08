@@ -62,15 +62,15 @@ The intended next-merchant path is: **install existing application packages → 
 
 ### Media/R2: working job engine, not a scaffold
 
-- **Existing:** `lib/assets/{jobs,pipeline,process-job,worker-hook,image-optimize,classify,r2-client,completeful-product-assets}.js`; `apps/ecommerce-cms-agentsam/backend/assets/product-optimize.js`; `bin/fnf-assets`. Runtime includes `ASSET_JOBS`, R2 intake, classification, optimization, derivative/final asset handling, retries and stale-job recovery.
-- **Already an alias:** `scripts/optimize-uploads-images.mjs` delegates to `bin/fnf-assets optimize`. Do not describe it as an independent optimizer.
+- **Existing:** `lib/assets/{jobs,pipeline,process-job,worker-hook,image-optimize,classify,r2-client,completeful-product-assets}.js`; `apps/ecommerce-cms-agentsam/backend/assets/product-optimize.js`; `bin/fnf-assets.mjs`. Runtime includes `ASSET_JOBS`, R2 intake, classification, optimization, derivative/final asset handling, retries and stale-job recovery.
+- **Already an alias:** `scripts/optimize-uploads-images.mjs` delegates to `bin/fnf-assets.mjs optimize`. Do not describe it as an independent optimizer.
 - **Canonical target:** SDK Asset Core handles identity/provenance, Content handles lifecycle/provider representations, Media Kit handles collections/presentation, Merch handles product transforms, and Cloudflare Images owns that provider's operations.
 - **Safe convergence:** preserve D1 `media_assets`/job record semantics, enqueue/ack/retry/failure/repair, original preservation, derivative identity, CDN delivery, product ownership, service credentials and operator recoverability. Prove parity with actual R2 job fixtures **before** redirecting workers or deleting any local processor.
 
 ### Provider/commerce
 
 - `@inneranimalmedia/agentsam-provider-completeful` is an upstream provider adapter; FNF's `backend/completeful/*` and `scripts/create-completeful-product.mjs` need a caller/contract parity audit. App-specific orchestration, product mapping and merchant accounts remain in ecommerce.
-- `apps/ecommerce-cms-agentsam/bin/ecommerce.mjs` already supports `info`, `doctor`, `preview`, `scaffold`. `doctor` validates source structure, not full runtime readiness or remote credentials. `bin/fnf-assets` remains a valid compatibility/operator entrypoint.
+- `apps/ecommerce-cms-agentsam/bin/ecommerce.mjs` already supports `info`, `doctor`, `preview`, `scaffold`. `doctor` validates source structure, not full runtime readiness or remote credentials. `bin/fnf-assets.mjs` remains a valid compatibility/operator entrypoint.
 - Planned `ecommerce media`, `ecommerce knowledge`, `ecommerce catalog`, `ecommerce providers`, `ecommerce cms` should be implemented as **delegating command families**, not a new engine per CLI.
 
 ## Compatibility paths and migration discipline

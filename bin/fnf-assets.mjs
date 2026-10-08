@@ -1,16 +1,10 @@
 #!/usr/bin/env node
 /**
- * FNF asset pipeline CLI
- *
- *   bin/fnf-assets optimize --prefix uploads/
- *   bin/fnf-assets optimize --prefix products/shirts/
- *   bin/fnf-assets optimize --prefix products/fuel-n-freetime-hat/
- *   bin/fnf-assets optimize --prefix products/ --min-bytes 200000
- *   bin/fnf-assets plan-product --key products/shirts/fft-tee-frontside.webp
- *   bin/fnf-assets products --prefixes products/shirts/,products/fuel-n-freetime-hat/
+ * Asset pipeline CLI (R2 optimize / promote / plan).
+ * Storage comes from site/fuelnfreetime/storage.json via lib/assets/config.js.
+ * Nothing here is bucket- or product-specific; run `bin/fnf-assets.mjs help`.
  */
 
-import { spawnSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -18,6 +12,8 @@ import { fileURLToPath } from "node:url";
 import {
   runImageOptimizePipeline,
   optimizeProductPrefixes,
+  discoverChildPrefixes,
+  listR2Objects,
   planProductAssetOptimization,
   planAssetIngest,
   optimizeImageObject,
@@ -38,34 +34,36 @@ function has(name) {
 }
 
 function help() {
-  console.log(`fnf-assets — Fuel & Free Time R2 asset pipeline
+  console.log(`fnf-assets — R2 asset pipeline
 
 Bucket: ${FNF_R2.bucket}  binding: ${FNF_R2.binding}
 CDN:    ${FNF_R2.publicBaseUrl}
 Worker: ${FNF_R2.workerMediaBaseUrl}
 
 Commands:
-  optimize      Batch optimize images under a prefix (admin/debug; production uses auto jobs)
+  prefixes      List the folders that actually exist under --under (default: bucket root)
+  optimize      Batch optimize images under --prefix (admin/debug; production uses auto jobs)
+  products      Optimize product folders under ${FNF_R2.productRoot} (discovered, or --prefixes a,b)
   promote       Promote a single intake key (admin/debug Sharp path)
-  products      Optimize one or more product folder prefixes
   plan-product  Worker-safe plan for a product R2 key (no transform)
   plan          Worker-safe ingest plan for any media key
-  jobs:drain    Ask production Worker to drain queued asset jobs (automatic path)
-  jobs:process  Ask production Worker to process one job id
+  jobs:process  Retry one job through the production Worker (needs FNF_ADMIN_SESSION_COOKIE)
 
 Flags:
-  --prefix <path>       R2 prefix (default uploads/)
-  --prefixes <a,b>      Comma list for products command
+  --prefix <path>       R2 prefix (required for optimize; see "prefixes")
+  --under <path>        Parent for "prefixes" (default: bucket root)
+  --prefixes <a,b>      Explicit comma list for "products" (default: discover)
   --key <r2_key>        Single key for plan/promote/plan-product
   --job-id <id>         Job id for jobs:process
-  --limit <n>           Cap queue size / drain batch
+  --base <url>          Worker origin for jobs:process (default: origin of ${FNF_R2.workerMediaBaseUrl})
+  --limit <n>           Cap queue size
   --min-bytes <n>       Skip smaller objects
   --max-width <n>       Default ${FNF_R2.defaults.maxWidth}
   --quality <n>         Default ${FNF_R2.defaults.quality}
   --dry-run             Transform locally only; no R2 puts / deletes
 
 Production uploads auto-enqueue; this CLI is the same machinery for debug/batch.
-Auth: run via ./scripts/with-cf-admin-env.sh bin/fnf-assets …
+Auth: run via ./scripts/with-cf-admin-env.sh bin/fnf-assets.mjs …
 `);
 }
 
@@ -100,7 +98,7 @@ async function main() {
     // Queue + scheduled stale recovery are production authority.
     // Operator retry: authenticated POST /api/admin/assets/jobs/:id/retry
     const cookie = process.env.FNF_ADMIN_SESSION_COOKIE || "";
-    const base = flag("--base", "https://fuelnfreetime.com").replace(/\/$/, "");
+    const base = flag("--base", new URL(FNF_R2.workerMediaBaseUrl).origin).replace(/\/$/, "");
     if (!cookie) {
       console.error(JSON.stringify({
         ok: false,
@@ -132,6 +130,13 @@ async function main() {
     process.exit(1);
   }
 
+  if (command === "prefixes") {
+    const under = flag("--under", "");
+    const prefixes = await discoverChildPrefixes(under, listR2Objects);
+    console.log(JSON.stringify({ ok: true, under, prefixes }, null, 2));
+    return;
+  }
+
   if (command === "promote") {
     const key = flag("--key");
     if (!key) throw new Error("--key required");
@@ -158,7 +163,7 @@ async function main() {
         productSlug: flag("--product-slug"),
         collection: flag("--collection"),
         folder: flag("--folder"),
-        source: "bin/fnf-assets promote",
+        source: "bin/fnf-assets.mjs promote",
         deleteIntake: !has("--keep-intake"),
       },
     );
@@ -176,10 +181,12 @@ async function main() {
   };
 
   if (command === "optimize") {
+    const prefix = flag("--prefix");
+    if (!prefix) throw new Error('--prefix <path> required. Run "prefixes" to see what exists.');
     const report = await runImageOptimizePipeline({
       ...common,
-      prefix: flag("--prefix", "uploads/"),
-      source: "bin/fnf-assets optimize",
+      prefix,
+      source: "bin/fnf-assets.mjs optimize",
     });
     console.log(
       JSON.stringify(
@@ -198,13 +205,14 @@ async function main() {
   }
 
   if (command === "products") {
-    const raw =
-      flag("--prefixes") ||
-      "products/shirts/,products/fuel-n-freetime-hat/";
-    const prefixes = raw.split(",").map((s) => s.trim()).filter(Boolean);
+    const raw = flag("--prefixes");
+    const prefixes = raw
+      ? raw.split(",").map((s) => s.trim()).filter(Boolean)
+      : await discoverChildPrefixes(FNF_R2.productRoot, listR2Objects);
+    if (!prefixes.length) throw new Error(`No product folders found under ${FNF_R2.productRoot}`);
     const reports = await optimizeProductPrefixes(prefixes, runImageOptimizePipeline, {
       ...common,
-      source: "bin/fnf-assets products",
+      source: "bin/fnf-assets.mjs products",
     });
     const failed = reports.reduce((s, r) => s + (r.counts?.failed || 0), 0);
     const ok = reports.reduce((s, r) => s + (r.counts?.ok || 0), 0);
