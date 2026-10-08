@@ -93,12 +93,22 @@ function hashPrompt(prompt) {
 }
 
 export function provenanceRecord(input = {}) {
+  const promptHash = String(input.prompt_hash || input.promptHash || hashPrompt(input.prompt || ""));
+  const createdAt = input.created_at || input.createdAt || new Date().toISOString();
   return {
     generator: "agentsam",
     namespace: sanitizeNamespace(input.namespace || DEFAULT_NAMESPACE),
+    generation_id: String(input.generation_id || input.generationId || ""),
+    source_agent: String(input.source_agent || input.sourceAgent || "agentsam"),
+    provider: String(input.provider || ""),
     model: String(input.model || ""),
-    promptHash: hashPrompt(input.prompt || ""),
-    createdAt: input.createdAt || new Date().toISOString(),
+    prompt_hash: promptHash,
+    source_ref: String(input.source_ref || input.sourceRef || ""),
+    normalized_by: String(input.normalized_by || input.normalizedBy || "agentsam.theme-authoring.v1"),
+    created_at: createdAt,
+    // v1 compatibility aliases. New storage should use the snake_case fields above.
+    promptHash,
+    createdAt,
   };
 }
 
