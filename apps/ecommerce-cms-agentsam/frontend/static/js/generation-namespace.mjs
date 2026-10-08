@@ -166,7 +166,14 @@ export function lintScopedCss(css, forms) {
         }
       } else {
         prelude.split(",").map((selector) => selector.trim()).filter(Boolean).forEach((selector) => {
-          if (!selector.startsWith(forms.scope)) violations.push("selector must be rooted in " + forms.scope + ": " + selector);
+          if (!selector.startsWith(forms.scope)) {
+            violations.push("selector must be rooted in " + forms.scope + ": " + selector);
+            return;
+          }
+          const suffix = selector.slice(forms.scope.length);
+          if (suffix && !/^[\s>+~:.\[#]/.test(suffix)) {
+            violations.push("selector escapes placed instance scope " + forms.scope + ": " + selector);
+          }
         });
       }
       cursor = close + 1;
