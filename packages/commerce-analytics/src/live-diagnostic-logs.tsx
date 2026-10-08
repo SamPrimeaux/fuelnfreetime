@@ -6,7 +6,7 @@ import type {DiagnosticLogContext} from "./diagnostic-log.js";
 export type LiveLogsResponse={ok:boolean;logs:DiagnosticLogContext[];source:string;error?:string;generatedAt?:string};
 export type LiveLogsProps={
   range:string;poll?: (signal:AbortSignal)=>Promise<LiveLogsResponse>;
-  onAsk:(selected:DiagnosticLogContext[],context:ReturnType<typeof diagnosticContext>)=>void;
+  onAsk:(selected:DiagnosticLogContext[],context:ReturnType<typeof diagnosticContext>)=>void|Promise<void>;
 };
 
 const LOG_CAP=240;
@@ -85,7 +85,8 @@ export function LiveDiagnosticLogs({range,poll,onAsk}:LiveLogsProps){
  const ask=(items=chosen)=>{
    const subset=items.slice(0,20);
    if(!subset.length)return;
-   onAsk(subset,diagnosticContext(subset,{range,level:filter,search}));
+   Promise.resolve().then(()=>onAsk(subset,diagnosticContext(subset,{range,level:filter,search})))
+     .catch(()=>setCopyMessage("Side Assistant unavailable. Try opening it from the admin toolbar."));
  };
  const isDetails=(id:string)=>details.includes(id);
  const toggleDetails=(id:string)=>setDetails(x=>x.includes(id)?x.filter(y=>y!==id):[...x,id]);
