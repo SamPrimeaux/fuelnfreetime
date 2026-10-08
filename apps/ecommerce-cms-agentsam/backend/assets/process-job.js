@@ -1,10 +1,10 @@
 /**
- * Production asset job runner — shared by Worker queue consumer and bin/fnf-assets.mjs.
+ * Production asset job runner — shared by Worker queue consumer and apps/ecommerce-cms-agentsam/bin/assets.mjs.
  * Operator-facing lifecycle: processing → ready (never “optimize planned”).
  */
 
 import { planAssetIngest } from "./worker-hook.js";
-import { mediaPathForKey, publicUrlsForKey, deliveryUrlForKey, ASSET_STORAGE } from "./config.js";
+import { ASSET_DEFAULTS, assetStorage, publicUrlsForKey, deliveryUrlForKey, mediaPathForKey } from "./config.js";
 import {
   getAssetJob,
   markJobProcessing,
@@ -73,8 +73,8 @@ export async function finalizeMediaAsset(env, mediaRow, result) {
       height: result.height,
       encoder: result.encoder || null,
     },
-    public_base_url: ASSET_STORAGE.publicBaseUrl,
-    worker_media_base_url: ASSET_STORAGE.workerMediaBaseUrl,
+    public_base_url: assetStorage().publicBaseUrl,
+    worker_media_base_url: assetStorage().workerMediaBaseUrl,
   };
 
   await env.DB.prepare(
@@ -187,8 +187,8 @@ export async function processAssetJobById(env, jobId, opts = {}) {
         classification.media_role === "logo" ||
         classification.media_role === "icon";
       const out = await optimizeRasterBuffer(sourceBytes, sourceType, {
-        maxWidth: ASSET_STORAGE.defaults.maxWidth,
-        quality: ASSET_STORAGE.defaults.quality,
+        maxWidth: ASSET_DEFAULTS.defaults.maxWidth,
+        quality: ASSET_DEFAULTS.defaults.quality,
         preferWebp: !keepAlpha || classification.media_role === "product_photo",
         keepAlpha,
       });

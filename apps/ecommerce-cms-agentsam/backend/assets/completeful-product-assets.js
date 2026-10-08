@@ -11,7 +11,7 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { ASSET_STORAGE } from "./config.js";
+import { ASSET_DEFAULTS } from "./config.js";
 import { optimizeImageObject, isImageKey } from "./image-optimize.js";
 import { buildAssetTags } from "./tags.js";
 
@@ -50,8 +50,8 @@ export async function optimizeProductAsset(input) {
   const workDir = join(tmpdir(), `fnf-product-asset-${Date.now()}`);
   mkdirSync(workDir, { recursive: true });
 
-  const stageOpt = `${ASSET_STORAGE.stage.products}/${input.productSlug || "general"}/optimized`;
-  const stagePrev = `${ASSET_STORAGE.stage.products}/${input.productSlug || "general"}/preview`;
+  const stageOpt = `${ASSET_DEFAULTS.stage.products}/${input.productSlug || "general"}/optimized`;
+  const stagePrev = `${ASSET_DEFAULTS.stage.products}/${input.productSlug || "general"}/preview`;
 
   return optimizeImageObject(
     { key, size: input.sizeBytes || 0 },
@@ -59,8 +59,8 @@ export async function optimizeProductAsset(input) {
       workDir,
       cwd: input.cwd,
       dryRun: input.dryRun,
-      maxWidth: ASSET_STORAGE.defaults.productMaxWidth,
-      quality: ASSET_STORAGE.defaults.productQuality,
+      maxWidth: ASSET_DEFAULTS.defaults.productMaxWidth,
+      quality: ASSET_DEFAULTS.defaults.productQuality,
       stageOptimized: stageOpt,
       stagePreview: stagePrev,
       productSlug: input.productSlug,
@@ -83,8 +83,8 @@ export async function optimizeProductPrefixes(prefixes, runPipeline, opts = {}) 
     const report = await runPipeline({
       ...opts,
       prefix: normalized,
-      maxWidth: opts.maxWidth ?? ASSET_STORAGE.defaults.productMaxWidth,
-      quality: opts.quality ?? ASSET_STORAGE.defaults.productQuality,
+      maxWidth: opts.maxWidth ?? ASSET_DEFAULTS.defaults.productMaxWidth,
+      quality: opts.quality ?? ASSET_DEFAULTS.defaults.productQuality,
       source: opts.source || "completeful_product_batch",
     });
     reports.push(report);
@@ -97,7 +97,7 @@ export async function optimizeProductPrefixes(prefixes, runPipeline, opts = {}) 
  * Replaces hardcoded product folder lists.
  * @param {string} parent e.g. "products/"
  * @param {(prefix:string)=>Promise<Array<{key:string}>>} list
- * @returns {Promise<string[]>} sorted, e.g. ["products/hats/", "products/shirts/"]
+ * @returns {Promise<string[]>} sorted, e.g. ["products/a/", "products/b/"]
  */
 export async function discoverChildPrefixes(parent, list) {
   const root = parent === "" || parent.endsWith("/") ? parent : `${parent}/`;

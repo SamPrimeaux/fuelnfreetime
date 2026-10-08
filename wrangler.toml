@@ -26,6 +26,7 @@ ALLOWED_ORIGINS = "https://fuelnfreetime.com,https://www.fuelnfreetime.com"
 FNF_GITHUB_CLIENT_ID = "Ov23li6BZYxjVtGUWibX"
 COMPLETEFUL_ALLOW_LIVE_WRITES = "true"
 CLOUDFLARE_ACCOUNT_ID = "ede6590ac0d2fb7daf155b35653457b2"
+ASSET_PUBLIC_BASE_URL = "https://assets.fuelnfreetime.com"
 
 [[routes]]
 pattern = "fuelnfreetime.com"

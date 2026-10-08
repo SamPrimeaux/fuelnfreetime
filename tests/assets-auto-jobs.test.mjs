@@ -6,8 +6,11 @@ import {
   publicUrlsForKey,
   deliveryUrlForKey,
   mediaPathForKey,
-  FNF_R2,
-} from "../lib/assets/index.js";
+} from "../apps/ecommerce-cms-agentsam/backend/assets/index.js";
+
+import { configureAssetStorage, assetStorage } from "../apps/ecommerce-cms-agentsam/backend/assets/config.js";
+import { assetStorageFromProject, findProjectRoot } from "../apps/ecommerce-cms-agentsam/backend/assets/project-config.js";
+configureAssetStorage(assetStorageFromProject(findProjectRoot(new URL("..", import.meta.url).pathname)));
 
 test("operator lifecycle never uses optimize jargon in plan meta lifecycle", () => {
   const plan = planAssetIngest({
@@ -39,7 +42,7 @@ test("master assets skip destructive transform automatically", () => {
 });
 
 test("canonical URL helpers remain available for ready assets", () => {
-  assert.equal(FNF_R2.publicBaseUrl, "https://assets.fuelnfreetime.com");
+  assert.equal(assetStorage().publicBaseUrl, "https://assets.fuelnfreetime.com");
   assert.ok(deliveryUrlForKey("images/x.webp").includes("/media/"));
   assert.equal(mediaPathForKey("images/x.webp"), "/media/images/x.webp");
   assert.equal(

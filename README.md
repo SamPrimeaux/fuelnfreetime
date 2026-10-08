@@ -20,7 +20,7 @@ The authoritative, code-backed map is **[docs/ARCHITECTURE-AUTHORITY.md](docs/AR
 
 | Already built in this repo | Existing entrypoint / binding | Preferred consolidation |
 | --- | --- | --- |
-| R2 asset intake, optimization, derivatives, classification, job retries/recovery | `bin/fnf-assets.mjs`, `lib/assets/*`, `ASSET_JOBS` | Preserve jobs, route generic behavior into existing Asset Core / Content / Media Kit / Merch packages after parity |
+| R2 asset intake, optimization, derivatives, classification, job retries/recovery | `apps/ecommerce-cms-agentsam/bin/assets.mjs`, `apps/ecommerce-cms-agentsam/backend/assets/*`, `ASSET_JOBS` | Preserve jobs, route generic behavior into existing Asset Core / Content / Media Kit / Merch packages after parity |
 | BGE-M3 1024-dimensional semantic search and content indexing | `FNF_VECTORIZE`, `fnf-vectorize.js`, `vectorize-adapter.js`, `scripts/embed-fnf-content.mjs` | AgentSam Knowledge + Cloudflare connector with FNF bindings/filter/source configuration |
 | Portable ecommerce operations | `apps/ecommerce-cms-agentsam/bin/ecommerce.mjs` | Extend its command families as delegates rather than cloning engines |
 | CMS draft/generation and real theme rendering | `backend/cms/*`, `theme-contract`, Theme Editor | Preserve one D1/R2 page/section/block authority; reuse canonical CMS/runtime and Workbench packages |
@@ -480,7 +480,7 @@ Major session-gated families include:
     |- db/                      base schema, additive migrations, seeds and patches
     |- docs/                    architecture, runtime contracts, brand, ops and plans
     |- features/                machine-readable feature descriptors
-    |- lib/assets/              asset classification/processing pipeline
+    |- apps/ecommerce-cms-agentsam/backend/assets/              asset classification/processing pipeline
     |- scripts/                 build, sync, import, migration and operational scripts
     |- skills/                  project-local AgentSam/Cloudflare/provider skills
     |- tests/                   unit/integration/browser contract suite

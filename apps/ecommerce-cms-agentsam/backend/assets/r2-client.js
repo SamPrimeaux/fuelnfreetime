@@ -6,7 +6,7 @@ import { spawnSync } from "node:child_process";
 import { createWriteStream } from "node:fs";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
-import { ASSET_STORAGE } from "./config.js";
+import { assetStorage } from "./config.js";
 
 function apiToken() {
   return process.env.CLOUDFLARE_API_TOKEN || process.env.CF_API_TOKEN || "";
@@ -23,7 +23,7 @@ export async function listR2Objects(prefix) {
   let cursor = "";
   for (;;) {
     const url = new URL(
-      `https://api.cloudflare.com/client/v4/accounts/${ASSET_STORAGE.accountId}/r2/buckets/${ASSET_STORAGE.bucket}/objects`,
+      `https://api.cloudflare.com/client/v4/accounts/${assetStorage().accountId}/r2/buckets/${assetStorage().bucket}/objects`,
     );
     url.searchParams.set("prefix", prefix);
     url.searchParams.set("per_page", "1000");
@@ -41,7 +41,7 @@ export async function listR2Objects(prefix) {
 
 /** Download via verified Worker /media path. */
 export async function downloadObjectToFile(key, destPath) {
-  const url = `${ASSET_STORAGE.workerMediaBaseUrl}/${key.split("/").map(encodeURIComponent).join("/")}`;
+  const url = `${assetStorage().workerMediaBaseUrl}/${key.split("/").map(encodeURIComponent).join("/")}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`download ${key} → HTTP ${res.status}`);
   await pipeline(Readable.fromWeb(res.body), createWriteStream(destPath));
@@ -62,7 +62,7 @@ export function putObjectFromFile(key, filePath, contentType, customMetadata = {
     "r2",
     "object",
     "put",
-    `${ASSET_STORAGE.bucket}/${key}`,
+    `${assetStorage().bucket}/${key}`,
     "--file",
     filePath,
     "--content-type",
@@ -101,7 +101,7 @@ export function deleteR2Object(key, opts = {}) {
   if (opts.dryRun) return { ok: true, dry_run: true, key: clean };
   const r = spawnSync(
     "npx",
-    ["wrangler", "r2", "object", "delete", `${ASSET_STORAGE.bucket}/${clean}`, "--remote"],
+    ["wrangler", "r2", "object", "delete", `${assetStorage().bucket}/${clean}`, "--remote"],
     {
       cwd: opts.cwd || process.cwd(),
       encoding: "utf8",

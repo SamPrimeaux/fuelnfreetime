@@ -6,7 +6,7 @@
 import { readFileSync, unlinkSync } from "node:fs";
 import { basename, extname, join } from "node:path";
 import sharp from "sharp";
-import { ASSET_STORAGE, publicUrlsForKey, deliveryUrlForKey } from "./config.js";
+import { ASSET_DEFAULTS, publicUrlsForKey, deliveryUrlForKey } from "./config.js";
 import { downloadObjectToFile, putObjectFromFile, deleteR2Object } from "./r2-client.js";
 import { buildAssetTags, inferProductContextFromKey } from "./tags.js";
 import { classifyMediaAsset, canonicalKeyForPromotion } from "./classify.js";
@@ -101,8 +101,8 @@ export async function optimizeImageObject(item, opts) {
     };
   }
 
-  const maxWidth = opts.maxWidth ?? ASSET_STORAGE.defaults.maxWidth;
-  const quality = opts.quality ?? ASSET_STORAGE.defaults.quality;
+  const maxWidth = opts.maxWidth ?? ASSET_DEFAULTS.defaults.maxWidth;
+  const quality = opts.quality ?? ASSET_DEFAULTS.defaults.quality;
   const wantAlpha = classification.alpha_required || meta.hasAlpha;
   const outExt = wantAlpha && classification.media_role === "logo" ? "png" : "webp";
   const outMime = outExt === "png" ? "image/png" : "image/webp";

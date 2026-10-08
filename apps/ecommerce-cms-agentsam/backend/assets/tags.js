@@ -68,8 +68,8 @@ function humanize(s) {
 /** Infer product slug / collection from R2 key under products/. */
 export function inferProductContextFromKey(r2Key) {
   const parts = String(r2Key || "").split("/").filter(Boolean);
-  // products/shirts/foo.webp → collection=shirts, product from filename
-  // products/fuel-n-freetime-hat/img.png → collection+slug folder
+  // products/<collection>/foo.webp → collection=<collection>, product from filename
+  // products/<product-slug>/img.png → collection+slug folder
   if (parts[0] !== "products") {
     return { productSlug: null, collection: null, assetKind: "image" };
   }

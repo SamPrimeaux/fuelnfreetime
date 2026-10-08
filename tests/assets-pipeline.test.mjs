@@ -11,15 +11,18 @@ import {
   publicUrlsForKey,
   deliveryUrlForKey,
   mediaPathForKey,
-  FNF_R2,
-} from "../lib/assets/index.js";
+} from "../apps/ecommerce-cms-agentsam/backend/assets/index.js";
+
+import { configureAssetStorage, assetStorage } from "../apps/ecommerce-cms-agentsam/backend/assets/config.js";
+import { assetStorageFromProject, findProjectRoot } from "../apps/ecommerce-cms-agentsam/backend/assets/project-config.js";
+configureAssetStorage(assetStorageFromProject(findProjectRoot(new URL("..", import.meta.url).pathname)));
 
 test("canonical custom-domain URL generation", () => {
   const urls = publicUrlsForKey("products/shirts/fft-tee-frontside.webp");
   assert.equal(urls.cdn, "https://assets.fuelnfreetime.com/products/shirts/fft-tee-frontside.webp");
   assert.equal(urls.worker, "https://fuelnfreetime.com/media/products/shirts/fft-tee-frontside.webp");
   assert.equal(mediaPathForKey(urls.key), "/media/products/shirts/fft-tee-frontside.webp");
-  assert.equal(FNF_R2.publicBaseUrl, "https://assets.fuelnfreetime.com");
+  assert.equal(assetStorage().publicBaseUrl, "https://assets.fuelnfreetime.com");
   // Delivery prefers verified worker while CDN custom domain remains 404-prone.
   assert.equal(
     deliveryUrlForKey("products/shirts/fft-tee-frontside.webp"),

@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "bin": {
-    "ecommerce": "bin/ecommerce.mjs"
+    "ecommerce": "bin/ecommerce.mjs",
+    "assets": "bin/assets.mjs"
   },
   "scripts": {
     "doctor": "node bin/ecommerce.mjs doctor",

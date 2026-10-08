@@ -13,7 +13,7 @@ import { handleAdminApi } from "./admin/api.js";
 import { recordScheduledHealthProbe } from "./admin/analytics-health.js";
 import { serveCatalogImage } from "./completeful/images.js";
 import { runAgentsamCompaction } from "./agentsam/compaction.js";
-import { drainAssetJobs, processAssetJobById } from "./assets/product-optimize.js";
+import { drainAssetJobs, ensureAssetStorage, processAssetJobById } from "./assets/product-optimize.js";
 import { handleStoreApi } from "./store/api.js";
 import { decorateProductPage } from "./store/product-seo.js";
 import { handleAttributionApi } from "./attribution/api.js";
@@ -200,6 +200,8 @@ export default {
 
     const url = new URL(request.url);
     const path = url.pathname;
+    // Asset URLs are derived from the site's own domain; first request per isolate configures it.
+    await ensureAssetStorage(env, request).catch(() => null);
     const searchDiscovery = await handlePublicSearchDiscovery(request, env, url);
     if (searchDiscovery) return searchDiscovery;
     if (path === "/catalog-image") return serveCatalogImage(request, env, ctx);
@@ -511,6 +513,7 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
+    await ensureAssetStorage(env).catch(() => null);
     // Explicit cron routing: do not let health probes trigger compaction.
     if (event.cron === "*/30 * * * *") {
       ctx.waitUntil(recordScheduledHealthProbe(env).catch(err =>
@@ -543,6 +546,7 @@ export default {
   },
 
   async queue(batch, env) {
+    await ensureAssetStorage(env).catch(() => null);
     for (const message of batch.messages) {
       const jobId = message.body?.job_id;
       if (!jobId) {

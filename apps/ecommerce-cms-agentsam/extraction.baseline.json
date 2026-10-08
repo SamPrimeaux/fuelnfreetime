@@ -1,0 +1,15 @@
+{
+  "schema": "agentsam.extraction-baseline.v1",
+  "app": "apps/ecommerce-cms-agentsam",
+  "allowed": [
+    "apps/ecommerce-cms-agentsam/backend/admin/analytics-live-logs.js -> packages/commerce-analytics/src/diagnostic-log.js",
+    "apps/ecommerce-cms-agentsam/backend/admin/api.js -> packages/agentsam-merch/src/product-spine.js",
+    "apps/ecommerce-cms-agentsam/backend/admin/store.js -> packages/heuristic-theme/presets/fuel-free-time/tokens.json",
+    "apps/ecommerce-cms-agentsam/backend/admin/store.js -> packages/heuristic-theme/theme.json",
+    "apps/ecommerce-cms-agentsam/backend/cms/api.js -> packages/theme-contract/runtime/portable-sections.js",
+    "apps/ecommerce-cms-agentsam/backend/cms/api.js -> packages/theme-contract/runtime/revise-atlas-source.js",
+    "apps/ecommerce-cms-agentsam/backend/media/collection-contract.js -> packages/media-kit/src/collections.js",
+    "apps/ecommerce-cms-agentsam/backend/media/provider-contract.js -> packages/media-kit/src/providers.js",
+    "apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx -> packages/agentsam-merch/src/index.js"
+  ]
+}

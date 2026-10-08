@@ -1,4 +1,13 @@
-export { ASSET_STORAGE, FNF_R2, publicUrlsForKey, deliveryUrlForKey, mediaPathForKey } from "./config.js";
+export {
+  ASSET_DEFAULTS,
+  assetStorage,
+  configureAssetStorage,
+  createAssetStorage,
+  isAssetStorageConfigured,
+  publicUrlsForKey,
+  deliveryUrlForKey,
+  mediaPathForKey,
+} from "./config.js";
 export { listR2Objects, downloadObjectToFile, putObjectFromFile, deleteR2Object } from "./r2-client.js";
 export { buildAssetTags, inferProductContextFromKey } from "./tags.js";
 export {
