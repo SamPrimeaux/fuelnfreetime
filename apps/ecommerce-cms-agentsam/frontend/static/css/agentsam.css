@@ -383,3 +383,59 @@ body.agentsam-overlay-mode.agentsam-open {
     position: relative;
   }
 }
+
+
+/* Reference-fidelity Side Assistant: compact controls, canonical one-color mark. */
+.agentsam-mark {
+  position: relative;
+  color: var(--agentsam-mark-color, var(--te-text, currentColor));
+  background: var(--te-soft, transparent);
+  border-color: var(--te-border, currentColor);
+}
+.agentsam-mark::after {
+  content: "";
+  width: 23px;
+  height: 23px;
+  display: block;
+  background-color: currentColor;
+  -webkit-mask: url("/admin/brand/agentsam-mark.svg") center / contain no-repeat;
+  mask: url("/admin/brand/agentsam-mark.svg") center / contain no-repeat;
+}
+.agentsam-head { flex-wrap: wrap; gap: 8px; }
+.agentsam-head [data-assistant-actions] { display: flex; gap: 4px; margin-left: auto; }
+.agentsam-head [data-assistant-action] {
+  display: grid; place-items: center; flex: none; width: 27px; height: 27px;
+  border: 1px solid var(--te-border, rgba(0,0,0,.1));
+  border-radius: 8px; background: transparent; color: inherit; cursor: pointer;
+}
+.agentsam-head [data-assistant-action]:hover,
+.agentsam-head [data-assistant-action]:focus-visible { background: var(--te-soft, rgba(0,0,0,.06)); }
+.agentsam-head [data-context-chip] {
+  flex-basis: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; font-size: 11px; color: var(--te-muted, currentColor);
+}
+.agentsam-action-card {
+  display: grid; gap: 5px; width: 100%; min-width: 0; text-align: left;
+  background: var(--te-panel, white); color: var(--te-text, inherit);
+  border: 1px solid var(--te-border, #ddd); border-radius: 10px;
+  padding: 10px 12px; cursor: pointer; font: inherit;
+}
+.agentsam-action-card:hover,
+.agentsam-action-card:focus-visible { border-color: var(--te-accent, currentColor); }
+.agentsam-action-card strong { font-size: 13px; }
+.agentsam-action-card small { color: var(--te-muted, currentColor); overflow-wrap: anywhere; }
+.agentsam-dock .agentsam-drawer[data-expanded] {
+  position: fixed; top: min(7vh,56px); right: max(12px,env(safe-area-inset-right));
+  width: min(690px,calc(100vw - 24px)); height: min(86dvh,920px);
+  max-height: calc(100dvh - 24px); z-index: 220; border: 1px solid var(--te-border,#ddd);
+  border-radius: 14px; box-shadow: 0 20px 80px rgba(0,0,0,.23);
+}
+@media(max-width:640px){
+  .agentsam-dock .agentsam-drawer[data-expanded] {
+    top: 0; right: 0; width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0;
+  }
+  .agentsam-head { padding: 10px 12px; }
+}
+@media(prefers-reduced-motion:reduce){
+  .agentsam-drawer, .agentsam-action-card { transition:none!important; }
+}

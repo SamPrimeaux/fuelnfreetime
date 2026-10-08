@@ -106,15 +106,26 @@ async function init() {
   const lock = createGenerationLock();
   let activeSession = null;
 
-  composer.addEventListener("open-assistant", () => window.openAgentsamDrawer?.());
-  composer.addEventListener("submit-request", (event) => {
-    const text = String(event.detail?.text || "").trim();
-    if (!text) return;
-    window.openAgentsamDrawer?.();
-    flow.handoff(text);
-    flow.openRequest();
-    flow.send();
-  });
+  // The same portable composer element also powers a dock placement when
+  // the host supplies one. Neither placement generates code or opens the left
+  // panel until the user explicitly approves the action card.
+  const mounted = [composer];
+  const dockSlot = document.querySelector('[data-composer-slot="dock"]');
+  if (dockSlot && dockSlot !== editorSlot) {
+    const dockComposer = mountComposer(dockSlot, "dock");
+    dockComposer.setPlaceholder("Ask AgentSam about this page");
+    dockComposer.setChip(selectionLabel(context));
+    mounted.push(dockComposer);
+  }
+  for (const input of mounted) {
+    input.addEventListener("open-assistant", () => window.openAgentsamDrawer?.());
+    input.addEventListener("submit-request", event => {
+      const text = String(event.detail?.text || "").trim();
+      if (!text) return;
+      window.openAgentsamDrawer?.();
+      flow.handoff(text);
+    });
+  }
 
   async function openVersionHistory() {
     const selected = bridge.context?.();
@@ -194,11 +205,11 @@ async function init() {
 
   document.addEventListener("theme-editor:selection", (event) => {
     const next = event.detail || {};
-    composer.setChip(selectionLabel(next));
+    for (const input of mounted) input.setChip(selectionLabel(next));
     showHistoryAction(next);
     mountAssistantHeader(drawer, {
       selection: selectionLabel(next),
-      expanded: drawer.getAttribute("aria-hidden") === "false",
+      expanded: drawer.hasAttribute("data-expanded"),
     });
   });
 
@@ -294,7 +305,7 @@ async function init() {
       flow.review(result.record, () => bridge.acceptGenerated(result.record, provenance, {
         sectionKey: contextNow.generated ? contextNow.section_key : undefined,
         expectedVersion: contextNow.generated ? contextNow.version : undefined,
-      }));
+      }), provenance);
     } catch (error) {
       if (error?.name === "AbortError") flow.fail("Generation stopped.");
       else flow.fail(error?.message || "Generation failed.");
