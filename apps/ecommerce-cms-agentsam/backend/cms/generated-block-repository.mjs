@@ -148,7 +148,6 @@ export function createGeneratedBlockRepository(sql, objects, options = {}) {
         promptHash: (input.provenance && input.provenance.promptHash) || digest.slice(0, 8),
         createdAt: new Date().toISOString(),
       };
-      const blockId = input.blockId || ("cmsb_" + hash16);
       try {
         await sql.batch([
           { sql: "INSERT INTO " + TABLES.artifacts + " (id, account_id, artifact_key, artifact_type, version, r2_prefix, manifest_r2_key, content_hash, content_mode, status, source_kind, source_ref, metadata_json) VALUES (?, ?, ?, 'embed', '1', ?, ?, ?, 'component', 'ready', 'generator', ?, ?) ON CONFLICT(account_id, artifact_key, version) DO UPDATE SET manifest_r2_key = excluded.manifest_r2_key, content_hash = excluded.content_hash, source_ref = excluded.source_ref, metadata_json = excluded.metadata_json", params: ["cmsa_" + hash16, input.accountId, "block/" + hash16, "cms/artifacts/block/" + hash16 + "/", key, digest, picked.capability, JSON.stringify(provenance)] },
