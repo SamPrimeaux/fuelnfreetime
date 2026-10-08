@@ -502,3 +502,14 @@ body.agentsam-focus-mode .agentsam-mcp{max-width:min(780px,calc(100% - 32px));al
 @keyframes asm-focus-enter{from{opacity:.72;transform:translateX(15px)}to{opacity:1;transform:translateX(0)}}
 body.agentsam-focus-mode .agentsam-drawer{animation:asm-focus-enter .26s cubic-bezier(.2,.8,.2,1) both}
 @media(prefers-reduced-motion:reduce){body.agentsam-focus-mode .agentsam-drawer{animation:none}}
+
+/* Safe structured assistant replies (the model text never becomes raw HTML). */
+.agentsam-msg-content{min-width:0;overflow-wrap:anywhere;line-height:1.55}
+.agentsam-msg-content p{margin:0 0 10px;white-space:pre-wrap}
+.agentsam-msg-content p:last-child{margin-bottom:0}
+.agentsam-msg-content h4{font:650 12px/1.45 var(--font,system-ui);margin:9px 0 5px;color:inherit}
+.agentsam-msg-content h4:first-child{margin-top:0}
+.agentsam-msg-content ul,.agentsam-msg-content ol{margin:6px 0 12px;padding-left:20px}
+.agentsam-msg-content li{padding-left:2px;margin:4px 0;white-space:normal}
+.agentsam-msg-content pre{box-sizing:border-box;max-width:100%;margin:6px 0 12px;padding:11px 12px;overflow-x:auto;white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #e8e5ed;border-radius:9px;background:#f8f7fa;color:#3f3846;font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.agentsam-msg-content :not(pre)>code{border-radius:4px;background:#f0eef4;padding:1px 4px;font:11px ui-monospace,SFMono-Regular,Menlo,monospace}
