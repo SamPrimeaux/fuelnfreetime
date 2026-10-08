@@ -1,5 +1,16 @@
 # FNF Ecommerce CMS — Agent Authoring Rules
 
+## Reference-fidelity implementation (mandatory)
+
+When this app has a committed UI reference or a user-provided reference screenshot, treat it as an **implementation contract**, not inspiration. Reproduce the reference's interaction/layout model and information hierarchy closely while substituting canonical FNF/AgentSam data, ownership, branding, and theme tokens. "Polish" never authorizes arbitrary redesign.
+
+Do **not** collapse or relocate panels, swap compact menu rows for oversized cards, hide controls shown in the reference, invent substitute icons, change established picker or modal workflows, or reinterpret placement/density without recording an explicit justified deviation. Do not copy donor code, logos, artwork, or proprietary assets. Use our canonical AgentSam vector and existing application registries/renderer instead.
+
+Every reference-driven change must follow: **reference contract → implementation → actual DOM/browser screenshot → visual comparison at desktop/tablet/mobile → fail on unjustified drift**. Keep the chosen reference and acceptance checks together under `docs/ui-reference/`; never claim pixel comparison when reference files are missing. Browser mount/geometry and keyboard interaction are acceptance requirements, not tests of module registration alone.
+
+**Assistant handoff authority:** mini composer sends text to the right-docked Side Assistant. Only an action-card click opens the left-side editable request and client-only temporary tree node; only its Send may start generation. The editor's existing generation session, lock, Stop/abort, native inspector, and R2/D1 accept/publish authority remain unchanged. A generated code preview is text-only and cannot execute source HTML/JS.
+
+
 Scope: `apps/ecommerce-cms-agentsam/`. Read `theme/authoring.contract.json` before editing storefront sections, blocks, or Theme Studio. This is our portable adaptation of the Shopify theme authoring guide, **not a Liquid/Shopify runtime**.
 
 ## Ownership and source of truth
