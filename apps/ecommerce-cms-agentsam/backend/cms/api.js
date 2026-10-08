@@ -719,10 +719,13 @@ async function orderedSectionRows(env, pageId) {
 
 async function markPageDraft(env, pageId, slug) {
   await env.DB.prepare(`UPDATE pages SET status = 'draft', updated_at = datetime('now') WHERE id = ?`)
-    .bind(pageId)
-    .run();
-  // Keep the last published KV snapshot live while a draft is being edited.
-  // Publishing replaces it atomically via writePublishedSnapshot().
+    .bind(pageId).run();
+  // Canonical page identity is resolved through the existing legacy section
+  // bridge, so no other tenant's similarly named page can be affected.
+  await env.DB.prepare(`UPDATE cms_pages SET status='draft',updated_at=datetime('now')
+    WHERE id IN (SELECT page_id FROM cms_page_sections WHERE legacy_section_id IN
+      (SELECT id FROM page_sections WHERE page_id=?))`).bind(pageId).run();
+  // Keep the last public KV/R2 snapshot unchanged until explicit Publish.
   void slug;
 }
 
