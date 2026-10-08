@@ -58,6 +58,15 @@ export function BasinOverviewPanel({basin}:{basin:BasinOverview}) {
               </div>):<div className="muted text-xs">No discovered pipelines.</div>}
           </div>
         </div>
+        {basin.catalogTables.length>0&&<div style={{padding:"0 12px 12px",overflowX:"auto"}}>
+          <div className="card-sub" style={{marginBottom:8}}>Iceberg catalog tables</div>
+          <table className="tbl"><thead><tr><th>Namespace</th><th>Table</th><th className="num">Rows</th></tr></thead>
+            <tbody>{basin.catalogTables.map((table,i)=><tr key={table.namespace+":"+table.name+":"+i}>
+              <td className="mono">{table.namespace}</td><td>{table.name}</td>
+              <td className="num mono">{table.rows==null?"Not reported":table.rows.toLocaleString()}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>}
         <div className="card-foot">
           Historical row counts, lag, volume and freshness appear only when returned by the Basin adapter.
         </div>
