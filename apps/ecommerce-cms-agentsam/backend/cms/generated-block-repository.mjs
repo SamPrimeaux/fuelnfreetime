@@ -139,14 +139,24 @@ export function createGeneratedBlockRepository(sql, objects, options = {}) {
       const hash16 = digest.slice(0, 16);
       const key = "cms/artifacts/block/" + hash16 + "/manifest.json";
       await objects.put(key, JSON.stringify(canonical || input.manifest));
+      const supplied = input.provenance || {};
+      const promptHash = supplied.prompt_hash || supplied.promptHash || digest.slice(0, 8);
+      const createdAt = supplied.created_at || supplied.createdAt || new Date().toISOString();
       const provenance = {
-        generator: (input.provenance && input.provenance.generator) || "agentsam",
+        generator: supplied.generator || "agentsam",
         namespace: picked.namespace,
+        generation_id: supplied.generation_id || supplied.generationId || "",
+        source_agent: supplied.source_agent || supplied.sourceAgent || "agentsam",
         capability: picked.capability,
-        provider: picked.provider,
-        model: picked.model,
-        promptHash: (input.provenance && input.provenance.promptHash) || digest.slice(0, 8),
-        createdAt: new Date().toISOString(),
+        provider: supplied.provider || picked.provider,
+        model: supplied.model || picked.model,
+        prompt_hash: promptHash,
+        source_ref: supplied.source_ref || supplied.sourceRef || "",
+        normalized_by: supplied.normalized_by || supplied.normalizedBy || "agentsam.theme-authoring.v1",
+        created_at: createdAt,
+        // Compatibility aliases for older receipts/readers.
+        promptHash,
+        createdAt,
       };
       try {
         await sql.batch([
