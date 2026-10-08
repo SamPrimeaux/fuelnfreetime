@@ -16,7 +16,8 @@ type HealthResponse={
    errorRate:number|null;rpm:number|null;byStatus:Array<{status:string;requests:number}>};
  app:{available:boolean;reason?:string;source?:string;
    totals:{events:number;failures:number;successes:number;costUsd:number|null;avgDurationMs:number|null}|null;
-   timeline:Timeline[];operations:Operation[];failures:Failure[];repository:Failure[]};
+   timeline:Timeline[];operations:Operation[];failures:Failure[];repository:Failure[];
+   probes:{samples:number;passed:number;lastSeen:number|null}|null};
  basin:Basin;dataAvailability:{cloudflare:boolean;operations:boolean;basin:boolean};
 };
 const textOrDash=(value:number|null|undefined,digits=0)=>value==null||!Number.isFinite(value)?"—":value.toLocaleString(undefined,{maximumFractionDigits:digits});
@@ -69,7 +70,14 @@ export default function HealthPage({range}:PageProps){
    </div>
   </div>
   {error&&<div className="card" role="alert" style={{padding:14,color:"var(--bad)",marginBottom:14}}>{error}</div>}
-  {data&&<div className="muted text-xs" style={{marginBottom:13}}>Sources: {data.edge.available?data.edge.source:"Cloudflare SQL unavailable"} · {data.app.available?data.app.source:"D1 analytics unavailable"} · refreshed {new Date(data.generatedAt).toLocaleTimeString()}</div>}
+  {data&&<div className="muted text-xs" style={{marginBottom:13}}>
+    Sources: {data.edge.available?data.edge.source:"Cloudflare SQL unavailable"} · {data.app.available?data.app.source:"D1 analytics unavailable"}
+    {" · "}D1 probe: {data.app.probes?.samples
+      ? `${data.app.probes.passed}/${data.app.probes.samples} observed checks passed`
+      : "waiting for 30-minute samples"}
+    {" · "}refreshed {new Date(data.generatedAt).toLocaleTimeString()}
+    <span style={{marginLeft:6}}>Probe pass rate is not a continuous uptime guarantee.</span>
+  </div>}
   <div className="grid cols-4" style={{marginBottom:14}}>
    <SmallMetric label="HTTP requests" value={data?.edge.requests} unit="" source="Cloudflare HTTP requests"/>
    <SmallMetric label="Error rate" value={data?.edge.errorRate} unit="%" source="Cloudflare HTTP 5xx / requests"/>
