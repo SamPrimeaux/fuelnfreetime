@@ -32,6 +32,7 @@ jobs:
           node --check apps/ecommerce-cms-agentsam/backend/index.js
           node --check apps/ecommerce-cms-agentsam/backend/admin/analytics-live-logs.js
           node --test tests/health-telemetry.test.mjs tests/health-live-logs.test.mjs
-          node tests/health-live-logs-browser-smoke.mjs
       - name: Build FNF admin and guard package boundaries
         run: npm run build:admin
+      - name: Browser Live Logs + existing Side Assistant DOM acceptance
+        run: node tests/health-live-logs-browser-smoke.mjs
