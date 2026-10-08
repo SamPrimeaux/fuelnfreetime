@@ -22,11 +22,11 @@ export function createMiniAgentSam(host) {
     *{box-sizing:border-box}[hidden]{display:none!important}
     .outline{position:fixed;border:2px solid var(--accent);border-radius:6px;background:#8b5cf60c;box-shadow:0 0 0 1px #ffffff35 inset;pointer-events:none;transition:left .08s ease,top .08s ease,width .08s ease,height .08s ease}
     .hint{position:fixed;top:72px;left:50%;transform:translateX(-50%);max-width:min(520px,calc(100vw - 28px));padding:9px 14px;border:1px solid #ffffff2c;border-radius:999px;background:#211b30e8;backdrop-filter:blur(18px);box-shadow:0 10px 34px #160c3430;color:#eee7fb;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .composer{position:fixed;width:240px;min-height:44px;padding:6px;border:1px solid #ffffff2a;border-radius:24px;background:#211b30eb;backdrop-filter:blur(18px);box-shadow:0 12px 36px #160c342e;pointer-events:auto}
+    .composer{position:fixed;width:min(416px,calc(100vw - 24px));min-height:48px;padding:7px 9px;border:1px solid #ffffff2a;border-radius:24px;background:#211b30eb;backdrop-filter:blur(18px);box-shadow:0 12px 36px #160c342e;pointer-events:auto}
     .composer.message-expanded{border-radius:18px}
-    .row{display:flex;align-items:center;gap:5px}.icon{width:24px;height:24px;border-radius:50%;flex:none}
-    textarea{font:13px/1.4 system-ui;color:inherit;background:transparent;border:0;resize:none;width:100%;height:30px;padding:6px 0;outline:none;white-space:nowrap;overflow-x:auto;overflow-y:hidden}textarea::placeholder{color:#cac0dc}.message-expanded textarea{height:88px;white-space:pre-wrap;overflow-y:auto}
-    button{border:0;background:transparent;color:#c5a5ff;cursor:pointer;min-width:28px;min-height:30px;border-radius:50%;font:inherit;padding:3px}.expand{font-size:15px;line-height:1;color:#d8caef}.more{font-size:17px;line-height:1;color:#d8caef}.send{background:var(--accent);color:white;width:30px;flex:none}button:disabled{opacity:.45;cursor:wait}
+    .row{display:flex;align-items:center;gap:8px;min-width:0}.icon{width:26px;height:26px;border-radius:50%;flex:0 0 26px;object-fit:cover}
+    textarea{font:13px/1.4 system-ui;color:inherit;background:transparent;border:0;resize:none;flex:1 1 auto;min-width:0;width:auto;height:32px;padding:7px 0;outline:none;white-space:nowrap;overflow-x:auto;overflow-y:hidden}textarea::placeholder{color:#cac0dc}.message-expanded textarea{height:88px;white-space:pre-wrap;overflow-y:auto}
+    button{border:0;background:transparent;color:#c5a5ff;cursor:pointer;flex:0 0 30px;min-width:30px;min-height:32px;border-radius:50%;font:inherit;padding:3px}.expand{font-size:15px;line-height:1;color:#d8caef}.more{font-size:17px;line-height:1;color:#d8caef}.send{background:var(--accent);color:white;width:32px;flex:0 0 32px}button:disabled{opacity:.45;cursor:wait}
     .tools{display:flex;align-items:center;gap:6px;margin-top:6px}.tools button{border-radius:8px}.tools .dismiss{margin-left:auto}.status{color:#d3bfff;margin:6px 8px 2px;overflow-wrap:anywhere}
     .thinking{background:linear-gradient(100deg,#b08aff 20%,#f3e9ff 45%,#a17bf7 70%);background-size:200%;color:transparent;background-clip:text;animation:shimmer 1.8s linear infinite}
     .attachments{display:flex;flex-wrap:wrap;gap:4px}.attachments button{font-size:11px;max-width:100%;overflow:hidden;text-overflow:ellipsis;border-radius:8px}
@@ -259,9 +259,19 @@ export function createMiniAgentSam(host) {
 
   input.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') close();
-    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-      event.preventDefault();
-      send();
+    if (event.key === 'Enter' && !event.isComposing) {
+      if (event.shiftKey && !messageExpanded) {
+        event.preventDefault();
+        setMessageExpanded(true);
+        input.value += '\n';
+        return;
+      }
+      // The capsule is intentionally one-line: Enter must send, not silently
+      // insert a line break into an input that can no longer display it.
+      if (!messageExpanded || event.metaKey || event.ctrlKey) {
+        event.preventDefault();
+        void send();
+      }
     }
   });
 
@@ -325,7 +335,7 @@ export function createMiniAgentSam(host) {
       composer.hidden = false;
       outline.hidden = false;
       setToolsExpanded(false);
-    setMessageExpanded(false);
+      setMessageExpanded(false);
       input.value = '';
       input.placeholder = 'Ask for changes';
       showStatus('');
@@ -340,7 +350,7 @@ export function createMiniAgentSam(host) {
       portal.remove();
     },
     get expanded() {
-      return expanded;
+      return messageExpanded || toolsExpanded;
     },
   };
 }

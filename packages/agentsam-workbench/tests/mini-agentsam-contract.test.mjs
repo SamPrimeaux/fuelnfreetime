@@ -13,7 +13,7 @@ test('focusing the prompt does not implicitly expand miniAgentSam', () => {
 });
 
 test('message preview expands only from its explicit control without widening the composer', () => {
-  assert.match(source, /\.composer\{[^}]*width:240px/);
+  assert.match(source, /\.composer\{[^}]*width:min\(416px,calc\(100vw - 24px\)\)/);
   assert.doesNotMatch(source, /\.composer\.message-expanded\{[^}]*width:/);
   assert.match(source, /\.message-expanded textarea\{height:88px/);
   assert.match(source, /wrap="off"/);
