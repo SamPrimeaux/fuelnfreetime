@@ -20,6 +20,14 @@ on:
       - tests/revise-atlas-browser-smoke.mjs
       - tests/revise-atlas-storefront-browser-smoke.mjs
       - scripts/harvest-revise-site.mjs
+      - README.md
+      - AGENTS.md
+      - docs/package-authority.json
+      - docs/ARCHITECTURE-AUTHORITY.md
+      - docs/generated/package-authority.md
+      - scripts/package-authority.mjs
+      - packages/**/package.json
+      - apps/ecommerce-cms-agentsam/package.json
       - package.json
       - package-lock.json
       - apps/ecommerce-cms-agentsam/frontend/static/pages.html
@@ -63,6 +71,8 @@ jobs:
           node-version: '22'
       - name: Install locked runtime and renderer packages
         run: npm ci --ignore-scripts
+      - name: Verify architecture authority, package inventory and legacy paths
+        run: npm run check:authority
       - name: Verify syntax
         run: |
           node --check packages/theme-contract/runtime/portable-sections.js
