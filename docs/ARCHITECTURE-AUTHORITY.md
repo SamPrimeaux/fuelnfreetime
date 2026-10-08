@@ -86,9 +86,10 @@ Run from the FNF repository root:
 node scripts/package-authority.mjs --stdout  # inspect from tracked source
 node scripts/package-authority.mjs --write   # regenerate the checked-in report
 node scripts/package-authority.mjs --check   # fail when docs/manifest references drift
+AGENTSAM_SDK_ROOT=/path/to/agentsam-sdk node scripts/package-authority.mjs --check # also validate upstream package paths/names/versions
 ```
 
-The checker enumerates the FNF app/package manifests, references in tracked runtime sources, package mentions in README/authority docs, curated legacy paths and an explicitly versioned SDK audit snapshot. It deliberately **does not claim remote runtime verification**. CI must run `--check` after changes to manifests, docs, consumers or scripts.
+The checker enumerates the FNF app/package manifests, references in tracked runtime sources, package mentions in README/authority docs, curated legacy paths and an explicitly versioned SDK audit snapshot. It deliberately **does not claim remote runtime verification**. Setting `AGENTSAM_SDK_ROOT` enables cross-repo source manifest verification and fails on moved/missing SDK packages or version/name drift; leave unset in standalone FNF CI unless the SDK checkout is also provided. CI must run `--check` after changes to manifests, docs, consumers or scripts.
 
 ## Release/merchant #2 acceptance
 
