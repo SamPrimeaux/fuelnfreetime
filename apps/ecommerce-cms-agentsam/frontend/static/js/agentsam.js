@@ -20,15 +20,13 @@ function renderAgentsamShell() {
     <div class="agentsam-drawer drawer-mounted" id="agentsam-drawer" aria-hidden="true" aria-label="AgentSam Side Assistant">
       <header class="agentsam-head">
         <div class="agentsam-brand">
-          <div class="agentsam-mark" aria-hidden="true">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
-          </div>
+          <span class="agentsam-mark" aria-hidden="true"></span>
           <div>
-            <strong>AgentSam Side Assistant</strong>
+            <strong>AgentSam</strong>
             <span id="agentsam-status">Context-aware admin chat</span>
           </div>
         </div>
-        <div data-assistant-actions="true"><button type="button" data-assistant-action="New chat">New chat</button><button type="button" data-assistant-action="Expand">Expand</button></div>
+        <div data-assistant-actions="true"><button type="button" data-assistant-action="New chat" aria-label="Start a new chat" title="Start a new chat">＋</button><button type="button" data-assistant-action="Expand" aria-label="Expand Side Assistant" title="Expand Side Assistant">⤢</button></div>
         <span data-context-chip="true"></span>
         <button type="button" class="agentsam-close" id="agentsam-close" aria-label="Close AgentSam Side Assistant">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
@@ -301,6 +299,26 @@ function bindAgentsamStaticHandlers() {
 
   document.getElementById("agentsam-close")?.addEventListener("click", closeAgentsamDrawer);
   document.getElementById("agentsam-backdrop")?.addEventListener("click", closeAgentsamDrawer);
+  document.getElementById("agentsam-drawer")?.addEventListener("click", event => {
+    const target = event.target.closest?.("[data-assistant-action]");
+    if (!target) return;
+    const action = target.getAttribute("data-assistant-action");
+    if (action === "New chat") {
+      drawerConversationId = null;
+      const messages = document.getElementById("agentsam-messages");
+      messages?.replaceChildren();
+      appendMessage("assistant", "New chat ready. I can use the selected page or section as context.");
+      document.getElementById("agentsam-input")?.focus();
+    } else if (action === "Expand" || action === "Collapse") {
+      const drawer = document.getElementById("agentsam-drawer");
+      const expanded = !drawer.hasAttribute("data-expanded");
+      drawer.toggleAttribute("data-expanded", expanded);
+      target.setAttribute("data-assistant-action", expanded ? "Collapse" : "Expand");
+      target.setAttribute("aria-label", expanded ? "Dock Side Assistant" : "Expand Side Assistant");
+      target.title = expanded ? "Dock Side Assistant" : "Expand Side Assistant";
+      target.textContent = expanded ? "⤡" : "⤢";
+    }
+  });
 
   document.getElementById("agentsam-form")?.addEventListener("submit", (e) => {
     e.preventDefault();
