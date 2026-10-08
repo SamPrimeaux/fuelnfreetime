@@ -79,7 +79,8 @@ function generationMessages(capability, input) {
         "You create a normalized AgentSam CMS section or block.",
         prefix,
         "The definition.type becomes the saved semantic CMS type, so use a specific reusable kebab-case name such as testimonial-carousel or pricing-comparison, never custom or generated-section.",
-        "The definition.label is the merchant-facing editor name."
+        "The definition.label is the merchant-facing editor name.",
+        "Do not substitute the semantic type for __UID__; semantic identity and implementation namespace are separate."
       ].filter(Boolean).join(" ")
     },
     {

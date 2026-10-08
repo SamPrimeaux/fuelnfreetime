@@ -39,7 +39,12 @@ export function parseGeneratedDefinition(text, fallback = {}) {
     kind,
     type: safeType,
     label,
-    settings: parsed.settings && typeof parsed.settings === "object" ? parsed.settings : {},
+    settings:
+      parsed.settings && typeof parsed.settings === "object"
+        ? parsed.settings
+        : parsed.settingsSchema && typeof parsed.settingsSchema === "object"
+          ? parsed.settingsSchema
+          : {},
     blocks: Array.isArray(parsed.blocks) ? parsed.blocks : [],
   };
 }

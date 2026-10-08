@@ -156,3 +156,12 @@ test("generated definition normalizes into a merchant-facing semantic type", () 
     },
   );
 });
+
+
+test("generated definition accepts settingsSchema as a provider compatibility alias", () => {
+  const definition = parseGeneratedDefinition(
+    '{"kind":"section","type":"pricing-grid","label":"Pricing grid","settingsSchema":{"gap":{"type":"range"}}}',
+  );
+  assert.equal(definition.type, "pricing-grid");
+  assert.deepEqual(definition.settings, { gap: { type: "range" } });
+});
