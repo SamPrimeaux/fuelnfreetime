@@ -30,7 +30,7 @@ jobs:
       - name: Build existing merchant admin and storefront
         run: npm run build:admin
       - name: Verify reviewer security and existing CMS contracts
-        run: node --test tests/scene-review-preferences.test.mjs tests/revise-atlas-contract.test.mjs tests/cms-editor-registry.test.mjs tests/cms-editor-mutations.test.mjs tests/cms-about-community-source.test.mjs tests/storefront-header-presets-editor.test.mjs tests/portable-sections.test.mjs
+        run: node --test tests/scene-review-preferences.test.mjs tests/revise-atlas-contract.test.mjs tests/cms-editor-registry.test.mjs tests/cms-editor-mutations.test.mjs tests/cms-about-community-source.test.mjs tests/storefront-header-presets-editor.test.mjs tests/portable-sections.test.mjs tests/repository-contracts.test.mjs
       - name: Verify real merchant Preferences across devices
         run: node tests/preferences-merchant-browser-smoke.mjs
       - name: Verify canonical Theme Editor still handles real Shop sections

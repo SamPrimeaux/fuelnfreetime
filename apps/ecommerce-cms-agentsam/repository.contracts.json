@@ -139,6 +139,25 @@
         ],
         "migration_mode": "parallel-backfill"
       }
+    },
+    {
+      "contract_key": "schema.cms-artifacts-block-system",
+      "contract_version": "1.0.0",
+      "contract_type": "schema",
+      "name": "CMS artifact + nested block system",
+      "description": "Canonical D1/SQLite CMS schema with artifact-backed custom blocks, nested groups, provider-neutral artifact provenance and block integrity guards.",
+      "manifest_path": "db/schema/cms.sql",
+      "status": "active",
+      "metadata": {
+        "tables": [
+          "cms_artifacts",
+          "cms_section_blocks"
+        ],
+        "canonical_schema": "db/schema/cms.sql",
+        "migration": "db/migrate-cms-artifacts-block-tree-20261007.sql",
+        "integrity_migration": "db/migrate-cms-block-integrity-20261007.sql",
+        "block_registry": "apps/ecommerce-cms-agentsam/cms/block-types.json"
+      }
     }
   ]
 }
