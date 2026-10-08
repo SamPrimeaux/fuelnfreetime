@@ -129,7 +129,9 @@
     document.body.append(menu);
     let page = "root";
     let status = null;
+    let statusLoaded = false;
     let skills = null;
+    let skillsError = false;
     let loading = false;
     let noticeTimeout = null;
     const update = () => renderDrafts(root);
@@ -206,6 +208,7 @@
         const obj = await res.json();
         if (res.ok && obj.ok) status = obj;
       } catch { /* disconnected is not evidence of no plugins */ }
+      finally { statusLoaded = true; }
     }
     async function getSkills() {
       if (skills || loading) return;
@@ -213,8 +216,10 @@
       try {
         const res = await fetch("/api/admin/agentsam/skills", { credentials: "include" });
         const obj = await res.json();
-        skills = res.ok && obj.ok && Array.isArray(obj.skills) ? obj.skills : [];
-      } catch { skills = []; }
+        if (!res.ok || !obj.ok || !Array.isArray(obj.skills)) throw new Error("Skill registry unavailable");
+        skills = obj.skills;
+        skillsError = false;
+      } catch { skills = null; skillsError = true; }
       finally { loading = false; if (!menu.hidden && page === "skills") render(); }
     }
     function selectTarget(label, id) {
@@ -268,7 +273,7 @@
         });
       } else if (page === "skills") {
         menu.append(header("Skills"));
-        if (!skills) menu.append(row("Loading skills…", glyphs.skills, () => {}, { disabled: true }));
+        if (!skills) menu.append(row(skillsError ? "Could not load skills" : "Loading skills…", glyphs.skills, () => {}, { hint: skillsError ? "Try again later" : "", disabled: true }));
         else if (!skills.length) menu.append(row("No skills available", glyphs.skills, () => {}, { hint: "Check the FNF skill registry", disabled: true }));
         else {
           skills.slice(0, 16).forEach((skill) => {
@@ -282,7 +287,7 @@
         }, { hint: "Not available in this version" }));
       } else if (page === "apps") {
         menu.append(header("Apps"));
-        if (!status) menu.append(row("Checking connections…", glyphs.apps, () => {}, { disabled: true }));
+        if (!status) menu.append(row(statusLoaded ? "Connection status unavailable" : "Checking connections…", glyphs.apps, () => {}, { disabled: true }));
         const apps = Array.isArray(status?.mcp_servers) ? status.mcp_servers : [];
         if (status && !apps.length) menu.append(row("No linked app tools", glyphs.apps, () => {}, { hint: "No verified integrations available", disabled: true }));
         for (const app of apps) {
