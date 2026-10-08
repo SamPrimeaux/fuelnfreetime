@@ -56,7 +56,7 @@ async function run(){
 run();
 `;
 const bundled=await build({stdin:{contents:fixture,resolveDir:root,sourcefile:"log-fixture.tsx",loader:"tsx"},
- bundle:true,write:false,platform:"browser",format:"iife",jsx:"automatic",define:{"process.env.NODE_ENV":'"production"'}});
+ bundle:true,write:false,outdir:"/tmp/fnf-live-logs-browser-build",nodePaths:[path.join(root,"apps/ecommerce-cms-agentsam/frontend/node_modules")],platform:"browser",format:"iife",jsx:"automatic",define:{"process.env.NODE_ENV":'"production"'}});
 const js=bundled.outputFiles.find(f=>f.path.endsWith(".js"))?.text||"";
 const css=bundled.outputFiles.find(f=>f.path.endsWith(".css"))?.text||"";
 assert.ok(js.length,"React widget bundle missing");
