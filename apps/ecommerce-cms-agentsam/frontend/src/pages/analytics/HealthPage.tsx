@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AreaChart, Icon } from "@inneranimalmedia/commerce-analytics";
+import { AreaChart, Icon, BasinOverviewPanel } from "@inneranimalmedia/commerce-analytics";
 import { adminFetch } from "../../lib/api";
 import type { RangeKey } from "../../lib/types";
 
@@ -34,38 +34,6 @@ function NoSource({reason}:{reason:string}){
 }
 function Status({ready,label}:{ready:boolean;label:string}){
  return <span className={ready?"pill good":"pill"}><span className={ready?"dot":"muted"} />{label}</span>;
-}
-/** Basin is an optional application capability, not a mandatory FNF service. */
-export function BasinHealthPanel({basin}:{basin:Basin}){
- if(!basin.enabled)return null;
- const ready=basin.status==="connected";
- return <section className="card" aria-label="Basin lakehouse" style={{marginTop:14}}>
-  <div className="card-head">
-    <div><div className="card-title">Basin · historical analytics</div>
-      <div className="card-sub">Pipelines → Iceberg / R2 → Catalog → SQL</div></div>
-    <Status ready={ready} label={ready?"Provider connected":basin.status==="permission_required"?"Connection required":"Basin unavailable"}/>
-  </div>
-  {!ready?<NoSource reason="An authorized Basin provider adapter must discover warehouse, catalog and pipeline data. Configuration alone is not proof of connectivity."/>:
-   <>
-     <div className="grid cols-4" style={{padding:12,gap:12}}>
-       <SmallMetric label="Warehouses" value={basin.warehouses.length} unit="" source={basin.source}/>
-       <SmallMetric label="Pipelines" value={basin.pipelines.length} unit="" source={basin.source}/>
-       <SmallMetric label="Catalog tables" value={basin.catalogTables.length} unit="" source={basin.source}/>
-       <SmallMetric label="Last discovery" value={null} unit="" source={basin.checkedAt?new Date(basin.checkedAt).toLocaleString():"Not yet collected"}/>
-     </div>
-     <div className="grid cols-12" style={{padding:"0 12px 12px",gap:12}}>
-       <div className="span-6"><div className="card-sub" style={{marginBottom:9}}>Warehouses</div>
-         {basin.warehouses.length?<div>{basin.warehouses.map(w=><div className="row gap-2" key={w.id} style={{padding:8,borderBottom:"1px solid var(--border)"}}><strong>{w.label}</strong><small className="muted mono">{w.id}</small></div>)}</div>:
-          <div className="muted text-xs">No warehouses returned by the provider.</div>}
-       </div>
-       <div className="span-6"><div className="card-sub" style={{marginBottom:9}}>Pipelines</div>
-         {basin.pipelines.length?basin.pipelines.map(p=><div className="row gap-2" key={p.id} style={{padding:8,borderBottom:"1px solid var(--border)"}}><span>{p.label}</span><Status ready={p.status==="running"} label={p.status}/></div>):
-          <div className="muted text-xs">No discovered pipelines.</div>}
-       </div>
-     </div>
-     <div className="card-foot">Catalog tables are displayed only after provider discovery; row counts are not estimated.</div>
-   </>}
- </section>;
 }
 export default function HealthPage({range}:PageProps){
  const [data,setData]=useState<HealthResponse|null>(null);
@@ -153,7 +121,7 @@ export default function HealthPage({range}:PageProps){
     <NoSource reason={data?.app.available?"No failures recorded in this period.":"No D1 event records available."}/>}
    </div>
   </div>
-  {data?.basin.enabled&&<BasinHealthPanel basin={data.basin}/>}
+  {data?.basin.enabled&&<BasinOverviewPanel basin={data.basin}/>}
   {alertsOpen&&<section className="card" role="region" aria-label="Observed failures" style={{marginTop:14}}>
    <div className="card-head"><div><div className="card-title">Failure details</div><div className="card-sub">Recent recorded failures · {range}</div></div></div>
    {failures.length?failures.map((f,i)=><div key={i} style={{padding:"9px 15px",borderBottom:"1px solid var(--border)"}}>
