@@ -63,7 +63,7 @@ function ensureAssistant():Promise<void>{
  }
  return assistantLoader;
 }
-async function askAgentSamAboutLogs(logs:DiagnosticLogContext[],context:Record<string,unknown>){
+export async function askAgentSamAboutLogs(logs:DiagnosticLogContext[],context:Record<string,unknown>){
  await ensureAssistant();
  window.initAgentsamDrawer?.();
  window.setAgentsamPageContext?.(context);
