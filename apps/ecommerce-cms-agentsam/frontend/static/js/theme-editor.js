@@ -988,12 +988,22 @@
   function paintGeneratedSettings(panel, section) {
     const generatedSettings = section.content && section.content.__editor && section.content.__editor.generatedSettings;
     if (!generationInspector || !generatedSettings) return;
+    const schema = section.content.__editor.generatedSettingsSchema || {};
     const host = document.createElement('div');
     host.id = 'te-generated-settings';
-    generationInspector.renderGeneratedSettings(host, generatedSettings);
+    generationInspector.renderGeneratedSettings(host, generatedSettings, schema);
     panel.appendChild(host);
-    const wrapper = document.querySelector('[data-agentsam-block]') || { style: { setProperty() {} }, dataset: {} };
-    generationInspector.bindGeneratedSettings(host, wrapper, null);
+    const wrapper = generationPreviewWrapper();
+    generationInspector.bindGeneratedSettings(host, wrapper, {
+      onChange: function(key, value) {
+        if (liveUnimported) return;
+        section.content[key] = value;
+        section.content.__editor.generatedSettings[key] = value;
+        activeFieldKey = key;
+        markSectionDirty(section);
+        scheduleLocalPreview();
+      },
+    }, schema);
   }
 
   function beginGenerating() {
