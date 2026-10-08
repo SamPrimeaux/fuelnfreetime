@@ -94,12 +94,16 @@ test("existing public header consumes real persisted marquee preferences",()=>{
     style:"marquee",backgroundColor:"#121212",textColor:"#fdfdfd"});
   assert.equal(resolveNavConfig({announcementBgColor:"javascript:alert(1)"}).announcement.backgroundColor,"#161616");
 });
-test("preferences are GUI-driven and crawler signatures are not falsely offered",()=>{
+test("preferences expose public crawler discovery without a parallel credential authority",()=>{
   const doc=readFileSync("apps/ecommerce-cms-agentsam/frontend/static/preferences.html","utf8");
   assert.match(doc,/id="prefs-assets-dialog"/);
   assert.match(doc,/data-pick-asset="nav"/);
   assert.match(doc,/data-pick-asset="social"/);
   assert.match(doc,/id="announcement-style"/);
+  assert.match(doc,/robots\.txt/);
+  assert.match(doc,/sitemap\.xml/);
+  assert.match(doc,/site\.scrape/);
+  assert.doesNotMatch(doc,/crawler-credential-form|data-credential-tab|X-Crawler-Signature/);
   assert.doesNotMatch(doc,/Create signature<\/button>/);
   for(const match of doc.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))if(match[1].trim())new Script(match[1]);
 });

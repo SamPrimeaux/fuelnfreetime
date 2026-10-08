@@ -185,19 +185,40 @@ renderShell("/admin/preferences", `
       </div>
     </section>
 
-    <section class="prefs-card">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+    <section class="prefs-card" id="search-discovery-card" aria-labelledby="search-discovery-title">
+      <div class="prefs-crawler-heading">
         <div>
-          <h2 style="margin-bottom:6px;">Crawler access</h2><p style="margin:0;">Crawler authorization is not enabled. The signature request and verification service have not been implemented yet. This will require short-lived credentials, signed requests, scope limits and audit logs before merchants can issue access.</p>
+          <h2 id="search-discovery-title" style="margin-bottom:6px;">Search discovery &amp; site crawler</h2>
+          <p style="margin:0;">Public search engines use your storefront’s robots.txt and sitemap. AgentSam’s reusable <code>site.scrape</code> capability owns website harvesting; this ecommerce Worker supplies the site identity and public URL configuration.</p>
         </div>
-        <span class="prefs-status-pill">Not configured</span>
+        <span class="prefs-status-pill" id="crawler-status-pill" role="status">Loading discovery…</span>
       </div>
-      <div class="prefs-tabs" role="tablist">
-        <button type="button" class="prefs-tab is-active" data-tab="all">All</button>
-        <button type="button" class="prefs-tab" data-tab="active">Active</button>
-        <button type="button" class="prefs-tab" data-tab="expired">Expired</button>
+      <div class="prefs-crawler-site">
+        <div><span class="prefs-crawler-label">Storefront</span><strong id="crawler-site-name">Loading store…</strong><small id="crawler-site-domain"></small></div>
+        <div class="prefs-crawler-discovery">
+          <a id="crawler-robots-link" href="/robots.txt" target="_blank" rel="noopener">Open robots.txt</a>
+          <a id="crawler-sitemap-link" href="/sitemap.xml" target="_blank" rel="noopener">Open sitemap.xml</a>
+        </div>
       </div>
-      <div class="prefs-empty" id="crawler-empty">No crawler credentials issued. This feature is not active.</div>
+      <div class="prefs-crawler-metrics" aria-label="Public search discovery counts">
+        <div><strong id="crawler-routes-count">—</strong><span>Public storefront routes</span></div>
+        <div><strong id="crawler-products-count">—</strong><span>Active products</span></div>
+        <div><strong id="crawler-sitemap-count">—</strong><span>Current sitemap URLs</span></div>
+        <div><strong id="crawler-runtime-status">—</strong><span>AgentSam service binding</span></div>
+      </div>
+      <div class="prefs-crawler-controls">
+        <p class="prefs-crawler-run" id="crawler-runtime-note" aria-live="polite">Loading crawler integration status…</p>
+        <div class="prefs-crawler-buttons"><button type="button" class="btn ghost small" id="crawler-refresh-btn">Refresh discovery status</button></div>
+      </div>
+      <div class="prefs-crawler-notice" id="crawler-notice" role="status" hidden></div>
+      <details class="prefs-crawler-help">
+        <summary>What this page publishes</summary>
+        <ul>
+          <li><code>robots.txt</code> is served by this Cloudflare Worker and excludes admin, API, account, cart, checkout and review routes.</li>
+          <li><code>sitemap.xml</code> is generated from the canonical public storefront route manifest and the live active-product catalog. Draft products are not listed.</li>
+          <li>This preferences page does not issue crawler credentials or maintain a second crawl queue. Run history, host scheduling, evidence and crawl authorization belong to the shared AgentSam crawler/runtime authorities.</li>
+        </ul>
+      </details>
     </section>
 
     <div class="prefs-note" id="prefs-note"></div>
@@ -483,10 +504,54 @@ document.getElementById("save-prefs-btn").addEventListener("click", async () => 
   }
 });
 
-// Crawler and challenge verification need real server-side integration. No
-// misleading 'create signature' action is exposed before the service exists.
+function crawlerNotice(message, kind = "info") {
+  const notice = document.getElementById("crawler-notice");
+  notice.textContent = message || "";
+  notice.hidden = !message;
+  notice.className = `prefs-crawler-notice${message ? ` is-${kind}` : ""}`;
+}
 
+async function refreshCrawlerDashboard() {
+  const button = document.getElementById("crawler-refresh-btn");
+  if (button) button.disabled = true;
+  try {
+    const data = await adminFetch("/api/admin/store/crawler");
+    const site = data.site || {};
+    const counts = data.public_discovery || {};
+    const bindingPresent = data.crawler_binding_present === true;
+    document.getElementById("crawler-status-pill").textContent = site.origin ? "Public discovery ready" : "Domain required";
+    document.getElementById("crawler-status-pill").className = `prefs-status-pill${site.origin ? " is-ready" : " is-warning"}`;
+    document.getElementById("crawler-site-name").textContent = site.name || "Storefront";
+    document.getElementById("crawler-site-domain").textContent = site.domain || "Configure a public HTTPS website URL in Company settings.";
+    document.getElementById("crawler-robots-link").href = site.robots_url || "/robots.txt";
+    document.getElementById("crawler-sitemap-link").href = site.sitemap_url || "/sitemap.xml";
+    document.getElementById("crawler-routes-count").textContent = String(Number(counts.indexable_routes || 0));
+    document.getElementById("crawler-products-count").textContent = String(Number(counts.active_products || 0));
+    document.getElementById("crawler-sitemap-count").textContent = String(Number(counts.sitemap_url_count || 0));
+    document.getElementById("crawler-runtime-status").textContent = bindingPresent ? "Binding present" : "Not bound";
+    document.getElementById("crawler-runtime-note").textContent = bindingPresent
+      ? `An AGENTSAM_SITE_SCRAPE binding is configured, but this Preferences page currently publishes discovery only. Crawl actions and evidence remain owned by ${data.crawler_authority || "AgentSam SDK"}.`
+      : `Public search discovery is served by this Cloudflare Worker. The shared ${data.crawler_capability || "site.scrape"} crawler is owned by ${data.crawler_authority || "AgentSam SDK"} and is not bound into this Worker; no FNF-only crawl queue or credential store is created here.`;
+    crawlerNotice(counts.sitemap_truncated
+      ? "The sitemap listing reached its 48,000-product cap. A sitemap index is needed before this catalog can publish more product URLs."
+      : "", counts.sitemap_truncated ? "warning" : "info");
+  } catch (error) {
+    document.getElementById("crawler-status-pill").textContent = "Unavailable";
+    document.getElementById("crawler-status-pill").className = "prefs-status-pill is-warning";
+    if (error.status === 409) crawlerNotice("Configure a valid public HTTPS storefront domain before publishing crawler discovery files.", "warning");
+    else crawlerNotice(error.message || "Search discovery status could not be loaded.", "error");
+    document.getElementById("crawler-routes-count").textContent = "—";
+    document.getElementById("crawler-products-count").textContent = "—";
+    document.getElementById("crawler-sitemap-count").textContent = "—";
+    document.getElementById("crawler-runtime-status").textContent = "—";
+    document.getElementById("crawler-runtime-note").textContent = "No crawler or sitemap metrics are available until the store domain and database are configured.";
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
 
+document.getElementById("crawler-refresh-btn").addEventListener("click", refreshCrawlerDashboard);
+refreshCrawlerDashboard();
 
 const assetDialog = document.getElementById("prefs-assets-dialog");
 let pickerKind = "social";
