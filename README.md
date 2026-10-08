@@ -31,6 +31,8 @@ Names such as `FNF_VECTORIZE`, `fnf-agentsam-bge-m3-1024` and historical `fnf_*`
 
 The FNF workspace also contains some packages whose **names overlap upstream SDK packages while their local versions differ** (notably Workbench and Merch). A matching package name must not be mistaken for proof that FNF is using the SDK implementation.
 
+**Repository/contract graph authority already exists:** `@inneranimalmedia/agentsam-repository` owns repository identity, contract/dependency records, hashes, and failure policies. Our `scripts/package-authority.mjs` check is an app-local package/evidence inventory, not a new repository-contract registry. See [the contract authority section](docs/ARCHITECTURE-AUTHORITY.md#repository-contracts-and-graph-authority-already-exists).
+
 ---
 
 ## Product installation relationship
