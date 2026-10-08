@@ -492,3 +492,8 @@ body.agentsam-focus-mode .agentsam-mcp{max-width:min(780px,calc(100% - 32px));al
 @media(max-width:900px){body.agentsam-open:not(.agentsam-focus-mode) .agentsam-dock{width:min(390px,100%);padding:7px}body.agentsam-focus-mode .agentsam-dock{position:static;box-shadow:none}}
 @media(max-width:640px){body.agentsam-focus-mode .agentsam-head{padding:10px 12px}body.agentsam-focus-mode .agentsam-messages{padding:14px 9px 20px}body.agentsam-focus-mode .agentsam-compose{margin-bottom:10px;width:calc(100% - 16px)}.agentsam-head [data-assistant-actions]{gap:2px}}
 @media(prefers-reduced-motion:reduce){.agentsam-dock,.agentsam-drawer{transition:none!important}}
+
+.asm-menu-row[hidden]{display:none!important}
+.asm-menu-search{display:block;width:calc(100% - 12px);height:32px;margin:6px;border:1px solid #e3e0e8;border-radius:8px;outline:0;padding:5px 9px;color:#29272d;background:#fff;font:11px/1.3 var(--font,system-ui);box-sizing:border-box}
+.asm-menu-search:focus{border-color:#9c83b5;box-shadow:0 0 0 2px #b79bd020}
+.asm-capability-popover svg{display:block;flex:none}
