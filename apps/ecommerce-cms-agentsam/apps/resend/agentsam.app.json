@@ -35,16 +35,25 @@
     "label": "Email"
   },
   "agent": {
-    "status": "plugin-and-tool-registration-pending",
+    "status": "registered",
     "tool_resolution": "agentsam_tools.capability_key + enabled plugin_key=resend",
-    "resource_scope_source": "agentsam_plugins.resource_scope_json",
-    "intended_capabilities": [
-      "email.send",
-      "email.batch.send",
-      "email.webhook.receive",
-      "email.delivery.status"
+    "resource_scope_source": "agentsam_plugins.resource_scope_json + mail_mailboxes authorization",
+    "capabilities": {
+      "read": [
+        "email.mailbox.read",
+        "email.message.read",
+        "email.provider.status"
+      ],
+      "approval_required": [
+        "email.send"
+      ]
+    },
+    "tools": [
+      "email_mailboxes_list",
+      "email_messages_list",
+      "email_send",
+      "email_provider_status"
     ],
-    "verified_tools": [],
-    "notes": "Email/Resend runtime is implemented and working, but the live FNF agentsam_plugins registry has no resend installation and no matching Resend tools are registered yet."
+    "notes": "Mailbox reads and sends reuse mail_mailboxes owner_user_id/owner_auth_email/access_json authorization. Email send is approval/confirmation gated."
   }
 }

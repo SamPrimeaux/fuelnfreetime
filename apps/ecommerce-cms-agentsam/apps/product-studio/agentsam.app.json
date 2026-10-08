@@ -39,27 +39,35 @@
     "resource_scope": "current tenant + selected commerce/media resources",
     "capabilities": {
       "read": [
-        "catalog.read",
-        "catalog.search"
+        "commerce.catalog.read",
+        "commerce.catalog.search"
       ],
       "write": [
-        "design.create",
-        "product.sync"
+        "commerce.design.create",
+        "commerce.product.sync"
       ],
       "approval_required": [
-        "product.publish"
+        "commerce.product.publish"
       ],
       "optional_tool_capabilities": [
-        "assets.media.list",
-        "assets.image.variant_plan",
-        "store.products.list"
-      ],
-      "normalization_pending": [
-        "assets.media.list",
-        "assets.image.variant_plan",
-        "store.products.list"
+        "media.library.read",
+        "media.image.variant.plan",
+        "commerce.products.read"
       ]
     },
-    "notes": "Commerce capabilities are verified in the live tool registry. Optional media/store keys currently exist on tools but are not yet normalized into agentsam_capabilities."
+    "notes": "Capabilities use the canonical domain namespace. Provider mutations remain gated until their curated executor is implemented; Product Studio itself continues to use its existing backend workflow.",
+    "execution": {
+      "callable_now": [
+        "commerce.catalog.read",
+        "commerce.catalog.search",
+        "media.library.read",
+        "commerce.products.read"
+      ],
+      "provider_executor_pending": [
+        "commerce.design.create",
+        "commerce.product.sync",
+        "commerce.product.publish"
+      ]
+    }
   }
 }

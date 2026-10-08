@@ -44,6 +44,39 @@ function extractReply(result) {
   return "";
 }
 
+function parseToolArguments(raw) {
+  if (raw == null || raw === "") return {};
+  if (typeof raw === "object") return raw;
+  try {
+    const parsed = JSON.parse(String(raw));
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+export function extractToolCalls(result) {
+  if (!result) return [];
+  const direct =
+    (Array.isArray(result.tool_calls) && result.tool_calls) ||
+    (Array.isArray(result.result?.tool_calls) && result.result.tool_calls) ||
+    (Array.isArray(result.choices?.[0]?.message?.tool_calls) && result.choices[0].message.tool_calls) ||
+    [];
+
+  return direct
+    .map((call, index) => {
+      const fn = call?.function || call || {};
+      const name = String(fn.name || call?.name || "").trim();
+      if (!name) return null;
+      return {
+        id: call?.id || `toolcall_${index + 1}`,
+        name,
+        arguments: parseToolArguments(fn.arguments ?? call?.arguments),
+      };
+    })
+    .filter(Boolean);
+}
+
 function trimSystem(text) {
   const s = String(text || "");
   if (s.length <= MAX_SYSTEM_CHARS) return s;
@@ -193,17 +226,37 @@ async function executeModel(env, model, systemPrompt, userMessage, routing) {
     throw new Error("empty_vision_response");
   }
 
-  const result = await env.AGENTSAM_WAI.run(model.model_id, {
-    messages: [
-      { role: "system", content: trimSystem(systemPrompt) },
-      { role: "user", content: user },
-    ],
+  const messages =
+    Array.isArray(routing.messages) && routing.messages.length
+      ? routing.messages
+      : [
+          { role: "system", content: trimSystem(systemPrompt) },
+          { role: "user", content: user },
+        ];
+
+  const payload = {
+    messages,
     max_tokens: defaults.max_tokens || 1024,
     ...defaults,
-  }, { gateway: { id: "fuelnfreetime-agentsam", skipCache: false } });
+  };
+
+  if (
+    model.supports_tools &&
+    Array.isArray(routing.tool_definitions) &&
+    routing.tool_definitions.length
+  ) {
+    payload.tools = routing.tool_definitions;
+  }
+
+  const result = await env.AGENTSAM_WAI.run(
+    model.model_id,
+    payload,
+    { gateway: { id: "fuelnfreetime-agentsam", skipCache: false } },
+  );
 
   const reply = extractReply(result).trim();
-  if (reply) return { reply };
+  const toolCalls = extractToolCalls(result);
+  if (reply || toolCalls.length) return { reply, tool_calls: toolCalls };
   throw new Error("empty_response");
 }
 
@@ -312,7 +365,13 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
   }
 
   const chain = await getFallbackChain(env, normalized);
-  const compatibleChain = chain.filter((m) => isModelCompatible(m, normalized.task_type, normalized));
+  const wantsTools =
+    Array.isArray(normalized.tool_definitions) && normalized.tool_definitions.length > 0;
+  const compatibleChain = chain.filter(
+    (m) =>
+      isModelCompatible(m, normalized.task_type, normalized) &&
+      (!wantsTools || m.supports_tools),
+  );
 
   const attemptedModels = [];
   let selectedModel = null;
@@ -336,7 +395,7 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
         normalized
       );
 
-      if (!output?.reply && !output?.image_base64) {
+      if (!output?.reply && !output?.image_base64 && !output?.tool_calls?.length) {
         throw new Error("empty_response");
       }
 
@@ -356,7 +415,9 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
       });
 
       const inputTokens = estimateTokens(userMessage) + estimateTokens(systemPrompt);
-      const outputTokens = estimateTokens(output.reply);
+      const outputTokens =
+        estimateTokens(output.reply) +
+        estimateTokens(output.tool_calls?.length ? JSON.stringify(output.tool_calls) : "");
       const aiLatencyMs = Date.now() - aiStarted;
       const costTier = model.cost_tier || "unknown";
       const estimatedCostUsd = estimateCostUsd(inputTokens, outputTokens, costTier);
@@ -390,6 +451,7 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
         reply: output.reply,
         image_base64: output.image_base64 || null,
         mime_type: output.mime_type || null,
+        tool_calls: output.tool_calls || [],
         model: model.model_id,
         selected_model: model.model_id,
         model_lane: model.lane,

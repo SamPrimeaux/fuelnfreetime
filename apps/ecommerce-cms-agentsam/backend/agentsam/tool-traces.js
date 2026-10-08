@@ -81,6 +81,33 @@ export function buildToolCallFromGithubMeta(meta, ids = {}) {
   };
 }
 
+export function buildToolCallTrace(tool, input, result, ids = {}, durationMs = null) {
+  const id = `tc_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
+  const status =
+    result?.ok === true
+      ? "complete"
+      : result?.approval_required || result?.confirmation_required
+        ? "approval_required"
+        : "failed";
+  return {
+    id,
+    tool_call_id: id,
+    tool_key: tool?.tool_key || "unknown_tool",
+    display_name: tool?.display_name || tool?.tool_key || "AgentSam tool",
+    subtitle: tool?.capability_key || tool?.app_id || tool?.handler_type || "",
+    provider: tool?.app_id || tool?.plugin_key || "agentsam",
+    server: tool?.handler_type || "internal",
+    status,
+    duration_ms: durationMs,
+    input_preview: clip(JSON.stringify(input || {})),
+    output_preview: clip(JSON.stringify(result || {})),
+    error: result?.error || null,
+    icon: iconForTool(tool?.tool_key, tool?.plugin_key || tool?.app_id),
+    conversation_id: ids.conversation_id,
+    message_id: ids.message_id,
+  };
+}
+
 export async function getToolCallById(env, id) {
   if (!env?.DB || !id) return null;
   const row = await env.DB.prepare(
@@ -135,6 +162,9 @@ export function routeChipsFromRouting(routing, toolCalls = []) {
     if (tc.provider === "mcp") chips.push({ label: "Inner Animal MCP", kind: "tool" });
     if (/d1/i.test(tc.tool_key || "")) chips.push({ label: "D1", kind: "tool" });
     if (/r2|media/i.test(tc.tool_key || "")) chips.push({ label: "R2", kind: "tool" });
+    if (/growth|campaign/i.test(tc.tool_key || "")) chips.push({ label: "Growth", kind: "tool" });
+    if (/email|mailbox|resend/i.test(tc.tool_key || "")) chips.push({ label: "Email", kind: "tool" });
+    if (/product|catalog|completeful/i.test(tc.tool_key || "")) chips.push({ label: "Commerce", kind: "tool" });
   }
 
   const seen = new Set();

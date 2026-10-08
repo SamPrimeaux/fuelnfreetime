@@ -39,16 +39,31 @@
     "label": "Growth"
   },
   "agent": {
-    "status": "tool-registration-pending",
-    "tool_resolution": "agentsam_tools.capability_key",
-    "resource_scope": "current tenant + selected campaign/audience/content resources",
-    "intended_capabilities": [
-      "campaign.create",
-      "campaign.manage",
-      "campaign.analytics",
-      "attribution.read"
+    "status": "registered",
+    "tool_resolution": "agentsam_tools.capability_key + app_id=growth",
+    "resource_scope": "current application account + growth_campaigns/attribution resources",
+    "capabilities": {
+      "read": [
+        "campaign.overview.read",
+        "campaign.read"
+      ],
+      "write": [
+        "campaign.create",
+        "campaign.update",
+        "campaign.generate"
+      ],
+      "approval_required": [
+        "campaign.publish"
+      ]
+    },
+    "tools": [
+      "growth_overview_read",
+      "growth_campaigns_list",
+      "growth_campaign_create",
+      "growth_campaign_update",
+      "growth_campaign_generate",
+      "growth_campaign_publish"
     ],
-    "verified_tools": [],
-    "notes": "Growth UI/backend are implemented, but no matching Growth/Campaign tools are registered in the live FNF agentsam_tools table yet."
+    "notes": "Growth tools reuse the existing admin Growth API. Draft mutations require confirmation; campaign publish requires explicit approval."
   }
 }

@@ -140,7 +140,15 @@
     "db:verify:cms-artifacts-block-system": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/verify-cms-artifacts-block-system-20261007.sql",
     "db:cms:local-schema": "sh -c 'sqlite3 \"${CMS_SQLITE_PATH:-.agentsam/data/agentsam.sqlite}\" < db/schema/cms.sql'",
     "db:seed:repository-contract:cms-artifacts-block-system": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/seed-repository-contract-cms-artifacts-block-system-20261007.sql",
-    "db:migrate:agentsam-code-capabilities": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-agentsam-code-capabilities-20261007.sql"
+    "db:migrate:agentsam-code-capabilities": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-agentsam-code-capabilities-20261007.sql",
+    "db:migrate:agentsam-tools-authority": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-agentsam-tools-authority-20261007.sql",
+    "db:seed:agentsam-app-tools": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/seed-agentsam-app-tools-20261007.sql",
+    "agentsam:repository-contracts:generate": "node apps/ecommerce-cms-agentsam/bin/repository-contracts.mjs --account-id acct_fuelnfreetime --repository-id github:samprimeaux/fuelnfreetime --output db/seed-agentsam-repository-contracts.generated.sql",
+    "db:seed:agentsam-repository-contracts": "npm run agentsam:repository-contracts:generate && ./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/seed-agentsam-repository-contracts.generated.sql",
+    "db:migrate:cms-data-family": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-cms-data-family-20261007.sql",
+    "db:seed:cms-section-blocks": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/seed-cms-section-blocks-20261007.sql",
+    "db:verify:cms-data-family": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/verify-cms-data-family-20261007.sql",
+    "db:install:cms-data-family": "npm run db:migrate:cms-data-family && npm run db:seed:cms-section-blocks && npm run db:verify:cms-data-family"
   },
   "devDependencies": {
     "esbuild": "^0.28.1",

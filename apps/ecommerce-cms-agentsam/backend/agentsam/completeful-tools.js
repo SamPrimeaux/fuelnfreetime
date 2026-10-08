@@ -170,7 +170,8 @@ export async function executeCompletefulTool(env, tool, params = {}) {
       };
     }
 
-    case "catalog.get": {
+    case "catalog.get":
+    case "catalog.read": {
       const productId = String(
         params.product_id || params.completeful_product_id || params.productId || "",
       ).trim();
@@ -182,6 +183,7 @@ export async function executeCompletefulTool(env, tool, params = {}) {
     }
 
     case "catalog.semantic":
+    case "catalog.search":
       return semanticCatalogSearch(env, params);
 
     case "webhooks.list":

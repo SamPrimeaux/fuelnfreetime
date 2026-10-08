@@ -35,20 +35,34 @@
     "resource_scope_source": "agentsam_plugins.resource_scope_json",
     "capabilities": {
       "read": [
-        "catalog.read",
-        "catalog.search",
-        "order.quote"
+        "commerce.catalog.read",
+        "commerce.catalog.search",
+        "commerce.order.quote"
       ],
       "write": [
-        "catalog.sync",
-        "design.create",
-        "product.sync"
+        "commerce.catalog.sync",
+        "commerce.design.create",
+        "commerce.product.sync"
       ],
       "approval_required": [
-        "order.create",
-        "product.publish"
+        "commerce.order.create",
+        "commerce.product.publish"
       ]
     },
-    "notes": "These capability keys are present in the live agentsam_capabilities catalog and are backed by Completeful tools today."
+    "notes": "Catalog read/search/sync are backed by the curated Completeful AgentSam adapter. Other registered provider operations stay degraded until that adapter implements them; approval gates remain declared for order creation and product publishing.",
+    "execution": {
+      "callable_now": [
+        "commerce.catalog.read",
+        "commerce.catalog.search",
+        "commerce.catalog.sync"
+      ],
+      "registered_but_degraded": [
+        "commerce.design.create",
+        "commerce.order.quote",
+        "commerce.order.create",
+        "commerce.product.sync",
+        "commerce.product.publish"
+      ]
+    }
   }
 }
