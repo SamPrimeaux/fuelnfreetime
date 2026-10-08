@@ -35,6 +35,21 @@ for(const item of config.sdk_authorities||[]){
   if(item.status==="SOURCE_UNVERIFIED" && (item.sdk_path||item.audited_version))errors.push("Unverified source claims a version: "+item.name);
   if(item.status!=="SOURCE_UNVERIFIED" && (!item.sdk_path||!item.audited_version))errors.push("SDK snapshot lacks source/version: "+item.name);
 }
+// Opt-in cross-repository verification. The FNF CI checkout cannot assume SDK
+// repository credentials or package sources are available.
+const sdkRoot=process.env.AGENTSAM_SDK_ROOT?.trim();
+if(sdkRoot){
+  for(const item of config.sdk_authorities||[]){
+    if(!item.sdk_path)continue;
+    const file=path.resolve(sdkRoot,item.sdk_path,"package.json");
+    if(!fs.existsSync(file)){errors.push("SDK package source missing: "+file);continue;}
+    try{
+      const manifest=JSON.parse(fs.readFileSync(file,"utf8"));
+      if(manifest.name!==item.name)errors.push("SDK package name drift: "+item.sdk_path+" expected "+item.name+" got "+manifest.name);
+      if(manifest.version!==item.audited_version)errors.push("SDK version drift: "+item.name+" expected "+item.audited_version+" got "+manifest.version);
+    }catch(e){errors.push("SDK package manifest unreadable: "+file+" — "+e.message);}
+  }
+}
 for(const item of config.legacy||[]){
   if(!exists(item.path))errors.push("Legacy entrypoint no longer exists: "+item.path);
   if(!item.status||!item.note)errors.push("Legacy entrypoint has no disposition: "+item.path);
