@@ -79,8 +79,6 @@ jobs:
           node --check apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor.js
       - name: Real renderer and shared catalog checks
         run: node --test tests/portable-sections.test.mjs tests/revise-atlas-contract.test.mjs tests/theme-studio-universal.test.mjs tests/cms-editor-mutations.test.mjs tests/cms-generated-section-accept.test.mjs tests/cms-generated-stream.test.mjs tests/cms-definition-registry.test.mjs tests/storefront-header-presets-editor.test.mjs
-      - name: Reference-fidelity Side Assistant DOM and explicit generation gate
-        run: node --test apps/ecommerce-cms-agentsam/tests/reference-fidelity-dom.test.mjs apps/ecommerce-cms-agentsam/tests/generation-surfaces.test.mjs
       - name: Actual Chrome public DOM and live editor preview proof
         run: node tests/portable-sections-browser-smoke.mjs
       - name: Real Home-page composer browser proof
@@ -91,7 +89,7 @@ jobs:
         run: node tests/cms-live-source-browser-smoke.mjs
       - name: Actual storefront media and CTA edits in Chrome
         run: node tests/cms-slot-binding-browser-smoke.mjs
-      - name: Generated private section review/accept browser test
+      - name: Reference-fidelity Chrome handoff and explicit private section acceptance
         run: node tests/cms-generated-approval-browser-smoke.mjs
       - name: Accepted generated section in the actual public and private storefront renderer
         run: node tests/cms-generated-storefront-browser-smoke.mjs
