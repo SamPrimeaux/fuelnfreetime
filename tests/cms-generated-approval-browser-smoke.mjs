@@ -45,7 +45,7 @@ try{
  const proof=JSON.parse(match[1].replaceAll("&quot;",'"').replaceAll("&amp;","&"));
  assert.deepEqual(proof.before,{accepted:0,button:true,sandbox:"",srcdoc:true,stage:"review"});
  assert.equal(proof.after.accepted,1);
- assert.equal(proof.after.stage,"installed");
+ assert.equal(proof.after.stage,"settings");
  assert.match(proof.after.message,/private draft/i);
  console.log("PASS: generation preview is script-disabled and cannot install before explicit acceptance");
 }finally{server.close();}
