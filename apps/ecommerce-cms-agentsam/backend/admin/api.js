@@ -54,6 +54,7 @@ import { groupProductInventory, resolveProductSource, validateInventoryAdjustmen
 import { handleAdminCmsApi } from "../cms/api.js";
 import { getFinanceAnalytics } from "./analytics-finance.js";
 import { getHealthAnalytics } from "./analytics-health.js";
+import { fetchCloudflareLiveLogs } from "./analytics-live-logs.js";
 import {
   agentsamChat,
   agentsamAiModelsList,
@@ -969,6 +970,14 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   }
   if (path === "/api/admin/agentsam/compaction/run" && method === "POST") {
     return agentsamCompactionRun(request, env, executionCtx);
+  }
+  if (path === "/api/admin/analytics/logs/recent" && method === "GET") {
+    // Production diagnostic traces contain privileged operational metadata.
+    // The same admin session gate applies; restrict to administrator roles.
+    if (!["admin","owner","super_admin"].includes(String(user.role||"").toLowerCase()))
+      return json({error:"logs_admin_permission_required"},{status:403,headers:{"cache-control":"no-store"}});
+    const result=await fetchCloudflareLiveLogs(env,{windowSeconds:url.searchParams.get("window")||180});
+    return json(result,{status:result.ok?200:result.status,headers:{"cache-control":"no-store"}});
   }
   if (path === "/api/admin/analytics/health" && method === "GET") {
     return json(await getHealthAnalytics(env, url.searchParams.get("range") || "30d"));
