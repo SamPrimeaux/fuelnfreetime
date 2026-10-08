@@ -19,7 +19,7 @@ export function normalizeHealthRange(input, now = Date.now()) {
   return { range, since:Math.floor(now/1000)-seconds, start:new Date(now-seconds*1000).toISOString() };
 }
 async function ledger(env, since) {
-  if (!env.DB?.prepare) return { ...unavailable("d1_not_bound"), totals:null,timeline:[],operations:[],failures:[],repository:[] };
+  if (!env.DB?.prepare) return { ...unavailable("d1_not_bound"), totals:null,timeline:[],operations:[],failures:[],repository:[],probes:null };
   try {
     const results = await Promise.all([
       env.DB.prepare(`SELECT COUNT(*) AS events,
@@ -48,6 +48,11 @@ async function ledger(env, since) {
           AND (event_type='github' OR event_type='deployment' OR error_code LIKE '%drift%'
           OR error_code LIKE '%schema%' OR error_code LIKE '%contract%')
         ORDER BY created_at_unix DESC LIMIT 20`).bind(FNF_ACCOUNT_ID,since).all(),
+      env.DB.prepare(`SELECT COUNT(*) AS samples,
+        SUM(CASE WHEN status='success' THEN 1 ELSE 0 END) AS passed,
+        MAX(created_at_unix) AS last_seen
+        FROM agentsam_analytics WHERE account_id=? AND created_at_unix>=?
+        AND event_name='health.probe'`).bind(FNF_ACCOUNT_ID,since).first(),
     ]);
     return {
       available:true,reason:null,source:"D1 agentsam_analytics",
@@ -56,9 +61,11 @@ async function ledger(env, since) {
         avgDurationMs:number(results[0]?.avg_duration_ms)},
       timeline:results[1]?.results||[],operations:results[2]?.results||[],
       failures:results[3]?.results||[],repository:results[4]?.results||[],
+      probes:{samples:number(results[5]?.samples)??0,passed:number(results[5]?.passed)??0,
+        lastSeen:number(results[5]?.last_seen)},
     };
   } catch (err) {
-    return {...unavailable("analytics_ledger_unavailable"),totals:null,timeline:[],operations:[],failures:[],repository:[]};
+    return {...unavailable("analytics_ledger_unavailable"),totals:null,timeline:[],operations:[],failures:[],repository:[],probes:null};
   }
 }
 async function cloudflare(env, start, seconds) {
