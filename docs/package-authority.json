@@ -80,7 +80,7 @@
     },
     {
       "name": "@inneranimalmedia/agentsam-identity",
-      "sdk_path": "packages/agentsam-identity",
+      "sdk_path": "packages/identity",
       "role": "Identity/session/OAuth entry",
       "status": "CONVERGING",
       "audited_version": "2.6.12"
@@ -157,31 +157,34 @@
     },
     {
       "name": "@inneranimalmedia/agentsam-provider-completeful",
-      "sdk_path": "packages/agentsam-provider-completeful",
+      "sdk_path": "packages/providers/completeful",
       "role": "Completeful provider adapter",
       "status": "CONVERGING",
       "audited_version": "2.6.12"
     },
     {
       "name": "@inneranimalmedia/revise-theme",
-      "sdk_path": "packages/revise-theme",
+      "sdk_path": null,
       "role": "Alternate packaged theme",
-      "status": "AVAILABLE",
-      "audited_version": "2.6.12"
+      "status": "SOURCE_UNVERIFIED",
+      "audited_version": null,
+      "note": "Declared/referenced by ecommerce; source package not verified in inspected agentsam-sdk checkout. Resolve before claiming active or canonical."
     },
     {
       "name": "@inneranimalmedia/section-library",
-      "sdk_path": "packages/section-library",
+      "sdk_path": null,
       "role": "Reusable section primitives",
-      "status": "CONVERGING",
-      "audited_version": "2.6.12"
+      "status": "SOURCE_UNVERIFIED",
+      "audited_version": null,
+      "note": "Declared/referenced by ecommerce; source package not verified in inspected agentsam-sdk checkout. Resolve before claiming active or canonical."
     },
     {
       "name": "@inneranimalmedia/site-contracts",
-      "sdk_path": "packages/site-contracts",
+      "sdk_path": null,
       "role": "Site/layout contracts",
-      "status": "CONVERGING",
-      "audited_version": "2.6.12"
+      "status": "SOURCE_UNVERIFIED",
+      "audited_version": null,
+      "note": "Declared/referenced by ecommerce; source package not verified in inspected agentsam-sdk checkout. Resolve before claiming active or canonical."
     },
     {
       "name": "@inneranimalmedia/agentsam-merch",
