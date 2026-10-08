@@ -4,11 +4,14 @@ on:
     paths:
       - wrangler.toml
       - apps/ecommerce-cms-agentsam/backend/admin/analytics-health.js
+      - apps/ecommerce-cms-agentsam/backend/admin/analytics-live-logs.js
       - apps/ecommerce-cms-agentsam/backend/admin/api.js
       - apps/ecommerce-cms-agentsam/backend/index.js
       - apps/ecommerce-cms-agentsam/frontend/src/pages/analytics/HealthPage.tsx
       - packages/commerce-analytics/**
       - tests/health-telemetry.test.mjs
+      - tests/health-live-logs.test.mjs
+      - tests/health-live-logs-browser-smoke.mjs
       - .github/workflows/health-telemetry.yml
 permissions:
   contents: read
@@ -27,6 +30,8 @@ jobs:
           node --check apps/ecommerce-cms-agentsam/backend/admin/analytics-health.js
           node --check apps/ecommerce-cms-agentsam/backend/admin/api.js
           node --check apps/ecommerce-cms-agentsam/backend/index.js
-          node --test tests/health-telemetry.test.mjs
+          node --check apps/ecommerce-cms-agentsam/backend/admin/analytics-live-logs.js
+          node --test tests/health-telemetry.test.mjs tests/health-live-logs.test.mjs
+          node tests/health-live-logs-browser-smoke.mjs
       - name: Build FNF admin and guard package boundaries
         run: npm run build:admin
