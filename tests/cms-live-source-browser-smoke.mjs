@@ -53,6 +53,12 @@ const probe = "<script>setTimeout(function(){" +
  "noOverflow:document.documentElement.scrollWidth<=window.innerWidth+1," +
  "saveInTop:!!document.querySelector('.theme-studio-toolbar__right #te-save')," +
  "inspectorScrollable:getComputedStyle(document.querySelector('.te-inspector-body')).overflowY==='auto'};" +
+ "before.mediaControls={sort:!!document.getElementById('te-media-sort'),drop:!!document.getElementById('te-media-dropzone'),upload:!!document.getElementById('te-media-upload'),feedback:!!document.getElementById('te-media-alert')};" +
+ "if(window.innerWidth>900){" +
+ "var inspectorToggle=document.getElementById('te-inspector-toggle');var inspectorPanel=document.querySelector('.theme-editor-panel');" +
+ "inspectorToggle.click();before.panelClosed=getComputedStyle(inspectorPanel).display==='none';" +
+ "inspectorToggle.click();before.panelRestored=getComputedStyle(inspectorPanel).display!=='none';" +
+ "}" +
  "settingsButton?.click();" +
  "before.toolbar.settingsOpened=!document.querySelector('[data-drawer-panel=\\\"theme-settings\\\"]').hidden;" +
  "before.toolbar.options=document.querySelectorAll('[data-theme-preview]').length;" +
@@ -172,6 +178,10 @@ assert.equal(result.before.toolbar.pageVisible,true);
 assert.equal(result.before.toolbar.settingsOpened,true);
 assert.equal(result.before.toolbar.options,3);
 assert.equal(result.before.toolbar.noOverflow,true);
+assert.deepEqual(result.before.mediaControls,{sort:true,drop:true,upload:true,feedback:true},
+  "Media dialog must expose real sort, drop/upload, and local status");
+assert.equal(result.before.panelClosed,true,"Inspector toggle must reclaim canvas width");
+assert.equal(result.before.panelRestored,true,"Inspector toggle must restore settings without dropping selection");
 assert.equal(result.before.toolbar.saveInTop,true,"Save draft must be in the top toolbar");
 assert.equal(result.before.toolbar.inspectorScrollable,true,"Inspector must scroll without obstructing media");
 assert.equal(result.before.catalog.compact,true,"Add Section picker must be contextual and compact");
