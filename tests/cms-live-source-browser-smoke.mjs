@@ -50,14 +50,17 @@ const probe = "<script>setTimeout(function(){" +
  "before.toolbar={theme:document.getElementById('te-theme-name')?.textContent," +
  "themeSettings:!!settingsButton,legacyTabs:document.querySelectorAll('#te-tabs,.te-theme-switch').length," +
  "pageVisible:getComputedStyle(document.getElementById('te-page-trigger')).display!=='none'," +
- "noOverflow:document.documentElement.scrollWidth<=window.innerWidth+1};" +
+ "noOverflow:document.documentElement.scrollWidth<=window.innerWidth+1," +
+ "saveInTop:!!document.querySelector('.theme-studio-toolbar__right #te-save')," +
+ "inspectorScrollable:getComputedStyle(document.querySelector('.te-inspector-body')).overflowY==='auto'};" +
  "settingsButton?.click();" +
  "before.toolbar.settingsOpened=!document.querySelector('[data-drawer-panel=\\\"theme-settings\\\"]').hidden;" +
  "before.toolbar.options=document.querySelectorAll('[data-theme-preview]').length;" +
  "document.querySelector('[data-drawer-mode=\\\"sections\\\"]')?.click();" +
  "document.getElementById('te-add-section')?.click();" +
  "var catalog=document.getElementById('te-section-menu');" +
- "before.catalog={modal:!!catalog?.open,cards:catalog?.querySelectorAll('[data-catalog-template]').length||0};" +
+ "before.catalog={modal:!!catalog?.open,cards:catalog?.querySelectorAll('[data-catalog-template]').length||0," +
+ "compact:catalog.getBoundingClientRect().width<=400,insertionPoints:document.querySelectorAll('[data-insert-at]').length};" +
  "document.getElementById('te-section-cancel')?.click();" +
  "before.catalog.closed=!catalog?.open;" +
  "document.querySelector('[data-add-block-section=collections]')?.click();" +
@@ -169,6 +172,10 @@ assert.equal(result.before.toolbar.pageVisible,true);
 assert.equal(result.before.toolbar.settingsOpened,true);
 assert.equal(result.before.toolbar.options,3);
 assert.equal(result.before.toolbar.noOverflow,true);
+assert.equal(result.before.toolbar.saveInTop,true,"Save draft must be in the top toolbar");
+assert.equal(result.before.toolbar.inspectorScrollable,true,"Inspector must scroll without obstructing media");
+assert.equal(result.before.catalog.compact,true,"Add Section picker must be contextual and compact");
+assert.ok(result.before.catalog.insertionPoints>1,"Section tree needs insertion positions");
 assert.equal(result.before.catalog.modal,true,"Section picker should open in a native dialog");
 assert.ok(result.before.catalog.cards>0,"Section picker must show registered choices");
 assert.equal(result.before.catalog.closed,true,"Section picker must close without losing the editor");
