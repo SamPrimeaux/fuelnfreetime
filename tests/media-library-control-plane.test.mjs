@@ -8,8 +8,14 @@ import {
   listMedia,
   listMediaAlbums,
   reorderMedia,
+  uploadMedia,
 } from "../apps/ecommerce-cms-agentsam/backend/admin/media.js";
 import { resolveSelectedResource } from "../apps/ecommerce-cms-agentsam/backend/agentsam/selected-resource.js";
+import { configureAssetStorage } from "../apps/ecommerce-cms-agentsam/backend/assets/config.js";
+
+// This test file runs outside the Worker bootstrap. Supply a test-only delivery
+// origin; production and customer installations must provide their own values.
+configureAssetStorage({ workerMediaBaseUrl: "https://example.test/media" });
 
 function fixture(count = 65) {
   const db = new DatabaseSync(":memory:");
@@ -161,6 +167,61 @@ async function responseJson(response) {
   assert.ok(response instanceof Response);
   return response.json();
 }
+
+test("real media upload persists a non-null R2-backed public URL and returns the selected asset", async () => {
+  const { db, env } = fixture(0); // SQLite enforces the live media_assets.url NOT NULL constraint.
+  const uploads = [];
+  env.WEBSITE_ASSETS = {
+    async put(key, bytes, options) {
+      uploads.push({ key, bytes: new Uint8Array(bytes), options });
+    },
+  };
+  const form = new FormData();
+  form.set("transform_policy", "preserve");
+  form.set("prefix", "uploads/staging/images/");
+  form.append("files", new Blob(["valid-image-data"], { type: "image/png" }), "example.png");
+  const response = await uploadMedia(
+    new Request("https://example.test/api/admin/media", { method: "POST", body: form }),
+    env,
+  );
+  assert.equal(response.status, 200);
+  const data = await response.json();
+  assert.equal(data.ok, true);
+  assert.equal(data.assets.length, 1);
+  const saved = db.prepare("SELECT * FROM media_assets WHERE id = ?").get(data.assets[0].id);
+  assert.equal(saved.r2_key, "uploads/staging/images/example.png");
+  assert.equal(saved.url, "/media/uploads/staging/images/example.png");
+  assert.equal(data.assets[0].url, saved.url);
+  assert.equal(data.assets[0].source.provider, "r2");
+  assert.equal(uploads.length, 1);
+  assert.equal(uploads[0].key, saved.r2_key);
+  assert.equal(uploads[0].options.httpMetadata.contentType, "image/png");
+});
+
+test("retry preserves an unindexed R2 original after a failed D1 insert", async () => {
+  const { db, env } = fixture(0);
+  const originalKey = "uploads/staging/images/example.png";
+  const oldBytes = new Uint8Array([1, 2, 3, 4]);
+  const objects = new Map([[originalKey, oldBytes]]);
+  env.WEBSITE_ASSETS = {
+    async head(key) { return objects.has(key) ? { key } : null; },
+    async put(key, bytes) { objects.set(key, new Uint8Array(bytes)); },
+  };
+  const form = new FormData();
+  form.set("prefix", "uploads/staging/images/");
+  form.set("transform_policy", "preserve");
+  form.append("files", new Blob(["new-image-data"], { type: "image/png" }), "example.png");
+  const result = await uploadMedia(
+    new Request("https://example.test/api/admin/media", { method: "POST", body: form }),
+    env,
+  );
+  assert.equal(result.status, 200);
+  const asset = (await result.json()).assets[0];
+  assert.equal(asset.r2_key, "uploads/staging/images/example-2.png");
+  assert.equal(asset.url, "/media/uploads/staging/images/example-2.png");
+  assert.deepEqual(objects.get(originalKey), oldBytes, "unindexed R2 original must be preserved");
+  assert.equal(db.prepare("SELECT url FROM media_assets WHERE id=?").get(asset.id).url, asset.url);
+});
 
 test("media list is server-paged and search-filtered before rendering", async () => {
   const { env } = fixture(65);
