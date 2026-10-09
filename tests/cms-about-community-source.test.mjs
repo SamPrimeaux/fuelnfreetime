@@ -33,7 +33,11 @@ function fieldsInRegistry(section) {
 }
 
 test("canonical FNF registry retains all unrelated storefronts and original sections", () => {
-  assert.deepEqual(Object.keys(PAGE_REGISTRY), allRoutes);
+  assert.deepEqual(Object.keys(PAGE_REGISTRY).slice(0, allRoutes.length), allRoutes);
+  assert.deepEqual(Object.keys(PAGE_REGISTRY).slice(allRoutes.length),
+    ["products", "stories", "campaigns", "ideas"]);
+  for (const slug of ["products", "stories", "campaigns", "ideas"])
+    assert.equal(PAGE_REGISTRY[slug].defaultStatus,"draft");
   assert.deepEqual(Object.keys(PAGE_REGISTRY.home.sections),
     ["hero", "manifesto", "collections", "values", "community", "newsletter"]);
   assert.deepEqual(Object.keys(PAGE_REGISTRY.shop.sections),

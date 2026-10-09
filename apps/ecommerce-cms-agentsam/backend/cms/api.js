@@ -125,6 +125,39 @@ async function currentSectionVersion(env, pageId, sectionKey) {
   return Number(row?.content_version ?? 0);
 }
 
+/** Mirror the committed legacy pointer to the normalized CMS tables.
+ * The versioned R2 document remains the content authority; the canonical
+ * inline projection retains backwards-compatible inspector values.
+ * Only sections with an existing canonical link are touched. */
+async function syncCanonicalDraftPointer(env, legacySectionId, content, r2Meta) {
+  const canonical = await env.DB.prepare(
+    `SELECT id,account_id FROM cms_page_sections WHERE legacy_section_id=? LIMIT 1`
+  ).bind(legacySectionId).first();
+  if (!canonical) return;
+  await env.DB.prepare(`UPDATE cms_page_sections
+    SET inline_content_json=?,content_r2_key=?,content_version=?,content_hash=?,
+        status='draft',updated_at=datetime('now')
+    WHERE id=? AND legacy_section_id=?`)
+    .bind(JSON.stringify(content),r2Meta.key,r2Meta.version,r2Meta.content_hash,
+      canonical.id,legacySectionId).run();
+  // Generated components have their own immutable revision pipeline below.
+  // Do not double-register these as ordinary draft revisions.
+  if (!content?.__editor?.generated) {
+    // The canonical revision is a pointer-only receipt; the immutable body lives
+    // at the exact R2 key. Existing imported revision v1 remains untouched.
+    await env.DB.prepare(`INSERT INTO cms_revisions
+      (account_id,entity_type,entity_id,revision_number,revision_kind,
+       content_r2_key,content_hash,snapshot_json,metadata_json)
+      SELECT ?, 'section', ?, ?, 'draft', ?, ?, '{}',
+             '{"source":"cms-editor-save","r2_authoritative":true}'
+      WHERE NOT EXISTS (SELECT 1 FROM cms_revisions
+        WHERE entity_type='section' AND entity_id=? AND revision_kind='draft'
+          AND revision_number=? AND content_r2_key=?)`)
+      .bind(canonical.account_id,canonical.id,r2Meta.version,r2Meta.key,r2Meta.content_hash,
+        canonical.id,r2Meta.version,r2Meta.key).run();
+  }
+}
+
 async function persistSectionDraft(
   env,
   slug,
@@ -187,7 +220,10 @@ async function persistSectionDraft(
         )
         .run();
 
-      if (d1Changes(result) === 1) return r2Meta;
+      if (d1Changes(result) === 1) {
+        await syncCanonicalDraftPointer(env, existing.id, content, r2Meta);
+        return r2Meta;
+      }
 
       if (hasExpected) {
         const latest = await currentSectionVersion(env, pageId, sectionKey);
@@ -218,6 +254,10 @@ async function persistSectionDraft(
           r2Meta.content_hash
         )
         .run();
+      const created = await env.DB.prepare(
+        `SELECT id FROM page_sections WHERE page_id=? AND section_key=?`
+      ).bind(pageId,sectionKey).first();
+      if (created) await syncCanonicalDraftPointer(env, created.id, content, r2Meta);
       return r2Meta;
     } catch (error) {
       if (attempt >= 2) throw error;
@@ -1195,6 +1235,11 @@ export async function publishPage(env, slug) {
 export async function seedPageFromRegistry(env, slug) {
   const reg = getRegistryPage(slug);
   if (!reg) return { error: "Unknown page", status: 404 };
+  if (reg.status === "draft") {
+    // Revise pages must enter through the versioned R2 + D1 draft installer;
+    // never silently bootstrap a private draft as a published storefront.
+    return { error: "Draft-only page requires CMS import", status: 409 };
+  }
 
   await env.DB.prepare(
     `INSERT INTO pages (slug, title, status, updated_at)
@@ -1294,6 +1339,10 @@ export async function bootstrapAllPages(env) {
   const slugs = Object.keys(PAGE_REGISTRY);
   const results = [];
   for (const slug of slugs) {
+    if (PAGE_REGISTRY[slug]?.defaultStatus === "draft") {
+      results.push({slug, status: "skipped_draft"});
+      continue;
+    }
     results.push(await seedPageFromRegistry(env, slug));
   }
   return { ok: true, pages: results };

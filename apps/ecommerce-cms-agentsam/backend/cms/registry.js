@@ -3,6 +3,10 @@
  * Used for: D1 seeding, admin field schemas, merge defaults on edit (not public fallback).
  */
 import { M } from "./media-paths.js";
+import reviseSite from "../../fixtures/fnf-revise-site.json" with { type: "json" };
+import reviseMediaMap from "../../fixtures/fnf-revise-media-map.json" with { type: "json" };
+import { reviseAtlas } from "../../../../packages/theme-contract/runtime/revise-atlas-source.js";
+
 
 /**
  * GUI field types supported by the CMS editor. Existing registry entries can keep
@@ -1932,6 +1936,37 @@ export const PAGE_REGISTRY = {
   },
 };
 
+// Revise pages are native CMS documents, not generated HTML or a parallel store.
+// Use the same portable preset schemas the renderer and editor already share.
+// Do not override legacy Home/Shop or promote any draft to published.
+const reviseMediaUrls = Object.fromEntries(Object.entries(reviseMediaMap)
+  .map(([key, media]) => [key, media.url]));
+for (const page of reviseSite.pages) {
+  if (page.id === "home" || PAGE_REGISTRY[page.id]) continue;
+  const sections = Object.fromEntries(page.sections.map((section, index) => {
+    const preset = "revise-atlas/" + section.preset.split("/")[1];
+    const schema = reviseAtlas.schema(preset);
+    const content = reviseAtlas.fromSiteSection(section, reviseMediaUrls);
+    if (!schema || !content) throw new Error("Revise CMS preset unavailable: " + preset);
+    return [section.id, {
+      label: schema.label,
+      sortOrder: index * 10,
+      sourceSection: section.id,
+      fields: schema.fields,
+      blocks: schema.blocks,
+      settings: schema.settings,
+      capabilities: schema.capabilities,
+      guardrails: schema.guardrails,
+      defaultContent: content
+    }];
+  }));
+  PAGE_REGISTRY[page.id] = {
+    title: page.title,
+    defaultStatus: "draft",
+    sections
+  };
+}
+
 export const PAGE_SLUGS = Object.keys(PAGE_REGISTRY);
 
 export function getRegistryPage(slug) {
@@ -1941,7 +1976,7 @@ export function getRegistryPage(slug) {
     .map(([key, sec]) => ({
       key,
       sort_order: sec.sortOrder,
-      status: "published",
+      status: def.defaultStatus || "published",
       content: structuredClone(sec.defaultContent),
       updated_at: null,
     }))
@@ -1950,7 +1985,7 @@ export function getRegistryPage(slug) {
   return {
     slug,
     title: def.title,
-    status: "published",
+    status: def.defaultStatus || "published",
     sections,
     source: "registry",
   };
@@ -1960,7 +1995,7 @@ export function listRegistryPages() {
   return PAGE_SLUGS.filter((s) => s !== "site").map((slug) => ({
     slug,
     title: PAGE_REGISTRY[slug].title,
-    status: "published",
+    status: PAGE_REGISTRY[slug].defaultStatus || "published",
     section_count: Object.keys(PAGE_REGISTRY[slug].sections).length,
     updated_at: null,
     source: "registry",
