@@ -505,7 +505,11 @@ export async function uploadMedia(request, env, executionCtx = null) {
         ? { requiresMaster: true } : null,
     });
 
-    const urls = publicUrlFields(intakeKey);
+    // Use the same provider-aware descriptor as rowToAsset(). Passing a raw
+    // key here hides r2_key from mediaSourceFromRow(), yielding a null URL and
+    // violating the live media_assets.url NOT NULL contract after R2 put.
+    const urls = publicUrlFields({ r2_key: intakeKey });
+    if (!urls.url) throw new Error("Unable to resolve a delivery URL for the uploaded media source");
     const meta = {
       ...plan.meta,
       ...(browserEdit && editedSource ? { media_edit: {
