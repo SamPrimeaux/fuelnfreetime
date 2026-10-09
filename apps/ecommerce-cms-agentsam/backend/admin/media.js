@@ -208,23 +208,28 @@ async function readJson(request) {
 }
 
 async function uniqueKey(env, prefix, filename) {
+  // Earlier failed uploads may have left R2 objects without D1 rows.
+  // Never overwrite those originals just because D1 lacks a matching key.
+  async function taken(key) {
+    const row = await env.DB.prepare(`SELECT 1 FROM media_assets WHERE r2_key = ?`)
+      .bind(key).first();
+    if (row) return true;
+    return typeof env.WEBSITE_ASSETS?.head === "function" &&
+      Boolean(await env.WEBSITE_ASSETS.head(key));
+  }
   let key = prefix + filename;
-  const existing = await env.DB.prepare(`SELECT 1 FROM media_assets WHERE r2_key = ?`)
-    .bind(key)
-    .first();
-  if (!existing) return key;
+  if (!(await taken(key))) return key;
 
   const lastDot = filename.lastIndexOf(".");
   const base = lastDot === -1 ? filename : filename.slice(0, lastDot);
   const ext = lastDot === -1 ? "" : filename.slice(lastDot);
   for (let i = 2; i < 1000; i++) {
     key = `${prefix}${base}-${i}${ext}`;
-    const row = await env.DB.prepare(`SELECT 1 FROM media_assets WHERE r2_key = ?`)
-      .bind(key)
-      .first();
-    if (!row) return key;
+    if (!(await taken(key))) return key;
   }
-  return `${prefix}${base}-${Date.now()}${ext}`;
+  key = `${prefix}${base}-${Date.now()}-${crypto.randomUUID()}${ext}`;
+  if (await taken(key)) throw new Error("Unable to allocate an unused media key");
+  return key;
 }
 
 async function nextDisplayOrder(env, folder) {
