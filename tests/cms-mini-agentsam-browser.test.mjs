@@ -41,10 +41,14 @@ const probe=`<script>(async function(){
     document.querySelector('[data-select-section="hero"]').click();
   }
   (document.getElementById('te-field-hero-headline') || selected).focus();
+  await sleep(160);
+  const initialHidden=!document.querySelector('[data-mini-agentsam]') || document.querySelector('[data-mini-agentsam]').shadowRoot.querySelector('.composer').hidden;
+  const miniToggle=document.getElementById('te-mini-agent-toggle');
+  miniToggle.click();
   const portal=await until(()=>{const p=document.querySelector('[data-mini-agentsam]');return p&&!p.shadowRoot.querySelector('.composer').hidden?p:null});
   const mini=portal.shadowRoot;
   const caption=document.getElementById('te-selected-path').textContent;
-  const sourceRect=document.getElementById('te-field-hero-headline').getBoundingClientRect();
+  const sourceRect=miniToggle.getBoundingClientRect();
   const initialComposerRect=mini.querySelector('.composer').getBoundingClientRect();
   const arrow=mini.querySelector('.send').textContent.trim();
   mini.querySelector('textarea').value='Rewrite the selected headline to sound more compelling.';
@@ -67,7 +71,7 @@ const probe=`<script>(async function(){
   document.getElementById('te-save').click();
   await until(()=>window.__writes.length===1);
   const miniRect=mini.querySelector('.composer').getBoundingClientRect();
-  const result={initialValue,caption,composerVisible:true,localReviewExists,sideAssistantOpen,focusedGroups,sourceRect:{left:sourceRect.left,right:sourceRect.right,top:sourceRect.top,bottom:sourceRect.bottom},initialComposerRect:{left:initialComposerRect.left,right:initialComposerRect.right,top:initialComposerRect.top,bottom:initialComposerRect.bottom},arrow,proposed,canApply,beforeField,beforeWrites,fieldAfter,dirty,afterApplyWrites,savedWrites:window.__writes.length,saved:window.__writes[0],chatCount:window.__chatCount,viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,composerRect:{left:miniRect.left,right:miniRect.right,top:miniRect.top,bottom:miniRect.bottom},errors:window.__agentErrors};
+  const result={initialValue,initialHidden,caption,composerVisible:true,localReviewExists,sideAssistantOpen,focusedGroups,sourceRect:{left:sourceRect.left,right:sourceRect.right,top:sourceRect.top,bottom:sourceRect.bottom},initialComposerRect:{left:initialComposerRect.left,right:initialComposerRect.right,top:initialComposerRect.top,bottom:initialComposerRect.bottom},arrow,proposed,canApply,beforeField,beforeWrites,fieldAfter,dirty,afterApplyWrites,savedWrites:window.__writes.length,saved:window.__writes[0],chatCount:window.__chatCount,viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,composerRect:{left:miniRect.left,right:miniRect.right,top:miniRect.top,bottom:miniRect.bottom},errors:window.__agentErrors};
   const pre=document.createElement('pre');pre.id='mini-result';pre.textContent=JSON.stringify(result);document.body.append(pre);
  }catch(error){const pre=document.createElement('pre');pre.id='mini-result';pre.textContent=JSON.stringify({fatal:String(error),note:document.getElementById('te-note')?.textContent,errors:window.__agentErrors,html:document.getElementById('te-inspector-body')?.innerText?.slice(0,150)});document.body.append(pre);}
 })()</script>`;
@@ -114,9 +118,10 @@ try{
  console.log(JSON.stringify(result,null,2));
  assert.equal(result.fatal,undefined);
  assert.equal(result.composerVisible,true);
+ assert.equal(result.initialHidden,true,'Selecting or focusing a field must not open miniAgentSam');
  assert.equal(result.arrow,'↑','Send must be an upward arrow');
- assert.ok(result.initialComposerRect.right>=result.sourceRect.left-10 && result.initialComposerRect.left<=result.sourceRect.right+10, 'Composer must anchor horizontally beside the selected field');
- assert.ok(Math.abs(result.initialComposerRect.bottom-result.sourceRect.top)<150 || Math.abs(result.initialComposerRect.top-result.sourceRect.bottom)<150, 'Composer must appear near the selected field, not the header button');
+ assert.ok(result.initialComposerRect.right>=result.sourceRect.left-10 && result.initialComposerRect.left<=result.sourceRect.right+10, 'Composer must anchor beside the explicit toolbar toggle');
+ assert.ok(Math.abs(result.initialComposerRect.bottom-result.sourceRect.top)<150 || Math.abs(result.initialComposerRect.top-result.sourceRect.bottom)<150, 'Composer must appear near the opt-in toolbar toggle');
  assert.match(result.caption,/hero.*headline/i);
  assert.equal(result.proposed,message);
  assert.equal(result.canApply,true);
