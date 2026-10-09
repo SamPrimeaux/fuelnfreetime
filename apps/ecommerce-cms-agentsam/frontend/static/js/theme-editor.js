@@ -61,6 +61,8 @@
   let mediaTarget = null;
   let selectedMediaAsset = null;
   const mediaUndo = new Map();
+  const expandedSections = new Set();
+  let sectionInsertIndex = null;
   const resourceCache = Object.create(null);
   let dirty = false;
   const dirtySections = new Set();
@@ -112,7 +114,7 @@
             '<div class="te-theme-identity" aria-live="polite"><strong id="te-theme-name">Theme</strong><span class="te-theme-status" id="te-theme-status" hidden></span></div>',
 
             '<div class="te-page-menu">',
-              '<button type="button" class="te-page-trigger" id="te-page-trigger" aria-expanded="false"><span class="te-page-trigger__content">', icon.page, '<strong id="te-page-title">Loading…</strong></span><span aria-hidden="true">⌄</span></button>',
+              '<button type="button" class="te-page-trigger" id="te-page-trigger" aria-expanded="false" title="Choose a storefront page"><span class="te-page-trigger__content">', icon.page, '<strong id="te-page-title">Loading…</strong></span><span aria-hidden="true">⌄</span></button>',
               '<div class="te-page-popover" id="te-page-popover" hidden><input class="te-page-search" id="te-page-search" placeholder="Search online store pages" autocomplete="off" aria-label="Search pages"><div class="te-page-options" id="te-page-options"></div></div>',
             '</div>',
             '<span class="te-save-state" id="te-save-state">Loading</span>',
@@ -123,7 +125,7 @@
               '<button type="button" class="te-device-btn" data-device="mobile" title="Mobile">', icon.mobile, '</button>',
             '</div>',
           '</div>',
-          '<div class="theme-studio-toolbar__right"><button type="button" class="te-icon-btn" id="agentsam-toggle" aria-label="Open AgentSam" title="Open AgentSam" aria-expanded="false"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/></svg></button><a class="te-toolbar-btn" id="te-page-settings" href="#">Page settings</a><button type="button" class="te-toolbar-btn is-primary" id="te-publish">Publish</button></div>',
+          '<div class="theme-studio-toolbar__right"><button type="button" class="te-icon-btn" id="agentsam-toggle" aria-label="Open AgentSam" title="Open AgentSam" aria-expanded="false"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/></svg></button><a class="te-toolbar-btn" id="te-page-settings" href="#" title="Edit page settings">Page settings</a><button type="button" class="te-toolbar-btn" id="te-save" title="Save private draft (⌘S)">Save draft</button><button type="button" class="te-toolbar-btn is-primary" id="te-publish" title="Publish approved draft to the public site">Publish</button></div>',
         '</header>',
         '<div class="theme-studio-workspace">',
           '<nav class="te-mobile-pane-switch" id="te-mobile-pane-switch" aria-label="Editor workspace view">',
@@ -137,14 +139,14 @@
             '<section class="te-drawer-panel" data-drawer-panel="app-embeds" hidden><div class="te-panel-title"><span class="te-panel-kicker">Storefront</span><h2>App embeds</h2><p>Extensions that run on the storefront, not admin apps.</p></div><input class="te-page-search" id="te-embed-search" placeholder="Search app embeds" aria-label="Search app embeds"><div class="te-empty" id="te-embed-empty">No storefront embeds are installed for this theme.</div></section>' +
           '</aside>',
           '<main class="theme-studio-canvas">',
-            '<div class="te-preview-bar"><span id="te-preview-label">Storefront preview</span><div class="te-preview-bar__actions"><button class="te-import-live" type="button" id="te-import-live" hidden>Import live page</button><button class="te-icon-btn" type="button" id="te-refresh" title="Refresh preview">', icon.refresh, '</button><a class="te-icon-btn" id="te-open-tab" href="#" target="_blank" rel="noopener" title="Open in new tab">', icon.external, '</a></div></div>',
+            '<div class="te-preview-bar"><span id="te-preview-label">Storefront preview</span><div class="te-preview-bar__actions"><button class="te-import-live" type="button" id="te-import-live" hidden>Import live page</button><button class="te-icon-btn" type="button" id="te-refresh" title="Refresh preview">', icon.refresh, '</button><a class="te-icon-btn" id="te-open-tab" href="#" target="_blank" rel="noopener" title="Open published storefront page in a new tab">', icon.external, '</a></div></div>',
             '<div class="te-preview-stage"><div class="te-preview-device" id="te-preview-device" data-device="desktop"><iframe id="theme-preview" title="Storefront preview" class="theme-editor-preview"></iframe></div></div>',
             '<div class="te-preview-status"><span class="te-preview-mode">Local draft preview</span><span class="te-selected-path" id="te-selected-path">Select a section in the preview or tree</span></div>',
           '</main>',
           '<aside class="theme-editor-panel">',
             '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><div class="te-inspector-tools"><button type="button" id="te-agent-open" class="te-agent-open" aria-label="Ask miniAgentSam about the selected section" title="Ask miniAgentSam about this section">✦ Ask AgentSam</button><span class="te-badge" id="te-section-status">draft</span></div></div>',
             '<div class="te-inspector-body" id="te-inspector-body"></div><div data-composer-slot="editor"></div>',
-            '<div class="te-inspector-save"><button type="button" class="te-toolbar-btn is-primary" id="te-save">Save draft</button><p class="te-note" id="te-note"></p></div>',
+            '<div class="te-inspector-save"><p class="te-note" id="te-note" role="status" aria-live="polite"></p></div>',
           '</aside>',
         '</div>',
       '</div>',
@@ -572,6 +574,9 @@
       }).join('');
 
       const blockTemplates = Array.isArray(schema.blocks) ? schema.blocks : [];
+      const sectionRef = owner + ':' + section.key;
+      const canExpand = blockMeta.length > 0 || blockTemplates.length > 0;
+      const expanded = expandedSections.has(sectionRef) || (sectionSelected && Boolean(activeBlockId));
       const addBlock = blockTemplates.length
         ? '<button type="button" class="te-add-block" data-add-block-section="' + cmsEscapeAttr(section.key) + '" data-block-owner="' + cmsEscapeAttr(owner) + '">+ Add block</button>'
         : '';
@@ -583,6 +588,7 @@
 
       return '<div class="te-tree-section" data-tree-section="' + cmsEscapeAttr(owner + ':' + section.key) + '" data-group="' + cmsEscapeAttr(group) + '">' +
         '<div class="te-tree-row' + (sectionSelected && !activeBlockId ? ' is-active' : '') + '" data-section-key="' + cmsEscapeAttr(section.key) + '" data-section-owner="' + cmsEscapeAttr(owner) + '" draggable="' + canReorder + '" data-index="' + index + '">' +
+          (canExpand ? '<button type="button" class="te-tree-expand" data-expand-section="' + cmsEscapeAttr(sectionRef) + '" aria-expanded="' + expanded + '" aria-label="' + (expanded ? 'Collapse ' : 'Expand ') + cmsEscapeAttr(label) + '" title="' + (expanded ? 'Collapse blocks' : 'Expand blocks') + '"><span aria-hidden="true">›</span></button>' : '<span class="te-tree-expand-placeholder"></span>') +
           '<button type="button" class="te-tree-row__main" data-select-section="' + cmsEscapeAttr(section.key) + '" data-section-owner="' + cmsEscapeAttr(owner) + '">' +
             '<span class="te-tree-row__icon">' + icon.section + '</span><span class="te-tree-row__copy"><span class="te-tree-row__name">' + cmsEscapeHtml(label) +
             '</span><span class="te-tree-row__meta">' + cmsEscapeHtml(metaText) + (provenanceLabel ? '<span class="te-provenance" data-provenance="' + cmsEscapeAttr(provenance) + '">' + cmsEscapeHtml(provenanceLabel) + '</span>' : '') + '</span></span>' +
@@ -592,11 +598,17 @@
             (!isGlobal && capabilities.duplicate !== false ? '<button type="button" class="te-tree-mini" data-duplicate-section="' + cmsEscapeAttr(section.key) + '" title="Duplicate section">⧉</button>' : '') +
             (!isGlobal && capabilities.remove !== false ? '<button type="button" class="te-tree-mini" data-remove-section="' + cmsEscapeAttr(section.key) + '" title="Remove section">×</button>' : '') +
           '</span></div>' +
-          '<div class="te-block-list">' + blockRows + addBlock + '</div>' +
+          '<div class="te-block-list' + (expanded ? '' : ' is-collapsed') + '">' + blockRows + addBlock + '</div>' +
         '</div>';
     }
 
-    const pageRows = pageSections.map(function(section, index) { return sectionNode(section, index, 'template'); }).join('');
+    const insertLine = function(index) {
+      return '<div class="te-insert-line"><button type="button" data-insert-at="' + index +
+        '" aria-label="Add section at position ' + (index + 1) + '" title="Insert section here">+</button></div>';
+    };
+    const pageRows = insertLine(0) + pageSections.map(function(section, index) {
+      return sectionNode(section, index, 'template') + insertLine(index + 1);
+    }).join('');
     const headerRow = sectionNode(header, -1, 'header');
     const footerRow = sectionNode(footer, -1, 'footer');
 
@@ -607,10 +619,10 @@
         unmanagedLiveSections.map(function(region, index) {
           return '<button type="button" class="te-live-only-row" data-scroll-live="' + index + '"><span>' + icon.section + '</span><span><strong>' + cmsEscapeHtml(humanize(region.label.replaceAll('.', ' '))) + '</strong><small>Existing storefront · adapter needed</small></span></button>';
         }).join('') + '</div>' : '') +
-      '<button type="button" class="te-add-section" id="te-add-section">+ Add section</button>' +
+      '<button type="button" class="te-add-section" id="te-add-section" title="Add a section to this page">+ Add section</button>' +
       '<dialog class="te-section-menu" id="te-section-menu" aria-label="Add a section" hidden>' +
         '<div class="te-section-menu__head"><div><strong>Add a section</strong><small>Choose a reusable storefront component</small></div><button type="button" class="te-tree-mini" id="te-section-cancel" aria-label="Close section catalog">×</button></div>' +
-        '<input class="te-section-search" id="te-section-search" placeholder="Search sections" autocomplete="off">' +
+        '<input class="te-section-search" id="te-section-search" placeholder="Search sections" aria-label="Search available sections" autocomplete="off">' +
         '<div class="te-section-catalog" id="te-section-catalog"></div>' +
       '</dialog>' +
       '<div class="te-tree-group te-tree-group--global"><div class="te-tree-group__label">Footer</div>' + footerRow + '</div>';
@@ -634,12 +646,27 @@
 
       byId('te-section-catalog').querySelectorAll('[data-catalog-template]').forEach(function(button) {
         button.addEventListener('click', function() {
+          const insertAt = sectionInsertIndex;
           if (menu.open) menu.close();
-          insertSection(button.dataset.catalogTemplate, button.dataset.catalogPreset);
+          insertSection(button.dataset.catalogTemplate, button.dataset.catalogPreset, insertAt);
         });
       });
     }
 
+    byId('te-tree').querySelectorAll('[data-expand-section]').forEach(function(button) {
+      button.addEventListener('click', function(event) {
+        event.stopPropagation();
+        const ref = button.dataset.expandSection;
+        const expanded = !expandedSections.has(ref);
+        if (expanded) expandedSections.add(ref);
+        else expandedSections.delete(ref);
+        const section = button.closest('.te-tree-section');
+        section?.querySelector('.te-block-list')?.classList.toggle('is-collapsed', !expanded);
+        button.setAttribute('aria-expanded', String(expanded));
+        button.setAttribute('aria-label', (expanded ? 'Collapse ' : 'Expand ') + (section?.querySelector('.te-tree-row__name')?.textContent || 'section'));
+        button.title = expanded ? 'Collapse blocks' : 'Expand blocks';
+      });
+    });
     byId('te-tree').querySelectorAll('[data-scroll-live]').forEach(function(button) {
       button.addEventListener('click', function() {
         const region = unmanagedLiveSections[Number(button.dataset.scrollLive)];
@@ -700,23 +727,31 @@
 
     const add = byId('te-add-section');
     const menu = byId('te-section-menu');
-    add?.addEventListener('click', function() {
+    function openCatalog(anchor, index) {
+      sectionInsertIndex = index;
       menu.hidden = false;
-      add.hidden = true;
       renderCatalog('');
-      if (typeof menu.showModal === 'function') menu.showModal();
+      const rect = anchor.getBoundingClientRect();
+      const width = Math.min(375, window.innerWidth - 16);
+      const left = Math.max(8, Math.min(window.innerWidth - width - 8,
+        window.innerWidth - rect.right >= width + 8 ? rect.right + 8 : rect.left));
+      menu.style.left = left + 'px';
+      const height = Math.min(515, window.innerHeight - 24);
+      menu.style.top = Math.max(8, Math.min(rect.top, window.innerHeight - height - 8)) + 'px';
+      if (typeof menu.show === 'function' && !menu.open) menu.show();
       requestAnimationFrame(function() { byId('te-section-search')?.focus(); });
+    }
+    add?.addEventListener('click', function() { openCatalog(add, pageSections.length); });
+    byId('te-tree').querySelectorAll('[data-insert-at]').forEach(function(button) {
+      button.addEventListener('click', function() { openCatalog(button, Number(button.dataset.insertAt)); });
     });
     menu.addEventListener('close', function() {
       menu.hidden = true;
-      add.hidden = false;
+      sectionInsertIndex = null;
     });
     byId('te-section-cancel')?.addEventListener('click', function() {
       if (menu.open) menu.close();
-      else {
-        menu.hidden = true;
-        add.hidden = false;
-      }
+      else { menu.hidden = true; sectionInsertIndex = null; }
     });
     byId('te-section-search')?.addEventListener('input', function(event) { renderCatalog(event.target.value); });
     // Preserve old atlas links without maintaining another source editor.
@@ -2113,7 +2148,7 @@
     try { await task; } finally { pendingNativeSections.delete(id); }
   }
 
-  async function insertSection(templateKey, themePreset) {
+  async function insertSection(templateKey, themePreset, toIndex) {
     if (liveUnimported) { setNote('Start editing page to create a private draft before changing its sections.'); return false; }
     setNote('Adding section…');
     try {
@@ -2122,7 +2157,7 @@
         body: JSON.stringify({
           templateKey: templateKey,
           themePreset: themePreset || '',
-          toIndex: (pageData?.sections || []).length
+          toIndex: Number.isInteger(toIndex) ? toIndex : (pageData?.sections || []).length
         })
       });
       activeSectionOwner = slug;
@@ -2611,6 +2646,17 @@
   });
   byId('te-agent-open').addEventListener('click', function(event) {
     toggleMiniAgentSam(event.currentTarget);
+  });
+  document.addEventListener('pointerdown', function(event) {
+    const picker = byId('te-section-menu');
+    if (picker?.open && !picker.contains(event.target) &&
+        !event.target.closest('#te-add-section, [data-insert-at], #te-library-browse')) picker.close();
+  });
+  document.addEventListener('keydown', function(event) {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+      event.preventDefault();
+      void saveDraft();
+    }
   });
   byId('te-save').addEventListener('click', saveDraft);
   document.addEventListener('click', function(event) {
