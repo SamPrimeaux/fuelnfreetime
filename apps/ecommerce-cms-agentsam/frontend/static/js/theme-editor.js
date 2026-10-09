@@ -59,6 +59,7 @@
   let refreshTimer = null;
   let mediaLibrary = [];
   let mediaTarget = null;
+  let selectedMediaAsset = null;
   const mediaUndo = new Map();
   const resourceCache = Object.create(null);
   let dirty = false;
@@ -146,9 +147,10 @@
         '</div>',
       '</div>',
       '<div class="te-media-modal" id="te-media-modal" hidden><div class="te-media-dialog" role="dialog" aria-modal="true" aria-labelledby="te-media-title">',
-        '<div class="te-media-dialog__head"><strong id="te-media-title">Choose media</strong><button type="button" class="te-icon-btn" id="te-media-close" aria-label="Close">×</button></div>',
-        '<div class="te-media-dialog__tools"><input id="te-media-search" placeholder="Search media"><label class="te-upload-target">Upload<input id="te-media-upload" type="file" accept="image/*,video/*,.glb,.gltf,.usdz" multiple></label></div>',
-        '<div class="te-media-grid" id="te-media-grid"></div>',
+        '<div class="te-media-dialog__head"><div><strong id="te-media-title">Select media</strong><p>Choose an existing asset or upload a new one. Nothing is published here.</p></div><button type="button" class="te-icon-btn" id="te-media-close" aria-label="Close media picker" title="Close media picker">×</button></div>',
+        '<div class="te-media-dialog__tools"><input id="te-media-search" type="search" placeholder="Search by filename" aria-label="Search media by filename"><select id="te-media-filter" aria-label="Filter media"><option value="all">All media</option><option value="images">Images</option><option value="products">Products</option><option value="videos">Videos</option></select><label class="te-upload-target" title="Upload an image or video">Upload<input id="te-media-upload" type="file" accept="image/*,video/*,.glb,.gltf,.usdz" multiple></label></div>',
+        '<div class="te-media-grid" id="te-media-grid" role="group" aria-label="Available media"></div>',
+        '<div class="te-media-dialog__footer"><span id="te-media-count" class="te-media-dialog__count" role="status"></span><span id="te-media-selected-name" class="te-media-dialog__selected">Select an asset to preview</span><button type="button" class="te-media-button" id="te-media-cancel">Cancel</button><button type="button" class="te-toolbar-btn is-primary" id="te-media-confirm" disabled>Use media</button></div>',
       '</div></div>'
     ].join('');
   }
@@ -916,30 +918,7 @@
         }).join('') + '</div></details>';
     }
 
-    html += '<details class="te-inspector-disclosure te-inspector-disclosure--tools">' +
-      '<summary>Preview preferences<span class="te-disclosure-chevron" aria-hidden="true">⌄</span></summary>' +
-      '<div class="te-inspector-disclosure__body"><div class="te-setting-card">' +
-        '<div class="te-setting-row"><div><strong>Editable outlines</strong><span>Highlight CMS boundaries in the preview.</span></div><button type="button" class="te-switch" id="te-outline-switch" role="switch" aria-label="Editable outlines" aria-checked="' + showOutlines + '"></button></div>' +
-        '<div class="te-setting-row"><div><strong>Auto-refresh preview</strong><span>Update the preview after saved changes.</span></div><button type="button" class="te-switch" id="te-auto-switch" role="switch" aria-label="Auto-refresh preview" aria-checked="' + autoPreview + '"></button></div>' +
-      '</div></div></details>';
-
     return html;
-  }
-
-  function wireInspectorPreferences() {
-    const outlineSwitch = byId('te-outline-switch');
-    if (outlineSwitch) outlineSwitch.addEventListener('click', function(event) {
-      showOutlines = event.currentTarget.getAttribute('aria-checked') !== 'true';
-      localStorage.setItem('fnf-theme-editor-outlines', showOutlines ? '1' : '0');
-      event.currentTarget.setAttribute('aria-checked', String(showOutlines));
-      bindPreviewSelection();
-    });
-    const autoSwitch = byId('te-auto-switch');
-    if (autoSwitch) autoSwitch.addEventListener('click', function(event) {
-      autoPreview = event.currentTarget.getAttribute('aria-checked') !== 'true';
-      localStorage.setItem('fnf-theme-editor-auto-preview', autoPreview ? '1' : '0');
-      event.currentTarget.setAttribute('aria-checked', String(autoPreview));
-    });
   }
 
   function renderInspector() {
@@ -971,7 +950,6 @@
       selectSection(section.key, null, false, sectionOwner(section));
     });
     wireFields();
-    wireInspectorPreferences();
     paintGeneratedSettings(panel, section);
     if (liveUnimported) {
       panel.querySelectorAll('input, textarea, select, button:not(#te-inspector-parent)').forEach(function(control) { control.disabled = true; });
@@ -2464,32 +2442,67 @@
   }
 
   async function loadMedia() {
-    const response = await editorRequest('/api/admin/media?view=all');
-    mediaLibrary = response.assets || response.media || [];
+    // Fetch the actual available library rather than silently exposing only
+    // the first 48 items. Pagination is owned by the existing media API.
+    const assets = [];
+    let page = 1;
+    let pages = 1;
+    do {
+      const data = await editorRequest('/api/admin/media?view=all&page_size=100&sort=newest&page=' + page);
+      assets.push(...(data.assets || data.media || []));
+      pages = Number(data.pagination?.pages || 1);
+      page += 1;
+    } while (page <= pages && page <= 10);
+    mediaLibrary = assets;
     return mediaLibrary;
   }
 
   function renderMediaGrid(query) {
     const needle = String(query || '').trim().toLowerCase();
+    const filter = byId('te-media-filter').value;
     const assets = mediaLibrary.filter(function(asset) {
-      return !needle || ((asset.filename || '') + ' ' + (asset.folder || '') + ' ' + (asset.content_type || '')).toLowerCase().includes(needle);
+      const matches = !needle || ((asset.filename || '') + ' ' + (asset.folder || '') + ' ' + (asset.content_type || '')).toLowerCase().includes(needle);
+      const kind = String(asset.content_type || '').toLowerCase();
+      const matchesFilter = filter === 'all' ||
+        (filter === 'images' && kind.startsWith('image/') && asset.folder !== 'products') ||
+        (filter === 'products' && asset.folder === 'products') ||
+        (filter === 'videos' && (kind.startsWith('video/') || kind.startsWith('model/')));
+      return matches && matchesFilter;
     });
+    const count = byId('te-media-count');
+    if (count) count.textContent = assets.length + ' of ' + mediaLibrary.length + ' assets';
 
     byId('te-media-grid').innerHTML = assets.length ? assets.map(function(asset) {
       const isImage = String(asset.content_type || '').startsWith('image/');
-      return '<button type="button" class="te-media-card" data-media-url="' + cmsEscapeAttr(asset.url || '') + '"><span class="te-media-card__thumb">' +
-        (isImage ? '<img src="' + cmsEscapeAttr(asset.url || '') + '" alt="">' : '<span>' + cmsEscapeHtml((asset.content_type || 'file').split('/').pop()) + '</span>') +
-        '</span><span class="te-media-card__copy"><strong>' + cmsEscapeHtml(asset.filename || asset.r2_key || 'Asset') + '</strong><span>' + cmsEscapeHtml(asset.folder || 'media') + '</span></span></button>';
-    }).join('') : '<div class="te-empty" style="grid-column:1/-1">No media found.</div>';
+      const url = asset.url || '';
+      const selected = selectedMediaAsset && selectedMediaAsset.url === url;
+      const name = asset.filename || asset.r2_key || 'Asset';
+      return '<button type="button" class="te-media-card' + (selected ? ' is-selected' : '') +
+        '" data-media-url="' + cmsEscapeAttr(url) + '" aria-pressed="' + Boolean(selected) + '" title="' + cmsEscapeAttr(name) + '"' +
+        (url ? '' : ' disabled') + '><span class="te-media-card__thumb">' +
+        (isImage && url ? '<img loading="lazy" src="' + cmsEscapeAttr(url) + '" alt="">' :
+          '<span>' + cmsEscapeHtml((asset.content_type || 'file').split('/').pop()) + '</span>') +
+        '</span><span class="te-media-card__copy"><strong>' + cmsEscapeHtml(name) + '</strong><span>' +
+        cmsEscapeHtml(asset.folder || 'media') + '</span></span></button>';
+    }).join('') : '<div class="te-empty" style="grid-column:1/-1">No matching media. Try another search or upload a file.</div>';
 
     byId('te-media-grid').querySelectorAll('[data-media-url]').forEach(function(card) {
-      card.addEventListener('click', function() { if (mediaTarget) setMediaValue(mediaTarget, card.dataset.mediaUrl); });
+      card.addEventListener('click', function() {
+        selectedMediaAsset = mediaLibrary.find(function(asset) { return asset.url === card.dataset.mediaUrl; }) || null;
+        byId('te-media-selected-name').textContent = selectedMediaAsset?.filename || 'Select an asset to preview';
+        byId('te-media-confirm').disabled = !selectedMediaAsset?.url;
+        renderMediaGrid(byId('te-media-search').value);
+      });
     });
   }
 
   async function openMediaPicker(fieldKey) {
     mediaTarget = fieldKey;
+    selectedMediaAsset = null;
     byId('te-media-modal').hidden = false;
+    byId('te-media-confirm').disabled = true;
+    byId('te-media-selected-name').textContent = 'Select an asset to preview';
+    byId('te-media-filter').value = 'all';
     byId('te-media-grid').innerHTML = '<div class="te-empty" style="grid-column:1/-1">Loading media…</div>';
     try {
       await loadMedia();
@@ -2503,7 +2516,9 @@
   function closeMediaPicker() {
     byId('te-media-modal').hidden = true;
     mediaTarget = null;
+    selectedMediaAsset = null;
     byId('te-media-search').value = '';
+    byId('te-media-filter').value = 'all';
   }
 
   async function uploadFiles(files) {
@@ -2618,10 +2633,22 @@
   });
   byId('te-media-close').addEventListener('click', closeMediaPicker);
   byId('te-media-search').addEventListener('input', function(event) { renderMediaGrid(event.target.value); });
+  byId('te-media-filter').addEventListener('change', function() { renderMediaGrid(byId('te-media-search').value); });
+  byId('te-media-cancel').addEventListener('click', closeMediaPicker);
+  byId('te-media-confirm').addEventListener('click', function() {
+    if (!mediaTarget || !selectedMediaAsset?.url) return;
+    setMediaValue(mediaTarget, selectedMediaAsset.url);
+  });
   byId('te-media-upload').addEventListener('change', async function(event) {
     try {
       const assets = await uploadFiles(Array.from(event.target.files || []));
-      if (mediaTarget && assets[0]) setMediaValue(mediaTarget, assets[0].url);
+      if (mediaTarget && assets[0]) {
+        selectedMediaAsset = assets[0];
+        byId('te-media-selected-name').textContent = assets[0].filename || 'Uploaded media';
+        byId('te-media-confirm').disabled = !assets[0].url;
+        renderMediaGrid(byId('te-media-search').value);
+        setNote('Upload completed. Select Use media to apply it to this draft.', 'success');
+      }
     } catch (error) {
       setNote(error.message || String(error), 'error');
       setSaveState('Upload failed', 'error');
