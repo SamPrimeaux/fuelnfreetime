@@ -140,18 +140,22 @@ async function syncCanonicalDraftPointer(env, legacySectionId, content, r2Meta) 
     WHERE id=? AND legacy_section_id=?`)
     .bind(JSON.stringify(content),r2Meta.key,r2Meta.version,r2Meta.content_hash,
       canonical.id,legacySectionId).run();
-  // The canonical revision is a pointer-only receipt; the immutable body lives
-  // at the exact R2 key. Existing imported revision v1 remains untouched.
-  await env.DB.prepare(`INSERT INTO cms_revisions
-    (account_id,entity_type,entity_id,revision_number,revision_kind,
-     content_r2_key,content_hash,snapshot_json,metadata_json)
-    SELECT ?, 'section', ?, ?, 'draft', ?, ?, '{}',
-           '{"source":"cms-editor-save","r2_authoritative":true}'
-    WHERE NOT EXISTS (SELECT 1 FROM cms_revisions
-      WHERE entity_type='section' AND entity_id=? AND revision_kind='draft'
-        AND revision_number=? AND content_r2_key=?)`)
-    .bind(canonical.account_id,canonical.id,r2Meta.version,r2Meta.key,r2Meta.content_hash,
-      canonical.id,r2Meta.version,r2Meta.key).run();
+  // Generated components have their own immutable revision pipeline below.
+  // Do not double-register these as ordinary draft revisions.
+  if (!content?.__editor?.generated) {
+    // The canonical revision is a pointer-only receipt; the immutable body lives
+    // at the exact R2 key. Existing imported revision v1 remains untouched.
+    await env.DB.prepare(`INSERT INTO cms_revisions
+      (account_id,entity_type,entity_id,revision_number,revision_kind,
+       content_r2_key,content_hash,snapshot_json,metadata_json)
+      SELECT ?, 'section', ?, ?, 'draft', ?, ?, '{}',
+             '{"source":"cms-editor-save","r2_authoritative":true}'
+      WHERE NOT EXISTS (SELECT 1 FROM cms_revisions
+        WHERE entity_type='section' AND entity_id=? AND revision_kind='draft'
+          AND revision_number=? AND content_r2_key=?)`)
+      .bind(canonical.account_id,canonical.id,r2Meta.version,r2Meta.key,r2Meta.content_hash,
+        canonical.id,r2Meta.version,r2Meta.key).run();
+  }
 }
 
 async function persistSectionDraft(
