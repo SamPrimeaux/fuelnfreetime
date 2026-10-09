@@ -69,8 +69,10 @@
   let saveInFlight = null;
   let autosaveFailed = false;
   let device = localStorage.getItem('fnf-theme-editor-device') || 'desktop';
-  let showOutlines = localStorage.getItem('fnf-theme-editor-outlines') !== '0';
-  let autoPreview = localStorage.getItem('fnf-theme-editor-auto-preview') !== '0';
+  // Selection outlines and local preview updates are editor fundamentals,
+  // not per-browser preferences that can silently disable authoring feedback.
+  const showOutlines = true;
+  const autoPreview = true;
 
   const fallbackPages = host ? [] : [
     { slug: 'home', title: 'Home page', route: '/' },
