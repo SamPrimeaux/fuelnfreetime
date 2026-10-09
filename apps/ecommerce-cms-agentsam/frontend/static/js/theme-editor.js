@@ -576,7 +576,7 @@
       const blockTemplates = Array.isArray(schema.blocks) ? schema.blocks : [];
       const sectionRef = owner + ':' + section.key;
       const canExpand = blockMeta.length > 0 || blockTemplates.length > 0;
-      const expanded = expandedSections.has(sectionRef) || (sectionSelected && Boolean(activeBlockId));
+      const expanded = expandedSections.has(sectionRef);
       const addBlock = blockTemplates.length
         ? '<button type="button" class="te-add-block" data-add-block-section="' + cmsEscapeAttr(section.key) + '" data-block-owner="' + cmsEscapeAttr(owner) + '">+ Add block</button>'
         : '';
@@ -1739,6 +1739,8 @@
     activeSectionOwner = sectionOwner(section);
     activeBlockId = blockId;
     activeFieldKey = fieldKey || null;
+    // Selecting a block expands its parent, but users may explicitly close it.
+    expandedSections.add(activeSectionOwner + ':' + sectionKey);
 
     if (activeFieldKey && activeFieldKey.indexOf(blockId + '.') !== 0) activeFieldKey = blockId + '.' + activeFieldKey;
 
