@@ -8,6 +8,7 @@
     "apps/ecommerce-cms-agentsam/backend/admin/store.js -> packages/heuristic-theme/theme.json",
     "apps/ecommerce-cms-agentsam/backend/cms/api.js -> packages/theme-contract/runtime/portable-sections.js",
     "apps/ecommerce-cms-agentsam/backend/cms/api.js -> packages/theme-contract/runtime/revise-atlas-source.js",
+    "apps/ecommerce-cms-agentsam/backend/cms/registry.js -> packages/theme-contract/runtime/revise-atlas-source.js",
     "apps/ecommerce-cms-agentsam/backend/media/collection-contract.js -> packages/media-kit/src/collections.js",
     "apps/ecommerce-cms-agentsam/backend/media/provider-contract.js -> packages/media-kit/src/providers.js",
     "apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx -> packages/agentsam-merch/src/index.js"
