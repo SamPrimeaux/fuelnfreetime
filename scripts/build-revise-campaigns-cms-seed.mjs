@@ -1,16 +1,23 @@
 import fs from "node:fs";
 import crypto from "node:crypto";
+import path from "node:path";
 
 const fixture = JSON.parse(fs.readFileSync(new URL("../apps/ecommerce-cms-agentsam/fixtures/fnf-revise-site.json", import.meta.url)));
 const mediaMap = JSON.parse(fs.readFileSync(new URL("../apps/ecommerce-cms-agentsam/fixtures/fnf-revise-media-map.json", import.meta.url)));
-const page = fixture.pages.find((candidate) => candidate.id === "campaigns");
-if (!page) throw new Error("Missing campaigns fixture");
-
 const q = (value) => "'" + String(value ?? "").replaceAll("'", "''") + "'";
 const j = (value) => q(JSON.stringify(value));
 const safe = (value) => String(value).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 72);
 const hash = (value) => crypto.createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const account = "(SELECT account_id FROM cms_pages ORDER BY created_at,id LIMIT 1)";
+const useR2Drafts = process.argv.includes("--r2-drafts");
+const r2OutArg = process.argv.find((arg) => arg.startsWith("--r2-out="));
+const r2Out = r2OutArg ? path.resolve(r2OutArg.slice(9)) : null;
+if (r2Out && !useR2Drafts) throw new Error("--r2-out requires --r2-drafts");
+const r2Manifest = [];
+
+export function renderReviseSeed(pageId) {
+const page = fixture.pages.find((candidate) => candidate.id === pageId);
+if (!page) throw new Error("Missing Revise page: " + pageId);
 const lines = [];
 const emit = (...parts) => lines.push(...parts);
 
@@ -73,7 +80,7 @@ emit(
   "WHERE NOT EXISTS (SELECT 1 FROM pages WHERE slug=" + q(page.id) + ");",
   "",
   "INSERT INTO cms_pages (id,account_id,legacy_page_id,slug,title,page_type,status,template_key,metadata_json)",
-  "SELECT " + q("cmsp_revise_campaigns") + "," + account + ",p.id,p.slug,p.title,'standard','draft','revise'," +
+  "SELECT " + q("cmsp_revise_" + safe(page.id)) + "," + account + ",p.id,p.slug,p.title,'standard','draft','revise'," +
     j({source:"fnf-revise-site",theme:"revise",path:page.path,description:page.description,import:"canonical-seed-v1"}),
   "FROM pages p WHERE p.slug=" + q(page.id) +
     " AND NOT EXISTS (SELECT 1 FROM cms_pages cp WHERE cp.account_id=" + account + " AND cp.slug=p.slug);",
@@ -116,7 +123,23 @@ function emitChild(section, block, field, value, parentId, order) {
 
   if (field === "mediaKey") {
     const media = mediaMap[value];
-    if (!media) return;
+    if (!media) {
+      // Preserve unresolvable media *as editable data*. Never fabricate an
+      // asset ID, drop the block field, or imply that this image exists in R2.
+      if (!useR2Drafts) return;
+      emit(
+        "INSERT INTO cms_section_blocks (id,account_id,section_id,parent_block_id,block_key,block_type,sort_order,status,content_json,source_path,metadata_json)",
+        "SELECT " + q(id) + ",s.account_id,s.id," + q(parentId) + "," + q(blockKey) + ",'image'," + order + ",'active'," +
+          j({asset_id:null,mediaKey:value,alt:block.data.title || "",link:block.data.href || ""}) + "," +
+          q("$.blocks." + block.id + "." + field) + "," +
+          j({source_theme:"revise",media_key:value,unresolved_media:true}),
+        "FROM cms_page_sections s JOIN cms_pages p ON p.id=s.page_id WHERE p.slug=" + q(page.id) +
+          " AND s.section_key=" + q(section.id) +
+          " AND NOT EXISTS (SELECT 1 FROM cms_section_blocks b WHERE b.section_id=s.id AND b.block_key=" + q(blockKey) + ");",
+        ""
+      );
+      return;
+    }
     emit(
       "INSERT INTO cms_section_blocks (id,account_id,section_id,parent_block_id,block_key,block_type,sort_order,status,content_json,source_path,metadata_json)",
       "SELECT " + q(id) + ",s.account_id,s.id," + q(parentId) + "," + q(blockKey) + ",'image'," + order + ",'active'," +
@@ -145,16 +168,44 @@ function emitChild(section, block, field, value, parentId, order) {
 page.sections.forEach((section, sectionIndex) => {
   const content = portableContent(section);
   const digest = hash(content);
+  const draftR2Key = "cms/pages/" + page.id + "/history/" + section.id +
+    ".v1." + digest.slice(0, 16) + ".json";
+  if (r2Out) {
+    // Identical payload to backend/cms/r2-store.js writeSectionDraft().
+    // Deterministic, immutable version-one content; never publish from an import.
+    const body = JSON.stringify({
+      section_key: section.id, content, status: "draft",
+      version: 1, content_hash: digest
+    });
+    const target = path.join(r2Out, draftR2Key);
+    fs.mkdirSync(path.dirname(target), {recursive:true});
+    if (fs.existsSync(target) && fs.readFileSync(target, "utf8") !== body)
+      throw new Error("refusing_to_overwrite_different_draft: " + draftR2Key);
+    fs.writeFileSync(target, body);
+    r2Manifest.push({
+      page: page.id, section_key: section.id, source_preset: section.preset,
+      r2_bucket: "fuelnfreetime", r2_key: draftR2Key,
+      content_hash: digest, payload_sha256: crypto.createHash("sha256").update(body).digest("hex"),
+      size_bytes: Buffer.byteLength(body), status: "draft"
+    });
+  }
 
   emit(
-    "INSERT INTO page_sections (page_id,section_key,sort_order,content_json,status,content_version,content_hash)",
-    "SELECT p.id," + q(section.id) + "," + (sectionIndex * 10) + "," + j(content) + ",'draft',1," + q(digest) +
+    useR2Drafts
+      ? "INSERT INTO page_sections (page_id,section_key,sort_order,content_json,status,content_version,content_hash,content_r2_key)"
+      : "INSERT INTO page_sections (page_id,section_key,sort_order,content_json,status,content_version,content_hash)",
+    "SELECT p.id," + q(section.id) + "," + (sectionIndex * 10) + "," +
+      (useR2Drafts ? "'{}'" : j(content)) + ",'draft',1," + q(digest) +
+      (useR2Drafts ? "," + q(draftR2Key) : "") +
       " FROM pages p WHERE p.slug=" + q(page.id) +
       " AND NOT EXISTS (SELECT 1 FROM page_sections ps WHERE ps.page_id=p.id AND ps.section_key=" + q(section.id) + ");",
     "",
-    "INSERT INTO cms_page_sections (id,account_id,page_id,legacy_section_id,section_key,section_type,sort_order,status,inline_content_json,content_version,content_hash,metadata_json)",
+    useR2Drafts
+      ? "INSERT INTO cms_page_sections (id,account_id,page_id,legacy_section_id,section_key,section_type,sort_order,status,inline_content_json,content_r2_key,content_version,content_hash,metadata_json)"
+      : "INSERT INTO cms_page_sections (id,account_id,page_id,legacy_section_id,section_key,section_type,sort_order,status,inline_content_json,content_version,content_hash,metadata_json)",
     "SELECT " + q("cmss_revise_" + safe(section.id)) + ",cp.account_id,cp.id,ps.id,ps.section_key," + q(section.type) +
-      ",ps.sort_order,'draft',ps.content_json,1,ps.content_hash," +
+      ",ps.sort_order,'draft'," + (useR2Drafts ? j(content) + ",ps.content_r2_key" : "ps.content_json") +
+      ",1,ps.content_hash," +
       j({source_theme:"revise",source_preset:section.preset,donor_section_id:section.id,canonical_blocks:true,inline_projection:"reviseAtlas"}) +
       " FROM page_sections ps JOIN pages p ON p.id=ps.page_id JOIN cms_pages cp ON cp.legacy_page_id=p.id" +
       " WHERE p.slug=" + q(page.id) + " AND ps.section_key=" + q(section.id) +
@@ -183,8 +234,11 @@ page.sections.forEach((section, sectionIndex) => {
   }
 
   emit(
-    "INSERT INTO cms_revisions (id,account_id,entity_type,entity_id,revision_number,revision_kind,content_hash,snapshot_json,metadata_json)",
-    "SELECT " + q("cmsr_revise_" + safe(section.id) + "_v1") + ",s.account_id,'section',s.id,1,'imported',s.content_hash,s.inline_content_json," +
+    useR2Drafts
+      ? "INSERT INTO cms_revisions (id,account_id,entity_type,entity_id,revision_number,revision_kind,content_r2_key,content_hash,snapshot_json,metadata_json)"
+      : "INSERT INTO cms_revisions (id,account_id,entity_type,entity_id,revision_number,revision_kind,content_hash,snapshot_json,metadata_json)",
+    "SELECT " + q("cmsr_revise_" + safe(section.id) + "_v1") + ",s.account_id,'section',s.id,1,'imported'," +
+      (useR2Drafts ? "s.content_r2_key," : "") + "s.content_hash,s.inline_content_json," +
       j({source_theme:"revise",source_preset:section.preset,import:"canonical-seed-v1"}) +
       " FROM cms_page_sections s JOIN cms_pages p ON p.id=s.page_id WHERE p.slug=" + q(page.id) +
       " AND s.section_key=" + q(section.id) +
@@ -195,7 +249,7 @@ page.sections.forEach((section, sectionIndex) => {
 
 emit(
   "INSERT INTO cms_revisions (id,account_id,entity_type,entity_id,revision_number,revision_kind,snapshot_json,metadata_json)",
-  "SELECT 'cmsr_revise_campaigns_v1',p.account_id,'page',p.id,1,'imported'," +
+  "SELECT " + q("cmsr_revise_" + safe(page.id) + "_v1") + ",p.account_id,'page',p.id,1,'imported'," +
     j({slug:page.id,title:page.title,template_key:"revise",source_path:page.path}) + "," +
     j({source_theme:"revise",import:"canonical-seed-v1"}) +
     " FROM cms_pages p WHERE p.slug=" + q(page.id) +
@@ -203,7 +257,26 @@ emit(
   ""
 );
 
-const output = lines.join("\n") + "\n";
+return lines.join("\n") + "\n";
+}
+
+const pageArg = process.argv.find((arg) => arg.startsWith("--pages="));
+const wanted = pageArg ? pageArg.slice(8) : "campaigns";
+const selected = wanted === "all" ? fixture.pages.map(p => p.id) : wanted.split(",").filter(Boolean);
+if (!selected.length || new Set(selected).size !== selected.length) throw new Error("invalid_page_selection");
+const rawOutput = selected.map(renderReviseSeed).join("");
+const output = useR2Drafts ? rawOutput.replace(/\n+$/, "\n") : rawOutput;
+if (r2Out) {
+  fs.writeFileSync(path.join(r2Out, "revise-draft-manifest.json"),
+    JSON.stringify({
+      schema: "fnf.cms-revise-r2-draft-manifest.v1",
+      pages: selected,
+      source_fixture: "apps/ecommerce-cms-agentsam/fixtures/fnf-revise-site.json",
+      source_contract: "revise/site-section-v1",
+      object_count: r2Manifest.length, objects: r2Manifest,
+      published: false, cms_installed: false
+    }, null, 2) + "\n");
+}
 const target = process.argv.find((arg) => arg.startsWith("--out="));
 if (target) fs.writeFileSync(target.slice(6), output);
 else process.stdout.write(output);
