@@ -125,7 +125,7 @@
               '<button type="button" class="te-device-btn" data-device="mobile" title="Mobile">', icon.mobile, '</button>',
             '</div>',
           '</div>',
-          '<div class="theme-studio-toolbar__right"><button type="button" class="te-icon-btn" id="agentsam-toggle" aria-label="Open AgentSam" title="Open AgentSam" aria-expanded="false"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/></svg></button><a class="te-toolbar-btn" id="te-page-settings" href="#" title="Edit page settings">Page settings</a><button type="button" class="te-toolbar-btn" id="te-save" title="Save private draft (⌘S)">Save draft</button><button type="button" class="te-toolbar-btn is-primary" id="te-publish" title="Publish approved draft to the public site">Publish</button></div>',
+          '<div class="theme-studio-toolbar__right"><button type="button" class="te-icon-btn" id="agentsam-toggle" aria-label="Open AgentSam" title="Open AgentSam" aria-expanded="false"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/></svg></button><button type="button" class="te-icon-btn" id="te-inspector-toggle" aria-controls="te-inspector-body" aria-expanded="true" aria-label="Hide settings panel" title="Hide settings panel">▣</button><a class="te-toolbar-btn" id="te-page-settings" href="#" title="Edit page settings">Page settings</a><button type="button" class="te-toolbar-btn" id="te-save" title="Save private draft (⌘S)">Save draft</button><button type="button" class="te-toolbar-btn is-primary" id="te-publish" title="Publish approved draft to the public site">Publish</button></div>',
         '</header>',
         '<div class="theme-studio-workspace">',
           '<nav class="te-mobile-pane-switch" id="te-mobile-pane-switch" aria-label="Editor workspace view">',
@@ -144,7 +144,7 @@
             '<div class="te-preview-status"><span class="te-preview-mode">Local draft preview</span><span class="te-selected-path" id="te-selected-path">Select a section in the preview or tree</span></div>',
           '</main>',
           '<aside class="theme-editor-panel">',
-            '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><div class="te-inspector-tools"><button type="button" id="te-agent-open" class="te-agent-open" aria-label="Ask miniAgentSam about the selected section" title="Ask miniAgentSam about this section">✦ Ask AgentSam</button><span class="te-badge" id="te-section-status">draft</span></div></div>',
+            '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><div class="te-inspector-tools"><button type="button" id="te-agent-open" class="te-agent-open" aria-label="Ask miniAgentSam about the selected section" title="Ask miniAgentSam about this section">✦ Ask AgentSam</button><span class="te-badge" id="te-section-status">draft</span><button type="button" class="te-icon-btn te-inspector-close" id="te-inspector-close" aria-label="Close settings panel" title="Close settings panel">×</button></div></div>',
             '<div class="te-inspector-body" id="te-inspector-body"></div><div data-composer-slot="editor"></div>',
             '<div class="te-inspector-save"><p class="te-note" id="te-note" role="status" aria-live="polite"></p></div>',
           '</aside>',
@@ -152,7 +152,7 @@
       '</div>',
       '<div class="te-media-modal" id="te-media-modal" hidden><div class="te-media-dialog" role="dialog" aria-modal="true" aria-labelledby="te-media-title">',
         '<div class="te-media-dialog__head"><div><strong id="te-media-title">Select media</strong><p>Choose an existing asset or upload a new one. Nothing is published here.</p></div><button type="button" class="te-icon-btn" id="te-media-close" aria-label="Close media picker" title="Close media picker">×</button></div>',
-        '<div class="te-media-dialog__tools"><input id="te-media-search" type="search" placeholder="Search by filename" aria-label="Search media by filename"><select id="te-media-filter" aria-label="Filter media"><option value="all">All media</option><option value="images">Images</option><option value="products">Products</option><option value="videos">Videos</option></select><label class="te-upload-target" title="Upload an image or video">Upload<input id="te-media-upload" type="file" accept="image/*,video/*,.glb,.gltf,.usdz" multiple></label></div>',
+        '<div class="te-media-dialog__tools"><input id="te-media-search" type="search" placeholder="Search media" aria-label="Search media by filename or folder"><select id="te-media-filter" aria-label="Filter media"><option value="all">All media</option><option value="images">Images</option><option value="products">Product media</option><option value="videos">Videos</option></select><select id="te-media-sort" aria-label="Sort media"><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="name">Name A–Z</option></select><label class="te-upload-target" title="Choose image or video files">+ Upload<input id="te-media-upload" type="file" accept="image/*,video/*" multiple></label></div><div class="te-media-dropzone" id="te-media-dropzone" tabindex="0" role="button" aria-label="Upload files or drop images and videos here"><strong>+ Add files</strong><span>Drag images or videos here, or choose files</span></div><div class="te-media-alert" id="te-media-alert" role="status" aria-live="polite" hidden></div>',
         '<div class="te-media-grid" id="te-media-grid" role="group" aria-label="Available media"></div>',
         '<div class="te-media-dialog__footer"><span id="te-media-count" class="te-media-dialog__count" role="status"></span><span id="te-media-selected-name" class="te-media-dialog__selected">Select an asset to preview</span><button type="button" class="te-media-button" id="te-media-cancel">Cancel</button><button type="button" class="te-toolbar-btn is-primary" id="te-media-confirm" disabled>Use media</button></div>',
       '</div></div>'
@@ -1710,6 +1710,7 @@
     activeBlockId = null;
     activeFieldKey = fieldKey || null;
 
+    setInspectorVisible(true);
     renderTree();
     renderInspector();
     if (window.matchMedia('(max-width: 900px)').matches) setMobilePane('settings');
@@ -1744,6 +1745,7 @@
 
     if (activeFieldKey && activeFieldKey.indexOf(blockId + '.') !== 0) activeFieldKey = blockId + '.' + activeFieldKey;
 
+    setInspectorVisible(true);
     renderTree();
     renderInspector();
     if (window.matchMedia('(max-width: 900px)').matches) setMobilePane('settings');
@@ -2368,6 +2370,17 @@
   }
 
   let editorDrawer = null;
+  let inspectorVisible = true;
+  function setInspectorVisible(value) {
+    inspectorVisible = Boolean(value);
+    const studio = document.querySelector('.theme-studio');
+    if (studio) studio.dataset.inspector = inspectorVisible ? 'open' : 'closed';
+    const toggle = byId('te-inspector-toggle');
+    toggle.setAttribute('aria-expanded', String(inspectorVisible));
+    toggle.setAttribute('aria-label', inspectorVisible ? 'Hide settings panel' : 'Show settings panel');
+    toggle.title = inspectorVisible ? 'Hide settings panel' : 'Show settings panel';
+    if (!inspectorVisible && window.matchMedia('(max-width: 900px)').matches) setMobilePane('preview');
+  }
   let themeIdentity = { name: '', status: '' };
   const drawerScroll = { sections: 0, 'theme-settings': 0, 'app-embeds': 0 };
 
@@ -2508,12 +2521,18 @@
         (filter === 'videos' && (kind.startsWith('video/') || kind.startsWith('model/')));
       return matches && matchesFilter;
     });
+    const sort = byId('te-media-sort').value;
+    assets.sort(function(a, b) {
+      if (sort === 'name') return String(a.filename || '').localeCompare(String(b.filename || ''));
+      const date = asset => Date.parse(asset.created_at || asset.uploaded_at || '') || (Number(asset.created_at_unix || 0) * 1000);
+      return sort === 'oldest' ? date(a) - date(b) : date(b) - date(a);
+    });
     const count = byId('te-media-count');
     if (count) count.textContent = assets.length + ' of ' + mediaLibrary.length + ' assets';
 
     byId('te-media-grid').innerHTML = assets.length ? assets.map(function(asset) {
-      const isImage = String(asset.content_type || '').startsWith('image/');
       const url = asset.url || '';
+      const isImage = String(asset.content_type || '').startsWith('image/') || /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(url);
       const selected = selectedMediaAsset && selectedMediaAsset.url === url;
       const name = asset.filename || asset.r2_key || 'Asset';
       return '<button type="button" class="te-media-card' + (selected ? ' is-selected' : '') +
@@ -2525,6 +2544,11 @@
         cmsEscapeHtml(asset.folder || 'media') + '</span></span></button>';
     }).join('') : '<div class="te-empty" style="grid-column:1/-1">No matching media. Try another search or upload a file.</div>';
 
+    byId('te-media-grid').querySelectorAll('.te-media-card__thumb img').forEach(function(img) {
+      img.addEventListener('error', function() {
+        img.replaceWith(Object.assign(document.createElement('span'), { textContent: 'Preview unavailable' }));
+      }, { once: true });
+    });
     byId('te-media-grid').querySelectorAll('[data-media-url]').forEach(function(card) {
       card.addEventListener('click', function() {
         selectedMediaAsset = mediaLibrary.find(function(asset) { return asset.url === card.dataset.mediaUrl; }) || null;
@@ -2541,13 +2565,19 @@
     byId('te-media-modal').hidden = false;
     byId('te-media-confirm').disabled = true;
     byId('te-media-selected-name').textContent = 'Select an asset to preview';
-    byId('te-media-filter').value = 'all';
-    byId('te-media-grid').innerHTML = '<div class="te-empty" style="grid-column:1/-1">Loading media…</div>';
+    const field = fieldByKey(fieldKey);
+    byId('te-media-filter').value = field?.type === 'video' ? 'videos' : 'all';
+    byId('te-media-sort').value = 'newest';
+    byId('te-media-alert').hidden = true;
+    byId('te-media-grid').innerHTML = '<div class="te-empty" style="grid-column:1/-1">Loading your media library…</div>';
+    byId('te-media-count').textContent = 'Loading…';
+    byId('te-media-upload').accept = field?.type === 'video' ? 'video/*' : 'image/*,video/*';
     try {
       await loadMedia();
       renderMediaGrid('');
       byId('te-media-search').focus();
     } catch (error) {
+      byId('te-media-count').textContent = 'Library unavailable';
       byId('te-media-grid').innerHTML = '<div class="te-empty" style="grid-column:1/-1">' + cmsEscapeHtml(error.message || String(error)) + '</div>';
     }
   }
@@ -2660,6 +2690,8 @@
       void saveDraft();
     }
   });
+  byId('te-inspector-toggle').addEventListener('click', function() { setInspectorVisible(!inspectorVisible); });
+  byId('te-inspector-close').addEventListener('click', function() { setInspectorVisible(false); });
   byId('te-save').addEventListener('click', saveDraft);
   document.addEventListener('click', function(event) {
     const dockSave = event.target && event.target.closest && event.target.closest('[data-dock-save], #dock-save');
@@ -2684,26 +2716,61 @@
   byId('te-media-close').addEventListener('click', closeMediaPicker);
   byId('te-media-search').addEventListener('input', function(event) { renderMediaGrid(event.target.value); });
   byId('te-media-filter').addEventListener('change', function() { renderMediaGrid(byId('te-media-search').value); });
+  byId('te-media-sort').addEventListener('change', function() { renderMediaGrid(byId('te-media-search').value); });
   byId('te-media-cancel').addEventListener('click', closeMediaPicker);
   byId('te-media-confirm').addEventListener('click', function() {
     if (!mediaTarget || !selectedMediaAsset?.url) return;
     setMediaValue(mediaTarget, selectedMediaAsset.url);
   });
-  byId('te-media-upload').addEventListener('change', async function(event) {
+  async function uploadIntoPicker(files) {
+    if (!files.length) return;
+    const dropzone = byId('te-media-dropzone');
+    const status = byId('te-media-alert');
+    dropzone.setAttribute('aria-busy', 'true');
+    dropzone.querySelector('span').textContent = 'Uploading ' + files.length + ' file(s)…';
+    status.hidden = true;
     try {
-      const assets = await uploadFiles(Array.from(event.target.files || []));
+      const assets = await uploadFiles(files);
       if (mediaTarget && assets[0]) {
         selectedMediaAsset = assets[0];
         byId('te-media-selected-name').textContent = assets[0].filename || 'Uploaded media';
         byId('te-media-confirm').disabled = !assets[0].url;
         renderMediaGrid(byId('te-media-search').value);
-        setNote('Upload completed. Select Use media to apply it to this draft.', 'success');
+        status.textContent = 'Uploaded. Choose Use media to stage this asset in the private draft.';
+        status.dataset.state = 'success';
+        status.hidden = false;
       }
     } catch (error) {
-      setNote(error.message || String(error), 'error');
-      setSaveState('Upload failed', 'error');
+      status.textContent = error.message || String(error);
+      status.dataset.state = 'error';
+      status.hidden = false;
+      setNote(status.textContent, 'error');
+    } finally {
+      dropzone.removeAttribute('aria-busy');
+      dropzone.querySelector('span').textContent = 'Drag images or videos here, or choose files';
     }
+  }
+  byId('te-media-upload').addEventListener('change', async function(event) {
+    await uploadIntoPicker(Array.from(event.target.files || []));
     event.target.value = '';
+  });
+  const mediaDropzone = byId('te-media-dropzone');
+  mediaDropzone.addEventListener('click', function() { byId('te-media-upload').click(); });
+  mediaDropzone.addEventListener('keydown', function(event) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      byId('te-media-upload').click();
+    }
+  });
+  mediaDropzone.addEventListener('dragover', function(event) {
+    event.preventDefault();
+    mediaDropzone.classList.add('is-over');
+  });
+  mediaDropzone.addEventListener('dragleave', function() { mediaDropzone.classList.remove('is-over'); });
+  mediaDropzone.addEventListener('drop', function(event) {
+    event.preventDefault();
+    mediaDropzone.classList.remove('is-over');
+    void uploadIntoPicker(Array.from(event.dataTransfer?.files || []));
   });
   byId('te-media-modal').addEventListener('click', function(event) { if (event.target === byId('te-media-modal')) closeMediaPicker(); });
 
