@@ -1,0 +1,91 @@
+{
+  "schema": "fnf.cms.revise-d1-r2-receipt.v1",
+  "generatedAt": "2026-10-09",
+  "repo": "SamPrimeaux/fuelnfreetime",
+  "branch": "feat/cms-revise-full-d1-r2-20261009",
+  "database": {
+    "name": "fuelnfreetime",
+    "id": "9fd6ff92-e407-4b51-8b01-3c93f3845bb2",
+    "account": "ede6590ac0d2fb7daf155b35653457b2"
+  },
+  "objectStorage": {
+    "bucket": "fuelnfreetime",
+    "prefix": "cms/pages/",
+    "uploaded": 17,
+    "readback": 17
+  },
+  "pages": [
+    {
+      "slug": "stories",
+      "sections": 4,
+      "blockGroups": 9,
+      "blockChildren": 24
+    },
+    {
+      "slug": "campaigns",
+      "sections": 4,
+      "blockGroups": 11,
+      "blockChildren": 36
+    },
+    {
+      "slug": "products",
+      "sections": 5,
+      "blockGroups": 7,
+      "blockChildren": 20
+    },
+    {
+      "slug": "ideas",
+      "sections": 4,
+      "blockGroups": 8,
+      "blockChildren": 112
+    }
+  ],
+  "sourcePreserved": {
+    "existingCampaignsSections": 4,
+    "existingHomeSections": 8
+  },
+  "d1": {
+    "pageRowsCreated": 3,
+    "legacySectionsCreated": 13,
+    "canonicalSectionsCreated": 13,
+    "campaignsPointersAttached": 4,
+    "definitionsCreated": 13,
+    "blockGroupsCreated": 24,
+    "blockChildrenCreated": 156,
+    "sectionR2RevisionsPresent": 17,
+    "pageRevisionsCreated": 3,
+    "unmappedPointers": 0,
+    "foreignKeyViolations": 0,
+    "allStatus": "draft"
+  },
+  "unresolvedMedia": [
+    "fnf.tee.front",
+    "fnf.hat",
+    "completeful.glass-coffee-can",
+    "fnf.build.dirt.1",
+    "fnf.graphic.fuel-up",
+    "fnf.hero",
+    "fnf.tee.back",
+    "fnf.build.dirt.4",
+    "fnf.build.heli.4"
+  ],
+  "tests": {
+    "focusedCmsSuite": {
+      "passed": 14
+    },
+    "draftSaveSqliteR2Roundtrip": {
+      "passed": 2
+    },
+    "frontendBuild": {
+      "passed": true
+    },
+    "authorityGate": {
+      "passed": true
+    }
+  },
+  "approvedForPublication": false,
+  "hostedEditorVerified": false,
+  "visualFidelityVerified": false,
+  "blockTreeEditSyncVerified": false,
+  "status": "D1_R2_DRAFT_WIRED_NOT_PUBLISHED"
+}
