@@ -198,6 +198,31 @@ test("real media upload persists a non-null R2-backed public URL and returns the
   assert.equal(uploads[0].options.httpMetadata.contentType, "image/png");
 });
 
+test("retry preserves an unindexed R2 original after a failed D1 insert", async () => {
+  const { db, env } = fixture(0);
+  const originalKey = "uploads/staging/images/example.png";
+  const oldBytes = new Uint8Array([1, 2, 3, 4]);
+  const objects = new Map([[originalKey, oldBytes]]);
+  env.WEBSITE_ASSETS = {
+    async head(key) { return objects.has(key) ? { key } : null; },
+    async put(key, bytes) { objects.set(key, new Uint8Array(bytes)); },
+  };
+  const form = new FormData();
+  form.set("prefix", "uploads/staging/images/");
+  form.set("transform_policy", "preserve");
+  form.append("files", new Blob(["new-image-data"], { type: "image/png" }), "example.png");
+  const result = await uploadMedia(
+    new Request("https://example.test/api/admin/media", { method: "POST", body: form }),
+    env,
+  );
+  assert.equal(result.status, 200);
+  const asset = (await result.json()).assets[0];
+  assert.equal(asset.r2_key, "uploads/staging/images/example-2.png");
+  assert.equal(asset.url, "/media/uploads/staging/images/example-2.png");
+  assert.deepEqual(objects.get(originalKey), oldBytes, "unindexed R2 original must be preserved");
+  assert.equal(db.prepare("SELECT url FROM media_assets WHERE id=?").get(asset.id).url, asset.url);
+});
+
 test("media list is server-paged and search-filtered before rendering", async () => {
   const { env } = fixture(65);
   const page2 = await responseJson(
