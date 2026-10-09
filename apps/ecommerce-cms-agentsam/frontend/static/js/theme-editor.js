@@ -23,6 +23,7 @@
   let miniAgentSam = null;
   let miniAgentSamPromise = null;
   let miniAgentSamSelectionTick = 0;
+  let miniAgentSamVisible = false;
   let miniAnchor = null;
 
   function setMiniAnchor(element, frame, event) {
@@ -58,6 +59,7 @@
   let refreshTimer = null;
   let mediaLibrary = [];
   let mediaTarget = null;
+  const mediaUndo = new Map();
   const resourceCache = Object.create(null);
   let dirty = false;
   const dirtySections = new Set();
@@ -111,6 +113,7 @@
               '<div class="te-page-popover" id="te-page-popover" hidden><input class="te-page-search" id="te-page-search" placeholder="Search online store pages" autocomplete="off" aria-label="Search pages"><div class="te-page-options" id="te-page-options"></div></div>',
             '</div>',
             '<span class="te-save-state" id="te-save-state">Loading</span>',
+            '<button type="button" id="te-mini-agent-toggle" class="te-mini-agent-toggle" aria-label="Ask miniAgentSam about the selected component" title="Ask miniAgentSam (opt-in)" aria-pressed="false"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3Z"/><path d="m19 17 .7 1.3L21 19l-1.3.7L19 21l-.7-1.3L17 19l1.3-.7L19 17Z"/></svg></button>',
             '<div class="te-device-switch" aria-label="Preview device">',
               '<button type="button" class="te-device-btn" data-device="desktop" title="Desktop">', icon.desktop, '</button>',
               '<button type="button" class="te-device-btn" data-device="tablet" title="Tablet">', icon.tablet, '</button>',
@@ -136,7 +139,7 @@
             '<div class="te-preview-status"><span class="te-preview-mode">Local draft preview</span><span class="te-selected-path" id="te-selected-path">Select a section in the preview or tree</span></div>',
           '</main>',
           '<aside class="theme-editor-panel">',
-            '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><div class="te-inspector-tools"><button type="button" id="te-agent-open" class="te-agent-open" aria-label="Ask miniAgentSam about the selected section">✦ Ask AgentSam</button><span class="te-badge" id="te-section-status">draft</span></div></div>',
+            '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><div class="te-inspector-tools"><button type="button" id="te-agent-open" class="te-agent-open" aria-label="Ask miniAgentSam about the selected section" title="Ask miniAgentSam about this section">✦ Ask AgentSam</button><span class="te-badge" id="te-section-status">draft</span></div></div>',
             '<div class="te-inspector-body" id="te-inspector-body"></div><div data-composer-slot="editor"></div>',
             '<div class="te-inspector-save"><button type="button" class="te-toolbar-btn is-primary" id="te-save">Save draft</button><p class="te-note" id="te-note"></p></div>',
           '</aside>',
@@ -793,7 +796,9 @@
       return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label>' + cmsEscapeHtml(field.label) + '</label>' +
         '<div class="te-media-drop" data-media-drop="' + cmsEscapeAttr(field.key) + '"><div class="te-media-preview">' + preview +
         '</div><div class="te-media-actions"><button type="button" class="te-media-button" data-pick-media="' + cmsEscapeAttr(field.key) + '">Choose</button>' +
-        '<label class="te-media-button" style="display:inline-flex;align-items:center">Upload<input type="file" hidden data-upload-media="' + cmsEscapeAttr(field.key) + '" accept="' + (field.type === 'video' ? 'video/*' : 'image/*,video/*,.glb,.gltf,.usdz') + '"></label></div></div>' +
+        '<label class="te-media-button" style="display:inline-flex;align-items:center">Upload<input type="file" hidden data-upload-media="' + cmsEscapeAttr(field.key) + '" accept="' + (field.type === 'video' ? 'video/*' : 'image/*,video/*,.glb,.gltf,.usdz') + '"></label>' +
+        (mediaUndo.has(mediaUndoKey(field.key)) ? '<button type="button" class="te-media-button" data-undo-media="' + cmsEscapeAttr(field.key) + '" title="Undo the previous media change">Undo media</button>' : '') +
+        '</div><div class="te-media-feedback" data-media-feedback role="status" aria-live="polite"></div></div>' +
         '<input class="te-media-url" id="' + id + '" data-field-input="' + cmsEscapeAttr(field.key) + '" value="' + safeValue + '" placeholder="' + cmsEscapeAttr(field.placeholder || 'Media URL or path') + '">' + help + '</div>';
     }
 
@@ -1021,7 +1026,6 @@
         byId('te-selected-path').textContent = (activeSectionOwner === 'site' ? 'Global' : slug) + ' / ' + activeSectionKey + ' / ' + activeFieldKey;
         highlightPreviewSelection();
         closeAgentProposal();
-        void openMiniAgentSam();
       });
       input.addEventListener('input', function() {
         const field = fieldByKey(input.dataset.fieldInput);
@@ -1137,15 +1141,13 @@
       button.addEventListener('click', function() { openMediaPicker(button.dataset.pickMedia); });
     });
 
+    document.querySelectorAll('[data-undo-media]').forEach(function(button) {
+      button.addEventListener('click', function() { undoMediaValue(button.dataset.undoMedia); });
+    });
     document.querySelectorAll('[data-upload-media]').forEach(function(input) {
       input.addEventListener('change', async function() {
         if (!input.files || !input.files.length) return;
-        try {
-          const assets = await uploadFiles(Array.from(input.files));
-          if (assets[0]) setMediaValue(input.dataset.uploadMedia, assets[0].url);
-        } catch (error) {
-          setNote(error.message || String(error), 'error');
-        }
+        await uploadMediaIntoField(input.dataset.uploadMedia, Array.from(input.files));
         input.value = '';
       });
     });
@@ -1167,12 +1169,7 @@
       zone.addEventListener('drop', async function(event) {
         const files = Array.from((event.dataTransfer && event.dataTransfer.files) || []);
         if (!files.length) return;
-        try {
-          const assets = await uploadFiles(files.slice(0, 1));
-          if (assets[0]) setMediaValue(fieldKey, assets[0].url);
-        } catch (error) {
-          setNote(error.message || String(error), 'error');
-        }
+        await uploadMediaIntoField(fieldKey, files.slice(0, 1));
       });
     });
   }
@@ -1237,15 +1234,69 @@
     else preview.innerHTML = '<div class="te-media-empty">' + (value ? cmsEscapeHtml(String(value).split('/').pop()) : 'Drop media here or choose from library') + '</div>';
   }
 
+  function mediaUndoKey(fieldKey) {
+    const section = currentSection();
+    return section ? sectionOwner(section) + ':' + section.key + ':' + fieldKey : '';
+  }
+
   function setMediaValue(fieldKey, url) {
     const section = currentSection();
-    if (!section) return;
+    if (!section || !url) return;
+    const prior = cmsGetPath(section.content, fieldKey) || '';
+    if (prior === url) return;
+    const key = mediaUndoKey(fieldKey);
+    if (key && !mediaUndo.has(key)) mediaUndo.set(key, prior);
     cmsSetPath(section.content, fieldKey, url);
     activeFieldKey = fieldKey;
     markSectionDirty(section);
     renderInspector();
     scheduleLocalPreview();
     closeMediaPicker();
+    setNote('Media selected. Review the preview; Save draft to persist the change.', 'success');
+  }
+
+  function undoMediaValue(fieldKey) {
+    const section = currentSection();
+    const key = mediaUndoKey(fieldKey);
+    if (!section || !mediaUndo.has(key)) return;
+    const previous = mediaUndo.get(key);
+    mediaUndo.delete(key);
+    cmsSetPath(section.content, fieldKey, previous);
+    activeFieldKey = fieldKey;
+    markSectionDirty(section);
+    renderInspector();
+    scheduleLocalPreview();
+    setNote('Previous media restored in this draft. Save draft to persist.', 'success');
+  }
+
+  async function uploadMediaIntoField(fieldKey, files) {
+    if (!files.length) return;
+    const zone = document.querySelector('[data-media-drop="' + CSS.escape(fieldKey) + '"]');
+    const preview = zone?.querySelector('.te-media-preview');
+    const feedback = zone?.querySelector('[data-media-feedback]');
+    const previousMarkup = preview?.innerHTML || '';
+    let temporaryUrl = null;
+    if (preview && files[0].type.startsWith('image/')) {
+      temporaryUrl = URL.createObjectURL(files[0]);
+      const img = document.createElement('img');
+      img.src = temporaryUrl;
+      img.alt = 'Selected file preview — not uploaded';
+      preview.replaceChildren(img);
+    }
+    if (feedback) { feedback.classList.remove('is-error'); feedback.textContent = 'Preview only — uploading. No draft change has been saved.'; }
+    try {
+      const assets = await uploadFiles(files);
+      const asset = assets[0];
+      if (!asset?.url) throw new Error('The upload returned no usable media URL.');
+      setMediaValue(fieldKey, asset.url);
+    } catch (error) {
+      if (preview?.isConnected) preview.innerHTML = previousMarkup;
+      if (feedback?.isConnected) { feedback.classList.add('is-error'); feedback.textContent = error.message || String(error); }
+      setNote(error.message || String(error), 'error');
+      setSaveState('Upload failed', 'error');
+    } finally {
+      if (temporaryUrl) URL.revokeObjectURL(temporaryUrl);
+    }
   }
 
   // The live HTML is the source of truth for a route not yet imported into CMS.
@@ -1570,6 +1621,13 @@
     pendingAgentProposal = null;
   }
 
+  function closeMiniAgentSam() {
+    miniAgentSamSelectionTick += 1;
+    miniAgentSam?.close();
+    miniAgentSamVisible = false;
+    byId('te-mini-agent-toggle')?.setAttribute('aria-pressed', 'false');
+  }
+
   async function openMiniAgentSam() {
     const selection = selectedAgentResource();
     if (!selection) { setNote('Select a section or editable field before asking AgentSam.'); return; }
@@ -1584,6 +1642,8 @@
       if (tick !== miniAgentSamSelectionTick) return;
       // Anchor to the visible CMS inspector rather than the browser's generic annotation mode.
       miniAgentSam.select(selection, selectedMiniBounds);
+      miniAgentSamVisible = true;
+      byId('te-mini-agent-toggle')?.setAttribute('aria-pressed', 'true');
     } catch (error) {
       setNote('miniAgentSam could not load: ' + (error.message || String(error)), 'error');
     }
@@ -1651,7 +1711,7 @@
     highlightPreviewSelection();
     closeAgentProposal();
     publishGenerationSelection();
-    void openMiniAgentSam();
+    closeMiniAgentSam();
   }
 
   function selectBlock(sectionKey, blockId, fieldKey, scrollPreview, ownerSlug) {
@@ -1686,7 +1746,7 @@
     highlightPreviewSelection();
     closeAgentProposal();
     publishGenerationSelection();
-    void openMiniAgentSam();
+    closeMiniAgentSam();
   }
 
   function bindPreviewSelection() {
@@ -1826,8 +1886,7 @@
   }
 
   async function loadPage() {
-    miniAgentSamSelectionTick += 1;
-    miniAgentSam?.close();
+    closeMiniAgentSam();
     miniAnchor = null;
     closeAgentProposal();
     setNote('');
@@ -2461,9 +2520,19 @@
       location.href = '/admin/login';
       throw new Error('Unauthorized');
     }
-    const data = await response.json().catch(function() { return {}; });
-    if (!response.ok) throw new Error(data.error || 'Upload failed');
-    const assets = data.assets || [];
+    const data = await response.json().catch(function() { return null; });
+    if (!response.ok) {
+      throw new Error(data?.error || ('Media upload failed (HTTP ' + response.status + '). ' +
+        (!data ? 'The server returned a non-JSON response; check the upload route, session, size limit and Worker logs.' :
+          'Check the media service response.')));
+    }
+    if (!data || !Array.isArray(data.assets)) {
+      throw new Error('Media upload response was invalid; the server did not return an assets list.');
+    }
+    const assets = data.assets;
+    if (assets.length !== files.length || assets.some(function(asset) { return !asset?.url; })) {
+      throw new Error('Media upload incomplete: a saved file or its public media URL is missing.');
+    }
     mediaLibrary = assets.concat(mediaLibrary.filter(function(existing) {
       return !assets.some(function(asset) { return asset.id === existing.id; });
     }));
@@ -2515,9 +2584,16 @@
   byId('te-import-live').addEventListener('click', function() {
     return liveUnimported ? importLiveSource() : stageMissingSourceSections();
   });
-  byId('te-agent-open').addEventListener('click', function() {
-    if (!miniAnchor?.element?.isConnected) setMiniAnchor(byId('te-agent-open'));
+  function toggleMiniAgentSam(anchor) {
+    if (miniAgentSamVisible) { closeMiniAgentSam(); return; }
+    setMiniAnchor(anchor);
     void openMiniAgentSam();
+  }
+  byId('te-mini-agent-toggle').addEventListener('click', function(event) {
+    toggleMiniAgentSam(event.currentTarget);
+  });
+  byId('te-agent-open').addEventListener('click', function(event) {
+    toggleMiniAgentSam(event.currentTarget);
   });
   byId('te-save').addEventListener('click', saveDraft);
   document.addEventListener('click', function(event) {
@@ -2543,8 +2619,13 @@
   byId('te-media-close').addEventListener('click', closeMediaPicker);
   byId('te-media-search').addEventListener('input', function(event) { renderMediaGrid(event.target.value); });
   byId('te-media-upload').addEventListener('change', async function(event) {
-    try { await uploadFiles(Array.from(event.target.files || [])); }
-    catch (error) { setNote(error.message || String(error), 'error'); }
+    try {
+      const assets = await uploadFiles(Array.from(event.target.files || []));
+      if (mediaTarget && assets[0]) setMediaValue(mediaTarget, assets[0].url);
+    } catch (error) {
+      setNote(error.message || String(error), 'error');
+      setSaveState('Upload failed', 'error');
+    }
     event.target.value = '';
   });
   byId('te-media-modal').addEventListener('click', function(event) { if (event.target === byId('te-media-modal')) closeMediaPicker(); });
@@ -2554,6 +2635,12 @@
       });
 
   document.addEventListener('keydown', function(event) {
+    if (event.metaKey && event.ctrlKey && ['1','2','3'].includes(event.key)) {
+      event.preventDefault();
+      const mode = { '1': 'sections', '2': 'theme-settings', '3': 'app-embeds' }[event.key];
+      setEditorDrawer(mode);
+      return;
+    }
     if (event.key === 'Escape') {
       closePageMenu();
       closeThemeMenu();

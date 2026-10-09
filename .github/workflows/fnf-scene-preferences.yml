@@ -35,3 +35,5 @@ jobs:
         run: node tests/preferences-merchant-browser-smoke.mjs
       - name: Verify canonical Theme Editor still handles real Shop sections
         run: node tests/cms-live-source-browser-smoke.mjs
+      - name: Verify miniAgentSam remains opt-in before proposal and explicit save
+        run: node tests/cms-mini-agentsam-browser.test.mjs
