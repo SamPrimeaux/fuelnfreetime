@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import http from "node:http";
-import {readFileSync,existsSync,mkdirSync} from "node:fs";
+import {readFileSync,writeFileSync,existsSync,mkdirSync} from "node:fs";
 import {execFile} from "node:child_process";
 import {promisify} from "node:util";
 import path from "node:path";
@@ -27,6 +27,11 @@ const server=http.createServer((req,res)=>{
 await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
 const dir=process.env.THEME_SETTINGS_SCREENSHOT_DIR||"/tmp/theme-settings-screens";
 mkdirSync(dir,{recursive:true});
+// Portable, isolated review artifact; not a storefront or CMS publish.
+const standalone=initial
+ .replace('<link rel="stylesheet" href="/theme-settings.css">','<style>'+css+'</style>')
+ .replace('<script src="/theme-settings.js"></script><script src="/probe.js"></script>','<script>'+js.replaceAll('</script>','<\\/script>')+'</script>');
+writeFileSync(path.join(dir,'theme-settings-interactive-review.html'),standalone,'utf8');
 try {
  for(const width of [1440,834,390]){
  const url="http://127.0.0.1:"+server.address().port+"/";
