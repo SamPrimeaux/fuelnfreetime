@@ -71,6 +71,47 @@
   let saveInFlight = null;
   let autosaveFailed = false;
   let device = localStorage.getItem('fnf-theme-editor-device') || 'desktop';
+  let inspectionEnabled = true;
+  const undoHistory = [];
+  const redoHistory = [];
+  let lastHistoryTime = 0;
+  function updateUndoRedo() {
+    const undo = byId('te-undo');
+    const redo = byId('te-redo');
+    if (undo) undo.disabled = undoHistory.length === 0;
+    if (redo) redo.disabled = redoHistory.length === 0;
+  }
+  function recordFieldHistory(section, fieldKey, before, after) {
+    const owner = sectionOwner(section);
+    const previous = undoHistory.at(-1);
+    const now = Date.now();
+    if (previous && previous.owner === owner && previous.key === section.key &&
+        previous.field === fieldKey && now - lastHistoryTime < 650) {
+      previous.after = after;
+    } else {
+      undoHistory.push({ owner, key: section.key, field: fieldKey, before, after });
+      if (undoHistory.length > 100) undoHistory.shift();
+    }
+    redoHistory.length = 0;
+    lastHistoryTime = now;
+    updateUndoRedo();
+  }
+  function replayFieldHistory(source, destination, direction) {
+    const entry = source.pop();
+    if (!entry) return;
+    const section = findSection(entry.key, entry.owner);
+    if (!section) { source.push(entry); return; }
+    section.content = structuredClone(entry[direction]);
+    destination.push(entry);
+    lastHistoryTime = 0;
+    markSectionDirty(section);
+    renderInspector();
+    renderTree();
+    scheduleLocalPreview();
+    highlightPreviewSelection();
+    updateUndoRedo();
+  }
+
   // Selection outlines and local preview updates are editor fundamentals,
   // not per-browser preferences that can silently disable authoring feedback.
   const showOutlines = true;
@@ -95,9 +136,15 @@
     refresh: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M20 6v5h-5M4 18v-5h5" stroke="currentColor" stroke-width="1.7"/><path d="M6 9a7 7 0 0 1 12-2l2 2M4 15l2 2a7 7 0 0 0 12-2" stroke="currentColor" stroke-width="1.7"/></svg>',
     external: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M14 5h5v5M19 5l-8 8" stroke="currentColor" stroke-width="1.7"/><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" stroke="currentColor" stroke-width="1.7"/></svg>',
     exit: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M10 7 5 12l5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 12h9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M14 5h4a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-4" stroke="currentColor" stroke-width="1.7"/></svg>',
-    sections: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 7h14M5 12h14M5 17h14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
-    settings: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M6 6l1.6 1.6M16.4 16.4 18 18M18 6l-1.6 1.6M7.6 16.4 6 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+    sections: '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M12.5 8h5M12.5 12h5M12.5 16h3"/></svg>',
+    settings: '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.86l.07.07-1.95 1.95-.07-.07A1.7 1.7 0 0 0 16 18.47l-.08.03V21h-3.84v-2.5L12 18.47a1.7 1.7 0 0 0-1.86.34l-.07.07-1.95-1.95.07-.07A1.7 1.7 0 0 0 8.53 15l-.03-.08H6v-3.84h2.5l.03-.08a1.7 1.7 0 0 0-.34-1.86l-.07-.07 1.95-1.95.07.07A1.7 1.7 0 0 0 12 7.53l.08-.03V5h3.84v2.5l.08.03a1.7 1.7 0 0 0 1.86-.34l.07-.07 1.95 1.95-.07.07A1.7 1.7 0 0 0 19.47 11l.03.08H22v3.84h-2.5Z" transform="translate(-2 -1) scale(1.1)"/></svg>',
     embeds: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="13" y="13" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><path d="M13 7h5a2 2 0 0 1 2 2v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>'
+    ,
+    panel: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>',
+    inspect: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.034 12.681a.498.498 0 0 1 .647-.647l9 3.5a.5.5 0 0 1-.033.943l-3.444 1.068a1 1 0 0 0-.66.66l-1.067 3.443a.5.5 0 0 1-.943.033z"/><path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/><path d="M5 21a2 2 0 0 1-2-2"/><path d="M9 3h1"/><path d="M9 21h2"/><path d="M14 3h1"/><path d="M3 9v1"/><path d="M21 9v2"/><path d="M3 14v1"/></svg>',
+    undo: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-2"/></svg>',
+    redo: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5M20 9H10a6 6 0 0 0 0 12h2"/></svg>',
+    more: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>'
   };
 
   function shellMarkup() {
@@ -105,8 +152,8 @@
       '<div class="theme-studio">',
         '<header class="theme-studio-toolbar">',
           '<div class="theme-studio-toolbar__left">',
-            '<button type="button" class="te-mode-btn" id="te-exit" aria-label="Exit editor" title="Exit editor">', icon.exit, '<span>Exit</span></button>',
-            '<button type="button" class="te-mode-btn" data-drawer-mode="sections" aria-pressed="true" aria-label="Sections" title="Sections (⌘⌃1)">', icon.sections, '<span>Sections</span></button>',
+            '<button type="button" class="te-mode-btn" id="te-exit" aria-label="Exit editor" title="Exit">', icon.exit, '</button>',
+            '<button type="button" class="te-mode-btn" data-drawer-mode="sections" aria-pressed="true" aria-label="Sections" title="Sections (⌘⌃1)">', icon.sections, '</button>',
             '<button type="button" class="te-mode-btn" data-drawer-mode="theme-settings" aria-pressed="false" aria-label="Theme settings" title="Theme settings (⌘⌃2)">', icon.settings, '</button>',
             '<button type="button" class="te-mode-btn" data-drawer-mode="app-embeds" aria-pressed="false" aria-label="App embeds" title="App embeds (⌘⌃3)">', icon.embeds, '</button>',
           '</div>',
@@ -117,15 +164,27 @@
               '<button type="button" class="te-page-trigger" id="te-page-trigger" aria-expanded="false" title="Choose a storefront page"><span class="te-page-trigger__content">', icon.page, '<strong id="te-page-title">Loading…</strong></span><span aria-hidden="true">⌄</span></button>',
               '<div class="te-page-popover" id="te-page-popover" hidden><input class="te-page-search" id="te-page-search" placeholder="Search online store pages" autocomplete="off" aria-label="Search pages"><div class="te-page-options" id="te-page-options"></div></div>',
             '</div>',
-            '<span class="te-save-state" id="te-save-state">Loading</span>',
-            '<button type="button" id="te-mini-agent-toggle" class="te-mini-agent-toggle" aria-label="Ask miniAgentSam about the selected component" title="Ask miniAgentSam (opt-in)" aria-pressed="false"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3Z"/><path d="m19 17 .7 1.3L21 19l-1.3.7L19 21l-.7-1.3L17 19l1.3-.7L19 17Z"/></svg></button>',
+            '<span class="te-save-state" id="te-save-state" role="status" aria-live="polite" title="Loading" aria-label="Loading">Loading</span>',
+          '</div>',
+          '<div class="theme-studio-toolbar__right">',
+            '<button type="button" class="te-icon-btn te-agentsam-mark" id="agentsam-toggle" aria-label="Open AgentSam Side Assistant" title="AgentSam Side Assistant" aria-expanded="false"><img src="/admin/brand/agentsam-sidekick-symbol.svg" width="20" height="20" alt="" aria-hidden="true"></button>',
+            '<button type="button" class="te-icon-btn" id="te-inspect-mode" aria-label="Canvas inspection on" title="Canvas inspection on — select sections in the preview" aria-pressed="true">', icon.inspect, '</button>',
+            '<span class="te-toolbar-separator" aria-hidden="true"></span>',
             '<div class="te-device-switch" aria-label="Preview device">',
-              '<button type="button" class="te-device-btn" data-device="desktop" title="Desktop">', icon.desktop, '</button>',
-              '<button type="button" class="te-device-btn" data-device="tablet" title="Tablet">', icon.tablet, '</button>',
-              '<button type="button" class="te-device-btn" data-device="mobile" title="Mobile">', icon.mobile, '</button>',
+              '<button type="button" class="te-device-btn" data-device="desktop" aria-label="Desktop preview" title="Desktop">', icon.desktop, '</button>',
+              '<button type="button" class="te-device-btn" data-device="tablet" aria-label="Tablet preview" title="Tablet">', icon.tablet, '</button>',
+              '<button type="button" class="te-device-btn" data-device="mobile" aria-label="Mobile preview" title="Mobile">', icon.mobile, '</button>',
+            '</div>',
+            '<button type="button" class="te-icon-btn" id="te-undo" aria-label="Undo" title="Undo (⌘Z)" disabled>', icon.undo, '</button>',
+            '<button type="button" class="te-icon-btn" id="te-redo" aria-label="Redo" title="Redo (⌘⇧Z)" disabled>', icon.redo, '</button>',
+            '<div class="te-toolbar-more">',
+              '<button type="button" class="te-icon-btn" id="te-more" aria-label="More editor actions" aria-haspopup="true" aria-expanded="false" title="More actions">', icon.more, '</button>',
+              '<div class="te-toolbar-dropdown" id="te-more-menu" hidden><button type="button" id="te-view-draft">View draft in new tab</button><button type="button" id="te-shortcuts">Keyboard shortcuts</button><div id="te-shortcuts-help" class="te-shortcuts-help" hidden>⌘S · Save<br>⌘Z · Undo<br>⌘⇧Z · Redo<br>⌘⌃1 · Sections<br>⌘⌃2 · Theme settings<br>⌘⌃3 · App embeds</div></div>',
+            '</div>',
+            '<div class="te-save-actions"><button type="button" class="te-toolbar-btn is-primary" id="te-save" title="Save private draft (⌘S)">Save</button><button type="button" class="te-save-caret" id="te-save-options" aria-label="Additional save options" title="Additional save options" aria-haspopup="true" aria-expanded="false">⌄</button>',
+              '<div class="te-toolbar-dropdown te-save-menu" id="te-save-menu" hidden><button type="button" id="te-publish" title="Publish reviewed revision">Publish live…</button></div>',
             '</div>',
           '</div>',
-          '<div class="theme-studio-toolbar__right"><button type="button" class="te-icon-btn" id="agentsam-toggle" aria-label="Open AgentSam" title="Open AgentSam" aria-expanded="false"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/></svg></button><button type="button" class="te-icon-btn" id="te-inspector-toggle" aria-controls="te-inspector-body" aria-expanded="true" aria-label="Hide settings panel" title="Hide settings panel">▣</button><a class="te-toolbar-btn" id="te-page-settings" href="#" title="Edit page settings">Page settings</a><button type="button" class="te-toolbar-btn" id="te-save" title="Save private draft (⌘S)">Save draft</button><button type="button" class="te-toolbar-btn is-primary" id="te-publish" title="Publish approved draft to the public site">Publish</button></div>',
         '</header>',
         '<div class="theme-studio-workspace">',
           '<nav class="te-mobile-pane-switch" id="te-mobile-pane-switch" aria-label="Editor workspace view">',
@@ -134,7 +193,7 @@
             '<button type="button" data-mobile-pane="settings">Settings</button>',
           '</nav>',
           '<aside class="theme-studio-tree" id="te-editor-drawer">' +
-            '<section class="te-drawer-panel" data-drawer-panel="sections"><div class="te-panel-title"><span class="te-panel-kicker">Page structure</span><h2 id="te-tree-title">Page</h2><p id="te-tree-path">/</p></div><div id="te-tree"></div><section id="te-block-panel" data-surface="left" hidden></section><div class="te-tree-footer"><button type="button" class="te-library-browse" id="te-library-browse">Browse sections</button><a id="te-manage-page" href="#">Page content & settings →</a></div></section>' +
+            '<section class="te-drawer-panel" data-drawer-panel="sections"><div class="te-panel-title te-panel-title--compact"><h2 id="te-tree-title">Page</h2></div><div id="te-tree"></div><section id="te-block-panel" data-surface="left" hidden></section></section>' +
             '<section class="te-drawer-panel" data-drawer-panel="theme-settings" hidden><div class="te-panel-title"><span class="te-panel-kicker">Theme</span><h2>Theme settings</h2><p>Global appearance for the installed theme. A preview switch does not rename it.</p></div><div class="te-theme-options" id="te-theme-popover">' + ((window.ThemeStudioPreview && window.ThemeStudioPreview.themes) || []).map(function(theme) { return '<button type="button" class="te-theme-option' + (theme.id === selectedTheme ? ' is-active' : '') + '" data-theme-preview="' + cmsEscapeAttr(theme.id) + '" aria-pressed="' + String(theme.id === selectedTheme) + '">' + '<strong>' + cmsEscapeHtml(theme.name) + '</strong><small>' + cmsEscapeHtml('Appearance preview') + '</small></button>'; }).join('') + '</div></section>' +
             '<section class="te-drawer-panel" data-drawer-panel="app-embeds" hidden><div class="te-panel-title"><span class="te-panel-kicker">Storefront</span><h2>App embeds</h2><p>Extensions that run on the storefront, not admin apps.</p></div><input class="te-page-search" id="te-embed-search" placeholder="Search app embeds" aria-label="Search app embeds"><div class="te-empty" id="te-embed-empty">No storefront embeds are installed for this theme.</div></section>' +
           '</aside>',
@@ -144,7 +203,7 @@
             '<div class="te-preview-status"><span class="te-preview-mode">Local draft preview</span><span class="te-selected-path" id="te-selected-path">Select a section in the preview or tree</span></div>',
           '</main>',
           '<aside class="theme-editor-panel">',
-            '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><div class="te-inspector-tools"><button type="button" id="te-agent-open" class="te-agent-open" aria-label="Ask miniAgentSam about the selected section" title="Ask miniAgentSam about this section">✦ Ask AgentSam</button><span class="te-badge" id="te-section-status">draft</span><button type="button" class="te-icon-btn te-inspector-close" id="te-inspector-close" aria-label="Close settings panel" title="Close settings panel">×</button></div></div>',
+            '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><div class="te-inspector-tools"><button type="button" id="te-agent-open" class="te-agent-open" aria-label="Ask miniAgentSam about the selected section" title="Ask miniAgentSam about this section"><img src="/admin/brand/agentsam-mark.svg" width="16" height="12" alt="" aria-hidden="true"> Ask AgentSam</button><span class="te-badge" id="te-section-status">draft</span><button type="button" class="te-icon-btn te-inspector-close" id="te-inspector-close" aria-label="Close settings panel" title="Close settings panel">×</button></div></div>',
             '<div class="te-inspector-body" id="te-inspector-body"></div><div data-composer-slot="editor"></div>',
             '<div class="te-inspector-save"><p class="te-note" id="te-note" role="status" aria-live="polite"></p></div>',
           '</aside>',
@@ -168,6 +227,58 @@
   }
 
   const byId = function(id) { return document.getElementById(id); };
+  function mountEditorTooltips() {
+    const root = document.querySelector('.theme-studio');
+    if (!root || byId('te-hover-help')) return;
+    const tip = document.createElement('div');
+    tip.id = 'te-hover-help';
+    tip.className = 'te-hover-help';
+    tip.setAttribute('role', 'tooltip');
+    tip.hidden = true;
+    document.body.appendChild(tip);
+    let anchor = null;
+    function hide() {
+      if (anchor) anchor.removeAttribute('aria-describedby');
+      anchor = null;
+      tip.hidden = true;
+    }
+    function target(node) {
+      const trigger = node?.closest?.('button, a, [role="button"]');
+      return trigger && root.contains(trigger) ? trigger : null;
+    }
+    function reveal(node) {
+      if (!node) return hide();
+      const label = node.dataset.tooltip || node.getAttribute('title') || node.getAttribute('aria-label');
+      if (!label || node.disabled) return hide();
+      if (anchor && anchor !== node) anchor.removeAttribute('aria-describedby');
+      anchor = node;
+      node.dataset.tooltip = label;
+      node.removeAttribute('title');
+      node.setAttribute('aria-describedby', tip.id);
+      tip.textContent = label;
+      tip.hidden = false;
+      const rect = node.getBoundingClientRect();
+      const width = tip.getBoundingClientRect().width;
+      const height = tip.getBoundingClientRect().height;
+      tip.style.left = Math.max(8, Math.min(rect.left + rect.width / 2 - width / 2, innerWidth - width - 8)) + 'px';
+      const below = rect.bottom + height + 12 < innerHeight;
+      tip.style.top = (below ? rect.bottom + 7 : Math.max(7, rect.top - height - 7)) + 'px';
+    }
+    root.addEventListener('pointerover', function(event) { reveal(target(event.target)); });
+    root.addEventListener('pointerout', function(event) {
+      if (!anchor || anchor.contains(event.relatedTarget)) return;
+      hide();
+    });
+    root.addEventListener('focusin', function(event) { reveal(target(event.target)); });
+    root.addEventListener('focusout', function(event) {
+      if (anchor?.contains(event.relatedTarget)) return;
+      hide();
+    });
+    root.addEventListener('scroll', hide, true);
+    window.addEventListener('blur', hide);
+  }
+  mountEditorTooltips();
+
   if (host) {
     const themeMenu = document.querySelector('.te-theme-menu');
     if (themeMenu) themeMenu.hidden = true;
@@ -398,7 +509,10 @@
     } else if (field.type === 'boolean') {
       next = Boolean(value);
     }
+    const before = structuredClone(section.content);
     cmsSetPath(section.content, field.key, next);
+    if (JSON.stringify(before) === JSON.stringify(section.content)) return;
+    recordFieldHistory(section, field.key, before, structuredClone(section.content));
     markSectionDirty(section);
     scheduleLocalPreview();
     byId('te-selected-path').textContent = (sectionOwner(section) === 'site' ? 'Global' : slug) + ' / ' + section.key + ' / ' + field.key;
@@ -413,6 +527,8 @@
   function setSaveState(label, state) {
     const el = byId('te-save-state');
     el.textContent = label;
+    el.title = label;
+    el.setAttribute('aria-label', label);
     el.className = 'te-save-state' + (state ? ' is-' + state : '');
   }
 
@@ -437,9 +553,9 @@
     dirty = Boolean(value);
     const save = byId('te-save');
     if (save) save.disabled = liveUnimported || !dirty;
-    if (liveUnimported) setSaveState('Live preview · no draft changes');
-    else if (dirty) setSaveState('Unpublished changes', 'dirty');
-    else setSaveState(pageData && pageData.status === 'published' ? 'Published' : 'Saved privately', 'saved');
+    if (liveUnimported) setSaveState('Preview only');
+    else if (dirty) setSaveState('Unsaved changes', 'dirty');
+    else setSaveState('Saved', 'saved');
     if (dirty) schedulePrivateAutosave();
     else clearTimeout(autosaveTimer);
   }
@@ -545,7 +661,7 @@
     const registrySections = (window.SECTION_SCHEMAS && window.SECTION_SCHEMAS[slug]) || {};
 
     byId('te-tree-title').textContent = (pageData && pageData.title) || humanize(slug);
-    byId('te-tree-path').textContent = pageRoute(slug);
+
 
     function sectionNode(section, index, group) {
       if (!section) return '';
@@ -1388,7 +1504,7 @@
     }
     liveSourceCaptured = true;
     discoverUnmanagedSections();
-    byId('te-save').textContent = 'Save draft';
+    byId('te-save').textContent = 'Save';
     byId('te-preview-label').textContent = 'Live storefront — ' + sections.length + ' editable regions';
     renderTree();
     renderInspector();
@@ -1768,6 +1884,27 @@
     closeMiniAgentSam();
   }
 
+  // Hover is transient. It never changes the selected node, draft, or inspector.
+  function hoverEditorNode(sectionKey, blockId, owner) {
+    const tree = byId('te-tree');
+    tree.querySelectorAll('.is-hovered').forEach(function(node) { node.classList.remove('is-hovered'); });
+    if (sectionKey) {
+      const container = tree.querySelector('[data-tree-section="' + CSS.escape((owner || slug) + ':' + sectionKey) + '"]');
+      const row = blockId
+        ? container?.querySelector('.te-block-row[data-block-id="' + CSS.escape(blockId) + '"]')
+        : container?.querySelector('.te-tree-row');
+      row?.classList.add('is-hovered');
+    }
+    let doc;
+    try { doc = byId('theme-preview').contentDocument; } catch {}
+    if (!doc) return;
+    doc.querySelectorAll('[data-theme-editor-hover]').forEach(function(node) { node.removeAttribute('data-theme-editor-hover'); });
+    if (!sectionKey || !inspectionEnabled) return;
+    const section = doc.querySelector('[data-cms-section="' + CSS.escape(sectionKey) + '"], [data-section-id="' + CSS.escape(sectionKey) + '"]');
+    const target = blockId ? section?.querySelector('[data-cms-block="' + CSS.escape(blockId) + '"]') : section;
+    target?.setAttribute('data-theme-editor-hover', 'true');
+  }
+
   function bindPreviewSelection() {
     const frame = byId('theme-preview');
     let doc;
@@ -1782,15 +1919,25 @@
         'html.fnf-theme-editor-outlines [data-cms-section]{outline:1px dashed rgba(95,67,213,.24);outline-offset:-1px}' +
         'html.fnf-theme-editor-outlines [data-cms]{cursor:pointer!important}' +
         'html.fnf-theme-editor-outlines [data-cms]:hover{outline:2px solid rgba(95,67,213,.52);outline-offset:2px}' +
-        '[data-theme-editor-selected="true"]{outline:2px solid #7656ee!important;outline-offset:2px!important;box-shadow:0 0 0 3px rgba(118,86,238,.12)!important}';
+        '[data-theme-editor-selected="true"]{outline:2px solid #7656ee!important;outline-offset:2px!important;box-shadow:0 0 0 3px rgba(118,86,238,.12)!important}' +
+        '[data-theme-editor-hover="true"]:not([data-theme-editor-selected="true"]){outline:2px dashed #7656ee!important;outline-offset:2px!important}';
       if (doc.head) doc.head.appendChild(style);
     }
-    doc.documentElement.classList.toggle('fnf-theme-editor-outlines', showOutlines);
+    doc.documentElement.classList.toggle('fnf-theme-editor-outlines', showOutlines && inspectionEnabled);
 
     if (doc.documentElement.dataset.fnfThemeEditorBound !== '1') {
       doc.documentElement.dataset.fnfThemeEditorBound = '1';
+      doc.addEventListener('mouseover', function(event) {
+        if (!inspectionEnabled) return;
+        const el = event.target?.closest?.('[data-cms-block], [data-cms-section], [data-section-id]');
+        const section = el?.closest?.('[data-cms-section], [data-section-id]');
+        if (section) hoverEditorNode(section.getAttribute('data-cms-section') || section.getAttribute('data-section-id'), el.closest('[data-cms-block]')?.getAttribute('data-cms-block'), section.closest('[data-cms-section]')?.dataset.sectionOwner || slug);
+      });
+      doc.addEventListener('mouseout', function(event) {
+        if (!event.relatedTarget?.closest?.('[data-cms-block], [data-cms-section], [data-section-id]')) hoverEditorNode(null);
+      });
       doc.addEventListener('click', function(event) {
-        if (window.__fnfGlobalInspectMode) return;
+        if (!inspectionEnabled || window.__fnfGlobalInspectMode) return;
         const target = event.target && event.target.closest && event.target.closest('[data-cms], [data-cms-block], [data-cms-section], [data-section-id]');
         if (!target) return;
 
@@ -1822,6 +1969,7 @@
   }
 
   function highlightPreviewSelection() {
+    if (!inspectionEnabled) return;
     let doc;
     try { doc = byId('theme-preview').contentDocument; } catch { return; }
     if (!doc) return;
@@ -1854,7 +2002,9 @@
     localStorage.setItem('fnf-theme-editor-device', device);
     byId('te-preview-device').dataset.device = device;
     document.querySelectorAll('.te-device-btn').forEach(function(button) {
-      button.classList.toggle('is-active', button.dataset.device === device);
+      const active = button.dataset.device === device;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
     });
   }
 
@@ -1905,6 +2055,10 @@
   }
 
   async function loadPage() {
+    undoHistory.length = 0;
+    redoHistory.length = 0;
+    lastHistoryTime = 0;
+    updateUndoRedo();
     closeMiniAgentSam();
     miniAnchor = null;
     closeAgentProposal();
@@ -1934,7 +2088,7 @@
       if (!liveUnimported && missingSourceSections.length) {
         byId('te-import-live').textContent = 'Stage ' + missingSourceSections.length + ' missing sections';
       }
-      byId('te-save').textContent = 'Save draft';
+      byId('te-save').textContent = 'Save';
       siteData = results[2].page;
       pages = (results[1].pages || []).filter(function(page) { return page.slug !== 'site'; });
 
@@ -1963,6 +2117,7 @@
       byId('te-page-title').textContent = pageData.title || humanize(slug);
       for (const id of ['te-page-settings', 'te-manage-page']) {
         const link = byId(id);
+        if (!link) continue;
         if (host) {
           link.href = '#';
           link.hidden = !host.onPageSettings;
@@ -2083,6 +2238,7 @@
   }
 
   async function publishPage() {
+    if (!window.confirm('Publish the reviewed draft to the live storefront? This is separate from Save.')) return false;
     if (generationLock.locked()) { setNote('Wait for generation to finish.'); return false; }
     if (liveUnimported) {
       setNote('Import the existing live page before publishing any CMS draft.', 'error');
@@ -2119,7 +2275,7 @@
       setSaveState('Publish failed', 'error');
     } finally {
       button.disabled = false;
-      button.textContent = 'Publish';
+      button.textContent = 'Publish live…';
     }
   }
 
@@ -2375,10 +2531,8 @@
     inspectorVisible = Boolean(value);
     const studio = document.querySelector('.theme-studio');
     if (studio) studio.dataset.inspector = inspectorVisible ? 'open' : 'closed';
-    const toggle = byId('te-inspector-toggle');
-    toggle.setAttribute('aria-expanded', String(inspectorVisible));
-    toggle.setAttribute('aria-label', inspectorVisible ? 'Hide settings panel' : 'Show settings panel');
-    toggle.title = inspectorVisible ? 'Hide settings panel' : 'Show settings panel';
+    const inspect = byId('te-inspect-mode');
+    if (inspect) inspect.setAttribute('aria-controls', 'te-inspector-body');
     if (!inspectorVisible && window.matchMedia('(max-width: 900px)').matches) setMobilePane('preview');
   }
   let themeIdentity = { name: '', status: '' };
@@ -2632,6 +2786,16 @@
   document.querySelectorAll('.te-device-btn').forEach(function(button) {
     button.addEventListener('click', function() { setDevice(button.dataset.device); });
   });
+  byId('te-tree').addEventListener('mouseover', function(event) {
+    const block = event.target.closest('.te-block-row');
+    const row = event.target.closest('.te-tree-row');
+    if (block) hoverEditorNode(block.dataset.blockSection, block.dataset.blockId, block.dataset.blockOwner);
+    else if (row) hoverEditorNode(row.dataset.sectionKey, null, row.dataset.sectionOwner);
+  });
+  byId('te-tree').addEventListener('mouseout', function(event) {
+    const row = event.target.closest('.te-tree-row, .te-block-row');
+    if (row && !row.contains(event.relatedTarget)) hoverEditorNode(null);
+  });
 
   byId('te-exit').addEventListener('click', exitEditor);
   document.querySelectorAll('[data-drawer-mode]').forEach(function(button) {
@@ -2645,14 +2809,6 @@
       : 'No storefront embeds are installed for this theme.';
   });
 
-  byId('te-library-browse').addEventListener('click', function() {
-    closeThemeMenu();
-    if (window.matchMedia('(max-width: 900px)').matches) setMobilePane('sections');
-    const add = byId('te-add-section');
-    if (add && !add.hidden) add.click();
-    byId('te-section-menu')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    byId('te-section-search')?.focus();
-  });
 
   byId('te-page-trigger').addEventListener('click', function() {
     if (byId('te-page-popover').hidden) openPageMenu();
@@ -2673,7 +2829,7 @@
     setMiniAnchor(anchor);
     void openMiniAgentSam();
   }
-  byId('te-mini-agent-toggle').addEventListener('click', function(event) {
+  byId('te-mini-agent-toggle')?.addEventListener('click', function(event) {
     toggleMiniAgentSam(event.currentTarget);
   });
   byId('te-agent-open').addEventListener('click', function(event) {
@@ -2690,7 +2846,124 @@
       void saveDraft();
     }
   });
-  byId('te-inspector-toggle').addEventListener('click', function() { setInspectorVisible(!inspectorVisible); });
+  // Mount the established Side Assistant on standalone Theme Editor pages.
+  // Other hosts may have already loaded it; never register a competing chat surface.
+  function ensureSideAssistant() {
+    if (typeof window.initAgentsamDrawer === 'function') {
+      window.initAgentsamDrawer();
+      return;
+    }
+    if (document.getElementById('te-agentsam-side-assistant-script')) return;
+    const script = document.createElement('script');
+    script.id = 'te-agentsam-side-assistant-script';
+    script.src = '/admin/js/agentsam.js';
+    script.addEventListener('load', function() { window.initAgentsamDrawer?.(); }, { once: true });
+    script.addEventListener('error', function() { setNote('AgentSam Side Assistant failed to load.', 'error'); }, { once: true });
+    document.head.appendChild(script);
+  }
+  ensureSideAssistant();
+  byId('te-inspect-mode').addEventListener('click', function() {
+    if (!inspectorVisible) {
+      setInspectorVisible(true);
+      inspectionEnabled = true;
+    } else {
+      inspectionEnabled = !inspectionEnabled;
+    }
+    const control = byId('te-inspect-mode');
+    control.setAttribute('aria-pressed', String(inspectionEnabled));
+    const help = inspectionEnabled ? 'Canvas inspection on — select sections in the preview' : 'Canvas inspection off — click to enable';
+    control.title = help;
+    control.setAttribute('aria-label', inspectionEnabled ? 'Canvas inspection on' : 'Canvas inspection off');
+    control.dataset.tooltip = help;
+    let doc;
+    try { doc = byId('theme-preview').contentDocument; } catch {}
+    if (doc?.documentElement) {
+      doc.documentElement.classList.toggle('fnf-theme-editor-outlines', inspectionEnabled);
+      if (!inspectionEnabled) doc.querySelectorAll('[data-theme-editor-selected]').forEach(function(node) {
+        node.removeAttribute('data-theme-editor-selected');
+      });
+      else highlightPreviewSelection();
+    }
+  });
+  byId('te-undo').addEventListener('click', function() { replayFieldHistory(undoHistory, redoHistory, 'before'); });
+  byId('te-redo').addEventListener('click', function() { replayFieldHistory(redoHistory, undoHistory, 'after'); });
+  function toggleToolbarMenu(buttonId, menuId) {
+    const button = byId(buttonId), menu = byId(menuId);
+    const next = menu.hidden;
+    for (const [bid, mid] of [['te-more','te-more-menu'], ['te-save-options','te-save-menu']]) {
+      byId(mid).hidden = true;
+      byId(bid).setAttribute('aria-expanded', 'false');
+    }
+    menu.hidden = !next;
+    button.setAttribute('aria-expanded', String(next));
+    if (next && window.matchMedia('(max-width: 900px)').matches) {
+      // The compact mobile toolbar scrolls; portaled menus must not be clipped.
+      document.body.appendChild(menu);
+      menu.style.position = 'fixed';
+      menu.style.zIndex = '9999';
+      const rect = button.getBoundingClientRect();
+      const menuWidth = menu.getBoundingClientRect().width || 190;
+      menu.style.left = Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8)) + 'px';
+      menu.style.top = rect.bottom + 6 + 'px';
+      menu.querySelector('button')?.focus();
+    } else if (next) {
+      button.parentElement.appendChild(menu);
+      menu.style.position = '';
+      menu.style.left = '';
+      menu.style.top = '';
+    }
+  }
+  byId('te-more').addEventListener('click', function() { toggleToolbarMenu('te-more','te-more-menu'); });
+  byId('te-save-options').addEventListener('click', function() { toggleToolbarMenu('te-save-options','te-save-menu'); });
+  byId('te-shortcuts').addEventListener('click', function() {
+    const help = byId('te-shortcuts-help');
+    if (help) help.hidden = !help.hidden;
+  });
+  document.addEventListener('pointerdown', function(event) {
+    for (const [container, button, menu] of [['.te-toolbar-more','te-more','te-more-menu'], ['.te-save-actions','te-save-options','te-save-menu']]) {
+      if (!event.target.closest(container) && !event.target.closest('#' + menu)) {
+        byId(menu).hidden = true;
+        byId(button).setAttribute('aria-expanded','false');
+      }
+    }
+  });
+  document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+      for (const [button, menu] of [['te-more','te-more-menu'], ['te-save-options','te-save-menu']]) {
+        byId(menu).hidden = true;
+        byId(button).setAttribute('aria-expanded','false');
+      }
+    }
+    const target = event.target;
+    if (target?.closest?.('input, textarea, [contenteditable="true"], [role="textbox"]')) return;
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
+      event.preventDefault();
+      replayFieldHistory(event.shiftKey ? redoHistory : undoHistory, event.shiftKey ? undoHistory : redoHistory, event.shiftKey ? 'after' : 'before');
+    }
+  });
+  byId('te-view-draft').addEventListener('click', function() {
+    const frame = byId('theme-preview');
+    let doc;
+    try { doc = frame.contentDocument; } catch {}
+    if (!doc?.documentElement || !doc.body) {
+      setNote('Private preview is not ready. Refresh the editor preview and try again.', 'error');
+      return;
+    }
+    // Read-only copy of the exact rendered private preview; never use the published URL.
+    const snapshot = doc.documentElement.cloneNode(true);
+    snapshot.querySelector('#fnf-theme-editor-preview-style')?.remove();
+    snapshot.classList.remove('fnf-theme-editor-outlines');
+    snapshot.querySelectorAll('[data-theme-editor-selected]').forEach(function(node) { node.removeAttribute('data-theme-editor-selected'); });
+    snapshot.querySelectorAll('script').forEach(function(node) { node.remove(); });
+    const base = doc.createElement('base');
+    base.href = new URL(frame.getAttribute('src') || '/', location.origin).href;
+    snapshot.querySelector('head')?.prepend(base);
+    const url = URL.createObjectURL(new Blob(['<!doctype html>\n'+snapshot.outerHTML], { type:'text/html' }));
+    window.open(url, '_blank', 'noopener,noreferrer');
+    setTimeout(function() { URL.revokeObjectURL(url); }, 60000);
+    byId('te-more-menu').hidden = true;
+    byId('te-more').setAttribute('aria-expanded','false');
+  });
   byId('te-inspector-close').addEventListener('click', function() { setInspectorVisible(false); });
   byId('te-save').addEventListener('click', saveDraft);
   document.addEventListener('click', function(event) {
