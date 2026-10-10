@@ -54,7 +54,7 @@ test("adaptive header owns contrast and old pages no longer carry duplicate head
   }
 });
 
-test("theme editor is the visual editor and page edit is presented as page settings", async () => {
+test("theme editor keeps page settings in page editor, not the compact toolbar", async () => {
   const themeEditor = await read(
     "apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor.js"
   );
@@ -68,11 +68,13 @@ test("theme editor is the visual editor and page edit is presented as page setti
   assert.match(themeEditor, /id="te-theme-name"/);
   assert.match(themeEditor, /data-drawer-mode="theme-settings"/);
   assert.doesNotMatch(themeEditor, /id="te-theme-trigger"/);
-  assert.match(themeEditor, />Page settings</);
+  assert.doesNotMatch(themeEditor, /id="te-page-settings"|id="te-manage-page"|>Page settings</);
+  assert.match(themeEditor, /id="te-save"/);
+  assert.match(themeEditor, /id="te-publish"/);
   assert.match(themeEditor, /Appearance and layout/);
   assert.match(themeEditor, /function renderInspectorGroups/);
   assert.doesNotMatch(themeEditor, /id="te-tabs"/);
-  assert.match(themeEditor, /Page content & settings/);
+  assert.doesNotMatch(themeEditor, /Page content & settings/);
 
   assert.match(pageEditor, /Page Editor — Fuel & Free Time Admin/);
   assert.match(pageEditor, />Edit visually</);
