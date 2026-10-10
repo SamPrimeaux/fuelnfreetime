@@ -135,3 +135,60 @@ test("undo/redo alter real CMS draft fields; Save writes draft but never publish
     dom.window.close();
   }
 });
+
+test("a real edit keeps Save actionable after automatic draft persistence",async()=>{
+ const {dom,w,doc,writes}=await editorFixture();
+ try{
+  const save=doc.getElementById("te-save");
+  assert.equal(save.disabled,true,"clean editor starts with nothing to save");
+  const field=doc.getElementById("te-field-hero-headline");
+  field.value="Save CTA remains ready";
+  field.dispatchEvent(new w.Event("input",{bubbles:true}));
+  assert.equal(save.disabled,false,"first keystroke enables Save immediately");
+  assert.equal(save.classList.contains("is-dirty"),true);
+  await new Promise(resolve=>setTimeout(resolve,1100));
+  await tick();await tick();
+  assert.equal(writes.length,1,"private autosave writes once");
+  assert.equal(save.disabled,false,"Save remains clickable after private autosave");
+  assert.equal(save.classList.contains("is-dirty"),false);
+  save.click();
+  await tick();
+  assert.equal(writes.length,1,"Save with no pending changes does not write a duplicate revision");
+  assert.match(doc.getElementById("te-note").textContent,/saved/i);
+ } finally {dom.window.close();}
+});
+
+test("explicit Publish live does not invoke browser confirm or issue concurrent publishes",async()=>{
+ const {dom,w,doc}=await editorFixture();
+ try{
+  let confirmCalls=0,publishCalls=0;
+  w.confirm=()=>{confirmCalls++;return false;};
+  const original=w.adminFetch;
+  let complete;
+  w.adminFetch=async (url,options)=>{
+   if(url==="/api/admin/cms/pages/shop/publish"&&options?.method==="POST"){
+    publishCalls++;
+    await new Promise(resolve=>complete=resolve);
+    return {published_at:"2026-10-10T05:00:00Z"};
+   }
+   return original(url,options);
+  };
+  const option=doc.getElementById("te-save-options");
+  option.click();
+  assert.equal(doc.getElementById("te-save-menu").hidden,false);
+  doc.getElementById("te-publish").click();
+  assert.equal(confirmCalls,0,"explicit menu selection is the publish intent");
+  assert.equal(doc.getElementById("te-save-menu").hidden,true);
+  assert.equal(option.getAttribute("aria-expanded"),"false");
+  await tick();
+  assert.equal(publishCalls,1);
+  assert.equal(doc.getElementById("te-publish").disabled,true);
+  doc.getElementById("te-publish").click();
+  await tick();
+  assert.equal(publishCalls,1,"one publish request while the first is in flight");
+  complete();
+  await tick();await tick();
+  assert.equal(doc.getElementById("te-publish").disabled,false);
+  assert.match(doc.getElementById("te-note").textContent,/Published/i);
+ } finally {dom.window.close();}
+});
