@@ -9,6 +9,24 @@
   },
   "scripts": {
     "doctor": "node bin/ecommerce.mjs doctor",
-    "preview": "node bin/ecommerce.mjs preview"
+    "preview": "node bin/ecommerce.mjs preview",
+    "build:frontend": "npm run build --prefix frontend",
+    "build:assets": "node bin/build-assets.mjs",
+    "build": "npm run build:frontend && npm run build:assets",
+    "dev": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy",
+    "test:package": "node --test tests/package-boundaries.test.mjs"
+  },
+  "dependencies": {
+    "@inneranimalmedia/revise-theme": "0.2.0",
+    "@inneranimalmedia/section-library": "0.1.0",
+    "@jsquash/jpeg": "1.6.0",
+    "@jsquash/png": "3.1.1",
+    "@jsquash/resize": "2.1.1",
+    "@jsquash/webp": "1.5.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "wrangler": "4.149.0"
   }
 }

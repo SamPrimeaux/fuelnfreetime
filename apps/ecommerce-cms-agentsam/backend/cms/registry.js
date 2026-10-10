@@ -5,7 +5,7 @@
 import { M } from "./media-paths.js";
 import reviseSite from "../../fixtures/fnf-revise-site.json" with { type: "json" };
 import reviseMediaMap from "../../fixtures/fnf-revise-media-map.json" with { type: "json" };
-import { reviseAtlas } from "../../../../packages/theme-contract/runtime/revise-atlas-source.js";
+import { reviseAtlas } from "../../packages/theme-contract/runtime/revise-atlas-source.js";
 
 
 /**

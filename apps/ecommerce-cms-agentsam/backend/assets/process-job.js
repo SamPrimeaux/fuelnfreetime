@@ -195,28 +195,24 @@ export async function processAssetJobById(env, jobId, opts = {}) {
       const canonicalKey =
         plan.canonical_key ||
         intakeKey.replace(/\.[^.]+$/, "") + `.${out.ext}`;
-      // Ensure we don't write on top of intake if same path with different format
-      const destKey =
-        canonicalKey === intakeKey
-          ? intakeKey.replace(/\.[^.]+$/, `.${out.ext}`)
-          : canonicalKey;
+      // Original objects are immutable. Even same-format output must not
+      // overwrite intake bytes, and input cleanup requires separate reference GC.
+      const destKey = canonicalKey === intakeKey
+        ? intakeKey.replace(/(\.[^.]+)?$/, "-optimized-" + jobId + "." + out.ext)
+        : canonicalKey;
 
       await env.WEBSITE_ASSETS.put(destKey, out.bytes, {
         httpMetadata: { contentType: out.contentType },
         customMetadata: {
-          "fnf-asset-role": "canonical",
-          "fnf-intake-key": intakeKey.slice(0, 200),
-          "fnf-pipeline": classification.pipeline || "image",
+          "agentsam-asset-role": "canonical",
+          "agentsam-original-key": intakeKey.slice(0, 200),
+          "agentsam-pipeline": classification.pipeline || "image",
         },
       });
 
-      if (destKey !== intakeKey) {
-        try {
-          await env.WEBSITE_ASSETS.delete(intakeKey);
-        } catch {
-          /* intake cleanup best-effort */
-        }
-      }
+      // Retain the source; no inline deletion in the conversion queue.
+      // A separate reference-aware garbage collector can clean temporary intake
+      // only after all media/revision/product relationships are reconciled.
 
       transformed = {
         canonical_key: destKey,
@@ -236,7 +232,8 @@ export async function processAssetJobById(env, jobId, opts = {}) {
         pipeline: classification.pipeline,
         encoder: "jsquash",
         transformed: true,
-        intake_deleted: destKey !== intakeKey,
+        intake_deleted: false,
+        source_preserved: true,
       };
     }
 

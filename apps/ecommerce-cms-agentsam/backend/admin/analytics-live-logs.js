@@ -3,7 +3,7 @@
  * Never queried by cron, page load, or the Health KPI read model.
  * Cloudflare REST API is called only by authenticated operator request.
  */
-import {normalizeDiagnosticLog} from "../../../../packages/commerce-analytics/src/diagnostic-log.js";
+import {normalizeDiagnosticLog} from "../../packages/commerce-analytics/src/diagnostic-log.js";
 
 const SERVICE="fuelnfreetime";
 const API="https://api.cloudflare.com/client/v4";

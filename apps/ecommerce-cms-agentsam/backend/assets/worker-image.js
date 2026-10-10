@@ -10,6 +10,7 @@ import encodePng from "@jsquash/png/encode.js";
 import decodeWebp from "@jsquash/webp/decode.js";
 import encodeWebp from "@jsquash/webp/encode.js";
 import resize from "@jsquash/resize";
+import { prepareWorkerCodecs } from "./worker-codecs-wasm.js";
 
 /**
  * @param {ArrayBuffer} bytes
@@ -17,6 +18,7 @@ import resize from "@jsquash/resize";
  * @param {{ maxWidth?: number, quality?: number, preferWebp?: boolean, keepAlpha?: boolean }} opts
  */
 export async function optimizeRasterBuffer(bytes, contentType, opts = {}) {
+  await prepareWorkerCodecs();
   const maxWidth = opts.maxWidth ?? 1600;
   const quality = opts.quality ?? 82;
   const preferWebp = opts.preferWebp !== false;

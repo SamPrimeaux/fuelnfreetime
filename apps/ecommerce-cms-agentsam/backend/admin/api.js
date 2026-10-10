@@ -1,3 +1,4 @@
+import { removeMediaBackground } from "./media-background.js";
 import {
   hashPassword,
   verifyPassword,
@@ -50,7 +51,7 @@ import {
   setPrimaryProductImage,
 } from "./media.js";
 import { planProductAssetOptimization } from "../assets/product-optimize.js";
-import { groupProductInventory, resolveProductSource, validateInventoryAdjustment } from "../../../../packages/agentsam-merch/src/product-spine.js";
+import { groupProductInventory, resolveProductSource, validateInventoryAdjustment } from "../../packages/agentsam-merch/src/product-spine.js";
 import { handleAdminCmsApi } from "../cms/api.js";
 import { getFinanceAnalytics } from "./analytics-finance.js";
 import { getHealthAnalytics } from "./analytics-health.js";
@@ -842,6 +843,9 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   m = path.match(/^\/api\/admin\/media\/albums\/(\d+)$/);
   if (m && method === "PATCH") return updateMediaAlbum(request, env, m[1]);
   if (m && method === "DELETE") return deleteMediaAlbum(request, env, m[1]);
+
+  m = path.match(/^\/api\/admin\/media\/(\d+)\/remove-background$/);
+  if (m && method === "POST") return removeMediaBackground(request, env, m[1], user);
 
   m = path.match(/^\/api\/admin\/media\/(\d+)\/comments$/);
   if (m && method === "POST") return addMediaReviewComment(request, env, m[1], user);

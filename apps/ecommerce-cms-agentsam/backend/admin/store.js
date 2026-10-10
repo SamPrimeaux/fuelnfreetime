@@ -13,17 +13,11 @@ import {
 import { getCompany, companyDomain } from "../lib/company.js";
 import { hashPassword, verifyPassword } from "../lib/auth.js";
 import { listStoreThemes } from "./themes.js";
-// Installed theme owns its appearance: never substitute a store-specific color
-// guess or force the FNF orange/light admin preset on unrelated CMS sites.
-import heuristicManifest from '../../../../packages/heuristic-theme/theme.json' with { type: 'json' };
-import heuristicTokens from '../../../../packages/heuristic-theme/presets/fuel-free-time/tokens.json' with { type: 'json' };
-
+// Theme appearance comes from the installed theme/tenant contract, never
+// a baked-in merchant preset in the reusable ecommerce application.
 function appearanceForInstalledPackage(theme) {
-  if (theme?.package_name === '@inneranimalmedia/heuristic-theme' &&
-      heuristicManifest.entry === 'presets/fuel-free-time/preset.json') {
-    return { theme_id: heuristicManifest.id, preset_id: 'fuel-free-time', tokens: heuristicTokens };
-  }
-  return null; // A new theme must supply its own registered visual contract.
+  const appearance = theme?.settings?.appearance ?? theme?.metadata?.appearance;
+  return appearance && typeof appearance === "object" ? appearance : null;
 }
 
 

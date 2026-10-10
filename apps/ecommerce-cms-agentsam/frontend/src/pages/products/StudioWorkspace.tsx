@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { createMiniAgentSam } from "../../../../packages/agentsam-workbench/src/mini-agentsam.js";
 import { adminFetch, adminFormFetch } from "../../lib/api";
-import { evaluateManufacturingCompatibility } from "../../../../../../packages/agentsam-merch/src/index.js";
+import { evaluateManufacturingCompatibility } from "../../../../packages/agentsam-merch/src/index.js";
 import StudioIcon from "./StudioIcon";
 import ProductImage from "./ProductImage";
 import {
@@ -164,6 +165,7 @@ export default function StudioWorkspace({
   const [providerRenderUrl, setProviderRenderUrl] = useState<string | null>(null);
   const [trimTransparent, setTrimTransparent] = useState(false);
   const [removeFlatBackground, setRemoveFlatBackground] = useState(false);
+  const [subjectRemovalAvailable, setSubjectRemovalAvailable] = useState(false);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -187,13 +189,60 @@ export default function StudioWorkspace({
     width: number;
     height: number;
   } | null>(null);
-  const [prompt, setPrompt] = useState("");
+  const [artworkSelected, setArtworkSelected] = useState(false);
+  const [agentVisible, setAgentVisible] = useState(false);
+  const miniRef = useRef<ReturnType<typeof createMiniAgentSam> | null>(null);
+  const miniSendRef = useRef<(message: string, signal: AbortSignal) => Promise<{ reply: string }>>(async () => ({ reply: "" }));
+  const dragRef = useRef<{ mode: "move" | "resize"; startX: number; startY: number; x: number; y: number; scale: number } | null>(null);
   const [reply, setReply] = useState("");
   const [conversationId, setConversationId] = useState<string>();
   const [notes, setNotes] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
   const panel = useRef<HTMLElement>(null);
   const stage = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const mini = createMiniAgentSam({
+      preferAbove: true,
+      resultStatus: "Reply ready · review the result",
+      capabilities: { list: () => [] },
+      send: ({ prompt: text, signal }) => miniSendRef.current(text, signal),
+      onResult: (result) => setReply(result.reply),
+      onClose: () => setAgentVisible(false),
+    });
+    miniRef.current = mini;
+    return () => { mini.destroy(); if (miniRef.current === mini) miniRef.current = null; };
+  }, []);
+
+  function openMiniAgentSam() {
+    if (agentVisible) { miniRef.current?.close(); return; }
+    miniRef.current?.select(
+      { type: "product_artwork", productId: catalogId, variantId, locationId, assetId: asset?.id || null },
+      () => (stage.current?.querySelector(".ps-artwork-layer") || stage.current)?.getBoundingClientRect() || null,
+    );
+    setAgentVisible(true);
+  }
+
+  function startDrag(event: PointerEvent<HTMLDivElement>, mode: "move" | "resize") {
+    if (!asset || !showArtwork) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = { mode, startX: event.clientX, startY: event.clientY, x, y, scale };
+    setArtworkSelected(true);
+  }
+  function updateDrag(event: PointerEvent<HTMLDivElement>) {
+    const from = dragRef.current;
+    if (!from) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const dx = ((event.clientX - from.startX) / Math.max(1, rect.width)) * 100;
+    const dy = ((event.clientY - from.startY) / Math.max(1, rect.height)) * 100;
+    if (from.mode === "resize") setScale(Math.max(5, Math.min(150, Math.round(from.scale + dx * 2))));
+    else {
+      setX(Math.max(0, Math.min(100, Math.round(from.x + dx))));
+      setY(Math.max(0, Math.min(100, Math.round(from.y + dy))));
+    }
+  }
+
   function openTab(next: string) {
     setPanelOpen((current) => next === tab ? !current : true);
     setTab(next);
@@ -220,6 +269,16 @@ export default function StudioWorkspace({
   // This image is a placement approximation, not a production mockup.
   const designImage = variantImage(variant) || location?.artboard_image_url || baseImage;
   const catalogId = catalogProductId(detail.product);
+  useEffect(() => {
+    const controller = new AbortController();
+    adminFetch<{ capabilities?: { can_remove_background?: boolean } }>("/api/admin/media?limit=1", {
+      signal: controller.signal,
+    }).then((result) => {
+      if (!controller.signal.aborted) setSubjectRemovalAvailable(Boolean(result.capabilities?.can_remove_background));
+    }).catch(() => { if (!controller.signal.aborted) setSubjectRemovalAvailable(false); });
+    return () => controller.abort();
+  }, []);
+
 
   function chooseVariantOption(axis: string, value: string) {
     const next = selectVariantForAxis(detail.variants, variant, axis, value);
@@ -349,6 +408,24 @@ export default function StudioWorkspace({
         stage.current?.scrollIntoView({ block: "start" }),
       );
   }
+  async function removeBackgroundAI() {
+    if (!asset || busy || !subjectRemovalAvailable) return;
+    setBusy("remove-background");
+    setError("");
+    try {
+      const result = await adminFetch<{ ok: boolean; asset?: MediaAsset; provider?: string }>(
+        `/api/admin/media/${encodeURIComponent(asset.id)}/remove-background`, { method: "POST" },
+      );
+      if (!result.ok || !result.asset) throw new Error("Background removal did not produce a derivative.");
+      choose(result.asset);
+      setNotice("Transparent derivative saved to Media Library. Original artwork preserved. Verify print resolution before production.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Subject segmentation failed.");
+    } finally {
+      setBusy("");
+    }
+  }
+
   async function uploadMediaFile(file: File, prefix: string, options: {
     derivativeRole?: "original/master" | "manufacturing" | "mockup";
     transformPolicy?: "auto" | "preserve";
@@ -395,8 +472,9 @@ export default function StudioWorkspace({
       if (fileInput.current) fileInput.current.value = "";
     }
   }
-  async function askAI(generate: boolean) {
-    if (!prompt.trim() || busy) return;
+  async function askAI(generate: boolean, text: string, signal?: AbortSignal): Promise<{ reply: string }> {
+    if (!text.trim()) throw new Error("Describe what you would like AgentSam to make or change.");
+    if (busy) throw new Error("Another operation is running.");
     setBusy(generate ? "generate" : "ideas");
     setError("");
     try {
@@ -414,8 +492,9 @@ export default function StudioWorkspace({
         ai?: { image_base64?: string; mime_type?: string };
       }>("/api/admin/agentsam/chat", {
         method: "POST",
+        signal,
         body: JSON.stringify({
-          message: `${generate ? "Create standalone artwork" : "Brainstorm three concise visual directions"} for ${detail.product.name}. ${prompt}`,
+          message: `${generate ? "Create standalone artwork" : "Brainstorm three concise visual directions"} for ${detail.product.name}. ${text}`,
           conversation_id: conversationId,
           ...creative,
           context: { page: "/admin/products/create", ...creative },
@@ -436,12 +515,19 @@ export default function StudioWorkspace({
           ),
         );
       }
+      return { reply: result.reply };
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Creative request failed");
+      const message = e instanceof Error ? e.message : "Creative request failed";
+      setError(message);
+      throw new Error(message);
     } finally {
       setBusy("");
     }
   }
+  miniSendRef.current = (message, signal) => {
+    const generate = /^(create|generate|make|draw|design|render|illustrate|\/image)\b/i.test(message);
+    return askAI(generate, message, signal);
+  };
   async function saveDraft(nextPrepared: MediaAsset | null = preparedAsset, nextPreview: MediaAsset | null = previewAsset) {
     if (!variantId || !locationId) {
       setError("Choose a product option and print area before saving.");
@@ -1058,6 +1144,15 @@ export default function StudioWorkspace({
                 {busy === "prepare" ? "Preparing…" : preparedAsset ? "Rebuild production artwork" : "Prepare for print"}
               </button>
               <div className="ps-paper-note ps-prep-options">
+                <strong>Image editing</strong>
+                <button type="button" className="ps-button ps-wide"
+                  disabled={!asset || !subjectRemovalAvailable || Boolean(busy)}
+                  onClick={() => void removeBackgroundAI()}>
+                  {busy === "remove-background" ? "Removing background…" : subjectRemovalAvailable ? "Remove BG · AI cutout" : "Remove BG · provider unavailable"}
+                </button>
+                <small>Subject segmentation creates a separate transparent asset. It never overwrites your original.</small>
+              </div>
+              <div className="ps-paper-note ps-prep-options">
                 <strong>Artwork preparation</strong>
                 <label className="ps-check">
                   <input
@@ -1137,7 +1232,13 @@ export default function StudioWorkspace({
             </div>
             <span>{providerRenderUrl ? "Completeful render" : "Placement preview · provider render comes next"}</span>
           </div>
-          {asset && !providerRenderUrl && (
+          <div className="ps-studio-context">
+            <button type="button" className="ps-agent-trigger" aria-label={agentVisible ? "Hide miniAgentSam" : "Ask miniAgentSam about this design"} aria-pressed={agentVisible} onClick={openMiniAgentSam}>
+              <StudioIcon name="spark" size={16} /> {agentVisible ? "Hide AgentSam" : "Ask AgentSam"}
+            </button>
+            <button type="button" onClick={() => setGuides((current) => !current)} aria-pressed={guides}>{guides ? "Hide guides" : "Show guides"}</button>
+          </div>
+          {asset && !providerRenderUrl && artworkSelected && (
             <div className="ps-artwork-toolbar" role="toolbar" aria-label="Artwork placement controls">
               <button type="button" onClick={() => { setTab("layers"); setPanelOpen(true); }}>Edit placement</button>
               <button type="button" onClick={() => { setTab("tools"); setPanelOpen(true); setRemoveFlatBackground(true); }} title="Configure background removal before preparing a derivative">Cutout setup</button>
@@ -1161,14 +1262,26 @@ export default function StudioWorkspace({
                     <strong>{location?.name || "Selected print area"}</strong>
                     <small>Neutral positioning guide · not a supplier proof</small>
                   </div>
-                  {/shirt|tee|hoodie|sweatshirt|tank|jersey/i.test(detail.product.name) && (
+                  {designImage ? (
+                    <img className="ps-design-product-image" src={designImage} alt="Selected product preview; artwork placement is approximate" />
+                  ) : /shirt|tee|hoodie|sweatshirt|tank|jersey/i.test(detail.product.name) && (
                     <svg className="ps-design-garment-guide" viewBox="0 0 500 560" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
                       <path d="M170 66 L210 45 Q250 92 290 45 L330 66 L451 142 L407 236 L345 203 L345 502 Q250 527 155 502 L155 203 L93 236 L49 142 Z" fill="#d8ddd3" stroke="#aab5a4" strokeWidth="2"/>
                       <path d="M210 45 Q250 126 290 45" fill="none" stroke="#aab5a4" strokeWidth="2"/>
                       <path d="M155 203 L170 66 M345 203 L330 66" fill="none" stroke="#b7c0b1" strokeWidth="1.4"/>
                     </svg>
                   )}
-                  <div className={"ps-design-print-area" + (guides ? " is-gridded" : "")} style={{ aspectRatio: ratio }}>
+                  <div className={"ps-design-print-area" + (guides ? " is-gridded" : "")} style={{ aspectRatio: ratio }}
+                    onPointerDown={(event) => {
+                      const target = event.target as HTMLElement;
+                      if (target.closest(".ps-selection-handle")) startDrag(event, "resize");
+                      else if (target.closest(".ps-artwork-layer")) startDrag(event, "move");
+                      else setArtworkSelected(false);
+                    }}
+                    onPointerMove={updateDrag}
+                    onPointerUp={() => { dragRef.current = null; }}
+                    onPointerCancel={() => { dragRef.current = null; }}
+                  >
                     {guides && <>
                       <span className="ps-design-crosshair-x" aria-hidden="true" />
                       <span className="ps-design-crosshair-y" aria-hidden="true" />
@@ -1176,7 +1289,7 @@ export default function StudioWorkspace({
                     </>}
                     {asset && showArtwork ? (
                       <img
-                        className="ps-artwork-layer ps-artwork-layer--interactive"
+                        className={"ps-artwork-layer ps-artwork-layer--interactive" + (artworkSelected ? " is-selected" : "")}
                         src={asset.url}
                         alt="Selected artwork — use arrow keys to nudge the placement"
                         draggable={false}
@@ -1202,6 +1315,18 @@ export default function StudioWorkspace({
                         <StudioIcon name="upload" />
                         Add artwork
                       </button>
+                    )}
+                    {asset && showArtwork && artworkSelected && (
+                      <div className="ps-selection-frame" aria-hidden="true" style={{
+                        left: x + "%", top: y + "%", width: scale + "%",
+                        aspectRatio: dimensions ? dimensions.width + "/" + dimensions.height : "1",
+                        transform: "translate(-50%, -50%) rotate(" + rotation + "deg)",
+                      }}>
+                        <span className="ps-selection-handle ps-selection-handle--tl" />
+                        <span className="ps-selection-handle ps-selection-handle--tr" />
+                        <span className="ps-selection-handle ps-selection-handle--bl" />
+                        <span className="ps-selection-handle ps-selection-handle--br" />
+                      </div>
                     )}
                   </div>
                   <span className="ps-design-dimensions">{printSizeLabel(location)} · {printPixels ? `${printPixels.width} × ${printPixels.height} px` : "Provider dimensions unavailable"}</span>
@@ -1279,37 +1404,6 @@ export default function StudioWorkspace({
                     ? "Source resolution below print-area target"
                     : "Source pixels meet selected artboard; supplier acceptance unverified"}
             </span>
-          </div>
-          <div className="ps-composer">
-            <div className="ps-composer-label">
-              <StudioIcon name="spark" size={17} />
-              <strong>A creative partner, on your canvas.</strong>
-            </div>
-            <textarea
-              aria-label="Creative brief"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="A vintage racing emblem, warm cream and burnt orange…"
-              rows={2}
-            />
-            <div className="ps-composer-actions">
-              <span>Powered by AgentSam</span>
-              <button
-                className="ps-text-button"
-                disabled={!prompt.trim() || Boolean(busy)}
-                onClick={() => askAI(false)}
-              >
-                {busy === "ideas" ? "Exploring…" : "Brainstorm"}
-              </button>
-              <button
-                className="ps-button ps-primary"
-                disabled={!prompt.trim() || Boolean(busy)}
-                onClick={() => askAI(true)}
-              >
-                {busy === "generate" ? "Creating…" : "Create artwork"}
-                <StudioIcon name="spark" size={16} />
-              </button>
-            </div>
           </div>
           {reply && (
             <details open className="ps-ai-reply">
