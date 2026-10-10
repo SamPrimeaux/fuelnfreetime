@@ -36,9 +36,12 @@ const probe=`<script>(async function(){
  try{
   const selected=await until(()=>document.getElementById('te-field-hero-headline'));
   const initialValue=selected.value;
-  if(innerWidth<=900)document.querySelector('[data-mobile-pane="sections"]').click();
-  document.querySelector('[data-select-section="hero"]').click();
-  (document.getElementById('te-field-hero-headline') || selected).focus();
+  // Select the actual rendered heading. This supplies the correct field key
+  // and anchors the mini composer to the canvas, not a generic section row.
+  if(innerWidth<=900)document.querySelector('[data-mobile-pane="preview"]').click();
+  const preview=document.getElementById('theme-preview');
+  const heading=await until(()=>preview.contentDocument?.querySelector('[data-cms="headline"]'));
+  heading.click();
   const portal=await until(()=>{const p=document.querySelector('[data-mini-agentsam]');return p&&!p.shadowRoot.querySelector('.composer').hidden?p:null});
   const mini=portal.shadowRoot;
   const initialVisible=!mini.querySelector('.composer').hidden;
