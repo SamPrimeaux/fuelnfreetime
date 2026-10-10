@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { canEditRaster, validateImageDimensions } from '../packages/agentsam-workbench/src/media-asset-workbench.js';
 import { addMediaReviewComment } from '../apps/ecommerce-cms-agentsam/backend/admin/media.js';
+import { configureAssetStorage } from '../apps/ecommerce-cms-agentsam/backend/assets/config.js';
 
 test('only browser-editable raster formats expose working-copy tools', () => {
   for (const content_type of ['image/png', 'image/jpeg', 'image/webp']) assert.equal(canEditRaster({ content_type }), true);
@@ -37,6 +38,8 @@ function mockDb() {
   };
 }
 test('comments persist and append without overwriting other metadata', async () => {
+  // The API route configures this at startup; isolated handler tests must too.
+  configureAssetStorage({ workerMediaBaseUrl: 'https://example.test/media' });
   const db=mockDb();
   const first=await addMediaReviewComment(request({text:'Check logo edge',x:.25,y:.75}),{DB:db},1);
   assert.equal(first.status,200);

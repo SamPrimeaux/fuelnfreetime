@@ -44,6 +44,10 @@ database_id = "9fd6ff92-e407-4b51-8b01-3c93f3845bb2"
 [ai]
 binding = "AGENTSAM_WAI"
 
+# Independent foreground segmentation adapter. Native @jsquash and Sharp processors remain.
+[images]
+binding = "IMAGES"
+
 [[r2_buckets]]
 binding = "WEBSITE_ASSETS"
 bucket_name = "fuelnfreetime"
