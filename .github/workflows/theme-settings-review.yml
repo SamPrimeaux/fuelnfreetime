@@ -36,5 +36,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: theme-settings-desktop-tablet-mobile
-          path: ${{ runner.temp }}/theme-settings-captures/*.png
+          path: ${{ runner.temp }}/theme-settings-captures/
           if-no-files-found: warn
