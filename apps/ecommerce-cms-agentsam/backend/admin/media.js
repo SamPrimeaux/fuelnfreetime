@@ -41,6 +41,7 @@ export function mediaCapabilitySummary(env = {}) {
     transform_provider: transformProvider,
     browser_preview: true,
     can_materialize_derivatives: Boolean(transformProvider),
+    can_remove_background: Boolean(env.IMAGES?.input),
   };
 }
 

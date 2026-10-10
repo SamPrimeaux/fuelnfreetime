@@ -8,17 +8,22 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { inspectPackageBoundaries } from "./package-boundaries.mjs";
 
 const app = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const source = path.resolve(app, "../..");
+const source = app;
 const manifest = JSON.parse(fs.readFileSync(path.join(app, "agentsam.app.json"), "utf8"));
 const missing = [
-  "apps/ecommerce-cms-agentsam/backend/index.js",
-  "public",
-  "apps/ecommerce-cms-agentsam/frontend/package.json",
-  "db/schema.sql",
-  "wrangler.toml",
-].filter((f) => !fs.existsSync(path.join(source, f)));
+  "backend/index.js",
+  "frontend/package.json",
+  "frontend/static",
+  "packages/agentsam-merch/src/index.js",
+  "packages/theme-contract/runtime/portable-sections.js",
+  "packages/media-kit/src/index.js",
+  "packages/agentsam-workbench/src/media-asset-workbench.js",
+  "package-lock.json",
+  "AGENTS.md",
+].filter((f) => !fs.existsSync(path.join(app, f)));
 const [command = "info", ...args] = process.argv.slice(2);
 
 function scaffoldWrangler(workerName = "my-ecommerce") {
@@ -26,7 +31,7 @@ function scaffoldWrangler(workerName = "my-ecommerce") {
 # Brand SSOT: D1 company (see db/seed-customer-bootstrap.sql)
 # Integrations SSOT: D1 agentsam_plugins
 name = "${workerName}"
-main = "apps/ecommerce-cms-agentsam/backend/index.js"
+main = "backend/index.js"
 compatibility_date = "2026-01-20"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
@@ -51,6 +56,10 @@ database_id = "REPLACE_WITH_YOUR_RESOURCE_ID"
 
 [ai]
 binding = "AGENTSAM_WAI"
+# Optional Cloudflare Images host: required for AI subject-segmentation.
+# Keep @jsquash Worker and Sharp Node transforms independently operational.
+# [images]
+# binding = "IMAGES"
 
 [[r2_buckets]]
 binding = "WEBSITE_ASSETS"
@@ -185,56 +194,24 @@ function scaffold(destination) {
   if (!destination) throw new Error("Provide an empty destination directory.");
   if (missing.length) throw new Error("Source unavailable: " + missing.join(", "));
   const target = path.resolve(destination);
-  if (target === source || target.startsWith(source + path.sep)) {
-    throw new Error("Use a destination outside the source checkout.");
+  if (target === app || target.startsWith(app + path.sep) || app.startsWith(target + path.sep)) {
+    throw new Error("Install outside the source application; never copy into a parent.");
   }
   if (fs.existsSync(target) && fs.readdirSync(target).length) {
     throw new Error("Destination must be empty.");
   }
-  fs.mkdirSync(target, { recursive: true });
   const filter = (file) =>
-    !/(^|[/\\])(node_modules|\.git|\.wrangler|\.env[^/\\]*|\.dev\.vars[^/\\]*|dist|seed-[^/\\]*)($|[/\\])/.test(
+    !/(^|[/\\])(node_modules|.git|.wrangler|.env[^/\\]*|.dev.vars[^/\\]*|dist|seed-[^/\\]*)($|[/\\])/.test(
       file,
     );
-  for (const relative of [
-    "public",
-    "packages",
-    "db",
-    "apps/ecommerce-cms-agentsam",
-    "docs",
-    "lib",
-    "package.json",
-    "package-lock.json",
-    "AGENTS.md",
-    "ecommerce-cms-agentsam.md",
-  ]) {
-    const from = path.join(source, relative);
-    if (fs.existsSync(from)) fs.cpSync(from, path.join(target, relative), { recursive: true, filter });
-  }
-  fs.mkdirSync(path.join(target, "scripts"), { recursive: true });
-  for (const name of ["sync-app-frontend.mjs", "guard-boundaries.mjs"]) {
-    fs.copyFileSync(path.join(source, "scripts", name), path.join(target, "scripts", name));
-  }
-
+  // The release package is the only source. Never reach up to the monorepo.
+  fs.cpSync(app, target, { recursive: true, filter });
   fs.writeFileSync(path.join(target, "wrangler.toml"), scaffoldWrangler("my-ecommerce"));
   fs.writeFileSync(path.join(target, "db/seed-customer-bootstrap.sql"), scaffoldBootstrapSql());
   fs.writeFileSync(
     path.join(target, ".gitignore"),
-    "node_modules/\napps/ecommerce-cms-agentsam/frontend/node_modules/\n.wrangler/\n.env*\n.dev.vars*\n",
+    "node_modules/\nfrontend/node_modules/\n.wrangler/\ndist/\n.env*\n.dev.vars*\n",
   );
-
-  const pkgPath = path.join(target, "package.json");
-  const pkg = JSON.parse(fs.readFileSync(pkgPath));
-  pkg.name = "my-ecommerce";
-  pkg.scripts = {
-    "app:frontend:sync": "node scripts/sync-app-frontend.mjs",
-    "dev": "npm run build && wrangler dev",
-    "build":
-      "npm run build --prefix apps/ecommerce-cms-agentsam/frontend && npm run app:frontend:sync",
-    "deploy": "npm run build && wrangler deploy",
-    "ecommerce": "node apps/ecommerce-cms-agentsam/bin/ecommerce.mjs",
-  };
-  fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
   fs.writeFileSync(
     path.join(target, "SETUP.md"),
     `# Your ecommerce app
@@ -242,13 +219,14 @@ function scaffold(destination) {
 Portable SSOT (do not put brand/MCP URLs in Wrangler):
 
 1. Edit \`db/seed-customer-bootstrap.sql\` — company name/logo/colors + plugin endpoints + mail From.
-2. \`npm install && npm install --prefix apps/ecommerce-cms-agentsam/frontend\`
+2. \`npm ci && npm ci --prefix frontend\`
 3. Provision D1/R2/KV/Queue; set binding IDs in \`wrangler.toml\` (bindings + ALLOWED_ORIGINS only).
 4. Apply schema + migrations + \`db/seed-customer-bootstrap.sql\`.
 5. Set secrets (\`CAPP_KEY\`, \`RESEND_API_KEY\`, \`AGENTSAM_BRIDGE_KEY\`, …). Keep \`COMPLETEFUL_ALLOW_LIVE_WRITES=false\` until tested.
 6. \`npm run build && npm run dev\`
 
-Doctor checks source presence only.
+Doctor checks source boundaries. A standalone install and provider execution
+are separate release gates, not inferred from a present file.
 `,
   );
   console.log("Scaffold created: " + target + "\nRead SETUP.md before running or deploying.");
@@ -257,19 +235,26 @@ Doctor checks source presence only.
 try {
   if (command === "info") console.log(JSON.stringify(manifest, null, 2));
   else if (command === "doctor") {
+    const boundary = inspectPackageBoundaries(app);
     console.log(
       JSON.stringify(
-        { app: manifest.id, source, missing, source_ready: !missing.length, deployment_ready: false },
-        null,
-        2,
+        {
+          app: manifest.id, source, missing, source_ready: !missing.length,
+          package_boundary_ready: boundary.boundary_ready,
+          package_boundary_scan: { files: boundary.scanned_files, manifests: boundary.scanned_manifests },
+          package_boundary_issues: boundary.issues,
+          standalone_install_verified: false,
+          deployment_ready: false,
+        },
+        null, 2,
       ),
     );
-    if (missing.length) process.exitCode = 1;
+    if (missing.length || !boundary.boundary_ready) process.exitCode = 1;
   } else if (command === "scaffold") scaffold(args[0]);
   else if (command === "preview") {
     if (missing.length) throw new Error("Run doctor first.");
     const result = spawnSync(process.platform === "win32" ? "npm.cmd" : "npm", ["run", "dev", "--", ...args], {
-      cwd: source,
+      cwd: app,
       stdio: "inherit",
     });
     if (result.error) throw result.error;
