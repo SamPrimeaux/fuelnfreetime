@@ -14,11 +14,12 @@
   scroll-margin-top: 75px;
 }
 .product-studio-shell {
-  --ps-ink: #232720;
-  --ps-muted: #72776e;
-  --ps-line: #dedfd7;
-  --ps-accent: #d5e6ab;
-  --ps-paper: #fafbf6;
+  --ps-ink: #23212b;
+  --ps-muted: #6d6976;
+  --ps-line: #e2dfe9;
+  --ps-accent: var(--accent, #8b5cf6);
+  --ps-accent-soft: color-mix(in srgb, var(--ps-accent) 12%, white);
+  --ps-paper: #faf9fc;
   background: var(--ps-paper);
   color: var(--ps-ink);
   padding: 26px clamp(18px, 3.6vw, 64px) 48px;
@@ -1675,3 +1676,100 @@
 .ps-mini-map { width: clamp(145px, 22%, 210px); }
 .ps-mini-image { aspect-ratio: 4 / 5; }
 @media (max-width: 760px) { .ps-product-design-image,.ps-design-guide { min-height: 390px; } .ps-design-guide { padding: 70px 10px 35px; } .ps-design-print-area { width: min(65%, 250px); } .ps-mini-map { position: relative; width: min(100%, 260px); } .ps-design-guide__identity { left: 12px; top: 12px; } }
+
+/* Full-bleed, focused Product Studio: editor owns the canvas, not admin navigation. */
+body.product-studio-focused.console-theme { --c-nav-w: 0px; }
+body.product-studio-focused .console-sidenav.admin-sidebar,
+body.product-studio-focused .console-topbar-spacer { display: none !important; }
+body.product-studio-focused .console-main.admin-main,
+body.product-studio-focused .console-main.admin-main:not(.console-main--bleed) {
+  max-width: none; width: 100%; padding: 0; min-width: 0; overflow: clip;
+}
+body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc(100dvh - 52px); }
+.product-studio-shell .ps-workspace-header { background: var(--ps-paper); }
+.product-studio-shell .ps-toolrail, .product-studio-shell .ps-toolpanel { background: var(--ps-paper); }
+.product-studio-shell .ps-toolrail button.is-active { color: var(--ps-accent); background: var(--ps-accent-soft); }
+.product-studio-shell :focus-visible { outline-color: var(--ps-accent); }
+.product-studio-shell .ps-view-tabs button.is-active { color: var(--ps-accent); }
+.product-studio-shell .ps-stage { background-image: radial-gradient(#c8c1d3 0.8px, transparent 0.8px); }
+.product-studio-shell .ps-design-guide { background: #f8f7fa; }
+.product-studio-shell .ps-design-product-image {
+  position: absolute; inset: 20px 0 15px; width: 100%; height: calc(100% - 35px);
+  object-fit: contain; object-position: center; pointer-events: none;
+}
+.product-studio-shell .ps-design-print-area {
+  background: rgba(255,255,255,.02); border: 1px dashed var(--ps-accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb,var(--ps-accent) 10%, transparent);
+}
+.product-studio-shell .ps-design-print-area.is-gridded {
+  background-image: linear-gradient(to right, color-mix(in srgb, var(--ps-accent) 12%, transparent) 1px, transparent 1px),
+  linear-gradient(to bottom, color-mix(in srgb, var(--ps-accent) 12%, transparent) 1px, transparent 1px);
+  background-size: 10% 10%;
+}
+.product-studio-shell .ps-design-crosshair-x { border-color: color-mix(in srgb,var(--ps-accent) 30%,transparent); }
+.product-studio-shell .ps-design-crosshair-y { border-color: color-mix(in srgb,var(--ps-accent) 30%,transparent); }
+.product-studio-shell .ps-design-safe-outline { border-color: color-mix(in srgb,var(--ps-accent) 55%,transparent); }
+.product-studio-shell .ps-artwork-layer--interactive:focus-visible { outline-color: var(--ps-accent); }
+.product-studio-shell .ps-canvas-controls input { accent-color: var(--ps-accent); }
+@media (max-width: 760px) {
+  .product-studio-shell .ps-workspace-header { padding: 12px; }
+  .product-studio-shell .ps-workspace-body { min-height: 0; }
+  .product-studio-shell .ps-stage-column { padding: 0 8px 80px; }
+  .product-studio-shell .ps-stage { padding: 12px 6px; }
+  .product-studio-shell .ps-product-design-image, .product-studio-shell .ps-design-guide { min-height: 340px; }
+  .product-studio-shell .ps-design-product-image { inset: 10px 0; height: calc(100% - 20px); }
+}
+
+/* Product Studio interactive selection and contextual AgentSam */
+.product-studio-shell .ps-studio-context {
+  display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap;
+  gap: 8px; margin: 0 0 10px;
+}
+.product-studio-shell .ps-studio-context button {
+  min-height: 36px; display: inline-flex; align-items: center; justify-content: center;
+  gap: 7px; border: 1px solid var(--ps-line); background: #fff; color: var(--ps-ink);
+  border-radius: 9px; padding: 6px 11px; font-size: 12px;
+}
+.product-studio-shell .ps-studio-context .ps-agent-trigger,
+.product-studio-shell .ps-studio-context .ps-agent-trigger[aria-pressed="true"] {
+  border-color: color-mix(in srgb,var(--ps-accent) 36%, white);
+  color: var(--ps-accent);
+  background: var(--ps-accent-soft);
+}
+.product-studio-shell .ps-artwork-toolbar {
+  border-color: color-mix(in srgb,var(--ps-accent) 32%, white);
+  box-shadow: 0 4px 20px rgba(35,17,67,.06);
+}
+.product-studio-shell .ps-artwork-toolbar button,
+.product-studio-shell .ps-canvas-controls button {
+  background: var(--ps-accent-soft); color: var(--ps-ink);
+}
+.product-studio-shell .ps-artwork-layer--interactive.is-selected {
+  outline: 1.5px solid var(--ps-accent);
+  outline-offset: 2px;
+}
+.product-studio-shell .ps-design-print-area { touch-action: none; }
+.product-studio-shell .ps-selection-frame {
+  position: absolute; z-index: 5; border: 1px solid var(--ps-accent);
+  box-shadow: 0 0 0 1px #ffffffaa inset; pointer-events: none;
+}
+.product-studio-shell .ps-selection-handle {
+  position: absolute; display: block; width: 12px; height: 12px;
+  border: 2px solid var(--ps-accent); border-radius: 3px; background: white;
+  pointer-events: auto; touch-action: none; cursor: nwse-resize;
+}
+.product-studio-shell .ps-selection-handle--tl { top: -6px; left: -6px; }
+.product-studio-shell .ps-selection-handle--tr { top: -6px; right: -6px; }
+.product-studio-shell .ps-selection-handle--bl { bottom: -6px; left: -6px; }
+.product-studio-shell .ps-selection-handle--br { bottom: -6px; right: -6px; }
+.product-studio-shell .ps-design-print-area .ps-artwork-layer--interactive { touch-action: none; }
+@media (max-width: 760px) {
+  .product-studio-shell .ps-toolrail {
+    flex-direction: row; overflow-x: auto; position: sticky; top: 0; z-index: 5;
+    padding: 5px; scrollbar-width: thin;
+  }
+  .product-studio-shell .ps-toolrail button { min-width: 62px; min-height: 52px; padding: 5px 2px; }
+  .product-studio-shell .ps-toolpanel { padding: 12px; }
+  .product-studio-shell .ps-studio-context { justify-content: center; }
+  .product-studio-shell .ps-selection-handle { width: 16px; height: 16px; }
+}

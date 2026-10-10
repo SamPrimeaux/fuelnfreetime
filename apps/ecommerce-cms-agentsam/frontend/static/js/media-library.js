@@ -1611,7 +1611,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     if (!asset) return;
     closeCardMenu();
     selected = asset;
-    mediaWorkbench?.setAsset(asset);
+    mediaWorkbench?.setAsset(asset, { backgroundRemoval: Boolean(mediaCapabilities.can_remove_background) });
     els.drawerPreview.dataset.agentsamMediaId = String(asset.id);
     els.drawerPreview.dataset.agentsamMediaFilename = asset.filename || 'Image';
     previewPresetId = "original";
@@ -1918,6 +1918,16 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
         // Prefer the first-party media route so browser canvas gets same-origin pixels.
         const path = String(asset.url || "");
         return path.startsWith("/media/") ? new URL(path, location.origin).href : mediaUrl(asset);
+      },
+      removeBackground: async ({ asset }) => {
+        const result = await adminFetch(`/api/admin/media/${encodeURIComponent(asset.id)}/remove-background`, {
+          method: "POST",
+        });
+        if (result?.asset) {
+          await load(); // refresh the authoritative library list
+          openDrawer(result.asset);
+        }
+        return result;
       },
       addComment: async ({ asset, text, x, y }) => {
         const result = await adminFetch(`/api/admin/media/${encodeURIComponent(asset.id)}/comments`, {
