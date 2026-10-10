@@ -639,6 +639,10 @@
 .te-inspector-disclosure__body { padding: 3px 12px 12px; border-top: 1px solid #f1f1ee; }
 .te-inspector-disclosure .te-setting-group { margin: 11px 0 16px; }
 .te-inspector-disclosure--tools { margin-top: 15px; }
+.te-inherited-style { display:block; margin:-10px 0 12px; color:var(--te-muted); font:400 10px/1.35 system-ui,sans-serif; }
+.te-reset-style { display:block; margin:-10px 0 12px auto; border:0; background:transparent; color:#6351a7; padding:5px 1px; cursor:pointer; font:600 10px/1.25 system-ui,sans-serif; text-decoration:underline; text-underline-offset:2px; }
+.te-reset-style:hover { color:#4228a2; }
+.te-reset-style:focus-visible { outline:2px solid var(--te-accent);outline-offset:2px;border-radius:3px; }
 .te-inspector-disclosure--tools .te-setting-card { margin: 10px 0 0; }
 .te-disclosure-chevron { color: #777771; font-size: 16px; transition: transform .18s ease; }
 .te-inspector-disclosure[open] .te-disclosure-chevron { transform: rotate(180deg); }
