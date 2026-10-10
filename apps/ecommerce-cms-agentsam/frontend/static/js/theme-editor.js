@@ -213,7 +213,7 @@
       '</div>',
       '<div class="te-media-modal" id="te-media-modal" hidden><div class="te-media-dialog" role="dialog" aria-modal="true" aria-labelledby="te-media-title">',
         '<div class="te-media-dialog__head"><div><strong id="te-media-title">Select media</strong><p>Choose an existing asset or upload a new one. Nothing is published here.</p></div><button type="button" class="te-icon-btn" id="te-media-close" aria-label="Close media picker" title="Close media picker">×</button></div>',
-        '<div class="te-media-dialog__tools"><input id="te-media-search" type="search" placeholder="Search media" aria-label="Search media by filename or folder"><select id="te-media-filter" aria-label="Filter media"><option value="all">All media</option><option value="images">Images</option><option value="products">Product media</option><option value="videos">Videos</option></select><select id="te-media-sort" aria-label="Sort media"><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="name">Name A–Z</option></select><label class="te-upload-target" title="Choose image or video files">+ Upload<input id="te-media-upload" type="file" accept="image/*,video/*" multiple></label></div><div class="te-media-dropzone" id="te-media-dropzone" tabindex="0" role="button" aria-label="Upload files or drop images and videos here"><strong>+ Add files</strong><span>Drag images or videos here, or choose files</span></div><div class="te-media-alert" id="te-media-alert" role="status" aria-live="polite" hidden></div>',
+        '<div class="te-media-dialog__tools"><input id="te-media-search" type="search" placeholder="Search media" aria-label="Search media by filename or folder"><select id="te-media-filter" aria-label="Filter media"><option value="all">All media</option><option value="images">Images</option><option value="products">Product media</option><option value="videos">Videos</option><option value="models">3D models</option></select><select id="te-media-sort" aria-label="Sort media"><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="name">Name A–Z</option></select><label class="te-upload-target" title="Choose image or video files">+ Upload<input id="te-media-upload" type="file" accept="image/*,video/*" multiple></label></div><div class="te-media-dropzone" id="te-media-dropzone" tabindex="0" role="button" aria-label="Upload files or drop images and videos here"><strong>+ Add files</strong><span>Drag images or videos here, or choose files</span></div><div class="te-media-alert" id="te-media-alert" role="status" aria-live="polite" hidden></div>',
         '<div class="te-media-grid" id="te-media-grid" role="group" aria-label="Available media"></div>',
         '<div class="te-media-dialog__footer"><span id="te-media-count" class="te-media-dialog__count" role="status"></span><span id="te-media-selected-name" class="te-media-dialog__selected">Select an asset to preview</span><button type="button" class="te-media-button" id="te-media-cancel">Cancel</button><button type="button" class="te-toolbar-btn is-primary" id="te-media-confirm" disabled>Use media</button></div>',
       '</div></div>'
@@ -486,7 +486,7 @@
   }
 
   function fieldKind(field) {
-    if (field.type === 'media' || field.type === 'video' || field.media) return 'media';
+    if (field.type === 'media' || field.type === 'video' || field.type === 'model3d' || field.media) return 'media';
     if (field.type === 'link' || field.type === 'product' || field.type === 'collection' || field.type === 'variant') return 'links';
     return 'content';
   }
@@ -950,16 +950,18 @@
     const id = 'te-field-' + section.key + '-' + field.key.replace(/[^a-zA-Z0-9_-]/g, '-');
     const help = field.help ? '<div class="te-field-help">' + cmsEscapeHtml(field.help) + '</div>' : '';
 
-    if (field.type === 'media' || field.type === 'video' || field.media) {
-      const isImage = field.type !== 'video' && /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(String(value));
+    if (field.type === 'media' || field.type === 'video' || field.type === 'model3d' || field.media) {
+      const isModel = field.type === 'model3d' || /\.(glb|gltf|usdz)(\?|$)/i.test(String(value));
+      const isImage = !isModel && field.type !== 'video' && /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(String(value));
       const isVideo = field.type === 'video' || /\.(mp4|mov|webm)(\?|$)/i.test(String(value));
       let preview = '<div class="te-media-empty">' + (value ? cmsEscapeHtml(String(value).split('/').pop()) : 'Drop media here or choose from library') + '</div>';
       if (value && isImage) preview = '<img src="' + safeValue + '" alt="">';
-      if (value && isVideo) preview = '<video src="' + safeValue + '" muted playsinline></video>';
+      if (value && isVideo && !isModel) preview = '<video src="' + safeValue + '" muted playsinline></video>';
+      if (value && isModel) preview = '<div class="te-media-empty" role="status">3D model · ' + cmsEscapeHtml(String(value).split('/').pop()) + '</div>';
       return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label>' + cmsEscapeHtml(field.label) + '</label>' +
         '<div class="te-media-drop" data-media-drop="' + cmsEscapeAttr(field.key) + '"><div class="te-media-preview">' + preview +
         '</div><div class="te-media-actions"><button type="button" class="te-media-button" data-pick-media="' + cmsEscapeAttr(field.key) + '">Choose</button>' +
-        '<label class="te-media-button" style="display:inline-flex;align-items:center">Upload<input type="file" hidden data-upload-media="' + cmsEscapeAttr(field.key) + '" accept="' + (field.type === 'video' ? 'video/*' : 'image/*,video/*,.glb,.gltf,.usdz') + '"></label>' +
+        '<label class="te-media-button" style="display:inline-flex;align-items:center">Upload<input type="file" hidden data-upload-media="' + cmsEscapeAttr(field.key) + '" accept="' + (field.type === 'video' ? 'video/*' : field.type === 'model3d' ? 'model/*,.glb,.gltf,.usdz' : 'image/*,video/*,.glb,.gltf,.usdz') + '"></label>' +
         (mediaUndo.has(mediaUndoKey(field.key)) ? '<button type="button" class="te-media-button" data-undo-media="' + cmsEscapeAttr(field.key) + '" title="Undo the previous media change">Undo media</button>' : '') +
         '</div><div class="te-media-feedback" data-media-feedback role="status" aria-live="polite"></div></div>' +
         '<input class="te-media-url" id="' + id + '" data-field-input="' + cmsEscapeAttr(field.key) + '" value="' + safeValue + '" placeholder="' + cmsEscapeAttr(field.placeholder || 'Media URL or path') + '">' + help + '</div>';
@@ -1366,10 +1368,12 @@
     if (!zone) return;
     const preview = zone.querySelector('.te-media-preview');
     const field = fieldByKey(fieldKey);
-    const isVideo = field && field.type === 'video' || /\.(mp4|mov|webm)(\?|$)/i.test(String(value));
-    const isImage = !isVideo && /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(String(value));
+    const isModel = field?.type === 'model3d' || /\.(glb|gltf|usdz)(\?|$)/i.test(String(value));
+    const isVideo = !isModel && (field?.type === 'video' || /\.(mp4|mov|webm)(\?|$)/i.test(String(value)));
+    const isImage = !isModel && !isVideo && /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(String(value));
     if (value && isVideo) preview.innerHTML = '<video src="' + cmsEscapeAttr(value) + '" muted playsinline></video>';
     else if (value && isImage) preview.innerHTML = '<img src="' + cmsEscapeAttr(value) + '" alt="">';
+    else if (value && isModel) preview.innerHTML = '<div class="te-media-empty" role="status">3D model · ' + cmsEscapeHtml(String(value).split('/').pop()) + '</div>';
     else preview.innerHTML = '<div class="te-media-empty">' + (value ? cmsEscapeHtml(String(value).split('/').pop()) : 'Drop media here or choose from library') + '</div>';
   }
 
@@ -1482,7 +1486,7 @@
         let value = '';
         if (field.key.endsWith('.href') || field.type === 'link') {
           value = el.getAttribute('href') || el.closest('a')?.getAttribute('href') || '';
-        } else if (field.type === 'media' || field.type === 'video' || field.media) {
+        } else if (field.type === 'media' || field.type === 'video' || field.type === 'model3d' || field.media) {
           value = el.getAttribute('src') || el.querySelector('img,video,source')?.getAttribute('src') || '';
         } else {
           const clone = el.cloneNode(true);
@@ -2690,7 +2694,8 @@
       const matchesFilter = filter === 'all' ||
         (filter === 'images' && kind.startsWith('image/') && asset.folder !== 'products') ||
         (filter === 'products' && asset.folder === 'products') ||
-        (filter === 'videos' && (kind.startsWith('video/') || kind.startsWith('model/')));
+        (filter === 'videos' && kind.startsWith('video/')) ||
+        (filter === 'models' && (kind.startsWith('model/') || /\.(glb|gltf|usdz)$/i.test(asset.filename || '')));
       return matches && matchesFilter;
     });
     const sort = byId('te-media-sort').value;
@@ -2738,12 +2743,12 @@
     byId('te-media-confirm').disabled = true;
     byId('te-media-selected-name').textContent = 'Select an asset to preview';
     const field = fieldByKey(fieldKey);
-    byId('te-media-filter').value = field?.type === 'video' ? 'videos' : 'all';
+    byId('te-media-filter').value = field?.type === 'video' ? 'videos' : field?.type === 'model3d' ? 'models' : 'all';
     byId('te-media-sort').value = 'newest';
     byId('te-media-alert').hidden = true;
     byId('te-media-grid').innerHTML = '<div class="te-empty" style="grid-column:1/-1">Loading your media library…</div>';
     byId('te-media-count').textContent = 'Loading…';
-    byId('te-media-upload').accept = field?.type === 'video' ? 'video/*' : 'image/*,video/*';
+    byId('te-media-upload').accept = field?.type === 'video' ? 'video/*' : field?.type === 'model3d' ? 'model/*,.glb,.gltf,.usdz' : 'image/*,video/*,.glb,.gltf,.usdz';
     try {
       await loadMedia();
       renderMediaGrid('');
