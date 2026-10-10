@@ -213,7 +213,7 @@ test("old Shop Hero selection exposes editable original text styling and Reset w
   await tick();await tick();
   assert.equal(writes.length,1);
   assert.equal(writes[0].content.__editor.fieldStyles.headline.fontSize,68);
-  assert.equal(writes[0].content.headline,"Time is the\nreal horsepower.","editing its appearance must preserve original headline content");
+  assert.equal(writes[0].content.headline,getRegistryPage("shop").sections.find(section=>section.key==="hero").content.headline,"editing appearance must preserve original content");
 
   const reset=inspector.querySelector('[data-reset-style="__editor.fieldStyles.headline.fontSize"]');
   assert.ok(reset,"every override supports returning to authored defaults");
