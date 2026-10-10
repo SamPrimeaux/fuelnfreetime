@@ -288,20 +288,34 @@ function action(button){
  if(a==="variant"){selectedVariant=+button.dataset.tsChoice;return updatePreview();}
  if(a==="nextImage"){imageIndex=(imageIndex+1)%3;return updatePreview();}
  if(a==="previousImage"){imageIndex=(imageIndex+2)%3;return updatePreview();}
- if(["cart","drawer","modal","popover"].includes(a))return dialog(a==="cart"?"Cart preview":a==="drawer"?"Storefront drawer preview":a==="modal"?"Modal preview":"Popover preview","<p>Local interactive overlay; nothing is sent to commerce, checkout, or publication.</p>");
+ if(["cart","drawer","modal","popover"].includes(a)){
+ const isCart=a==="cart",asDrawer=a==="drawer"||(isCart&&v("cart.type")==="Drawer");
+ const title=isCart?(asDrawer?"Cart drawer preview":"Cart page preview"):a==="drawer"?"Storefront drawer preview":a==="modal"?"Modal preview":"Popover preview";
+ const html=isCart?'<div class="ts-demo-lines"><div>Field Collection <strong>$45.00</strong></div><div>Cart total <strong>$45.00</strong></div><p>Local fixture. No order or checkout is placed.</p></div>':'<p>Storefront presentation preview; no merchant content is changed.</p>';
+ const d=dialog(title,html);
+ const surface=d.querySelector(".ts-modal");
+ if(asDrawer)surface.classList.add("ts-preview-drawer");
+ if(a==="popover"){surface.classList.add("ts-preview-popover");const bounds=button.getBoundingClientRect();surface.style.top=Math.max(10,Math.min(bounds.bottom+8,innerHeight-160))+"px";surface.style.left=Math.max(10,Math.min(bounds.left,innerWidth-290))+"px";}
+ const prefix=a==="modal"||a==="popover"?"overlays":"drawers";
+ surface.style.background=hex(v(prefix+".bg"));surface.style.color=hex(v(prefix+".text"));surface.style.borderColor=hex(v(prefix+".border"));
+ if(prefix==="overlays"){surface.style.borderRadius=v("overlays.radius")+"px";surface.style.borderWidth=v("overlays.thickness")+"px";surface.style.boxShadow=v("overlays.shadow")?"0 14px 45px "+hex(v("overlays.shadowColor"))+"35":"none";}
+ return;
+ }
+ if(a==="motionDemo"){const demo=root.querySelector(".ts-motion-card");if(demo){demo.classList.remove("is-playing");void demo.offsetWidth;demo.classList.add("is-playing");}return;}
+ if(button.closest(".ts-button-examples"))return dialog("Button style preview","<p>These are interactive style samples. No storefront action or commerce workflow is connected to this preview.</p>");
  if(key&&fieldMap.get(key)?.type==="switch")return set(key,!v(key));
  if(key&&button.dataset.tsValue!==undefined)return set(key,button.dataset.tsValue);
 }
 function price(key){return "$45.00"+(v("prices."+key)?" USD":"");}
 function demo(cat){
  const previewButton=(text,a)=>button(text,`data-ts-action="${a}"`);
- const product=()=>`<div class="ts-product" style="background:${hex(v("cards.bg"))};color:${hex(v("cards.text"))}"><div class="ts-product-image" data-ts-image style="background:${["#8d9791","#a4b7b7","#c4afa1"][imageIndex]}"><span>Media ${imageIndex+1} / 3</span>${v("cards.carousel")?`<div>${button("‹",'data-ts-action="previousImage" aria-label="Previous image"')}${button("›",'data-ts-action="nextImage" aria-label="Next image"')}</div>`:""}</div><strong>Field Collection</strong><small>${price("cards")}</small>${v("cards.quick")?previewButton("Quick add","cart"):""}</div>`;
+ const product=()=>`<div class="ts-product" style="background:${hex(v("cards.bg"))};color:${hex(v("cards.text"))}"><div class="ts-product-image" data-ts-image style="background:${["#8d9791","#a4b7b7","#c4afa1"][imageIndex]}"><span>Media ${imageIndex+1} / 3</span>${v("cards.carousel")?`<div>${button("‹",'data-ts-action="previousImage" aria-label="Previous image"')}${button("›",'data-ts-action="nextImage" aria-label="Next image"')}</div>`:""}</div><strong>Field Collection</strong><small>${price("cards")}</small>${(document.getElementById("te-preview-device")?.dataset.device==="mobile"?v("cards.mobileQuick"):v("cards.quick"))?previewButton("Quick add","cart"):""}</div>`;
  switch(cat){
  case "brand":return `<strong>${esc(brandName)}</strong><p>Asset previews appear in their own fields above.</p>`;
  case "palette":return `<div class="ts-demo-colors">${Array.from({length:paletteCount},(_,i)=>i).map(i=>`<span style="background:${hex(v("palette."+i))}"></span>`).join("")}</div>`;
  case "type":return `<h2 style="font-family:${esc(v("type.font.Heading"))},sans-serif;font-size:clamp(22px,5vw,${parseInt(v("type.h1.size"))}px);text-transform:${v("type.h1.case")==="Uppercase"?"uppercase":"none"};color:${hex(v("type.text"))};line-height:${{Tight:1.1,Normal:1.35,Loose:1.65}[v("type.h1.line")]}">Designed for living</h2><p style="font-family:${esc(v("type.font.Body"))},sans-serif;font-size:${esc(v("type.p.size"))};line-height:${{Tight:1.1,Normal:1.4,Loose:1.7}[v("type.p.line")]}">Typography preview, with responsive sizing.</p>`;
  case "page":return `<div class="ts-page-example" style="background:${hex(v("page.bg"))}"><div style="width:${{Narrow:"48%",Standard:"64%",Wide:"83%","Full width":"100%"}[v("page.width")]}">Content width</div></div>`;
- case "motion":return `<div tabindex="0" class="ts-motion-card ${v("motion.hover").toLowerCase().replace(/ /g,"-")}">Hover or focus for the chosen effect</div>`;
+ case "motion":return `<div tabindex="0" class="ts-motion-card ${v("motion.hover").toLowerCase().replace(/ /g,"-")}">Hover or focus for the chosen effect</div><div class="ts-demo-lines ts-motion-status"><div>Page transition <strong>${v("motion.page")?"On":"Off"}</strong></div><div>Product transition <strong>${v("motion.product")?"On":"Off"}</strong></div><div>Add-to-cart animation <strong>${v("motion.cart")?"On":"Off"}</strong></div></div>${button("Play transition","data-ts-action=\"motionDemo\"")}`;
  case "badges":return `<div class="ts-badge-example"><span style="background:${hex(v("badges.saleBg"))};color:${hex(v("badges.saleText"))};border-radius:${v("badges.radius")}px;text-transform:${v("badges.case")==="Uppercase"?"uppercase":"none"}">${esc(v("badges.position"))}: SALE</span><span style="background:${hex(v("badges.soldBg"))};color:${hex(v("badges.soldText"))}">SOLD OUT</span></div>`;
  case "buttons":return `<div class="ts-button-examples">${["primary","secondary","pills"].map(x=>button(x,`style="background:${v("buttons."+x+".bg")==="transparent"?"transparent":hex(v("buttons."+x+".bg"))};color:${hex(v("buttons."+x+".text"))};border:${v("buttons."+x+".borderW")}px solid ${hex(v("buttons."+x+".border"))};border-radius:${v("buttons."+x+".radius")}px;text-transform:${v("buttons."+x+".case")==="Uppercase"?"uppercase":"none"}"`)).join("")}</div>`;
  case "cart":return `<div class="ts-demo-lines"><div>Cart item <strong>${price("items")}</strong></div><div>Total <strong>${price("total")}</strong></div>${v("cart.note")?'<textarea placeholder="Note to seller" aria-label="Seller note"></textarea>':""}${v("cart.discount")?'<small>Discount input available</small>':""}${v("cart.accelerated")?'<small>Accelerated checkout preview · disabled</small>':""}${previewButton(v("cart.type")==="Drawer"?"Open cart drawer":"Open cart page","cart")}</div>`;
@@ -312,7 +326,7 @@ function demo(cat){
  case "prices":return `<div class="ts-demo-lines">${[["Product pages","product"],["Product cards","cards"],["Cart items","items"],["Cart total","total"]].map(([l,k])=>`<div>${l}<strong>${price(k)}</strong></div>`).join("")}</div>`;
  case "cards":return product();
  case "search":return `<div class="ts-demo-search"><input type="search" data-ts-search value="${esc(searchQuery)}" placeholder="Search sample products" aria-label="Preview search"><div class="ts-search-result" style="border-radius:${v("search.cardRadius")}px"><span class="ts-search-art" style="border-radius:${v("search.productRadius")}px"></span><strong data-ts-result style="text-transform:${v("search.title")==="Uppercase"?"uppercase":"none"}">${searchQuery&&!/field collection/i.test(searchQuery)?"No fixture matches":"Field Collection"}</strong></div><small>${esc(v("search.empty")||"No collection selected")} · local fixture only</small></div>`;
- case "swatches":return `<div class="ts-demo-swatches">${["Graphite","Sand","Stone","Unavailable"].map((l,i)=>button(selectedVariant===i?"✓":"",`data-ts-action="variant" data-ts-choice="${i}" ${i===3?"disabled":""} aria-pressed="${selectedVariant===i}" aria-label="${l}" title="${l}" style="width:${v("swatches.width")}px;height:${v("swatches.height")}px;border-radius:${v("swatches.radius")}px;border:${v("swatches.borders")==="None"?0:v("swatches.thickness")}px solid rgba(0,0,0,${v("swatches.opacity")/100});background:${["#303030","#d2c5ac","#9c9c97","#e9e9e9"][i]}"`)).join("")}</div>`;
+ case "swatches":return `<div class="ts-demo-swatches">${["Graphite","Sand","Stone","Unavailable"].map((l,i)=>button(selectedVariant===i?"✓":"",`data-ts-action="variant" data-ts-choice="${i}" ${i===3?"disabled":""} aria-pressed="${selectedVariant===i}" aria-label="${l}" title="${l}" style="width:${v("swatches.width")}px;height:${v("swatches.height")}px;border-radius:${v("swatches.radius")}px;border:${v("swatches.borders")==="None"?0:v("swatches.thickness")}px solid rgba(0,0,0,${v("swatches.opacity")/100});background:${["#303030","#d2c5ac","#9c9c97","#e9e9e9"][i]};${v("swatches.images")&&i!==3?`background-image:url(${mediaSample(i%3)});background-position:center;background-size:cover;`:""}"`)).join("")}</div>`;
  case "variants":return `<div class="ts-demo-variants ${v("variants.width")==="Fill"?"is-fill":""}">${["Small","Medium","Large"].map((label,i)=>button(label,`data-ts-action="variant" data-ts-choice="${i}" aria-pressed="${selectedVariant===i}" style="background:${hex(v(i===selectedVariant?"variants.selectedBg":"variants.bg"))};color:${hex(v(i===selectedVariant?"variants.selectedText":"variants.text"))};border:${v("variants.thickness")}px solid ${hex(v(i===selectedVariant?"variants.selectedBorder":"variants.border"))};border-radius:${v("variants.radius")}px"`)).join("")}</div>`;
  case "css":return "<p>Custom CSS is saved to isolated session preview state and is not applied to the storefront.</p>";
  default:return "";
@@ -356,6 +370,20 @@ function mount(){
  root.innerHTML=`<div class="ts-heading"><h2>Theme settings</h2><span>Preview</span></div><div class="ts-categories"></div><div class="ts-theme-style"><span>Theme style</span><span title="Theme style switching is deferred until backend mapping">ⓘ</span></div><p class="ts-review-note" data-ts-review-note>Preview only · preserved for this browser session · not published</p>`;
  rail=root.querySelector(".ts-categories");
  rail.innerHTML=categories.map(([id,label])=>`<section class="ts-category" data-ts-category="${id}"><h3><button type="button" data-ts-toggle aria-expanded="false" aria-controls="ts-panel-${id}"><span>${esc(label)}</span><svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button></h3><div id="ts-panel-${id}" data-ts-panel="${id}" class="ts-category-content" hidden></div></section>`).join("");
+ rail.addEventListener("mouseover",e=>{
+ if(category!=="cards"||!v("cards.second")||imageIndex!==0)return;
+ const card=e.target.closest(".ts-product");
+ if(!card||card.contains(e.relatedTarget))return;
+ const art=card.querySelector("[data-ts-image]");
+ if(art){art.style.background="#a4b7b7";art.querySelector("span").textContent="Media 2 / 3";}
+ });
+ rail.addEventListener("mouseout",e=>{
+ if(category!=="cards"||imageIndex!==0)return;
+ const card=e.target.closest(".ts-product");
+ if(!card||card.contains(e.relatedTarget))return;
+ const art=card.querySelector("[data-ts-image]");
+ if(art){art.style.background="#8d9791";art.querySelector("span").textContent="Media 1 / 3";}
+ });
  rail.addEventListener("click",e=>{
  const toggleButton=e.target.closest("[data-ts-toggle]");
  if(toggleButton)return openCategory(toggleButton.closest("[data-ts-category]").dataset.tsCategory);
