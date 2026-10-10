@@ -209,3 +209,17 @@ test("Custom CSS source edits remain isolated and do not inject new styles",()=>
  assert.equal(w.document.querySelector('style[data-generated-from-css]'),null);
  dom.window.close();
 });
+
+test("actual Theme Editor HTML loads the Theme Settings runtime after its editor host",()=>{
+ const html=readFileSync(new URL("../frontend/static/theme-editor.html",import.meta.url),"utf8");
+ const shell=new JSDOM(html);
+ const resources=[...shell.window.document.querySelectorAll("script[src]")].map(el=>el.getAttribute("src"));
+ const editor=resources.indexOf("/admin/js/theme-editor.js");
+ const settings=resources.indexOf("/admin/js/theme-settings-panel.js");
+ assert.ok(editor>=0,"canonical editor asset must load");
+ assert.equal(settings,editor+1,"theme settings must mount immediately after the editor");
+ assert.equal(resources.filter(x=>x==="/admin/js/theme-settings-panel.js").length,1);
+ assert.ok(shell.window.document.querySelector('link[href="/admin/css/theme-settings-panel.css"]'));
+ assert.doesNotMatch(shell.window.document.body.textContent,/\\n/,"literal slash-n must not appear in editor markup");
+ shell.window.close();
+});
