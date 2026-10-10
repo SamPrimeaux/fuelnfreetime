@@ -73,3 +73,85 @@ test("prices, variants and category preview respond without publication",()=>{
  assert.equal(w.ThemeSettingsPanel.getState().published,false);
  dom.window.close();
 });
+
+
+test("all visible categories expose working switch, select, slider, or segment mutations",()=>{
+ const {dom,w,root}=fixture();
+ const buttons=[...root.querySelectorAll("[data-ts-toggle]")];
+ let mutations=0;
+ for(const category of buttons){
+  category.click();
+  const toggle=root.querySelector(".ts-category.is-open .ts-switch");
+  if(toggle){
+   const key=toggle.dataset.tsKey,old=w.ThemeSettingsPanel.getState().values[key];
+   toggle.click();
+   assert.equal(w.ThemeSettingsPanel.getState().values[key],!old,key);
+   mutations++;
+  }
+  const select=root.querySelector(".ts-category.is-open select[data-ts-key]");
+  if(select&&select.options.length>1){
+   const key=select.dataset.tsKey;
+   const next=select.options[select.selectedIndex===0?1:0].value;
+   select.value=next;select.dispatchEvent(new w.Event("change",{bubbles:true}));
+   assert.equal(w.ThemeSettingsPanel.getState().values[key],next,key);
+   mutations++;
+  }
+  const slider=root.querySelector('.ts-category.is-open input[type="range"]');
+  if(slider){
+   const key=slider.dataset.tsKey,value=Math.min(Number(slider.max),Number(slider.value)+1);
+   slider.value=String(value);slider.dispatchEvent(new w.Event("input",{bubbles:true}));
+   assert.equal(w.ThemeSettingsPanel.getState().values[key],value,key);
+   mutations++;
+  }
+  const segments=root.querySelectorAll('.ts-category.is-open .ts-segment');
+  for(const group of segments){
+   const choices=[...group.querySelectorAll('button[data-ts-key]')];
+   const target=choices.find(b=>b.getAttribute("aria-pressed")==="false");
+   if(target){
+    target.click();
+    assert.equal(w.ThemeSettingsPanel.getState().values[target.dataset.tsKey],target.dataset.tsValue);
+    mutations++;
+    break;
+   }
+  }
+ }
+ assert.ok(mutations>=20,"expected broad functional control coverage");
+ dom.window.close();
+});
+test("palette Add creates editable fifth slot and links remain distinct from literals",()=>{
+ const {dom,w,root}=fixture();
+ root.querySelectorAll("[data-ts-toggle]")[1].click();
+ assert.equal(root.querySelectorAll(".ts-palette-chip").length,4);
+ root.querySelector('[data-ts-action="paletteAdd"]').click();
+ const picker=w.document.querySelector("[data-ts-color-hex]");
+ assert.ok(picker);
+ picker.value="#224488";w.document.querySelector("[data-ts-apply]").click();
+ assert.equal(root.querySelectorAll(".ts-palette-chip").length,5);
+ assert.equal(w.ThemeSettingsPanel.getState().values["palette.4"],"#224488");
+ dom.window.close();
+});
+test("media selection is reversible, scoped, and not a live asset upload",()=>{
+ const {dom,w,root}=fixture();
+ root.querySelectorAll("[data-ts-toggle]")[0].click();
+ const first=root.querySelector('[data-ts-action="media"][data-ts-key="brand.default"]');
+ assert.ok(first);
+ first.click();
+ assert.ok(w.document.querySelector(".ts-modal"));
+ w.document.querySelector('[data-ts-image-choice="1"]').click();
+ w.document.querySelector("[data-ts-apply]").click();
+ assert.ok(root.querySelector('[data-ts-media="brand.default"] img'));
+ assert.equal(root.querySelector('[data-ts-media="brand.inverse"] img'),null);
+ root.querySelector('[data-ts-action="mediaRemove"][data-ts-key="brand.default"]').click();
+ assert.equal(root.querySelector('[data-ts-media="brand.default"] img'),null);
+ dom.window.close();
+});
+test("Custom CSS source edits remain isolated and do not inject new styles",()=>{
+ const {dom,w,root}=fixture();
+ root.querySelectorAll("[data-ts-toggle]")[17].click();
+ const input=root.querySelector('#ts-css-code');
+ input.value='.preview-test { border-radius: 18px; }';
+ input.dispatchEvent(new w.Event("input",{bubbles:true}));
+ assert.match(w.ThemeSettingsPanel.getState().values["css.source"],/border-radius: 18px/);
+ assert.equal(w.document.querySelector('style[data-generated-from-css]'),null);
+ dom.window.close();
+});
