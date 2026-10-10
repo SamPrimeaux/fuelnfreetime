@@ -31,6 +31,7 @@ try {
  const args=["--headless=new","--disable-gpu","--disable-dev-shm-usage","--no-sandbox","--hide-scrollbars","--virtual-time-budget=3000","--window-size="+width+",960","--screenshot="+path.join(dir,"theme-settings-"+width+".png"),"--dump-dom",url];
  const {stdout}=await exec(chrome,args,{timeout:45000,encoding:"utf8",maxBuffer:1<<22});
  const match=stdout.match(/<pre id="theme-result"[^>]*>([^<]+)<\/pre>/);
+ if(!match) console.error("Chromium output tail:",stdout.slice(-4000));
  assert.ok(match,"Missing Theme Settings browser probe at "+width+"px");
  const result=JSON.parse(match[1].replaceAll("&quot;",'"').replaceAll("&amp;","&"));
  assert.equal(result.mounted,true);
