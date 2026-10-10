@@ -19,6 +19,7 @@ async function editorFixture() {
   w.structuredClone = globalThis.structuredClone;
   w.HTMLElement.prototype.scrollIntoView = () => {};
   const writes = [];
+  const publishes = [];
   const page = getRegistryPage("shop");
   const site = getRegistryPage("site");
   page.content_authority = "cms-draft-linked";
@@ -33,6 +34,10 @@ async function editorFixture() {
     if (url.endsWith("/pages/site")) return { page: site };
     if (url.endsWith("/pages/shop")) return { page, seeded: false };
     if (url.endsWith("/pages")) return { pages: [{ slug: "shop", title: "Shop", live_route: "/shop" }] };
+    if (url.endsWith("/pages/shop/publish") && options.method === "POST") {
+      publishes.push({url,method:options.method});
+      return w.__publishResponder ? w.__publishResponder() : { published_at: "2026-10-10T05:00:00Z" };
+    }
     if (url.includes("/sections/") && options.method === "PUT") {
       writes.push({ url, ...JSON.parse(options.body) });
       return { version: 2, updated_at: "2026-10-10T02:00:00Z" };
@@ -45,7 +50,7 @@ async function editorFixture() {
   await tick();
   await tick();
   await tick();
-  return { dom, w, doc: w.document, writes };
+  return { dom, w, doc: w.document, writes, publishes };
 }
 
 test("real editor mounts compact toolbar, one drawer and installed page tree", async () => {
@@ -159,20 +164,14 @@ test("a real edit keeps Save actionable after automatic draft persistence",async
 });
 
 test("explicit Publish live does not invoke browser confirm or issue concurrent publishes",async()=>{
- const {dom,w,doc}=await editorFixture();
+ const {dom,w,doc,publishes}=await editorFixture();
  try{
-  let confirmCalls=0,publishCalls=0;
+  let confirmCalls=0;
   w.confirm=()=>{confirmCalls++;return false;};
-  const original=w.adminFetch;
   let complete;
-  w.adminFetch=async (url,options)=>{
-   if(url==="/api/admin/cms/pages/shop/publish"&&options?.method==="POST"){
-    publishCalls++;
-    await new Promise(resolve=>complete=resolve);
-    return {published_at:"2026-10-10T05:00:00Z"};
-   }
-   return original(url,options);
-  };
+  w.__publishResponder=()=>new Promise(resolve=>{
+    complete=()=>resolve({published_at:"2026-10-10T05:00:00Z"});
+  });
   const option=doc.getElementById("te-save-options");
   option.click();
   assert.equal(doc.getElementById("te-save-menu").hidden,false);
@@ -181,11 +180,11 @@ test("explicit Publish live does not invoke browser confirm or issue concurrent 
   assert.equal(doc.getElementById("te-save-menu").hidden,true);
   assert.equal(option.getAttribute("aria-expanded"),"false");
   await tick();
-  assert.equal(publishCalls,1);
+  assert.equal(publishes.length,1);
   assert.equal(doc.getElementById("te-publish").disabled,true);
   doc.getElementById("te-publish").click();
   await tick();
-  assert.equal(publishCalls,1,"one publish request while the first is in flight");
+  assert.equal(publishes.length,1,"one publish request while the first is in flight");
   complete();
   await tick();await tick();
   assert.equal(doc.getElementById("te-publish").disabled,false);
