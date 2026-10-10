@@ -20,6 +20,8 @@
   let unmanagedLiveSections = [];
   let activeBlockId = null;
   let activeFieldKey = null;
+  // The selected authored slot persists while its appearance controls are edited.
+  let selectedStyleFieldKey = null;
   let miniAgentSam = null;
   let miniAgentSamPromise = null;
   let miniAgentSamSelectionTick = 0;
@@ -209,7 +211,7 @@
             '<div class="te-preview-status"><span class="te-preview-mode">Local draft preview</span><span class="te-selected-path" id="te-selected-path">Select a section in the preview or tree</span></div>',
           '</main>',
           '<aside class="theme-editor-panel">',
-            '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><div class="te-inspector-tools"><button type="button" id="te-agent-open" class="te-agent-open" aria-label="Ask miniAgentSam about the selected section" title="Ask miniAgentSam about this section"><img src="/admin/brand/agentsam-mark.svg" width="16" height="12" alt="" aria-hidden="true"> Ask AgentSam</button><span class="te-badge" id="te-section-status">draft</span><button type="button" class="te-icon-btn te-inspector-close" id="te-inspector-close" aria-label="Close settings panel" title="Close settings panel">×</button></div></div>',
+            '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><div class="te-inspector-tools"><button type="button" id="te-agent-open" class="te-agent-open" aria-label="Open miniAgentSam beside the selected element" title="Ask miniAgentSam about this selection"><img src="/admin/brand/agentsam-sidekick-symbol.svg" width="20" height="20" alt="" aria-hidden="true"></button><span class="te-badge" id="te-section-status">draft</span><button type="button" class="te-icon-btn te-inspector-close" id="te-inspector-close" aria-label="Close settings panel" title="Close settings panel">×</button></div></div>',
             '<div class="te-inspector-body" id="te-inspector-body"></div><div data-composer-slot="editor"></div>',
             '<div class="te-inspector-save"><p class="te-note" id="te-note" role="status" aria-live="polite"></p></div>',
           '</aside>',
@@ -475,16 +477,45 @@
     return (schema && schema.fields) || (window.SECTION_FIELDS && window.SECTION_FIELDS[slug] && window.SECTION_FIELDS[slug][activeSectionKey]) || [];
   }
 
+  function contextualStyleFields() {
+    const selected = currentSchema().find(function(field) { return field.key === selectedStyleFieldKey; });
+    if (!selected || !['text','rich_text','textarea','link'].includes(selected.type) &&
+        !/cta|button|label|headline|title|subheadline|eyebrow|meta/i.test(selected.key)) return [];
+    const prefix = '__editor.fieldStyles.' + selected.key + '.';
+    const number = (key,label,group,min,max,step=1,unit='px') =>
+      ({key:prefix+key,label,type:'number',min,max,step,unit,group,designStyle:true});
+    const choices = (key,label,group,options) =>
+      ({key:prefix+key,label,type:'select',group,options:options.map(function(value){
+        return {label:value === 'inherit'?'Theme default':value,value};
+      }),default:'inherit',designStyle:true});
+    return [
+      number('fontSize','Font size','typography',8,180),
+      choices('fontWeight','Font weight','typography',['inherit','400','500','600','700','800','900']),
+      number('lineHeight','Line height','typography',0.8,3,0.05,'×'),
+      number('letterSpacing','Letter spacing','typography',-5,24,0.25),
+      choices('textAlign','Alignment','typography',['inherit','left','center','right']),
+      choices('textTransform','Text case','typography',['inherit','none','uppercase','lowercase','capitalize']),
+      {key:prefix+'color',label:'Text color',type:'color',group:'appearance',designStyle:true},
+      {key:prefix+'backgroundColor',label:'Background',type:'color',group:'appearance',designStyle:true},
+      ...['Top','Bottom','Left','Right'].map(function(side) {
+        return number('padding'+side,side+' padding','spacing',0,160);
+      }),
+      number('borderRadius','Corner radius','appearance',0,160),
+    ];
+  }
+
   function currentSettings() {
     const block = currentBlockSchema();
     if (activeBlockId) {
-      if (!block || !Array.isArray(block.settings)) return [];
-      return block.settings.map(function(field) {
-        return { ...field, key: activeBlockId + '.__settings.' + field.key, blockRelativeKey: field.key };
-      });
+      const settings = block && Array.isArray(block.settings) ? block.settings.map(function(field) {
+        return {...field,key:activeBlockId+'.__settings.'+field.key,blockRelativeKey:field.key};
+      }) : [];
+      return settings.concat(contextualStyleFields());
     }
     const schema = currentSectionSchema();
-    return (schema && schema.settings) || [];
+    return ((schema && schema.settings) || []).map(function(field) {
+      return {...field,designStyle:true};
+    }).concat(contextualStyleFields());
   }
 
   function allEditableFields() {
@@ -518,7 +549,19 @@
       next = Boolean(value);
     }
     const before = structuredClone(section.content);
-    cmsSetPath(section.content, field.key, next);
+    if (field.designStyle && (value === '' || value === null || value === 'inherit' || value === undefined)) {
+      // Delete the override, never overwrite the packaged theme or authored HTML.
+      const parts=field.key.split('.');
+      const parent=cmsGetPath(section.content,parts.slice(0,-1).join('.'));
+      if(parent && typeof parent==='object')delete parent[parts.at(-1)];
+    } else {
+      if (field.designStyle && field.type === 'number') {
+        const parsed=Number(value);
+        if (!Number.isFinite(parsed) || parsed < field.min || parsed > field.max) return;
+        next=parsed;
+      }
+      cmsSetPath(section.content, field.key, next);
+    }
     if (JSON.stringify(before) === JSON.stringify(section.content)) return;
     recordFieldHistory(section, field.key, before, structuredClone(section.content));
     markSectionDirty(section);
@@ -1077,13 +1120,20 @@
         if (!byGroup[group]) byGroup[group] = [];
         byGroup[group].push(field);
       });
-      const focusedSetting = settings.some(function(field) { return field.key === activeFieldKey; });
-      html += '<details class="te-inspector-disclosure" data-inspector-advanced' + (focusedSetting ? ' open' : '') + '>' +
+      // Surface the controls immediately when an original field or section is selected.
+      // Explicit local overrides are optional; without one its original CSS wins.
+      html += '<details class="te-inspector-disclosure" data-inspector-advanced open>' +
         '<summary>Appearance and layout<span class="te-disclosure-chevron" aria-hidden="true">⌄</span></summary>' +
         '<div class="te-inspector-disclosure__body">' +
         Object.keys(byGroup).map(function(group) {
-          return '<div class="te-setting-group"><div class="te-setting-group__title">' + cmsEscapeHtml(humanize(group)) + '</div>' +
-            byGroup[group].map(function(field) { return renderField(section, field); }).join('') + '</div>';
+          return '<div class="te-setting-group"><div class="te-setting-group__title">' +
+            cmsEscapeHtml(group === 'typography' ? 'Selected text · Typography' : humanize(group)) + '</div>' +
+            byGroup[group].map(function(field) {
+              const hasOverride=cmsGetPath(section.content,field.key)!==undefined;
+              return renderField(section,field) +
+                (field.designStyle&&hasOverride?'<button type="button" class="te-reset-style" data-reset-style="'+cmsEscapeAttr(field.key)+'" title="Restore the original theme value">Reset to theme default</button>':
+                  field.designStyle?'<span class="te-inherited-style" title="The original installed-theme style is preserved">Using original theme style</span>':'');
+            }).join('') + '</div>';
         }).join('') + '</div></details>';
     }
 
@@ -1119,6 +1169,14 @@
       selectSection(section.key, null, false, sectionOwner(section));
     });
     wireFields();
+    panel.querySelectorAll('[data-reset-style]').forEach(function(button) {
+      button.addEventListener('click',function() {
+        const field=fieldByKey(button.dataset.resetStyle);
+        if(!field)return;
+        setFieldValue(field,undefined);
+        renderInspector();
+      });
+    });
     paintGeneratedSettings(panel, section);
     if (liveUnimported) {
       panel.querySelectorAll('input, textarea, select, button:not(#te-inspector-parent)').forEach(function(control) { control.disabled = true; });
@@ -1843,6 +1901,7 @@
     activeSectionOwner = sectionOwner(section);
     activeBlockId = null;
     activeFieldKey = fieldKey || null;
+    selectedStyleFieldKey = fieldKey || null;
 
     setInspectorVisible(true);
     renderTree();
@@ -1878,6 +1937,7 @@
     expandedSections.add(activeSectionOwner + ':' + sectionKey);
 
     if (activeFieldKey && activeFieldKey.indexOf(blockId + '.') !== 0) activeFieldKey = blockId + '.' + activeFieldKey;
+    selectedStyleFieldKey=activeFieldKey;
 
     setInspectorVisible(true);
     renderTree();
@@ -2865,7 +2925,9 @@
   });
   function toggleMiniAgentSam(anchor) {
     if (miniAgentSamVisible) { closeMiniAgentSam(); return; }
-    setMiniAnchor(anchor);
+    // A click in the inspector is not a new canvas selection: retain the
+    // genuine selected-element coordinates captured from the preview iframe.
+    if (!miniAnchor?.element?.isConnected) setMiniAnchor(anchor);
     void openMiniAgentSam();
   }
   byId('te-mini-agent-toggle')?.addEventListener('click', function(event) {

@@ -639,6 +639,10 @@
 .te-inspector-disclosure__body { padding: 3px 12px 12px; border-top: 1px solid #f1f1ee; }
 .te-inspector-disclosure .te-setting-group { margin: 11px 0 16px; }
 .te-inspector-disclosure--tools { margin-top: 15px; }
+.te-inherited-style { display:block; margin:-10px 0 12px; color:var(--te-muted); font:400 10px/1.35 system-ui,sans-serif; }
+.te-reset-style { display:block; margin:-10px 0 12px auto; border:0; background:transparent; color:#6351a7; padding:5px 1px; cursor:pointer; font:600 10px/1.25 system-ui,sans-serif; text-decoration:underline; text-underline-offset:2px; }
+.te-reset-style:hover { color:#4228a2; }
+.te-reset-style:focus-visible { outline:2px solid var(--te-accent);outline-offset:2px;border-radius:3px; }
 .te-inspector-disclosure--tools .te-setting-card { margin: 10px 0 0; }
 .te-disclosure-chevron { color: #777771; font-size: 16px; transition: transform .18s ease; }
 .te-inspector-disclosure[open] .te-disclosure-chevron { transform: rotate(180deg); }
@@ -1648,7 +1652,7 @@
 
 /* Contextual miniAgentSam uses the shared workbench; proposals hand off to the Side Assistant. */
 .te-inspector-tools { display:flex; align-items:center; gap:7px; min-width:0; }
-.te-agent-open { min-height:32px; border:1px solid #d6d0e8; background:#f4f0ff; color:#55409d; border-radius:9px; padding:5px 9px; cursor:pointer; font:700 10px/1.2 system-ui; white-space:nowrap; }
+.te-agent-open { width:34px;height:34px;min-width:34px;display:inline-grid;place-items:center;border:1px solid #d6d0e8;background:#f7f4ff;color:#55409d;border-radius:9px;padding:5px;cursor:pointer; }
 .te-agent-open:hover,.te-agent-open:focus-visible { background:#ebe3ff; outline:2px solid #ab95df; outline-offset:1px; }
 @media(max-width:900px) { .te-inspector-head { height:auto; min-height:51px; flex-wrap:wrap; padding-block:7px; } }
 
@@ -2345,7 +2349,7 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
   .theme-studio-toolbar__right .te-icon-btn { width: 30px; height: 30px; flex-basis: 30px; }
   .theme-studio-toolbar .te-save-actions > #te-save, .te-save-caret { height: 30px; }
 }
-.te-inspector-tools .te-agent-open img { width: 16px; height: 12px; object-fit: contain; vertical-align: middle; }
+.te-inspector-tools .te-agent-open img { width:20px;height:20px;object-fit:contain;display:block; }
 .te-tree-row.is-hovered:not(.is-active), .te-block-row.is-hovered:not(.is-active) { background: #f1edff; box-shadow: inset 2px 0 #7656ee; }
 /* Accessible hover/focus help is portaled above the editor's clipped rails. */
 .te-hover-help {

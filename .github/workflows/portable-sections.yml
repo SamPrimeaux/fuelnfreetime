@@ -51,6 +51,9 @@ on:
       - apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor-generation-bootstrap.mjs
       - apps/ecommerce-cms-agentsam/frontend/static/js/generation-stream.mjs
       - tests/cms-slot-binding-browser-smoke.mjs
+      - tests/cms-legacy-field-style-browser-smoke.mjs
+      - tests/cms-legacy-authored-slot-registration.test.mjs
+      - apps/ecommerce-cms-agentsam/tests/theme-toolbar-behavior.test.mjs
       - scripts/sync-app-frontend.mjs
       - tests/portable-sections.test.mjs
       - tests/cms-editor-mutations.test.mjs
@@ -71,6 +74,8 @@ jobs:
           node-version: '22'
       - name: Install locked runtime and renderer packages
         run: npm ci --ignore-scripts
+      - name: Install isolated DOM fixture for real editor test
+        run: npm install --no-save --ignore-scripts --package-lock=false jsdom@26
       - name: Verify architecture authority, package inventory and legacy paths
         run: npm run check:authority
       - name: Verify syntax
@@ -99,6 +104,12 @@ jobs:
         run: node tests/cms-live-source-browser-smoke.mjs
       - name: Actual storefront media and CTA edits in Chrome
         run: node tests/cms-slot-binding-browser-smoke.mjs
+      - name: Full authored Heuristic section and nested block slot registration
+        run: node --test tests/cms-legacy-authored-slot-registration.test.mjs
+      - name: Merchant legacy Hero overrides and reset preserve authored HTML and CSS
+        run: node tests/cms-legacy-field-style-browser-smoke.mjs
+      - name: Selected legacy field inspector saves overrides and resets in canonical CMS draft
+        run: node --test apps/ecommerce-cms-agentsam/tests/theme-toolbar-behavior.test.mjs
       - name: Reference-fidelity Chrome handoff and explicit private section acceptance
         run: node tests/cms-generated-approval-browser-smoke.mjs
       - name: Accepted generated section in the actual public and private storefront renderer
