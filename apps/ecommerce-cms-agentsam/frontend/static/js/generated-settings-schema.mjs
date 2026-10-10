@@ -2,7 +2,7 @@
  * merchant inspector. Settings values never define their own public API. */
 export const SETTING_TYPES = Object.freeze([
   'text','textarea','richtext','number','range','boolean','select','color',
-  'media','video','link','font-role','typography-preset','product','collection',
+  'media','video','model3d','link','font-role','typography-preset','product','collection',
   'variant','alignment','spacing',
 ]);
 const TYPES = new Set(SETTING_TYPES);
@@ -27,7 +27,7 @@ function validFieldValue(field,value) {
     case 'color':return typeof value==='string'&&COLORS.test(value);
     case 'select':return field.options.some(o=>o.value===value);
     case 'alignment':return typeof value==='string'&&ALIGN.has(value);
-    case 'media':case 'video':case 'product':case 'collection':case 'variant':
+    case 'media':case 'video':case 'model3d':case 'product':case 'collection':case 'variant':
       return typeof value==='string'&&REF.test(value);
     case 'link':return typeof value==='string'&&value.length<=2000&&
       (/^\/(?!\/)/.test(value)||/^#[-\w]+$/.test(value)||/^https:\/\//.test(value)||/^mailto:/.test(value));

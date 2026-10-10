@@ -69,6 +69,8 @@
   const dirtyVersions = new Map();
   let autosaveTimer = null;
   let saveInFlight = null;
+  let publishInFlight = false;
+  let hasEditedThisSession = false;
   let autosaveFailed = false;
   let device = localStorage.getItem('fnf-theme-editor-device') || 'desktop';
   let inspectionEnabled = true;
@@ -159,6 +161,10 @@
           '</div>',
           '<div class="theme-studio-toolbar__center">',
             '<div class="te-theme-identity" aria-live="polite"><strong id="te-theme-name">Theme</strong><span class="te-theme-status" id="te-theme-status" hidden></span></div>',
+            '<div class="te-theme-switcher"><span class="te-theme-switcher__caption">Theme</span><button type="button" id="te-theme-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="te-theme-menu" title="Switch the theme preview"><span id="te-theme-trigger-label">Theme</span><span aria-hidden="true">⌄</span></button>',
+              '<div class="te-toolbar-dropdown te-theme-menu" id="te-theme-menu" hidden>' + ((window.ThemeStudioPreview && window.ThemeStudioPreview.themes) || []).map(function(theme) {
+                return '<button type="button" data-theme-preview="' + cmsEscapeAttr(theme.id) + '" aria-pressed="' + String(theme.id === selectedTheme) + '" class="te-theme-option' + (theme.id === selectedTheme ? ' is-active' : '') + '"><strong>' + cmsEscapeHtml(theme.name) + '</strong><small>' + cmsEscapeHtml(theme.status === 'preview' ? 'Preview only' : 'Installed') + '</small></button>';
+              }).join('') + '</div></div>',
 
             '<div class="te-page-menu">',
               '<button type="button" class="te-page-trigger" id="te-page-trigger" aria-expanded="false" title="Choose a storefront page"><span class="te-page-trigger__content">', icon.page, '<strong id="te-page-title">Loading…</strong></span><span aria-hidden="true">⌄</span></button>',
@@ -194,7 +200,7 @@
           '</nav>',
           '<aside class="theme-studio-tree" id="te-editor-drawer">' +
             '<section class="te-drawer-panel" data-drawer-panel="sections"><div class="te-panel-title te-panel-title--compact"><h2 id="te-tree-title">Page</h2></div><div id="te-tree"></div><section id="te-block-panel" data-surface="left" hidden></section></section>' +
-            '<section class="te-drawer-panel" data-drawer-panel="theme-settings" hidden><div class="te-panel-title"><span class="te-panel-kicker">Theme</span><h2>Theme settings</h2><p>Global appearance for the installed theme. A preview switch does not rename it.</p></div><div class="te-theme-options" id="te-theme-popover">' + ((window.ThemeStudioPreview && window.ThemeStudioPreview.themes) || []).map(function(theme) { return '<button type="button" class="te-theme-option' + (theme.id === selectedTheme ? ' is-active' : '') + '" data-theme-preview="' + cmsEscapeAttr(theme.id) + '" aria-pressed="' + String(theme.id === selectedTheme) + '">' + '<strong>' + cmsEscapeHtml(theme.name) + '</strong><small>' + cmsEscapeHtml('Appearance preview') + '</small></button>'; }).join('') + '</div></section>' +
+            '<section class="te-drawer-panel" data-drawer-panel="theme-settings" hidden></section>' +
             '<section class="te-drawer-panel" data-drawer-panel="app-embeds" hidden><div class="te-panel-title"><span class="te-panel-kicker">Storefront</span><h2>App embeds</h2><p>Extensions that run on the storefront, not admin apps.</p></div><input class="te-page-search" id="te-embed-search" placeholder="Search app embeds" aria-label="Search app embeds"><div class="te-empty" id="te-embed-empty">No storefront embeds are installed for this theme.</div></section>' +
           '</aside>',
           '<main class="theme-studio-canvas">',
@@ -211,7 +217,7 @@
       '</div>',
       '<div class="te-media-modal" id="te-media-modal" hidden><div class="te-media-dialog" role="dialog" aria-modal="true" aria-labelledby="te-media-title">',
         '<div class="te-media-dialog__head"><div><strong id="te-media-title">Select media</strong><p>Choose an existing asset or upload a new one. Nothing is published here.</p></div><button type="button" class="te-icon-btn" id="te-media-close" aria-label="Close media picker" title="Close media picker">×</button></div>',
-        '<div class="te-media-dialog__tools"><input id="te-media-search" type="search" placeholder="Search media" aria-label="Search media by filename or folder"><select id="te-media-filter" aria-label="Filter media"><option value="all">All media</option><option value="images">Images</option><option value="products">Product media</option><option value="videos">Videos</option></select><select id="te-media-sort" aria-label="Sort media"><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="name">Name A–Z</option></select><label class="te-upload-target" title="Choose image or video files">+ Upload<input id="te-media-upload" type="file" accept="image/*,video/*" multiple></label></div><div class="te-media-dropzone" id="te-media-dropzone" tabindex="0" role="button" aria-label="Upload files or drop images and videos here"><strong>+ Add files</strong><span>Drag images or videos here, or choose files</span></div><div class="te-media-alert" id="te-media-alert" role="status" aria-live="polite" hidden></div>',
+        '<div class="te-media-dialog__tools"><input id="te-media-search" type="search" placeholder="Search media" aria-label="Search media by filename or folder"><select id="te-media-filter" aria-label="Filter media"><option value="all">All media</option><option value="images">Images</option><option value="products">Product media</option><option value="videos">Videos</option><option value="models">3D models</option></select><select id="te-media-sort" aria-label="Sort media"><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="name">Name A–Z</option></select><label class="te-upload-target" title="Choose image or video files">+ Upload<input id="te-media-upload" type="file" accept="image/*,video/*" multiple></label></div><div class="te-media-dropzone" id="te-media-dropzone" tabindex="0" role="button" aria-label="Upload files or drop images and videos here"><strong>+ Add files</strong><span>Drag images or videos here, or choose files</span></div><div class="te-media-alert" id="te-media-alert" role="status" aria-live="polite" hidden></div>',
         '<div class="te-media-grid" id="te-media-grid" role="group" aria-label="Available media"></div>',
         '<div class="te-media-dialog__footer"><span id="te-media-count" class="te-media-dialog__count" role="status"></span><span id="te-media-selected-name" class="te-media-dialog__selected">Select an asset to preview</span><button type="button" class="te-media-button" id="te-media-cancel">Cancel</button><button type="button" class="te-toolbar-btn is-primary" id="te-media-confirm" disabled>Use media</button></div>',
       '</div></div>'
@@ -282,6 +288,8 @@
   if (host) {
     const themeMenu = document.querySelector('.te-theme-menu');
     if (themeMenu) themeMenu.hidden = true;
+    const switcher = document.querySelector('.te-theme-switcher');
+    if (switcher) switcher.hidden = true;
   }
 
   function setMobilePane(pane) {
@@ -484,7 +492,7 @@
   }
 
   function fieldKind(field) {
-    if (field.type === 'media' || field.type === 'video' || field.media) return 'media';
+    if (field.type === 'media' || field.type === 'video' || field.type === 'model3d' || field.media) return 'media';
     if (field.type === 'link' || field.type === 'product' || field.type === 'collection' || field.type === 'variant') return 'links';
     return 'content';
   }
@@ -546,13 +554,19 @@
     dirtyVersions.set(ref, (dirtyVersions.get(ref) || 0) + 1);
     if (sectionOwner(section) === 'site') siteDraftTouched = true;
     autosaveFailed = false;
+    hasEditedThisSession = true;
     setDirty(true);
   }
 
   function setDirty(value) {
     dirty = Boolean(value);
     const save = byId('te-save');
-    if (save) save.disabled = liveUnimported || !dirty;
+    if (save) {
+      save.disabled = liveUnimported || (!dirty && !hasEditedThisSession);
+      save.classList.toggle('is-dirty', dirty);
+      save.setAttribute('aria-label', dirty ? 'Save unsaved draft changes' : 'Save draft — latest changes already saved');
+      save.title = dirty ? 'Save draft changes (⌘S)' : 'Draft is saved — Save again if needed (⌘S)';
+    }
     if (liveUnimported) setSaveState('Preview only');
     else if (dirty) setSaveState('Unsaved changes', 'dirty');
     else setSaveState('Saved', 'saved');
@@ -942,16 +956,18 @@
     const id = 'te-field-' + section.key + '-' + field.key.replace(/[^a-zA-Z0-9_-]/g, '-');
     const help = field.help ? '<div class="te-field-help">' + cmsEscapeHtml(field.help) + '</div>' : '';
 
-    if (field.type === 'media' || field.type === 'video' || field.media) {
-      const isImage = field.type !== 'video' && /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(String(value));
+    if (field.type === 'media' || field.type === 'video' || field.type === 'model3d' || field.media) {
+      const isModel = field.type === 'model3d' || /\.(glb|gltf|usdz)(\?|$)/i.test(String(value));
+      const isImage = !isModel && field.type !== 'video' && /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(String(value));
       const isVideo = field.type === 'video' || /\.(mp4|mov|webm)(\?|$)/i.test(String(value));
       let preview = '<div class="te-media-empty">' + (value ? cmsEscapeHtml(String(value).split('/').pop()) : 'Drop media here or choose from library') + '</div>';
       if (value && isImage) preview = '<img src="' + safeValue + '" alt="">';
-      if (value && isVideo) preview = '<video src="' + safeValue + '" muted playsinline></video>';
+      if (value && isVideo && !isModel) preview = '<video src="' + safeValue + '" muted playsinline></video>';
+      if (value && isModel) preview = '<div class="te-media-empty" role="status">3D model · ' + cmsEscapeHtml(String(value).split('/').pop()) + '</div>';
       return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label>' + cmsEscapeHtml(field.label) + '</label>' +
         '<div class="te-media-drop" data-media-drop="' + cmsEscapeAttr(field.key) + '"><div class="te-media-preview">' + preview +
         '</div><div class="te-media-actions"><button type="button" class="te-media-button" data-pick-media="' + cmsEscapeAttr(field.key) + '">Choose</button>' +
-        '<label class="te-media-button" style="display:inline-flex;align-items:center">Upload<input type="file" hidden data-upload-media="' + cmsEscapeAttr(field.key) + '" accept="' + (field.type === 'video' ? 'video/*' : 'image/*,video/*,.glb,.gltf,.usdz') + '"></label>' +
+        '<label class="te-media-button" style="display:inline-flex;align-items:center">Upload<input type="file" hidden data-upload-media="' + cmsEscapeAttr(field.key) + '" accept="' + (field.type === 'video' ? 'video/*' : field.type === 'model3d' ? 'model/*,.glb,.gltf,.usdz' : 'image/*,video/*,.glb,.gltf,.usdz') + '"></label>' +
         (mediaUndo.has(mediaUndoKey(field.key)) ? '<button type="button" class="te-media-button" data-undo-media="' + cmsEscapeAttr(field.key) + '" title="Undo the previous media change">Undo media</button>' : '') +
         '</div><div class="te-media-feedback" data-media-feedback role="status" aria-live="polite"></div></div>' +
         '<input class="te-media-url" id="' + id + '" data-field-input="' + cmsEscapeAttr(field.key) + '" value="' + safeValue + '" placeholder="' + cmsEscapeAttr(field.placeholder || 'Media URL or path') + '">' + help + '</div>';
@@ -1358,10 +1374,12 @@
     if (!zone) return;
     const preview = zone.querySelector('.te-media-preview');
     const field = fieldByKey(fieldKey);
-    const isVideo = field && field.type === 'video' || /\.(mp4|mov|webm)(\?|$)/i.test(String(value));
-    const isImage = !isVideo && /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(String(value));
+    const isModel = field?.type === 'model3d' || /\.(glb|gltf|usdz)(\?|$)/i.test(String(value));
+    const isVideo = !isModel && (field?.type === 'video' || /\.(mp4|mov|webm)(\?|$)/i.test(String(value)));
+    const isImage = !isModel && !isVideo && /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(String(value));
     if (value && isVideo) preview.innerHTML = '<video src="' + cmsEscapeAttr(value) + '" muted playsinline></video>';
     else if (value && isImage) preview.innerHTML = '<img src="' + cmsEscapeAttr(value) + '" alt="">';
+    else if (value && isModel) preview.innerHTML = '<div class="te-media-empty" role="status">3D model · ' + cmsEscapeHtml(String(value).split('/').pop()) + '</div>';
     else preview.innerHTML = '<div class="te-media-empty">' + (value ? cmsEscapeHtml(String(value).split('/').pop()) : 'Drop media here or choose from library') + '</div>';
   }
 
@@ -1474,7 +1492,7 @@
         let value = '';
         if (field.key.endsWith('.href') || field.type === 'link') {
           value = el.getAttribute('href') || el.closest('a')?.getAttribute('href') || '';
-        } else if (field.type === 'media' || field.type === 'video' || field.media) {
+        } else if (field.type === 'media' || field.type === 'video' || field.type === 'model3d' || field.media) {
           value = el.getAttribute('src') || el.querySelector('img,video,source')?.getAttribute('src') || '';
         } else {
           const clone = el.cloneNode(true);
@@ -2163,7 +2181,11 @@
     }
     clearTimeout(autosaveTimer);
     const refs = Array.from(dirtySections);
-    if (!dirty || !refs.length) return true;
+    if (!dirty || !refs.length) {
+      if (!automatic) setNote('All draft changes are saved.', 'success');
+      setSaveState('Saved', 'saved');
+      return true;
+    }
     const snapshots = refs.map(function(ref) {
       const parsed = parseDirtyRef(ref);
       const section = findSection(parsed.key, parsed.owner);
@@ -2225,7 +2247,7 @@
         setSaveState(conflict ? 'Save conflict' : 'Save failed — Retry', 'error');
         return false;
       } finally {
-        if (button) button.disabled = !dirty;
+        if (button) button.disabled = liveUnimported || (!dirty && !hasEditedThisSession);
       }
     })();
     saveInFlight = operation;
@@ -2238,7 +2260,11 @@
   }
 
   async function publishPage() {
-    if (!window.confirm('Publish the reviewed draft to the live storefront? This is separate from Save.')) return false;
+    // The explicit Publish live menu action is the merchant confirmation.
+    // Keep publish capability/preflight checks without a second browser-native dialog.
+    if (publishInFlight) return false;
+    byId('te-save-menu').hidden = true;
+    byId('te-save-options').setAttribute('aria-expanded', 'false');
     if (generationLock.locked()) { setNote('Wait for generation to finish.'); return false; }
     if (liveUnimported) {
       setNote('Import the existing live page before publishing any CMS draft.', 'error');
@@ -2249,6 +2275,7 @@
       return;
     }
     const button = byId('te-publish');
+    publishInFlight = true;
     button.disabled = true;
     button.textContent = 'Publishing…';
     try {
@@ -2274,7 +2301,8 @@
       setNote(error.message || String(error), 'error');
       setSaveState('Publish failed', 'error');
     } finally {
-      button.disabled = false;
+      publishInFlight = false;
+      syncPublishCapability();
       button.textContent = 'Publish live…';
     }
   }
@@ -2554,6 +2582,9 @@
     const nameEl = byId('te-theme-name');
     const statusEl = byId('te-theme-status');
     if (nameEl) nameEl.textContent = themeIdentity.name;
+    const currentPreview = window.ThemeStudioPreview?.getTheme?.(selectedTheme);
+    const triggerLabel = byId('te-theme-trigger-label');
+    if (triggerLabel) triggerLabel.textContent = currentPreview?.name || themeIdentity.name;
     if (statusEl) {
       const label = statusLabel(themeIdentity.status);
       statusEl.textContent = label;
@@ -2625,12 +2656,18 @@
   }
 
   function closeThemeMenu() {
-    if (editorDrawer === 'theme-settings') setEditorDrawer('sections');
+    const menu = byId('te-theme-menu');
+    if (menu) menu.hidden = true;
+    byId('te-theme-trigger')?.setAttribute('aria-expanded','false');
   }
 
   function openThemeMenu() {
     closePageMenu();
-    setEditorDrawer('theme-settings');
+    const menu = byId('te-theme-menu');
+    const trigger = byId('te-theme-trigger');
+    if (!menu || !trigger) return;
+    menu.hidden = !menu.hidden;
+    trigger.setAttribute('aria-expanded', String(!menu.hidden));
   }
 
   function openPageMenu() {
@@ -2672,7 +2709,8 @@
       const matchesFilter = filter === 'all' ||
         (filter === 'images' && kind.startsWith('image/') && asset.folder !== 'products') ||
         (filter === 'products' && asset.folder === 'products') ||
-        (filter === 'videos' && (kind.startsWith('video/') || kind.startsWith('model/')));
+        (filter === 'videos' && kind.startsWith('video/')) ||
+        (filter === 'models' && (kind.startsWith('model/') || /\.(glb|gltf|usdz)$/i.test(asset.filename || '')));
       return matches && matchesFilter;
     });
     const sort = byId('te-media-sort').value;
@@ -2720,12 +2758,12 @@
     byId('te-media-confirm').disabled = true;
     byId('te-media-selected-name').textContent = 'Select an asset to preview';
     const field = fieldByKey(fieldKey);
-    byId('te-media-filter').value = field?.type === 'video' ? 'videos' : 'all';
+    byId('te-media-filter').value = field?.type === 'video' ? 'videos' : field?.type === 'model3d' ? 'models' : 'all';
     byId('te-media-sort').value = 'newest';
     byId('te-media-alert').hidden = true;
     byId('te-media-grid').innerHTML = '<div class="te-empty" style="grid-column:1/-1">Loading your media library…</div>';
     byId('te-media-count').textContent = 'Loading…';
-    byId('te-media-upload').accept = field?.type === 'video' ? 'video/*' : 'image/*,video/*';
+    byId('te-media-upload').accept = field?.type === 'video' ? 'video/*' : field?.type === 'model3d' ? 'model/*,.glb,.gltf,.usdz' : 'image/*,video/*,.glb,.gltf,.usdz';
     try {
       await loadMedia();
       renderMediaGrid('');
@@ -2782,6 +2820,7 @@
   document.querySelectorAll('[data-theme-preview]').forEach(function(button) {
     button.addEventListener('click', function() { setTheme(button.dataset.themePreview); });
   });
+  byId('te-theme-trigger')?.addEventListener('click', openThemeMenu);
 
   document.querySelectorAll('.te-device-btn').forEach(function(button) {
     button.addEventListener('click', function() { setDevice(button.dataset.device); });
@@ -2890,7 +2929,7 @@
   function toggleToolbarMenu(buttonId, menuId) {
     const button = byId(buttonId), menu = byId(menuId);
     const next = menu.hidden;
-    for (const [bid, mid] of [['te-more','te-more-menu'], ['te-save-options','te-save-menu']]) {
+    for (const [bid, mid] of [['te-more','te-more-menu'], ['te-save-options','te-save-menu'], ['te-theme-trigger','te-theme-menu']]) {
       byId(mid).hidden = true;
       byId(bid).setAttribute('aria-expanded', 'false');
     }
@@ -2920,7 +2959,7 @@
     if (help) help.hidden = !help.hidden;
   });
   document.addEventListener('pointerdown', function(event) {
-    for (const [container, button, menu] of [['.te-toolbar-more','te-more','te-more-menu'], ['.te-save-actions','te-save-options','te-save-menu']]) {
+    for (const [container, button, menu] of [['.te-toolbar-more','te-more','te-more-menu'], ['.te-save-actions','te-save-options','te-save-menu'], ['.te-theme-switcher','te-theme-trigger','te-theme-menu']]) {
       if (!event.target.closest(container) && !event.target.closest('#' + menu)) {
         byId(menu).hidden = true;
         byId(button).setAttribute('aria-expanded','false');
@@ -2929,7 +2968,7 @@
   });
   document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') {
-      for (const [button, menu] of [['te-more','te-more-menu'], ['te-save-options','te-save-menu']]) {
+      for (const [button, menu] of [['te-more','te-more-menu'], ['te-save-options','te-save-menu'], ['te-theme-trigger','te-theme-menu']]) {
         byId(menu).hidden = true;
         byId(button).setAttribute('aria-expanded','false');
       }

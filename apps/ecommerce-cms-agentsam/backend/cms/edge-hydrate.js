@@ -3,7 +3,7 @@
  * Mirrors public/js/cms-hydrate.js for published content at the edge.
  */
 
-import { getPublishedPage } from "./api.js";
+import { getPreviewPage, getPublishedPage } from "./api.js";
 
 function getPath(obj, path) {
   return path.split(".").reduce((acc, key) => (acc == null ? acc : acc[key]), obj);
@@ -22,9 +22,10 @@ function sectionsByKeyFromPages(pages) {
   return map;
 }
 
-export async function loadEdgeHydrationContext(env, pageSlug) {
+export async function loadEdgeHydrationContext(env, pageSlug, { preview = false, loadPage } = {}) {
   const slugs = pageSlug === "site" ? ["site"] : ["site", pageSlug];
-  const pages = await Promise.all(slugs.map((slug) => getPublishedPage(env, slug)));
+  const resolvePage = loadPage || (preview ? getPreviewPage : getPublishedPage);
+  const pages = await Promise.all(slugs.map((slug) => resolvePage(env, slug)));
   const sectionsByKey = sectionsByKeyFromPages(pages.filter(Boolean));
   return {
     sectionsByKey,
@@ -85,12 +86,33 @@ export function applyCmsSlotValue(el, path, sectionsByKey) {
   return true;
 }
 
+/** Adapt original HTML with local data-cms="field" markers to the same
+ * section.field binding contract. No markup or style conversion is required.
+ * The streaming HTMLRewriter tracks section entry/exit, including nesting.
+ */
+export class CmsSectionScopeHandler {
+  constructor(scope) { this.scope = scope; }
+  element(el) {
+    const key = el.getAttribute("data-cms-section");
+    if (!key) return;
+    this.scope.stack.push(key);
+    el.onEndTag(() => {
+      this.scope.stack.pop();
+    });
+  }
+}
+
 export class CmsSlotHandler {
-  constructor(sectionsByKey) {
+  constructor(sectionsByKey, scope = { stack: [] }) {
     this.sectionsByKey = sectionsByKey;
+    this.scope = scope;
   }
   element(el) {
-    applyCmsSlotValue(el, el.getAttribute("data-cms"), this.sectionsByKey);
+    const marker = el.getAttribute("data-cms");
+    if (!marker) return;
+    const current = this.scope.stack.at(-1);
+    const resolved = marker.includes(".") || !current ? marker : current + "." + marker;
+    applyCmsSlotValue(el, resolved, this.sectionsByKey);
   }
 }
 
