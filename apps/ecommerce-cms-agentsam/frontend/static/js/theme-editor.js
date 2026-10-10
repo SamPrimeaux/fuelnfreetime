@@ -161,6 +161,10 @@
           '</div>',
           '<div class="theme-studio-toolbar__center">',
             '<div class="te-theme-identity" aria-live="polite"><strong id="te-theme-name">Theme</strong><span class="te-theme-status" id="te-theme-status" hidden></span></div>',
+            '<div class="te-theme-switcher"><span class="te-theme-switcher__caption">Theme</span><button type="button" id="te-theme-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="te-theme-menu" title="Switch the theme preview"><span id="te-theme-trigger-label">Theme</span><span aria-hidden="true">⌄</span></button>',
+              '<div class="te-toolbar-dropdown te-theme-menu" id="te-theme-menu" hidden>' + ((window.ThemeStudioPreview && window.ThemeStudioPreview.themes) || []).map(function(theme) {
+                return '<button type="button" data-theme-preview="' + cmsEscapeAttr(theme.id) + '" aria-pressed="' + String(theme.id === selectedTheme) + '" class="te-theme-option' + (theme.id === selectedTheme ? ' is-active' : '') + '"><strong>' + cmsEscapeHtml(theme.name) + '</strong><small>' + cmsEscapeHtml(theme.status === 'preview' ? 'Preview only' : 'Installed') + '</small></button>';
+              }).join('') + '</div></div>',
 
             '<div class="te-page-menu">',
               '<button type="button" class="te-page-trigger" id="te-page-trigger" aria-expanded="false" title="Choose a storefront page"><span class="te-page-trigger__content">', icon.page, '<strong id="te-page-title">Loading…</strong></span><span aria-hidden="true">⌄</span></button>',
@@ -196,7 +200,7 @@
           '</nav>',
           '<aside class="theme-studio-tree" id="te-editor-drawer">' +
             '<section class="te-drawer-panel" data-drawer-panel="sections"><div class="te-panel-title te-panel-title--compact"><h2 id="te-tree-title">Page</h2></div><div id="te-tree"></div><section id="te-block-panel" data-surface="left" hidden></section></section>' +
-            '<section class="te-drawer-panel" data-drawer-panel="theme-settings" hidden><div class="te-panel-title"><span class="te-panel-kicker">Theme</span><h2>Theme settings</h2><p>Global appearance for the installed theme. A preview switch does not rename it.</p></div><div class="te-theme-options" id="te-theme-popover">' + ((window.ThemeStudioPreview && window.ThemeStudioPreview.themes) || []).map(function(theme) { return '<button type="button" class="te-theme-option' + (theme.id === selectedTheme ? ' is-active' : '') + '" data-theme-preview="' + cmsEscapeAttr(theme.id) + '" aria-pressed="' + String(theme.id === selectedTheme) + '">' + '<strong>' + cmsEscapeHtml(theme.name) + '</strong><small>' + cmsEscapeHtml('Appearance preview') + '</small></button>'; }).join('') + '</div></section>' +
+            '<section class="te-drawer-panel" data-drawer-panel="theme-settings" hidden></section>' +
             '<section class="te-drawer-panel" data-drawer-panel="app-embeds" hidden><div class="te-panel-title"><span class="te-panel-kicker">Storefront</span><h2>App embeds</h2><p>Extensions that run on the storefront, not admin apps.</p></div><input class="te-page-search" id="te-embed-search" placeholder="Search app embeds" aria-label="Search app embeds"><div class="te-empty" id="te-embed-empty">No storefront embeds are installed for this theme.</div></section>' +
           '</aside>',
           '<main class="theme-studio-canvas">',
@@ -2576,6 +2580,9 @@
     const nameEl = byId('te-theme-name');
     const statusEl = byId('te-theme-status');
     if (nameEl) nameEl.textContent = themeIdentity.name;
+    const currentPreview = window.ThemeStudioPreview?.getTheme?.(selectedTheme);
+    const triggerLabel = byId('te-theme-trigger-label');
+    if (triggerLabel) triggerLabel.textContent = currentPreview?.name || themeIdentity.name;
     if (statusEl) {
       const label = statusLabel(themeIdentity.status);
       statusEl.textContent = label;
@@ -2647,12 +2654,18 @@
   }
 
   function closeThemeMenu() {
-    if (editorDrawer === 'theme-settings') setEditorDrawer('sections');
+    const menu = byId('te-theme-menu');
+    if (menu) menu.hidden = true;
+    byId('te-theme-trigger')?.setAttribute('aria-expanded','false');
   }
 
   function openThemeMenu() {
     closePageMenu();
-    setEditorDrawer('theme-settings');
+    const menu = byId('te-theme-menu');
+    const trigger = byId('te-theme-trigger');
+    if (!menu || !trigger) return;
+    menu.hidden = !menu.hidden;
+    trigger.setAttribute('aria-expanded', String(!menu.hidden));
   }
 
   function openPageMenu() {
@@ -2805,6 +2818,7 @@
   document.querySelectorAll('[data-theme-preview]').forEach(function(button) {
     button.addEventListener('click', function() { setTheme(button.dataset.themePreview); });
   });
+  byId('te-theme-trigger')?.addEventListener('click', openThemeMenu);
 
   document.querySelectorAll('.te-device-btn').forEach(function(button) {
     button.addEventListener('click', function() { setDevice(button.dataset.device); });
