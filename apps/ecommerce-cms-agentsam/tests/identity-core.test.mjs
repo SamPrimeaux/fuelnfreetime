@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
-import { migrateAccounts } from "../../../db/schema/migrations/identity-accounts.mjs";
-import { createIdentityRepository } from "../../../db/schema/core/identity-repository.mjs";
+import { migrateAccounts } from "../db/schema/migrations/identity-accounts.mjs";
+import { createIdentityRepository } from "../db/schema/core/identity-repository.mjs";
 
 const manifest = { accounts: { maxDepth: 3, kinds: ["organization", "reseller", "client"], roles: ["owner", "editor"], plans: { free: { entitlements: { "brand.powered_by.visible": true } }, agency: { entitlements: { "brand.powered_by.visible": false } } } } };
 
