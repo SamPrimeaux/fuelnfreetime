@@ -191,3 +191,37 @@ test("explicit Publish live does not invoke browser confirm or issue concurrent 
   assert.match(doc.getElementById("te-note").textContent,/Published/i);
  } finally {dom.window.close();}
 });
+
+test("old Shop Hero selection exposes editable original text styling and Reset without replacing content",async()=>{
+ const {dom,w,doc,writes}=await editorFixture();
+ try{
+  const frame=doc.getElementById("theme-preview");
+  frame.contentDocument.body.innerHTML='<section class="shop-hero old-design" data-cms-section="hero"><h1 class="h-display" data-cms="headline">Authored hero</h1><a class="h-button" data-cms="ctaPrimary.href" href="#catalog"><span data-cms="ctaPrimary.label">Shop</span></a></section>';
+  frame.dispatchEvent(new w.Event("load"));
+  const heroTitle=frame.contentDocument.querySelector('[data-cms="headline"]');
+  heroTitle.dispatchEvent(new frame.contentWindow.MouseEvent("click",{bubbles:true}));
+  const inspector=doc.getElementById("te-inspector-body");
+  assert.equal(inspector.querySelector("[data-inspector-advanced]").open,true,"Appearance controls should be immediately visible");
+  const size=inspector.querySelector('[data-field-input="__editor.fieldStyles.headline.fontSize"]');
+  const color=inspector.querySelector('[data-color-text="__editor.fieldStyles.headline.color"]');
+  assert.ok(size,"selected authored headline must expose font size");
+  assert.ok(color,"selected authored headline must expose text color");
+  assert.ok(inspector.querySelector('[data-field-key="__editor.spacing.paddingTop"]'),"original section padding must remain editable");
+  size.value="68";
+  size.dispatchEvent(new w.Event("input",{bubbles:true}));
+  doc.getElementById("te-save").click();
+  await tick();await tick();
+  assert.equal(writes.length,1);
+  assert.equal(writes[0].content.__editor.fieldStyles.headline.fontSize,68);
+  assert.equal(writes[0].content.headline,"Time is the\nreal horsepower.","editing its appearance must preserve original headline content");
+
+  const reset=inspector.querySelector('[data-reset-style="__editor.fieldStyles.headline.fontSize"]');
+  assert.ok(reset,"every override supports returning to authored defaults");
+  reset.click();
+  doc.getElementById("te-save").click();
+  await tick();await tick();
+  assert.equal(writes.length,2);
+  assert.equal(writes[1].content.__editor.fieldStyles.headline.fontSize,undefined);
+  assert.equal(frame.contentDocument.querySelector(".shop-hero").className,"shop-hero old-design");
+ }finally{dom.window.close();}
+});
