@@ -2386,3 +2386,169 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
 .te-theme-menu .te-theme-option strong { font-size:12px; }
 .te-theme-menu .te-theme-option small { color:#6e6a77;font-size:10px; }
 @media(max-width:760px){.te-theme-switcher__caption{display:none}.te-theme-switcher{max-width:155px}#te-theme-trigger{min-width:80px;max-width:132px;height:30px}.te-theme-menu{position:fixed;left:8px;top:51px}}
+
+/* The contextual mini capsule replaces the unrequested inspector composer. */
+[data-composer-slot="editor"][hidden] {display:none!important}
+.te-agent-open img {border-radius:7px;object-fit:cover}
+/* A visible left-rail generation preview with its own controlled scroll. */
+#te-block-panel[data-panel-state] {
+  box-shadow:0 12px 38px rgba(22,25,37,.22);border-color:#c8c8da;
+  overscroll-behavior:contain;scrollbar-width:thin;
+}
+#te-block-panel[data-panel-state="generating"] {border-color:#9277e7}
+#te-block-panel[data-panel-state="generating"] .te-phase:before {
+  content:"";display:inline-block;width:7px;height:7px;margin-right:7px;
+  border-radius:50%;background:#7c57df;box-shadow:0 0 0 3px #ebe5ff;
+}
+#te-block-panel[data-panel-state="review"] .te-generated-sandbox {
+  width:100%;min-height:170px;max-height:280px;border:1px solid var(--te-border);
+  border-radius:8px;background:#fff;
+}
+@media(max-width:900px){#te-block-panel[data-panel-state]{position:sticky!important;left:auto!important;top:auto!important;width:auto!important;max-height:50vh!important;z-index:2!important}}
+
+/* Shared compact inspector vocabulary, aligned to the reference's hierarchy. */
+.te-inspector-body {padding:0 14px 72px}
+.te-inspector-group {margin:0;padding:17px 0 19px;border-bottom:1px solid var(--te-border)}
+.te-inspector-group__head {margin-bottom:14px}
+.te-inspector-group__head h3 {font-size:12px;line-height:1.4;font-weight:670}
+.te-inspector-group__head p {display:none}
+.te-inspector-group--advanced summary {font-weight:660;font-size:12px;cursor:pointer;list-style-position:inside;padding:0 0 6px}
+.te-inspector-group--advanced[open] summary {margin-bottom:12px}
+.te-field {margin-bottom:13px}
+.te-field label {font-size:11px}
+.te-field input,.te-field textarea,.te-field select {border-radius:7px}
+.te-reset-style {margin:-5px 0 10px;font-size:10px;padding:3px 0;color:#6558a5;border:0;background:transparent;text-align:left;cursor:pointer}
+.te-reset-style:hover {text-decoration:underline}
+
+/* MOBILE RELEASE GATE: never compress the desktop's three rails on a phone.
+   The toolbar is two rows, the canvas/tree/inspector occupy one view at a time,
+   and the existing mobile pane controls live at the bottom as native navigation.
+   Theme Settings remain the same component when their mode is selected. */
+@media (max-width:900px) {
+  body.shell-mode-theme-editor .theme-studio,
+  .theme-studio {
+    height:100dvh;
+    min-height:0;
+    max-height:100dvh;
+    grid-template-rows:98px minmax(0,1fr);
+    overflow:hidden;
+  }
+  .theme-studio-toolbar {
+    display:grid;
+    position:relative;
+    top:auto;
+    height:98px;
+    min-height:98px;
+    max-height:98px;
+    grid-template-rows:52px 44px;
+    grid-template-columns:minmax(0,1fr) auto;
+    grid-template-areas:"left actions" "center center";
+    column-gap:7px;
+    row-gap:0;
+    padding:0 8px;
+    flex-wrap:nowrap;
+    overflow:visible;
+  }
+  .theme-studio-toolbar__left {grid-area:left;min-width:0;overflow:hidden;gap:3px}
+  .theme-studio-toolbar__right {
+    grid-area:actions;display:flex;overflow:visible;max-width:none;
+    justify-content:flex-end;gap:4px;min-width:0;
+  }
+  .theme-studio-toolbar__center {
+    grid-area:center;display:flex;justify-content:space-between;gap:7px;
+    min-width:0;width:100%;height:44px;border-top:1px solid var(--te-border);
+  }
+  .theme-studio-toolbar .te-theme-identity,.theme-studio-toolbar .te-device-switch,
+  .theme-studio-toolbar__right .te-toolbar-separator {display:none}
+  .te-theme-switcher {flex:0 1 38%;max-width:38%;min-width:0}
+  #te-theme-trigger {min-width:0;max-width:none;width:100%;justify-content:space-between}
+  .te-page-menu {flex:1 1 auto;min-width:0}
+  .te-page-trigger {width:100%;max-width:none;min-width:0;justify-content:space-between}
+  .theme-studio-toolbar__right .te-icon-btn {width:32px;height:34px;min-width:32px;flex:0 0 32px}
+  .theme-studio-toolbar__right .te-save-actions {margin-left:0;position:relative;right:auto}
+  .theme-studio-toolbar .te-save-actions>#te-save,.te-save-caret {height:34px}
+  .theme-studio-workspace,
+  .theme-studio[data-editor-drawer="closed"] .theme-studio-workspace {
+    display:grid;
+    position:relative;
+    height:100%;
+    min-height:0;
+    width:100%;
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-rows:minmax(0,1fr) 61px;
+    overflow:hidden;
+  }
+  .te-mobile-pane-switch {
+    display:grid;
+    position:relative;
+    top:auto;
+    grid-area:auto;
+    grid-column:1;
+    grid-row:2;
+    z-index:7;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    align-items:center;
+    min-height:61px;
+    height:61px;
+    background:#fff;
+    padding:5px 8px max(5px,env(safe-area-inset-bottom));
+    border-top:1px solid var(--te-border);
+    border-bottom:0;
+  }
+  .te-mobile-pane-switch button {min-width:0;height:43px;min-height:43px;border-radius:8px}
+  .theme-studio-tree,.theme-studio-canvas,.theme-editor-panel {
+    grid-column:1;
+    grid-row:1;
+    min-width:0;
+    min-height:0;
+    width:100%;
+    height:100%;
+    max-width:none;
+    max-height:none;
+    margin:0;
+  }
+  .theme-studio-tree {padding:9px 12px 18px;overflow-y:auto;overscroll-behavior:contain}
+  .theme-studio[data-mobile-pane="sections"] .theme-studio-tree,
+  .theme-studio[data-editor-drawer="closed"][data-mobile-pane="sections"] .theme-studio-tree {
+    display:block;height:100%;min-height:0;max-height:none;overflow-y:auto;
+  }
+  .theme-studio[data-mobile-pane="settings"] .theme-editor-panel {
+    display:flex;flex-direction:column;height:100%;min-height:0;
+    max-height:none;overflow:hidden;
+  }
+  .theme-studio[data-mobile-pane="preview"] .theme-studio-canvas {
+    display:flex;flex-direction:column;height:100%;min-height:0;max-height:none;
+    overflow:hidden;
+  }
+  .theme-studio[data-mobile-pane="sections"] .theme-studio-canvas,
+  .theme-studio[data-mobile-pane="sections"] .theme-editor-panel,
+  .theme-studio[data-mobile-pane="settings"] .theme-studio-tree,
+  .theme-studio[data-mobile-pane="settings"] .theme-studio-canvas,
+  .theme-studio[data-mobile-pane="preview"] .theme-studio-tree,
+  .theme-studio[data-mobile-pane="preview"] .theme-editor-panel {display:none!important}
+  .te-preview-stage {flex:1 1 auto;min-height:0;overflow:auto;padding:7px;overscroll-behavior:contain}
+  .te-preview-device,.theme-editor-preview {height:100%;min-height:0;max-width:100%}
+  .theme-studio[data-mobile-pane="settings"] .te-inspector-body {
+    flex:1 1 auto;min-height:0;height:auto;overflow-y:auto;
+    -webkit-overflow-scrolling:touch;padding:0 16px 32px;
+  }
+  #te-block-panel[data-panel-state] {
+    position:fixed!important;
+    left:9px!important;
+    right:9px!important;
+    width:auto!important;
+    top:auto!important;
+    bottom:calc(69px + env(safe-area-inset-bottom))!important;
+    max-height:min(45dvh,400px)!important;
+    overflow:auto;
+    z-index:120!important;
+    margin:0!important;
+  }
+}
+@media(max-width:370px){
+  .theme-studio-toolbar {padding:0 5px;column-gap:3px}
+  .theme-studio-toolbar__left {gap:0}
+  .te-mode-btn {padding:0 6px}
+  .theme-studio-toolbar__right {gap:2px}
+  .theme-studio-toolbar__right .te-icon-btn {width:29px;min-width:29px;flex-basis:29px}
+}

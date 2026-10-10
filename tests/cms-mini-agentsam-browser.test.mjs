@@ -36,19 +36,18 @@ const probe=`<script>(async function(){
  try{
   const selected=await until(()=>document.getElementById('te-field-hero-headline'));
   const initialValue=selected.value;
-  if(innerWidth<=900){
-    document.querySelector('[data-mobile-pane="sections"]').click();
-    document.querySelector('[data-select-section="hero"]').click();
-  }
-  (document.getElementById('te-field-hero-headline') || selected).focus();
-  await sleep(160);
-  const initialHidden=!document.querySelector('[data-mini-agentsam]') || document.querySelector('[data-mini-agentsam]').shadowRoot.querySelector('.composer').hidden;
-  const miniToggle=document.getElementById('te-agent-open');
-  miniToggle.click();
+  // Select the actual rendered heading. This supplies the correct field key
+  // and anchors the mini composer to the canvas, not a generic section row.
+  if(innerWidth<=900)document.querySelector('[data-mobile-pane="preview"]').click();
+  const preview=document.getElementById('theme-preview');
+  const heading=await until(()=>preview.contentDocument?.querySelector('[data-cms="headline"]'));
+  heading.click();
   const portal=await until(()=>{const p=document.querySelector('[data-mini-agentsam]');return p&&!p.shadowRoot.querySelector('.composer').hidden?p:null});
   const mini=portal.shadowRoot;
+  const initialVisible=!mini.querySelector('.composer').hidden;
+  const beforeChatCount=window.__chatCount;
   const caption=document.getElementById('te-selected-path').textContent;
-  const sourceRect=miniToggle.getBoundingClientRect();
+  const sourceRect=mini.querySelector('.outline').getBoundingClientRect();
   const initialComposerRect=mini.querySelector('.composer').getBoundingClientRect();
   const arrow=mini.querySelector('.send').textContent.trim();
   mini.querySelector('textarea').value='Rewrite the selected headline to sound more compelling.';
@@ -71,7 +70,7 @@ const probe=`<script>(async function(){
   document.getElementById('te-save').click();
   await until(()=>window.__writes.length===1);
   const miniRect=mini.querySelector('.composer').getBoundingClientRect();
-  const result={initialValue,initialHidden,caption,composerVisible:true,localReviewExists,sideAssistantOpen,focusedGroups,sourceRect:{left:sourceRect.left,right:sourceRect.right,top:sourceRect.top,bottom:sourceRect.bottom},initialComposerRect:{left:initialComposerRect.left,right:initialComposerRect.right,top:initialComposerRect.top,bottom:initialComposerRect.bottom},arrow,proposed,canApply,beforeField,beforeWrites,fieldAfter,dirty,afterApplyWrites,savedWrites:window.__writes.length,saved:window.__writes[0],chatCount:window.__chatCount,viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,composerRect:{left:miniRect.left,right:miniRect.right,top:miniRect.top,bottom:miniRect.bottom},errors:window.__agentErrors};
+  const result={initialValue,initialVisible,beforeChatCount,caption,composerVisible:true,localReviewExists,sideAssistantOpen,focusedGroups,sourceRect:{left:sourceRect.left,right:sourceRect.right,top:sourceRect.top,bottom:sourceRect.bottom},initialComposerRect:{left:initialComposerRect.left,right:initialComposerRect.right,top:initialComposerRect.top,bottom:initialComposerRect.bottom},arrow,proposed,canApply,beforeField,beforeWrites,fieldAfter,dirty,afterApplyWrites,savedWrites:window.__writes.length,saved:window.__writes[0],chatCount:window.__chatCount,viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,composerRect:{left:miniRect.left,right:miniRect.right,top:miniRect.top,bottom:miniRect.bottom},errors:window.__agentErrors};
   const pre=document.createElement('pre');pre.id='mini-result';pre.textContent=JSON.stringify(result);document.body.append(pre);
  }catch(error){const pre=document.createElement('pre');pre.id='mini-result';pre.textContent=JSON.stringify({fatal:String(error),note:document.getElementById('te-note')?.textContent,errors:window.__agentErrors,html:document.getElementById('te-inspector-body')?.innerText?.slice(0,150)});document.body.append(pre);}
 })()</script>`;
@@ -86,6 +85,7 @@ const assets={
  '/admin/js/theme-preview-runtime.js':'packages/fnf-theme/src/editor/preview-adapter.js',
  '/admin/js/theme-editor.js':'apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor.js',
  '/admin/js/theme-editor-mini-agentsam.mjs':'apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor-mini-agentsam.mjs',
+ '/admin/brand/mini-agentsam-trigger.svg':'apps/ecommerce-cms-agentsam/frontend/static/brand/mini-agentsam-trigger.svg',
  '/admin/workbench/index.js':'packages/agentsam-workbench/src/index.js',
  '/admin/workbench/mini-agentsam.js':'packages/agentsam-workbench/src/mini-agentsam.js',
  '/admin/workbench/composer.js':'packages/agentsam-workbench/src/composer.js',
@@ -104,7 +104,7 @@ const server=http.createServer(async(req,res)=>{
   if(!body.context?.selected_resource?.id)return res.writeHead(400,{'content-type':'application/json'}).end('{"error":"Missing CMS selection"}');
   return res.writeHead(200,{'content-type':'application/json'}).end(JSON.stringify({reply:message,conversation_id:'test-cms-chat'}));
  }
- if(assets[url])return res.writeHead(200,{'content-type':url.endsWith('.css')?'text/css':'text/javascript'}).end(file(assets[url]));
+ if(assets[url])return res.writeHead(200,{'content-type':url.endsWith('.css')?'text/css':url.endsWith('.svg')?'image/svg+xml':'text/javascript'}).end(file(assets[url]));
  res.writeHead(404).end();
 });
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -118,16 +118,18 @@ try{
  console.log(JSON.stringify(result,null,2));
  assert.equal(result.fatal,undefined);
  assert.equal(result.composerVisible,true);
- assert.equal(result.initialHidden,true,'Selecting or focusing a field must not open miniAgentSam');
+ assert.equal(result.initialVisible,true,'Selecting a CMS section must reveal contextual miniAgentSam beside the selected canvas element');
+ assert.equal(result.beforeChatCount,0,'Selection must never send an AI request');
  assert.equal(result.arrow,'↑','Send must be an upward arrow');
- assert.ok(result.initialComposerRect.right>=result.sourceRect.left-10 && result.initialComposerRect.left<=result.sourceRect.right+10, 'Composer must anchor beside the explicit toolbar toggle');
- assert.ok(Math.abs(result.initialComposerRect.bottom-result.sourceRect.top)<150 || Math.abs(result.initialComposerRect.top-result.sourceRect.bottom)<150, 'Composer must appear near the opt-in toolbar toggle');
+ assert.ok(result.initialComposerRect.right>=result.sourceRect.left-10 && result.initialComposerRect.left<=result.sourceRect.right+10, 'Composer must anchor beside the selected canvas element');
+ assert.ok(Math.abs(result.initialComposerRect.bottom-result.sourceRect.top)<150 || Math.abs(result.initialComposerRect.top-result.sourceRect.bottom)<150, 'Composer must appear near the selected canvas element');
  assert.match(result.caption,/hero.*headline/i);
  assert.equal(result.proposed,message);
  assert.equal(result.canApply,true);
  assert.equal(result.localReviewExists,false,'Theme inspector must not render a second proposal composer');
  assert.equal(result.sideAssistantOpen,true,'miniAgentSam proposal must open in the AgentSam Side Assistant');
- assert.deepEqual(result.focusedGroups,['Buttons and links'],'CTA selection should show CTA/link controls without unrelated Media fields');
+ assert.ok(result.focusedGroups.includes('Buttons and links'),'CTA selection must expose button/link controls');
+ assert.ok(!result.focusedGroups.includes('Media'),'CTA selection must not show unrelated media fields');
  assert.equal(result.beforeWrites,0);
  assert.equal(result.afterApplyWrites,0,'Only Save may persist a draft');
  assert.equal(result.beforeField,result.initialValue);

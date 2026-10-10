@@ -82,3 +82,30 @@ test("streamed code reaches the real preview element only through textContent", 
   assert.equal(source.includes("this.pre.innerHTML"), false);
   assert.equal(source.includes("this.pre.textContent"), true);
 });
+
+
+test("the existing generation preview is pinned visibly to the left rail", () => {
+  const document = page();
+  const rail = document.createElement('aside');
+  rail.className = 'theme-studio-tree';
+  rail.getBoundingClientRect = () => ({ left: 5, top: 54, right: 285, bottom: 754, width: 280, height: 700 });
+  const tree = document.querySelector('#te-tree');
+  const panel = document.querySelector('#te-block-panel');
+  tree.before(rail);
+  rail.append(tree, panel);
+  const flow = createGenerationFlow({
+    assistant: document.querySelector('#agentsam-dock'),
+    messages: document.querySelector('#agentsam-messages'),
+    tree, panel,
+    inspector: document.querySelector('#te-inspector-body'),
+  });
+  flow.handoff('create a new reusable section');
+  flow.openRequest();
+  assert.equal(panel.style.position, 'fixed');
+  assert.equal(panel.style.left, '13px');
+  assert.equal(panel.style.width, '264px');
+  flow.send();
+  assert.equal(panel.dataset.panelState, 'generating');
+  assert.ok(panel.querySelector('miniagentsam-codepreview'), 'the real streaming component is in the visible left panel');
+  assert.equal(flow.state.calls, 1);
+});

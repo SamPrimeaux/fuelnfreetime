@@ -1,11 +1,11 @@
 import { createMiniAgentSam } from '/admin/workbench/mini-agentsam.js';
 
 /** The existing CMS owns page/field state; this adapter owns no page persistence. */
-export function createThemeEditorMiniAgentSam({ onProposal }) {
+export function createThemeEditorMiniAgentSam({ onProposal, onClose }) {
   const conversations = new Map();
   const mini = createMiniAgentSam({
     preferAbove: true,
-    resultStatus: 'Proposal ready for review',
+    resultStatus: 'AgentSam request sent',
     capabilities: { list: () => [] },
     async send({ prompt, resource, signal }) {
       if (!resource?.sectionKey || !resource?.page) throw new Error('Choose a CMS section first.');
@@ -54,7 +54,40 @@ export function createThemeEditorMiniAgentSam({ onProposal }) {
     onResult(result) {
       onProposal({ selection: result.selection, text: result.reply });
     },
+    onClose,
   });
+  // Scope this styling to Theme Studio; other workbench consumers retain
+  // their existing miniAgentSam presentation and APIs.
+  const portal = document.querySelector('[data-mini-agentsam]');
+  const shadow = portal?.shadowRoot;
+  if (shadow && !shadow.querySelector('[data-theme-mini-style]')) {
+    const skin = document.createElement('style');
+    skin.dataset.themeMiniStyle = 'true';
+    skin.textContent = `
+      :host {--accent:#6f3ed7;color:#26202f}
+      .outline {border-color:#8359e8;background:#8359e80b}
+      .composer {width:min(340px,calc(100vw - 24px));min-height:44px;
+        border:1px solid #c3b2f3;border-radius:12px;padding:6px;
+        background:rgba(255,255,255,.98);color:#25212f;
+        box-shadow:0 9px 26px rgba(32,24,60,.2);backdrop-filter:blur(12px)}
+      .row {gap:7px}
+      .icon {height:31px;width:31px;flex-basis:31px;border-radius:8px;
+        border:1px solid #bba2ff;background:#36215b}
+      textarea {font-size:12px;color:#25212f;min-height:31px;line-height:1.35}
+      textarea::placeholder {color:#777080}
+      .send {background:#6d39d6;color:#fff;width:32px;height:32px;
+        flex-basis:32px;min-width:32px;border-radius:8px}
+      .expand,.more {color:#716783}
+      .status {color:#6852a3;font-size:11px}
+      .composer.message-expanded {border-radius:12px}
+      :focus-visible {outline-color:#815ce7}
+    `;
+    shadow.append(skin);
+    const avatar = shadow.querySelector('.icon');
+    if (avatar) avatar.src = '/admin/brand/mini-agentsam-trigger.svg';
+    const input = shadow.querySelector('textarea');
+    if (input) input.placeholder = 'Ask AgentSam…';
+  }
   return {
     select(selection, bounds) { mini.select(selection, bounds); },
     close() { mini.close(); },

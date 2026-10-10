@@ -9,7 +9,7 @@ const { JSDOM } = require("jsdom");
 const root = new URL("../frontend/static/js/", import.meta.url);
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 
-async function editorFixture() {
+async function editorFixture({ mobile = false } = {}) {
   const dom = new JSDOM("<!doctype html><html><body></body></html>", {
     url: "https://editor.test/admin/theme-editor?slug=shop",
     runScripts: "outside-only",
@@ -26,7 +26,7 @@ async function editorFixture() {
   page.sections = page.sections.map(section => ({ ...section, version: 1, status: "draft" }));
   site.sections = site.sections.map(section => ({ ...section, version: 1, status: "draft" }));
   w.CSS = { escape: value => String(value).replace(/[^a-zA-Z0-9_-]/g, ch => "\\" + ch) };
-  w.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
+  w.matchMedia = () => ({ matches: mobile, addEventListener() {}, removeEventListener() {} });
   w.renderShell = (_route, markup) => w.document.body.insertAdjacentHTML("afterbegin", markup);
   w.fetch = async () => ({ ok: true, json: async () => ({ active_theme: { name: "Heuristic", status: "active" } }) });
   w.adminFetch = async (url, options = {}) => {
@@ -67,13 +67,18 @@ test("real editor mounts compact toolbar, one drawer and installed page tree", a
     assert.equal(doc.body.classList.contains("agentsam-open"), true);
     doc.getElementById("agentsam-toggle").click();
     assert.equal(doc.body.classList.contains("agentsam-open"), false);
-    assert.equal(doc.getElementById("te-mini-agent-toggle"), null);
+    assert.equal(doc.getElementById("te-mini-agent-toggle"), null, "no redundant floating trigger: selecting automatically reveals the composer");
+    assert.equal(doc.getElementById("te-agent-open").querySelector("img")?.getAttribute("src"), "/admin/brand/mini-agentsam-trigger.svg", "fallback is the same recognizable mini icon");
+    assert.equal(doc.querySelector('[data-composer-slot="editor"]').hidden, true, "no redundant inspector composer");
     assert.equal(doc.getElementById("te-inspector-toggle"), null);
     assert.equal(doc.querySelectorAll('.theme-studio-toolbar__right .te-icon-btn[title*="Canvas inspection"]').length, 1);
     assert.ok(doc.getElementById("te-inspect-mode").innerHTML.includes("M12.034 12.681"));
     assert.ok(readFileSync(new URL("../frontend/static/brand/agentsam-sidekick-symbol.svg", import.meta.url), "utf8").includes("<svg"));
     assert.equal(doc.getElementById("te-tree-path"), null);
     assert.equal(doc.getElementById("te-library-browse"), null);
+    doc.getElementById("te-add-section").click();
+    assert.doesNotMatch(doc.getElementById("te-section-catalog").textContent, /Generate with AgentSam/i,
+      "catalog contains installable definitions only; contextual mini composer handles requests");
     assert.equal(doc.querySelector("#te-more-menu").hidden, true);
     const settings = doc.querySelector('[data-drawer-mode="theme-settings"]');
     settings.click();
@@ -203,7 +208,7 @@ test("old Shop Hero selection exposes editable original text styling and Reset w
   const heroTitle=previewDoc.querySelector('[data-cms="headline"]');
   heroTitle.dispatchEvent(new w.MouseEvent("click",{bubbles:true}));
   const inspector=doc.getElementById("te-inspector-body");
-  assert.equal(inspector.querySelector("[data-inspector-advanced]").open,true,"Appearance controls should be immediately visible");
+  assert.ok([...inspector.querySelectorAll('.te-inspector-group__head h3')].some(n=>n.textContent === 'Typography'), "Typography appears as a first-class contextual group, not a nested generic accordion");
   const size=inspector.querySelector('[data-field-input="__editor.fieldStyles.headline.fontSize"]');
   const color=inspector.querySelector('[data-color-text="__editor.fieldStyles.headline.color"]');
   assert.ok(size,"selected authored headline must expose font size");
@@ -226,4 +231,32 @@ test("old Shop Hero selection exposes editable original text styling and Reset w
   assert.equal(writes[1].content.__editor.fieldStyles.headline.fontSize,undefined);
   assert.equal(frame.contentDocument.querySelector(".shop-hero").className,"shop-hero old-design");
  }finally{dom.window.close();}
+});
+
+
+test("mobile selection stays on preview and Settings is a dedicated opt-in pane", async () => {
+  const {dom,doc}=await editorFixture({mobile:true});
+  try {
+    const studio=doc.querySelector('.theme-studio');
+    assert.equal(studio.dataset.mobilePane,'preview','a phone opens with storefront visible');
+    const hero=doc.querySelector('[data-select-section="hero"]');
+    assert.ok(hero);
+    hero.click();
+    assert.equal(studio.dataset.mobilePane,'preview','selecting should not cover the canvas with an inspector');
+    doc.querySelector('#te-mobile-pane-switch [data-mobile-pane="settings"]').click();
+    assert.equal(studio.dataset.mobilePane,'settings','settings are available by explicit mobile navigation');
+    doc.querySelector('#te-mobile-pane-switch [data-mobile-pane="sections"]').click();
+    assert.equal(studio.dataset.mobilePane,'sections','page hierarchy is a full independent mobile pane');
+  } finally {
+    dom.window.close();
+  }
+});
+
+test("mobile style contract bounds the toolbar, view panes and generation preview", () => {
+  const css=readFileSync(new URL('../frontend/static/css/theme-editor.css',import.meta.url),'utf8');
+  assert.match(css,/MOBILE RELEASE GATE:/);
+  assert.match(css,/grid-template-areas:"left actions" "center center"/);
+  assert.match(css,/grid-template-rows:minmax\(0,1fr\) 61px/);
+  assert.match(css,/data-mobile-pane="preview"\] \.theme-studio-canvas/);
+  assert.match(css,/#te-block-panel\[data-panel-state\][\s\S]*bottom:calc\(69px/);
 });
