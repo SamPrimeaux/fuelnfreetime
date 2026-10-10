@@ -22,6 +22,60 @@ test("18 reference categories and exclusive accordion behavior",()=>{
  assert.equal(root.querySelectorAll('[data-ts-toggle][aria-expanded="true"]').length,0);
  dom.window.close();
 });
+test("switching categories is atomic: exactly one visible, accessible panel and directional chevron",()=>{
+ const {dom,w,root}=fixture();
+ const rows=[...root.querySelectorAll(".ts-category")];
+ const invariant=(selected)=>{
+  assert.equal(root.dataset.openCategory,selected);
+  assert.equal(root.querySelectorAll('.ts-category.is-open').length,selected?1:0);
+  assert.equal(root.querySelectorAll('[data-ts-toggle][aria-expanded="true"]').length,selected?1:0);
+  assert.equal(root.querySelectorAll('.ts-category-content:not([hidden])').length,selected?1:0);
+  rows.forEach(row=>{
+   const on=row.dataset.tsCategory===selected;
+   const trigger=row.querySelector("[data-ts-toggle]");
+   const panel=row.querySelector("[data-ts-panel]");
+   assert.equal(trigger.getAttribute("aria-expanded"),String(on),row.dataset.tsCategory);
+   assert.equal(trigger.dataset.state,on?"open":"closed",row.dataset.tsCategory);
+   assert.equal(panel.hidden,!on,row.dataset.tsCategory);
+   assert.equal(panel.getAttribute("aria-hidden"),String(!on),row.dataset.tsCategory);
+   assert.equal(panel.hasAttribute("inert"),!on,row.dataset.tsCategory);
+   assert.equal(row.classList.contains("is-open"),on,row.dataset.tsCategory);
+  });
+ };
+ invariant("");
+ const keys=rows.map(row=>row.dataset.tsCategory);
+ for(const key of [...keys,...keys.slice().reverse(),keys[2],keys[12],keys[2]]){
+  w.ThemeSettingsPanel.open(key);
+  invariant(key);
+  // A second activation of the same heading collapses everything.
+  w.ThemeSettingsPanel.open(key);
+  invariant("");
+ }
+ const btn=rows[12].querySelector("[data-ts-toggle]");
+ btn.focus();
+ btn.click();
+ invariant("prices");
+ assert.equal(w.document.activeElement,btn,"clicked category retains keyboard focus");
+ w.ThemeSettingsPanel.close();
+ invariant("");
+ dom.window.close();
+});
+test("opening a category closes its predecessor without erasing an unsaved setting",()=>{
+ const {dom,w,root}=fixture();
+ const buttons=[...root.querySelectorAll("[data-ts-toggle]")];
+ buttons[15].click();
+ const width=root.querySelector('[data-ts-key="swatches.width"][type="number"]');
+ width.value="62";
+ width.dispatchEvent(new w.Event("input",{bubbles:true}));
+ buttons[12].click();
+ assert.equal(root.querySelector('[data-ts-panel="swatches"]').hidden,true);
+ assert.equal(root.querySelector('[data-ts-panel="prices"]').hidden,false);
+ assert.equal(w.ThemeSettingsPanel.getState().values["swatches.width"],62);
+ buttons[15].click();
+ assert.equal(root.querySelector('[data-ts-key="swatches.width"][type="number"]').value,"62");
+ assert.equal(root.querySelector('[data-ts-panel="prices"]').hidden,true);
+ dom.window.close();
+});
 test("all final five reference fields are present with correct initial values",()=>{
  const {dom,w,root}=fixture();
  const keys=["prices.product","prices.cards","prices.items","prices.total","cards.quick","cards.mobileQuick","cards.second","cards.carousel","search.empty","search.productRadius","search.cardRadius","swatches.width","swatches.height","swatches.radius","swatches.borders","swatches.thickness","swatches.opacity","variants.selectedBg","variants.selectedText","variants.selectedBorder","variants.width"];
