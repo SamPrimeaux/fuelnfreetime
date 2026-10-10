@@ -160,6 +160,7 @@ const assets = {
  "/admin/js/theme-preview-runtime.js":"packages/fnf-theme/src/editor/preview-adapter.js",
  "/admin/js/theme-editor.js":"apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor.js",
  "/admin/css/theme-editor.css":"apps/ecommerce-cms-agentsam/frontend/static/css/theme-editor.css",
+ "/admin/css/agentsam.css":"apps/ecommerce-cms-agentsam/frontend/static/css/agentsam.css",
  "/admin/css/console.css":"apps/ecommerce-cms-agentsam/frontend/static/css/console.css",
  "/admin/css/admin.css":"apps/ecommerce-cms-agentsam/frontend/static/css/admin.css",
  "/js/cms-hydrate.js":"packages/heuristic-theme/storefront/js/cms-hydrate.js"
