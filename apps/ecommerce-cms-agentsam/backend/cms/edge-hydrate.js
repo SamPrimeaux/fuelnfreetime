@@ -86,12 +86,33 @@ export function applyCmsSlotValue(el, path, sectionsByKey) {
   return true;
 }
 
+/** Adapt original HTML with local data-cms="field" markers to the same
+ * section.field binding contract. No markup or style conversion is required.
+ * The streaming HTMLRewriter tracks section entry/exit, including nesting.
+ */
+export class CmsSectionScopeHandler {
+  constructor(scope) { this.scope = scope; }
+  element(el) {
+    const key = el.getAttribute("data-cms-section");
+    if (!key) return;
+    this.scope.stack.push(key);
+    el.onEndTag(() => {
+      this.scope.stack.pop();
+    });
+  }
+}
+
 export class CmsSlotHandler {
-  constructor(sectionsByKey) {
+  constructor(sectionsByKey, scope = { stack: [] }) {
     this.sectionsByKey = sectionsByKey;
+    this.scope = scope;
   }
   element(el) {
-    applyCmsSlotValue(el, el.getAttribute("data-cms"), this.sectionsByKey);
+    const marker = el.getAttribute("data-cms");
+    if (!marker) return;
+    const current = this.scope.stack.at(-1);
+    const resolved = marker.includes(".") || !current ? marker : current + "." + marker;
+    applyCmsSlotValue(el, resolved, this.sectionsByKey);
   }
 }
 
