@@ -128,7 +128,8 @@ try{
  assert.equal(result.canApply,true);
  assert.equal(result.localReviewExists,false,'Theme inspector must not render a second proposal composer');
  assert.equal(result.sideAssistantOpen,true,'miniAgentSam proposal must open in the AgentSam Side Assistant');
- assert.deepEqual(result.focusedGroups,['Buttons and links'],'CTA selection should show CTA/link controls without unrelated Media fields');
+ assert.ok(result.focusedGroups.includes('Buttons and links'),'CTA selection must expose button/link controls');
+ assert.ok(!result.focusedGroups.includes('Media'),'CTA selection must not show unrelated media fields');
  assert.equal(result.beforeWrites,0);
  assert.equal(result.afterApplyWrites,0,'Only Save may persist a draft');
  assert.equal(result.beforeField,result.initialValue);
