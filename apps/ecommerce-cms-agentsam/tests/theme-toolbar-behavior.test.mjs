@@ -196,10 +196,12 @@ test("old Shop Hero selection exposes editable original text styling and Reset w
  const {dom,w,doc,writes}=await editorFixture();
  try{
   const frame=doc.getElementById("theme-preview");
-  frame.contentDocument.body.innerHTML='<section class="shop-hero old-design" data-cms-section="hero"><h1 class="h-display" data-cms="headline">Authored hero</h1><a class="h-button" data-cms="ctaPrimary.href" href="#catalog"><span data-cms="ctaPrimary.label">Shop</span></a></section>';
+  const previewDoc=doc.implementation.createHTMLDocument("Merchant source preview");
+  Object.defineProperty(frame,"contentDocument",{configurable:true,value:previewDoc});
+  previewDoc.body.innerHTML='<section class="shop-hero old-design" data-cms-section="hero"><h1 class="h-display" data-cms="headline">Authored hero</h1><a class="h-button" data-cms="ctaPrimary.href" href="#catalog"><span data-cms="ctaPrimary.label">Shop</span></a></section>';
   frame.dispatchEvent(new w.Event("load"));
-  const heroTitle=frame.contentDocument.querySelector('[data-cms="headline"]');
-  heroTitle.dispatchEvent(new frame.contentWindow.MouseEvent("click",{bubbles:true}));
+  const heroTitle=previewDoc.querySelector('[data-cms="headline"]');
+  heroTitle.dispatchEvent(new w.MouseEvent("click",{bubbles:true}));
   const inspector=doc.getElementById("te-inspector-body");
   assert.equal(inspector.querySelector("[data-inspector-advanced]").open,true,"Appearance controls should be immediately visible");
   const size=inspector.querySelector('[data-field-input="__editor.fieldStyles.headline.fontSize"]');
