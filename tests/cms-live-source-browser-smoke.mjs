@@ -96,10 +96,11 @@ const probe = "<script>setTimeout(function(){" +
  "var initialPreview=getComputedStyle(preview).display!=='none';" +
  "modes[0].click();var treeVisible=getComputedStyle(tree).display!=='none';" +
  "var heroRow=document.querySelector('[data-select-section=hero]');if(heroRow)heroRow.click();" +
- "var settingsVisible=getComputedStyle(inspector).display!=='none';" +
+ "var selectedPreviewVisible=getComputedStyle(preview).display!=='none';" +
+ "modes[2].click();var settingsVisible=getComputedStyle(inspector).display!=='none';" +
  "modes[1].click();var backToPreview=getComputedStyle(preview).display!=='none';" +
  "before.mobile={viewport:window.innerWidth,navVisible:getComputedStyle(nav).display!=='none'," +
- "initialPreview,treeVisible,settingsVisible,backToPreview," +
+ "initialPreview,treeVisible,selectedPreviewVisible,settingsVisible,backToPreview," +
  "treeHasAdd:!!document.getElementById('te-add-section')," +
  "noOverflow:document.documentElement.scrollWidth<=window.innerWidth+1};" +
  "}" +
@@ -244,7 +245,8 @@ for(const width of [744,390]){
  assert.equal(mobile.navVisible,true);
  assert.equal(mobile.initialPreview,true);
  assert.equal(mobile.treeVisible,true, "The section tree must be accessible on tablets and phones");
- assert.equal(mobile.settingsVisible,true, "Selecting a section must open editable settings");
+ assert.equal(mobile.selectedPreviewVisible,true, "Selecting a section must keep the mobile storefront visible");
+ assert.equal(mobile.settingsVisible,true, "The explicit Settings pane must expose editable controls");
  assert.equal(mobile.backToPreview,true);
  assert.equal(mobile.treeHasAdd,true);
  assert.equal(mobile.noOverflow,true, "Editor must have no horizontal page overflow");
