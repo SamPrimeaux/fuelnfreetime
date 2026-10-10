@@ -1,0 +1,40 @@
+name: Theme Settings — isolated frontend quality gate
+on:
+  pull_request:
+    paths:
+      - "apps/ecommerce-cms-agentsam/frontend/static/js/theme-settings-panel.js"
+      - "apps/ecommerce-cms-agentsam/frontend/static/css/theme-settings-panel.css"
+      - "apps/ecommerce-cms-agentsam/frontend/static/theme-editor.html"
+      - "apps/ecommerce-cms-agentsam/tests/theme-settings-panel.test.mjs"
+      - "tests/theme-settings-panel-browser-smoke.mjs"
+      - ".github/workflows/theme-settings-review.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-acceptance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Install isolated DOM test dependency
+        run: npm install --no-save --ignore-scripts --package-lock=false jsdom@26
+      - name: Unit and control contracts
+        run: node --test apps/ecommerce-cms-agentsam/tests/theme-settings-panel.test.mjs
+      - name: Real Chromium interaction and screenshots
+        env:
+          THEME_SETTINGS_SCREENSHOT_DIR: ${{ runner.temp }}/theme-settings-captures
+        run: node tests/theme-settings-panel-browser-smoke.mjs
+      - name: Screenshot evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: theme-settings-desktop-tablet-mobile
+          path: ${{ runner.temp }}/theme-settings-captures/
+          if-no-files-found: warn
