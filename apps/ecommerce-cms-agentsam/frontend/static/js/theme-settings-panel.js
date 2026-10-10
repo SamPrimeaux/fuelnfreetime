@@ -147,9 +147,9 @@ const hex=x=>validColor(x)&&x!=="transparent"?x:"#000000";
 const v=k=>state[k]??defaults[k]??"";
 const localKey=()=> "ia:theme-ui-review:v1:"+(document.querySelector("#te-theme-name")?.textContent||"installed")+":"+(new URLSearchParams(location.search).get("slug")||"page");
 const reviewNote=()=>root?.querySelector("[data-ts-review-note]");
-function load(){try{const data=JSON.parse(sessionStorage.getItem(localKey())||"null");if(data){Object.keys(defaults).forEach(k=>{if(data.values&&k in data.values)state[k]=data.values[k];});Object.entries(data.values||{}).forEach(([k,value])=>{if(/^palette\.\d+$/.test(k)){state[k]=value;paletteCount=Math.max(paletteCount,Number(k.split(".")[1])+1);}});paletteLinks=data.links||{};brandName=data.brandName||"Store";}}catch{}}
+function load(){try{const data=JSON.parse(sessionStorage.getItem(localKey())||"null");if(data){Object.keys(defaults).forEach(k=>{if(data.values&&k in data.values)state[k]=data.values[k];});Object.entries(data.values||{}).forEach(([k,value])=>{if(/^palette\.\d+$/.test(k)){state[k]=value;paletteCount=Math.max(paletteCount,Number(k.split(".")[1])+1);}});paletteLinks=data.links||{};brandName=data.brandName||"Store";media=data.media||{};}else{fieldMap.forEach((item,key)=>{if(item.type!=="color")return;const match=[0,1,2,3].find(i=>defaults["palette."+i]===item.initial);if(match!==undefined)paletteLinks[key]=match;});}}catch{}}
 function save(){
- try{sessionStorage.setItem(localKey(),JSON.stringify({values:state,links:paletteLinks,brandName}));}
+ try{const retained=Object.fromEntries(Object.entries(media).filter(([,value])=>String(value).length<1000000));sessionStorage.setItem(localKey(),JSON.stringify({values:state,links:paletteLinks,brandName,media:retained}));}
  catch{if(reviewNote())reviewNote().textContent="Preview only · session storage unavailable";}
 }
 function set(k,value){
@@ -263,7 +263,7 @@ function chooseMedia(key){
  const html=`<p class="ts-helper">Local preview illustrations only; no production media changes.</p><div class="ts-media-choices">${[0,1,2].map(i=>`<button type="button" data-ts-image-choice="${i}"><img src="${esc(mediaSample(i))}" alt="Sample illustration ${i+1}"></button>`).join("")}</div><label class="ts-upload">Choose image from device<input type="file" accept="image/*" data-ts-upload></label><p data-ts-selected-label class="ts-helper">Select an image to continue.</p>`;
  const d=dialog("Preview media picker",html,box=>{
  if(!box.dataset.src){box.querySelector("[data-ts-selected-label]").textContent="Choose an image first.";return false;}
- media[key]=box.dataset.src;updateMedia(key);
+ media[key]=box.dataset.src;updateMedia(key);save();
  });
  d.querySelectorAll("[data-ts-image-choice]").forEach(b=>b.addEventListener("click",()=>{d.dataset.src=mediaSample(+b.dataset.tsImageChoice);d.querySelector("[data-ts-selected-label]").textContent="Sample selected";}));
  d.querySelector("[data-ts-upload]").addEventListener("change",e=>{const file=e.target.files?.[0];if(!file||!file.type.startsWith("image/"))return;const fr=new FileReader();fr.onload=()=>{d.dataset.src=fr.result;d.querySelector("[data-ts-selected-label]").textContent=file.name;};fr.readAsDataURL(file);});
@@ -281,7 +281,7 @@ function action(button){
  if(a==="paletteEdit")return palettePicker(null,+button.dataset.tsIndex);
  if(a==="paletteAdd")return palettePicker(null,paletteCount);
  if(["media","explore"].includes(a))return chooseMedia(key);
- if(a==="mediaRemove"){delete media[key];return updateMedia(key);}
+ if(a==="mediaRemove"){delete media[key];updateMedia(key);save();return;}
  if(["collection","link"].includes(a))return resourcePicker(key);
  if(a==="name")return dialog("Manage store name",`<label>Store name<input data-ts-name value="${esc(brandName)}"></label>`,d=>{brandName=d.querySelector("[data-ts-name]").value.trim()||"Store";save();updatePreview();});
  if(a==="cssHelp")return dialog("About custom CSS","<p>The source editor is preview-only; CSS is not executed or published before mapping and approval.</p>");
