@@ -136,12 +136,12 @@
     refresh: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M20 6v5h-5M4 18v-5h5" stroke="currentColor" stroke-width="1.7"/><path d="M6 9a7 7 0 0 1 12-2l2 2M4 15l2 2a7 7 0 0 0 12-2" stroke="currentColor" stroke-width="1.7"/></svg>',
     external: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M14 5h5v5M19 5l-8 8" stroke="currentColor" stroke-width="1.7"/><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" stroke="currentColor" stroke-width="1.7"/></svg>',
     exit: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M10 7 5 12l5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 12h9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M14 5h4a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-4" stroke="currentColor" stroke-width="1.7"/></svg>',
-    sections: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 7h14M5 12h14M5 17h14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
-    settings: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7"/><path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M6 6l1.6 1.6M16.4 16.4 18 18M18 6l-1.6 1.6M7.6 16.4 6 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+    sections: '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M12.5 8h5M12.5 12h5M12.5 16h3"/></svg>',
+    settings: '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.86l.07.07-1.95 1.95-.07-.07A1.7 1.7 0 0 0 16 18.47l-.08.03V21h-3.84v-2.5L12 18.47a1.7 1.7 0 0 0-1.86.34l-.07.07-1.95-1.95.07-.07A1.7 1.7 0 0 0 8.53 15l-.03-.08H6v-3.84h2.5l.03-.08a1.7 1.7 0 0 0-.34-1.86l-.07-.07 1.95-1.95.07.07A1.7 1.7 0 0 0 12 7.53l.08-.03V5h3.84v2.5l.08.03a1.7 1.7 0 0 0 1.86-.34l.07-.07 1.95 1.95-.07.07A1.7 1.7 0 0 0 19.47 11l.03.08H22v3.84h-2.5Z" transform="translate(-2 -1) scale(1.1)"/></svg>',
     embeds: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="13" y="13" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><path d="M13 7h5a2 2 0 0 1 2 2v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>'
     ,
     panel: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>',
-    inspect: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3H5a2 2 0 0 0-2 2v2m0 4v2m0 4v2a2 2 0 0 0 2 2h2m4 0h2m4 0h1M11 3h2m4 0h2a2 2 0 0 1 2 2v2m0 4v2"/><path d="m12 12 9 4-4.5 1.5L15 22z"/></svg>',
+    inspect: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.034 12.681a.498.498 0 0 1 .647-.647l9 3.5a.5.5 0 0 1-.033.943l-3.444 1.068a1 1 0 0 0-.66.66l-1.067 3.443a.5.5 0 0 1-.943.033z"/><path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/><path d="M5 21a2 2 0 0 1-2-2"/><path d="M9 3h1"/><path d="M9 21h2"/><path d="M14 3h1"/><path d="M3 9v1"/><path d="M21 9v2"/><path d="M3 14v1"/></svg>',
     undo: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-2"/></svg>',
     redo: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5M20 9H10a6 6 0 0 0 0 12h2"/></svg>',
     more: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>'
@@ -167,9 +167,8 @@
             '<span class="te-save-state" id="te-save-state" role="status" aria-live="polite" title="Loading" aria-label="Loading">Loading</span>',
           '</div>',
           '<div class="theme-studio-toolbar__right">',
-            '<button type="button" class="te-icon-btn te-agentsam-mark" id="agentsam-toggle" aria-label="Open AgentSam Side Assistant" title="AgentSam Side Assistant" aria-expanded="false"><img src="/admin/brand/agentsam-mark.svg" width="20" height="16" alt="" aria-hidden="true"></button>',
-            '<button type="button" class="te-icon-btn" id="te-inspect-mode" aria-label="Canvas inspection" title="Canvas inspection" aria-pressed="true">', icon.inspect, '</button>',
-            '<button type="button" class="te-icon-btn te-panel-open" id="te-inspector-toggle" aria-controls="te-inspector-body" aria-expanded="true" aria-label="Hide settings panel" title="Hide settings panel">', icon.panel, '</button>',
+            '<button type="button" class="te-icon-btn te-agentsam-mark" id="agentsam-toggle" aria-label="Open AgentSam Side Assistant" title="AgentSam Side Assistant" aria-expanded="false"><img src="/admin/brand/agentsam-sidekick-symbol.svg" width="20" height="20" alt="" aria-hidden="true"></button>',
+            '<button type="button" class="te-icon-btn" id="te-inspect-mode" aria-label="Canvas inspection on" title="Canvas inspection on — select sections in the preview" aria-pressed="true">', icon.inspect, '</button>',
             '<span class="te-toolbar-separator" aria-hidden="true"></span>',
             '<div class="te-device-switch" aria-label="Preview device">',
               '<button type="button" class="te-device-btn" data-device="desktop" aria-label="Desktop preview" title="Desktop">', icon.desktop, '</button>',
@@ -228,6 +227,58 @@
   }
 
   const byId = function(id) { return document.getElementById(id); };
+  function mountEditorTooltips() {
+    const root = document.querySelector('.theme-studio');
+    if (!root || byId('te-hover-help')) return;
+    const tip = document.createElement('div');
+    tip.id = 'te-hover-help';
+    tip.className = 'te-hover-help';
+    tip.setAttribute('role', 'tooltip');
+    tip.hidden = true;
+    document.body.appendChild(tip);
+    let anchor = null;
+    function hide() {
+      if (anchor) anchor.removeAttribute('aria-describedby');
+      anchor = null;
+      tip.hidden = true;
+    }
+    function target(node) {
+      const trigger = node?.closest?.('button, a, [role="button"]');
+      return trigger && root.contains(trigger) ? trigger : null;
+    }
+    function reveal(node) {
+      if (!node) return hide();
+      const label = node.dataset.tooltip || node.getAttribute('title') || node.getAttribute('aria-label');
+      if (!label || node.disabled) return hide();
+      if (anchor && anchor !== node) anchor.removeAttribute('aria-describedby');
+      anchor = node;
+      node.dataset.tooltip = label;
+      node.removeAttribute('title');
+      node.setAttribute('aria-describedby', tip.id);
+      tip.textContent = label;
+      tip.hidden = false;
+      const rect = node.getBoundingClientRect();
+      const width = tip.getBoundingClientRect().width;
+      const height = tip.getBoundingClientRect().height;
+      tip.style.left = Math.max(8, Math.min(rect.left + rect.width / 2 - width / 2, innerWidth - width - 8)) + 'px';
+      const below = rect.bottom + height + 12 < innerHeight;
+      tip.style.top = (below ? rect.bottom + 7 : Math.max(7, rect.top - height - 7)) + 'px';
+    }
+    root.addEventListener('pointerover', function(event) { reveal(target(event.target)); });
+    root.addEventListener('pointerout', function(event) {
+      if (!anchor || anchor.contains(event.relatedTarget)) return;
+      hide();
+    });
+    root.addEventListener('focusin', function(event) { reveal(target(event.target)); });
+    root.addEventListener('focusout', function(event) {
+      if (anchor?.contains(event.relatedTarget)) return;
+      hide();
+    });
+    root.addEventListener('scroll', hide, true);
+    window.addEventListener('blur', hide);
+  }
+  mountEditorTooltips();
+
   if (host) {
     const themeMenu = document.querySelector('.te-theme-menu');
     if (themeMenu) themeMenu.hidden = true;
@@ -2480,10 +2531,8 @@
     inspectorVisible = Boolean(value);
     const studio = document.querySelector('.theme-studio');
     if (studio) studio.dataset.inspector = inspectorVisible ? 'open' : 'closed';
-    const toggle = byId('te-inspector-toggle');
-    toggle.setAttribute('aria-expanded', String(inspectorVisible));
-    toggle.setAttribute('aria-label', inspectorVisible ? 'Hide settings panel' : 'Show settings panel');
-    toggle.title = inspectorVisible ? 'Hide settings panel' : 'Show settings panel';
+    const inspect = byId('te-inspect-mode');
+    if (inspect) inspect.setAttribute('aria-controls', 'te-inspector-body');
     if (!inspectorVisible && window.matchMedia('(max-width: 900px)').matches) setMobilePane('preview');
   }
   let themeIdentity = { name: '', status: '' };
@@ -2814,10 +2863,18 @@
   }
   ensureSideAssistant();
   byId('te-inspect-mode').addEventListener('click', function() {
-    inspectionEnabled = !inspectionEnabled;
+    if (!inspectorVisible) {
+      setInspectorVisible(true);
+      inspectionEnabled = true;
+    } else {
+      inspectionEnabled = !inspectionEnabled;
+    }
     const control = byId('te-inspect-mode');
     control.setAttribute('aria-pressed', String(inspectionEnabled));
-    control.title = inspectionEnabled ? 'Canvas inspection on' : 'Canvas inspection off';
+    const help = inspectionEnabled ? 'Canvas inspection on — select sections in the preview' : 'Canvas inspection off — click to enable';
+    control.title = help;
+    control.setAttribute('aria-label', inspectionEnabled ? 'Canvas inspection on' : 'Canvas inspection off');
+    control.dataset.tooltip = help;
     let doc;
     try { doc = byId('theme-preview').contentDocument; } catch {}
     if (doc?.documentElement) {
@@ -2828,7 +2885,6 @@
       else highlightPreviewSelection();
     }
   });
-  byId('te-inspector-toggle').addEventListener('click', function() { setInspectorVisible(!inspectorVisible); });
   byId('te-undo').addEventListener('click', function() { replayFieldHistory(undoHistory, redoHistory, 'before'); });
   byId('te-redo').addEventListener('click', function() { replayFieldHistory(redoHistory, undoHistory, 'after'); });
   function toggleToolbarMenu(buttonId, menuId) {

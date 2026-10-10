@@ -2347,3 +2347,21 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
 }
 .te-inspector-tools .te-agent-open img { width: 16px; height: 12px; object-fit: contain; vertical-align: middle; }
 .te-tree-row.is-hovered:not(.is-active), .te-block-row.is-hovered:not(.is-active) { background: #f1edff; box-shadow: inset 2px 0 #7656ee; }
+/* Accessible hover/focus help is portaled above the editor's clipped rails. */
+.te-hover-help {
+  position: fixed;
+  z-index: 99999;
+  max-width: min(280px, calc(100vw - 16px));
+  pointer-events: none;
+  white-space: normal;
+  border-radius: 7px;
+  background: #19191e;
+  color: #fff;
+  padding: 6px 9px;
+  font: 500 11px/1.35 system-ui, sans-serif;
+  box-shadow: 0 4px 14px rgba(0,0,0,.16);
+}
+.te-hover-help[hidden] { display: none !important; }
+#te-inspect-mode[aria-pressed="true"] { color: #7352e5; background: #f1edff; border-color: #b5a0ed; }
+#te-inspect-mode[aria-pressed="false"] { color: #757575; background: #fff; border-color: var(--te-border); }
+.te-agentsam-mark img { width: 20px; height: 20px; }

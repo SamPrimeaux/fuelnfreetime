@@ -56,13 +56,17 @@ test("real editor mounts compact toolbar, one drawer and installed page tree", a
     assert.equal(doc.querySelectorAll("#te-save").length, 1);
     assert.equal(doc.querySelector("#te-save").textContent, "Save");
     assert.equal(doc.querySelector("#te-publish").textContent, "Publish live…");
-    assert.equal(doc.querySelector(".te-agentsam-mark img")?.getAttribute("src"), "/admin/brand/agentsam-mark.svg");
+    assert.equal(doc.querySelector(".te-agentsam-mark img")?.getAttribute("src"), "/admin/brand/agentsam-sidekick-symbol.svg");
     assert.ok(doc.getElementById("agentsam-drawer"));
     doc.getElementById("agentsam-toggle").click();
     assert.equal(doc.body.classList.contains("agentsam-open"), true);
     doc.getElementById("agentsam-toggle").click();
     assert.equal(doc.body.classList.contains("agentsam-open"), false);
     assert.equal(doc.getElementById("te-mini-agent-toggle"), null);
+    assert.equal(doc.getElementById("te-inspector-toggle"), null);
+    assert.equal(doc.querySelectorAll('.theme-studio-toolbar__right .te-icon-btn[title*="Canvas inspection"]').length, 1);
+    assert.ok(doc.getElementById("te-inspect-mode").innerHTML.includes("M12.034 12.681"));
+    assert.ok(readFileSync(new URL("../frontend/static/brand/agentsam-sidekick-symbol.svg", import.meta.url), "utf8").includes("<svg"));
     assert.equal(doc.getElementById("te-tree-path"), null);
     assert.equal(doc.getElementById("te-library-browse"), null);
     assert.equal(doc.querySelector("#te-more-menu").hidden, true);
@@ -118,8 +122,15 @@ test("undo/redo alter real CMS draft fields; Save writes draft but never publish
     assert.equal(doc.getElementById("te-inspect-mode").getAttribute("aria-pressed"), "false");
     doc.getElementById("te-inspector-close").click();
     assert.equal(doc.querySelector(".theme-studio").dataset.inspector, "closed");
-    doc.getElementById("te-inspector-toggle").click();
+    doc.getElementById("te-inspect-mode").click();
     assert.equal(doc.querySelector(".theme-studio").dataset.inspector, "open");
+    assert.equal(doc.getElementById("te-inspect-mode").getAttribute("aria-pressed"), "true");
+    const hintTarget = doc.querySelector('[data-drawer-mode="sections"]');
+    hintTarget.focus();
+    assert.equal(doc.querySelector("#te-hover-help").hidden, false);
+    assert.match(doc.querySelector("#te-hover-help").textContent, /Sections/);
+    hintTarget.blur();
+    assert.equal(doc.querySelector("#te-hover-help").hidden, true);
   } finally {
     dom.window.close();
   }
