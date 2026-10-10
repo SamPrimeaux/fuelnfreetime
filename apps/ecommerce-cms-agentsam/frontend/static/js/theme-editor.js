@@ -513,7 +513,9 @@
       return settings.concat(contextualStyleFields());
     }
     const schema = currentSectionSchema();
-    return ((schema && schema.settings) || []).concat(contextualStyleFields());
+    return ((schema && schema.settings) || []).map(function(field) {
+      return {...field,designStyle:true};
+    }).concat(contextualStyleFields());
   }
 
   function allEditableFields() {
@@ -1127,8 +1129,10 @@
           return '<div class="te-setting-group"><div class="te-setting-group__title">' +
             cmsEscapeHtml(group === 'typography' ? 'Selected text · Typography' : humanize(group)) + '</div>' +
             byGroup[group].map(function(field) {
+              const hasOverride=cmsGetPath(section.content,field.key)!==undefined;
               return renderField(section,field) +
-                (field.designStyle?'<button type="button" class="te-reset-style" data-reset-style="'+cmsEscapeAttr(field.key)+'" title="Restore the original theme value">Reset to theme default</button>':'');
+                (field.designStyle&&hasOverride?'<button type="button" class="te-reset-style" data-reset-style="'+cmsEscapeAttr(field.key)+'" title="Restore the original theme value">Reset to theme default</button>':
+                  field.designStyle?'<span class="te-inherited-style" title="The original installed-theme style is preserved">Using original theme style</span>':'');
             }).join('') + '</div>';
         }).join('') + '</div></details>';
     }
