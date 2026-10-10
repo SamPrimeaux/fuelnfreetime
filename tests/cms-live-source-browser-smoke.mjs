@@ -222,7 +222,7 @@ assert.deepEqual({ eyebrow:productGrid?.eyebrow,title:productGrid?.title },
 assert.ok(!("products" in productGrid), "Products must stay bound to the commerce API, not copied into CMS configuration");
 assert.equal(result.linked,true);
 assert.ok(result.saved.some(s=>s.content.headline==="Private autosave browser proof"),"Editing a native field should automatically persist a private draft");
-assert.equal(result.saveState,"Saved privately","Autosave should report completion without publishing");
+assert.equal(result.saveState,"Saved","Autosave must confirm draft persistence without publishing");
 console.log("PASS: real Shop content enters the CMS editor, then autosaves a private field edit");
 const automaticallyOpened = results.get("auto");
 assert.equal(automaticallyOpened.before.autoDraft,true,"A page with no existing draft should initialize its private revision automatically");
