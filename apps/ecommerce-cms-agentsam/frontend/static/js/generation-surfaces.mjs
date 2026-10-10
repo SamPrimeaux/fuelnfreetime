@@ -75,6 +75,27 @@ export function createGenerationFlow(regions) {
   const emit = (name, detail = {}) => regions.panel.dispatchEvent(
     new doc.defaultView.CustomEvent(name, { bubbles: true, detail }));
 
+  // One generation workspace, physically anchored to the left rail so it
+  // cannot disappear beneath a long section tree. The live code stream and
+  // sandbox review reuse the installed flow; no second generator is created.
+  function pinGenerationPreview() {
+    const rail = regions.tree.closest('.theme-studio-tree');
+    if (!rail) return;
+    const rect = rail.getBoundingClientRect();
+    if (rect.width < 120 || rect.height < 120) return;
+    const height = Math.min(510, Math.max(210, rect.height * .68));
+    Object.assign(regions.panel.style, {
+      position: 'fixed', left: (rect.left + 8) + 'px',
+      top: (rect.bottom - height - 8) + 'px',
+      width: (rect.width - 16) + 'px', maxHeight: height + 'px',
+      overflowY: 'auto', zIndex: '130',
+    });
+  }
+  doc.defaultView.addEventListener('resize', () => {
+    if (!regions.panel.hidden && regions.panel.hasAttribute('data-panel-state')) pinGenerationPreview();
+  }, { passive: true });
+
+
   const flow = {
     state,
     handoff(text) {
@@ -106,6 +127,7 @@ export function createGenerationFlow(regions) {
       if (state.generating) return;
       if (!placeholder || !placeholder.isConnected) placeholder = insertGeneratingNode(regions.tree);
       regions.panel.hidden = false;
+      pinGenerationPreview();
       regions.panel.setAttribute("data-panel-state", "request");
       regions.panel.setAttribute("data-surface", "left");
       regions.panel.replaceChildren();
@@ -140,6 +162,7 @@ export function createGenerationFlow(regions) {
       state.generating = true;
       state.calls += 1;
       if (!placeholder || !placeholder.isConnected) placeholder = insertGeneratingNode(regions.tree);
+      pinGenerationPreview();
       regions.panel.setAttribute("data-panel-state", "generating");
       regions.panel.setAttribute("data-surface", "left");
       regions.panel.replaceChildren();
@@ -180,6 +203,7 @@ export function createGenerationFlow(regions) {
     },
     review(record, accept, provenance = {}) {
       state.generating = false;
+      pinGenerationPreview();
       regions.panel.setAttribute("data-panel-state", "review");
       regions.panel.replaceChildren();
       const title = doc.createElement("strong");

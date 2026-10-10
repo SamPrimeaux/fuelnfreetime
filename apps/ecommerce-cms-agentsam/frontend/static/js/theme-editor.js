@@ -211,8 +211,8 @@
             '<div class="te-preview-status"><span class="te-preview-mode">Local draft preview</span><span class="te-selected-path" id="te-selected-path">Select a section in the preview or tree</span></div>',
           '</main>',
           '<aside class="theme-editor-panel">',
-            '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><div class="te-inspector-tools"><button type="button" id="te-agent-open" class="te-agent-open" aria-label="Open miniAgentSam beside the selected element" title="Ask miniAgentSam about this selection"><img src="/admin/brand/agentsam-sidekick-symbol.svg" width="20" height="20" alt="" aria-hidden="true"></button><span class="te-badge" id="te-section-status">draft</span><button type="button" class="te-icon-btn te-inspector-close" id="te-inspector-close" aria-label="Close settings panel" title="Close settings panel">×</button></div></div>',
-            '<div class="te-inspector-body" id="te-inspector-body"></div><div data-composer-slot="editor"></div>',
+            '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><div class="te-inspector-tools"><button type="button" id="te-agent-open" class="te-agent-open" aria-label="Open miniAgentSam beside the selected element" title="Ask miniAgentSam about this selection"><img src="/admin/brand/mini-agentsam-trigger.svg" width="20" height="20" alt="" aria-hidden="true"></button><span class="te-badge" id="te-section-status">draft</span><button type="button" class="te-icon-btn te-inspector-close" id="te-inspector-close" aria-label="Close settings panel" title="Close settings panel">×</button></div></div>',
+            '<div class="te-inspector-body" id="te-inspector-body"></div><div data-composer-slot="editor" hidden aria-hidden="true"></div>',
             '<div class="te-inspector-save"><p class="te-note" id="te-note" role="status" aria-live="polite"></p></div>',
           '</aside>',
         '</div>',
@@ -299,6 +299,7 @@
     const studio = document.querySelector('.theme-studio');
     if (!studio) return;
     studio.dataset.mobilePane = pane;
+    if (pane === 'settings') setInspectorVisible(true);
     byId('te-mobile-pane-switch')?.querySelectorAll('[data-mobile-pane]').forEach(function(button) {
       const selected = button.dataset.mobilePane === pane;
       button.classList.toggle('is-active', selected);
@@ -1085,11 +1086,6 @@
       groups[isActionLabel ? 'links' : kind].push(field);
     });
     const titles = { content: 'Content', media: 'Media', links: 'Buttons and links' };
-    const descriptions = {
-      content: 'Edit the copy and values for this selection.',
-      media: 'Use the existing media library or upload a file.',
-      links: 'Choose where visitors go when they click.'
-    };
     let visibleKinds = Object.keys(groups).filter(function(kind) {
       return groups[kind].length > 0;
     });
@@ -1104,14 +1100,11 @@
     }
     let html = visibleKinds.map(function(kind) {
       return '<section class="te-inspector-group" aria-label="' + titles[kind] + '">' +
-        '<div class="te-inspector-group__head"><h3>' + titles[kind] + '</h3><p>' + descriptions[kind] + '</p></div>' +
+        '<div class="te-inspector-group__head"><h3>' + titles[kind] + '</h3></div>' +
         groups[kind].map(function(field) { return renderField(section, field); }).join('') +
         '</section>';
     }).join('');
 
-    if (section.key === 'header' && sectionOwner(section) === 'site') {
-      html = '<div class="te-managed-preferences"><strong>Shared storefront settings</strong><p>Storefront logo, navigation and announcements are managed in Online Store Preferences. This Header inspector can still preview theme-draft changes.</p><a href="/admin/preferences">Open Store Preferences →</a></div>' + html;
-    }
     const settings = currentSettings();
     if (settings.length) {
       const byGroup = {};
@@ -1120,21 +1113,21 @@
         if (!byGroup[group]) byGroup[group] = [];
         byGroup[group].push(field);
       });
-      // Surface the controls immediately when an original field or section is selected.
-      // Explicit local overrides are optional; without one its original CSS wins.
-      html += '<details class="te-inspector-disclosure" data-inspector-advanced open>' +
-        '<summary>Appearance and layout<span class="te-disclosure-chevron" aria-hidden="true">⌄</span></summary>' +
-        '<div class="te-inspector-disclosure__body">' +
-        Object.keys(byGroup).map(function(group) {
-          return '<div class="te-setting-group"><div class="te-setting-group__title">' +
-            cmsEscapeHtml(group === 'typography' ? 'Selected text · Typography' : humanize(group)) + '</div>' +
-            byGroup[group].map(function(field) {
-              const hasOverride=cmsGetPath(section.content,field.key)!==undefined;
-              return renderField(section,field) +
-                (field.designStyle&&hasOverride?'<button type="button" class="te-reset-style" data-reset-style="'+cmsEscapeAttr(field.key)+'" title="Restore the original theme value">Reset to theme default</button>':
-                  field.designStyle?'<span class="te-inherited-style" title="The original installed-theme style is preserved">Using original theme style</span>':'');
-            }).join('') + '</div>';
-        }).join('') + '</div></details>';
+      // Native contextual groups, not a nested generic CSS inventory card.
+      // Advanced motion/responsive/visibility controls remain accessible
+      // without consuming the initial editing viewport.
+      html += Object.keys(byGroup).map(function(group) {
+        const title = group === 'typography' ? 'Typography' : humanize(group);
+        const advanced = /^(motion|responsive|visibility|advanced)$/i.test(group);
+        const fields = byGroup[group].map(function(field) {
+          const hasOverride = cmsGetPath(section.content, field.key) !== undefined;
+          return renderField(section, field) + (field.designStyle && hasOverride
+            ? '<button type="button" class="te-reset-style" data-reset-style="' + cmsEscapeAttr(field.key) + '" title="Restore original theme value">Reset</button>'
+            : '');
+        }).join('');
+        if (advanced) return '<details class="te-inspector-group te-inspector-group--advanced"><summary>' + cmsEscapeHtml(title) + '</summary>' + fields + '</details>';
+        return '<section class="te-inspector-group" aria-label="' + cmsEscapeAttr(title) + '"><div class="te-inspector-group__head"><h3>' + cmsEscapeHtml(title) + '</h3></div>' + fields + '</section>';
+      }).join('');
     }
 
     return html;
@@ -1227,7 +1220,7 @@
     document.querySelectorAll('[data-field-input]').forEach(function(input) {
       input.addEventListener('focus', function() {
         activeFieldKey = input.dataset.fieldInput;
-        setMiniAnchor(input);
+        // The visual selection, not the inspector input, anchors miniAgentSam.
         byId('te-selected-path').textContent = (activeSectionOwner === 'site' ? 'Global' : slug) + ' / ' + activeSectionKey + ' / ' + activeFieldKey;
         highlightPreviewSelection();
         closeAgentProposal();
@@ -1832,7 +1825,7 @@
     miniAgentSamSelectionTick += 1;
     miniAgentSam?.close();
     miniAgentSamVisible = false;
-    byId('te-mini-agent-toggle')?.setAttribute('aria-pressed', 'false');
+
   }
 
   async function openMiniAgentSam() {
@@ -1841,7 +1834,10 @@
     const tick = ++miniAgentSamSelectionTick;
     if (!miniAgentSamPromise) {
       miniAgentSamPromise = import('/admin/js/theme-editor-mini-agentsam.mjs')
-        .then(function(module) { return module.createThemeEditorMiniAgentSam({ onProposal: presentAgentProposal }); })
+        .then(function(module) { return module.createThemeEditorMiniAgentSam({
+          onProposal: presentAgentProposal,
+          onClose: function() { miniAgentSamVisible = false; },
+        }); })
         .catch(function(error) { miniAgentSamPromise = null; throw error; });
     }
     try {
@@ -1850,9 +1846,12 @@
       // Anchor to the visible CMS inspector rather than the browser's generic annotation mode.
       miniAgentSam.select(selection, selectedMiniBounds);
       miniAgentSamVisible = true;
-      byId('te-mini-agent-toggle')?.setAttribute('aria-pressed', 'true');
+
     } catch (error) {
-      setNote('miniAgentSam could not load: ' + (error.message || String(error)), 'error');
+      // The hosting page may have navigated away while dynamic import ran.
+      // Selection failures must never block the underlying editor.
+      if (document?.getElementById?.('te-note'))
+        setNote('miniAgentSam could not load: ' + (error.message || String(error)), 'error');
     }
   }
 
@@ -1906,7 +1905,9 @@
     setInspectorVisible(true);
     renderTree();
     renderInspector();
-    if (window.matchMedia('(max-width: 900px)').matches) setMobilePane('settings');
+    // Keep the selected storefront element visible on mobile. The merchant
+    // enters editing controls via the dedicated Settings pane.
+    if (window.matchMedia('(max-width: 900px)').matches) setMobilePane('preview');
     const prefix = activeSectionOwner === 'site' ? 'Global' : slug;
     byId('te-selected-path').textContent = fieldKey ? prefix + ' / ' + sectionKey + ' / ' + fieldKey : prefix + ' / ' + sectionKey;
 
@@ -1920,7 +1921,10 @@
     highlightPreviewSelection();
     closeAgentProposal();
     publishGenerationSelection();
-    closeMiniAgentSam();
+    // The inspector chooses the target. The mini composer appears at that
+    // selection without another trigger or any automatic model request.
+    if (inspectionEnabled) void openMiniAgentSam();
+    else closeMiniAgentSam();
   }
 
   function selectBlock(sectionKey, blockId, fieldKey, scrollPreview, ownerSlug) {
@@ -1942,7 +1946,9 @@
     setInspectorVisible(true);
     renderTree();
     renderInspector();
-    if (window.matchMedia('(max-width: 900px)').matches) setMobilePane('settings');
+    // Keep the selected storefront element visible on mobile. The merchant
+    // enters editing controls via the dedicated Settings pane.
+    if (window.matchMedia('(max-width: 900px)').matches) setMobilePane('preview');
     const prefix = activeSectionOwner === 'site' ? 'Global' : slug;
     byId('te-selected-path').textContent = activeFieldKey
       ? prefix + ' / ' + sectionKey + ' / ' + blockId + ' / ' + activeFieldKey.replace(blockId + '.', '')
@@ -1959,7 +1965,10 @@
     highlightPreviewSelection();
     closeAgentProposal();
     publishGenerationSelection();
-    closeMiniAgentSam();
+    // The inspector chooses the target. The mini composer appears at that
+    // selection without another trigger or any automatic model request.
+    if (inspectionEnabled) void openMiniAgentSam();
+    else closeMiniAgentSam();
   }
 
   // Hover is transient. It never changes the selected node, draft, or inspector.
@@ -2072,7 +2081,16 @@
     if (!selected && activeSectionKey) {
       selected = doc.querySelector('[data-cms-section="' + CSS.escape(activeSectionKey) + '"], [data-section-id="' + CSS.escape(activeSectionKey) + '"]');
     }
-    if (selected) selected.setAttribute('data-theme-editor-selected', 'true');
+    if (selected) {
+      selected.setAttribute('data-theme-editor-selected', 'true');
+      // Tree selection must resolve to the selected canvas element rather than
+      // leaving the mini composer beside its corresponding tree row.
+      if (!miniAnchor?.frame || miniAnchor.element !== selected)
+        setMiniAnchor(selected, byId('theme-preview'));
+    } else if (miniAnchor?.frame) {
+      setMiniAnchor(null);
+    }
+
   }
 
   function setDevice(next) {
@@ -2672,6 +2690,7 @@
     const aside = byId('te-editor-drawer');
     if (aside && editorDrawer) drawerScroll[editorDrawer] = aside.scrollTop;
     editorDrawer = editorDrawer === next ? null : next;
+    if (editorDrawer !== 'sections') closeMiniAgentSam();
     const studio = document.querySelector('.theme-studio');
     if (studio) studio.setAttribute('data-editor-drawer', editorDrawer || 'closed');
     document.querySelectorAll('[data-drawer-mode]').forEach(function(button) {
@@ -2930,9 +2949,6 @@
     if (!miniAnchor?.element?.isConnected) setMiniAnchor(anchor);
     void openMiniAgentSam();
   }
-  byId('te-mini-agent-toggle')?.addEventListener('click', function(event) {
-    toggleMiniAgentSam(event.currentTarget);
-  });
   byId('te-agent-open').addEventListener('click', function(event) {
     toggleMiniAgentSam(event.currentTarget);
   });
@@ -2976,6 +2992,7 @@
     control.title = help;
     control.setAttribute('aria-label', inspectionEnabled ? 'Canvas inspection on' : 'Canvas inspection off');
     control.dataset.tooltip = help;
+    if (!inspectionEnabled) closeMiniAgentSam();
     let doc;
     try { doc = byId('theme-preview').contentDocument; } catch {}
     if (doc?.documentElement) {
