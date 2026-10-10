@@ -6,6 +6,7 @@
 import { PAGE_REGISTRY } from "./registry.js";
 import {
   CmsSlotHandler,
+  CmsSectionScopeHandler,
   HeadEdgeHydratedHandler,
   HtmlEdgeHydratedHandler,
   loadEdgeHydrationContext,
@@ -197,10 +198,12 @@ export async function transformStorefrontHtml(response, env, slug, request) {
     const hydration = await loadEdgeHydrationContext(env, slug, { preview });
     if (hydration.hydrated) {
       edgeHydrated = true;
+      const scope = { stack: [] };
       rewriter = rewriter
         .on("html", new HtmlEdgeHydratedHandler())
         .on("head", new HeadEdgeHydratedHandler())
-        .on("[data-cms]", new CmsSlotHandler(hydration.sectionsByKey));
+        .on("[data-cms-section]", new CmsSectionScopeHandler(scope))
+        .on("[data-cms]", new CmsSlotHandler(hydration.sectionsByKey, scope));
     }
   }
 
