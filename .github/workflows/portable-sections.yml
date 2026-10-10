@@ -102,6 +102,15 @@ jobs:
         run: node tests/launch/portable-editor-browser-smoke.mjs
       - name: Real live Shop content and safe CMS draft import in Chrome
         run: node tests/cms-live-source-browser-smoke.mjs
+        env:
+          THEME_STUDIO_VISUALS: '1'
+      - name: Capture actual Theme Studio desktop and phone screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: theme-studio-rendered-rail
+          path: artifacts/theme-studio/*.png
+          if-no-files-found: warn
       - name: Actual storefront media and CTA edits in Chrome
         run: node tests/cms-slot-binding-browser-smoke.mjs
       - name: Full authored Heuristic section and nested block slot registration

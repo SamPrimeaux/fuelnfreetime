@@ -9,9 +9,9 @@ const { JSDOM } = require("jsdom");
 const root = new URL("../frontend/static/js/", import.meta.url);
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 
-async function editorFixture({ mobile = false } = {}) {
+async function editorFixture({ mobile = false, pageSlug = "shop" } = {}) {
   const dom = new JSDOM("<!doctype html><html><body></body></html>", {
-    url: "https://editor.test/admin/theme-editor?slug=shop",
+    url: "https://editor.test/admin/theme-editor?slug=" + pageSlug,
     runScripts: "outside-only",
     pretendToBeVisual: true
   });
@@ -20,7 +20,7 @@ async function editorFixture({ mobile = false } = {}) {
   w.HTMLElement.prototype.scrollIntoView = () => {};
   const writes = [];
   const publishes = [];
-  const page = getRegistryPage("shop");
+  const page = getRegistryPage(pageSlug);
   const site = getRegistryPage("site");
   page.content_authority = "cms-draft-linked";
   page.sections = page.sections.map(section => ({ ...section, version: 1, status: "draft" }));
@@ -32,8 +32,8 @@ async function editorFixture({ mobile = false } = {}) {
   w.adminFetch = async (url, options = {}) => {
     if (url.endsWith("/registry")) return registryForAdmin();
     if (url.endsWith("/pages/site")) return { page: site };
-    if (url.endsWith("/pages/shop")) return { page, seeded: false };
-    if (url.endsWith("/pages")) return { pages: [{ slug: "shop", title: "Shop", live_route: "/shop" }] };
+    if (url.endsWith("/pages/" + pageSlug)) return { page, seeded: false };
+    if (url.endsWith("/pages")) return { pages: [{ slug: pageSlug, title: page.title, live_route: "/" + pageSlug }] };
     if (url.endsWith("/pages/shop/publish") && options.method === "POST") {
       publishes.push({url,method:options.method});
       return w.__publishResponder ? w.__publishResponder() : { published_at: "2026-10-10T05:00:00Z" };
@@ -259,4 +259,57 @@ test("mobile style contract bounds the toolbar, view panes and generation previe
   assert.match(css,/grid-template-rows:minmax\(0,1fr\) 61px/);
   assert.match(css,/data-mobile-pane="preview"\] \.theme-studio-canvas/);
   assert.match(css,/#te-block-panel\[data-panel-state\][\s\S]*bottom:calc\(69px/);
+});
+
+
+test("About page hierarchy matches the approved nested merchant editing pattern", async () => {
+  const {dom,doc}=await editorFixture({pageSlug:'about'});
+  try {
+    const tree=doc.getElementById('te-tree');
+    const groupTitles=[...tree.querySelectorAll('.te-tree-group__label')].map(e=>e.textContent);
+    assert.deepEqual(groupTitles.filter(t=>['Header','Template','Footer'].includes(t)),['Header','Template','Footer']);
+    const header=tree.querySelector('[data-tree-section="site:header"]');
+    assert.ok(header.querySelector('[data-select-field="logoUrl"]'), 'Logo appears as a real editable field child');
+    assert.ok(header.querySelector('[data-toggle-menu="site:header"]'), 'Header has real collapsible Menu hierarchy');
+    assert.equal(header.querySelector('[data-toggle-menu="site:header"]').getAttribute('aria-expanded'),'false','Header navigation starts collapsed for a clean tree');
+    assert.ok(header.querySelector('[data-select-block="nav1"]'), 'Real navigation block remains selectable');
+    const menu=header.querySelector('[data-toggle-menu="site:header"]');
+    menu.click();
+    assert.equal(menu.getAttribute('aria-expanded'),'true','Menu opens on demand');
+    menu.click();
+    assert.equal(menu.getAttribute('aria-expanded'),'false','Menu collapses without hiding the Header');
+    const hero=tree.querySelector('[data-tree-section="about:hero"]');
+    assert.ok(hero, 'Hero is registered under Template');
+    assert.ok(hero.querySelector('[data-select-field="meta1"]'), 'Eyebrow/metadata is a selectable Text child');
+    const heading=hero.querySelector('[data-select-field="headline"]');
+    assert.ok(heading, 'Heading is visible even when Hero has zero persisted __editor.blocks');
+    assert.match(heading.textContent,/Heading.*Built in the Garage/i);
+    assert.match(hero.querySelector('[data-select-field="subheadline"]').textContent,/Text.*Born around garage nights/i,'Subheadline is Text, not a second Heading');
+    assert.ok(!hero.querySelector('[data-add-block-section="hero"]'), 'No fake Add block affordance without a registered CRUD template');
+    assert.equal(hero.querySelector('.te-tree-row__meta'),null, 'No database-facing draft/field-count subtitles');
+    assert.ok(tree.querySelector('.te-tree-group:nth-of-type(2) #te-add-section'), 'Add section belongs to Template');
+    heading.click();
+    assert.equal(doc.getElementById('te-inspector-title').textContent,'Heading');
+    assert.ok(doc.querySelector('[data-tree-field="headline"].is-active'), 'Selected field remains highlighted within its section');
+    assert.ok(doc.getElementById('te-inspector-body').querySelector('[data-field-input="headline"]'), 'Clicked child drives the existing editable inspector');
+    assert.equal(doc.querySelector('#te-inspector-body [data-field-input="meta1"]'),null,'Meta1 must not clutter the selected Heading inspector');
+    assert.equal(doc.querySelector('#te-inspector-body [data-field-input="meta2"]'),null,'Meta2 must not clutter the selected Heading inspector');
+    assert.ok(doc.querySelector('[data-inline-style-key="__editor.fieldStyles.headline.fontWeight"]'),'Real Bold control appears beside editable Heading text');
+    const uppercase=doc.querySelector('[data-inline-style-key="__editor.fieldStyles.headline.textTransform"]');
+    assert.equal(uppercase.getAttribute('aria-pressed'),'false');
+    uppercase.click();
+    assert.equal(doc.querySelector('[data-inline-style-key="__editor.fieldStyles.headline.textTransform"]').getAttribute('aria-pressed'),'true','Text toolbar is interactive, not decorative');
+    assert.equal(tree.querySelector('[data-tree-section="about:hero"] .te-tree-expand').getAttribute('aria-expanded'),'true');
+    assert.ok(doc.querySelector('[data-remove-section="hero"]'), 'Existing removal operation remains available via contextual actions');
+  }finally{dom.window.close();}
+});
+
+test("left rail visual density and touch controls are release requirements", () => {
+  const css=readFileSync(new URL('../frontend/static/css/theme-editor.css',import.meta.url),'utf8');
+  assert.match(css,/Merchant page hierarchy/);
+  assert.match(css,/grid-template-columns: 278px minmax\(0, 1fr\) 328px/);
+  assert.match(css,/\.te-field-row\.is-active/);
+  assert.match(css,/\.te-tree-actions__menu/);
+  assert.match(css,/\.te-inline-text-toolbar/);
+  assert.match(css,/@media\(max-width:900px\)[\s\S]*\.te-field-row__main/);
 });

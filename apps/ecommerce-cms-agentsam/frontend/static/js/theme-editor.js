@@ -64,6 +64,8 @@
   let selectedMediaAsset = null;
   const mediaUndo = new Map();
   const expandedSections = new Set();
+  const expandedMenus = new Set();
+  let treeExpandedForPage = null;
   let sectionInsertIndex = null;
   const resourceCache = Object.create(null);
   let dirty = false;
@@ -299,6 +301,12 @@
     const studio = document.querySelector('.theme-studio');
     if (!studio) return;
     studio.dataset.mobilePane = pane;
+    // Contextual AI is anchored to the selected *canvas* element. Never let
+    // its floating capsule obscure mobile Sections or Settings navigation.
+    if (window.matchMedia('(max-width: 900px)').matches) {
+      if (pane !== 'preview') closeMiniAgentSam();
+      else if (inspectionEnabled && activeSectionKey) void openMiniAgentSam();
+    }
     if (pane === 'settings') setInspectorVisible(true);
     byId('te-mobile-pane-switch')?.querySelectorAll('[data-mobile-pane]').forEach(function(button) {
       const selected = button.dataset.mobilePane === pane;
@@ -719,7 +727,16 @@
     const registrySections = (window.SECTION_SCHEMAS && window.SECTION_SCHEMAS[slug]) || {};
 
     byId('te-tree-title').textContent = (pageData && pageData.title) || humanize(slug);
-
+    // The original editor hid ordinary text inside generic section rows because
+    // only persisted __editor.blocks could appear in the hierarchy. Expand the
+    // current page on first open without undoing subsequent merchant collapses.
+    if (treeExpandedForPage !== slug) {
+      treeExpandedForPage = slug;
+      expandedSections.clear();
+      expandedMenus.clear();
+      if (header) expandedSections.add('site:header');
+      pageSections.forEach(function(section) { expandedSections.add(sectionOwner(section) + ':' + section.key); });
+    }
 
     function sectionNode(section, index, group) {
       if (!section) return '';
@@ -730,49 +747,75 @@
       const visible = !editor.visibility || editor.visibility.enabled !== false;
       const capabilities = schema.capabilities || {};
       const isGlobal = owner === 'site';
-      const label = schema.label || (section.key === 'header' ? 'Header' : section.key === 'footer' ? 'Footer' : humanize(editor.templateKey || section.key));
+      const label = section.key === 'header' && isGlobal ? 'Header'
+        : section.key === 'footer' && isGlobal ? 'Footer'
+        : (schema.label || humanize(editor.templateKey || section.key));
       const sectionSelected = section.key === activeSectionKey && owner === activeSectionOwner;
       const blockMeta = Array.isArray(editor.blocks) ? editor.blocks : [];
+      // Field nodes are selections into the EXISTING section schema, never
+      // synthetic persisted blocks. Selecting them uses the same inspector,
+      // save, undo and revision pipeline as direct canvas selection.
+      const fieldRows = fields.filter(function(field) {
+        const kind = String(field.type || '').toLowerCase();
+        if (section.key === 'header' && !section.content?.announcementEnabled && /^announcement(?:Text|Href)$/.test(field.key)) return false;
+        return ['text','textarea','richtext','rich-text','media','image','video','link','url'].includes(kind);
+      }).map(function(field) {
+        const key = String(field.key);
+        const value = cmsGetPath(section.content || {}, key);
+        const isMedia = /^(media|image|video)$/.test(String(field.type).toLowerCase());
+        const isHeading = /heading|headline|title/i.test(key) && !/subheadline|subtitle|subheading/i.test(key);
+        const kind = isMedia ? 'media' : isHeading ? 'heading' : /url|href|link/i.test(key) ? 'link' : 'text';
+        const label = /meta[0-9]+/i.test(key) ? 'Text' : isHeading ? 'Heading' : isMedia ? (field.label || 'Image') : /subheadline|subtitle/i.test(key) ? 'Text' : (field.label || humanize(key));
+        const preview = (typeof value === 'string' && !isMedia && !/url|href|link/i.test(key)) ? value.replace(/\s+/g, ' ').trim().slice(0, 60) : '';
+        const selected = sectionSelected && !activeBlockId && activeFieldKey === key;
+        return '<div class="te-field-row' + (selected ? ' is-active' : '') + '" data-tree-field="' + cmsEscapeAttr(key) + '">' +
+          '<button type="button" class="te-field-row__main" data-select-field="' + cmsEscapeAttr(key) + '" data-field-section="' + cmsEscapeAttr(section.key) + '" data-field-owner="' + cmsEscapeAttr(owner) + '" aria-label="Edit ' + cmsEscapeAttr(label + (preview ? ': ' + preview : '')) + '">' +
+            '<span class="te-field-row__icon te-field-row__icon--' + kind + '" aria-hidden="true"></span>' +
+            '<span class="te-field-row__label">' + cmsEscapeHtml(label) + (preview ? '<span class="te-field-row__preview"> — ' + cmsEscapeHtml(preview) + '</span>' : '') + '</span>' +
+          '</button></div>';
+      }).join('');
 
       const blockRows = blockMeta.map(function(meta, blockIndex) {
         const blockSchema = blockSchemaFor(section, meta) || {};
-        const blockLabel = blockSchema.label || humanize(meta.templateKey || meta.id);
+        const blockValue = cmsGetPath(section.content || {}, meta.id + '.label');
+        const blockLabel = (typeof blockValue === 'string' && blockValue.trim()) || blockSchema.label || humanize(meta.templateKey || meta.id);
         return '<div class="te-block-row' + (sectionSelected && meta.id === activeBlockId ? ' is-active' : '') + '" data-block-id="' + cmsEscapeAttr(meta.id) + '" data-block-index="' + blockIndex + '" data-block-section="' + cmsEscapeAttr(section.key) + '" data-block-owner="' + cmsEscapeAttr(owner) + '" draggable="true">' +
           '<button type="button" class="te-block-row__main" data-select-block="' + cmsEscapeAttr(meta.id) + '" data-block-section="' + cmsEscapeAttr(section.key) + '" data-block-owner="' + cmsEscapeAttr(owner) + '">' +
-            '<span class="te-block-row__rail"></span><span class="te-block-row__copy"><strong>' + cmsEscapeHtml(blockLabel) + '</strong><small>' + cmsEscapeHtml(meta.id) + '</small></span>' +
+            '<span class="te-field-row__icon te-field-row__icon--link" aria-hidden="true"></span><span class="te-block-row__copy"><strong>' + cmsEscapeHtml(blockLabel) + '</strong></span>' +
           '</button>' +
-          '<span class="te-tree-row__actions">' +
-            '<button type="button" class="te-tree-mini" data-duplicate-block="' + cmsEscapeAttr(meta.id) + '" data-block-section="' + cmsEscapeAttr(section.key) + '" data-block-owner="' + cmsEscapeAttr(owner) + '" title="Duplicate block">⧉</button>' +
-            '<button type="button" class="te-tree-mini" data-remove-block="' + cmsEscapeAttr(meta.id) + '" data-block-section="' + cmsEscapeAttr(section.key) + '" data-block-owner="' + cmsEscapeAttr(owner) + '" title="Remove block">×</button>' +
-          '</span></div>';
+          '<details class="te-tree-actions"><summary aria-label="Actions for ' + cmsEscapeAttr(blockLabel) + '">•••</summary><div class="te-tree-actions__menu">' +
+            '<button type="button" data-duplicate-block="' + cmsEscapeAttr(meta.id) + '" data-block-section="' + cmsEscapeAttr(section.key) + '" data-block-owner="' + cmsEscapeAttr(owner) + '">Duplicate block</button>' +
+            '<button type="button" data-remove-block="' + cmsEscapeAttr(meta.id) + '" data-block-section="' + cmsEscapeAttr(section.key) + '" data-block-owner="' + cmsEscapeAttr(owner) + '">Remove block</button>' +
+          '</div></details></div>';
       }).join('');
 
       const blockTemplates = Array.isArray(schema.blocks) ? schema.blocks : [];
       const sectionRef = owner + ':' + section.key;
-      const canExpand = blockMeta.length > 0 || blockTemplates.length > 0;
+      const canExpand = !!fieldRows || blockMeta.length > 0 || blockTemplates.length > 0;
       const expanded = expandedSections.has(sectionRef);
       const addBlock = blockTemplates.length
-        ? '<button type="button" class="te-add-block" data-add-block-section="' + cmsEscapeAttr(section.key) + '" data-block-owner="' + cmsEscapeAttr(owner) + '">+ Add block</button>'
+        ? '<button type="button" class="te-add-block" data-add-block-section="' + cmsEscapeAttr(section.key) + '" data-block-owner="' + cmsEscapeAttr(owner) + '"><span aria-hidden="true">⊕</span> Add block</button>'
         : '';
+      const isMenu = section.key === 'header' && blockMeta.some(function(meta) { return meta.templateKey === 'nav-link'; });
+      const menuExpanded = expandedMenus.has(sectionRef);
+      const blockContent = isMenu
+        ? '<div class="te-menu-group"><button type="button" class="te-menu-row" data-toggle-menu="' + cmsEscapeAttr(sectionRef) + '" aria-expanded="' + menuExpanded + '"><span class="te-field-row__icon te-field-row__icon--link" aria-hidden="true"></span><span>Menu</span><span class="te-menu-chevron" aria-hidden="true">⌄</span></button><div class="te-menu-children' + (menuExpanded ? '' : ' is-collapsed') + '">' + blockRows + addBlock + '</div></div>'
+        : blockRows + addBlock;
 
       const canReorder = !isGlobal && capabilities.reorder !== false;
-      const provenance = generationApi.detectProvenance(JSON.stringify(section.content || section));
-      const provenanceLabel = provenance === 'agentsam' ? 'AgentSam' : provenance === 'foreign-ai' ? 'foreign' : '';
-      const metaText = (isGlobal ? 'global' : (visible ? section.status || 'draft' : 'hidden')) + ' · ' + fields.length + ' fields' + (blockMeta.length ? ' · ' + blockMeta.length + ' blocks' : '');
-
       return '<div class="te-tree-section" data-tree-section="' + cmsEscapeAttr(owner + ':' + section.key) + '" data-group="' + cmsEscapeAttr(group) + '">' +
         '<div class="te-tree-row' + (sectionSelected && !activeBlockId ? ' is-active' : '') + '" data-section-key="' + cmsEscapeAttr(section.key) + '" data-section-owner="' + cmsEscapeAttr(owner) + '" draggable="' + canReorder + '" data-index="' + index + '">' +
           (canExpand ? '<button type="button" class="te-tree-expand" data-expand-section="' + cmsEscapeAttr(sectionRef) + '" aria-expanded="' + expanded + '" aria-label="' + (expanded ? 'Collapse ' : 'Expand ') + cmsEscapeAttr(label) + '" title="' + (expanded ? 'Collapse blocks' : 'Expand blocks') + '"><span aria-hidden="true">›</span></button>' : '<span class="te-tree-expand-placeholder"></span>') +
           '<button type="button" class="te-tree-row__main" data-select-section="' + cmsEscapeAttr(section.key) + '" data-section-owner="' + cmsEscapeAttr(owner) + '">' +
             '<span class="te-tree-row__icon">' + icon.section + '</span><span class="te-tree-row__copy"><span class="te-tree-row__name">' + cmsEscapeHtml(label) +
-            '</span><span class="te-tree-row__meta">' + cmsEscapeHtml(metaText) + (provenanceLabel ? '<span class="te-provenance" data-provenance="' + cmsEscapeAttr(provenance) + '">' + cmsEscapeHtml(provenanceLabel) + '</span>' : '') + '</span></span>' +
+            '</span></span>' +
           '</button>' +
-          '<span class="te-tree-row__actions">' +
-            (!isGlobal ? '<button type="button" class="te-tree-mini" data-toggle-section="' + cmsEscapeAttr(section.key) + '" data-section-owner="' + cmsEscapeAttr(owner) + '" title="' + (visible ? 'Hide section' : 'Show section') + '">' + (visible ? '◉' : '○') + '</button>' : '') +
-            (!isGlobal && capabilities.duplicate !== false ? '<button type="button" class="te-tree-mini" data-duplicate-section="' + cmsEscapeAttr(section.key) + '" title="Duplicate section">⧉</button>' : '') +
-            (!isGlobal && capabilities.remove !== false ? '<button type="button" class="te-tree-mini" data-remove-section="' + cmsEscapeAttr(section.key) + '" title="Remove section">×</button>' : '') +
-          '</span></div>' +
-          '<div class="te-block-list' + (expanded ? '' : ' is-collapsed') + '">' + blockRows + addBlock + '</div>' +
+          (!isGlobal ? '<details class="te-tree-actions"><summary aria-label="Actions for ' + cmsEscapeAttr(label) + '">•••</summary><div class="te-tree-actions__menu">' +
+            '<button type="button" data-toggle-section="' + cmsEscapeAttr(section.key) + '" data-section-owner="' + cmsEscapeAttr(owner) + '">' + (visible ? 'Hide section' : 'Show section') + '</button>' +
+            (capabilities.duplicate !== false ? '<button type="button" data-duplicate-section="' + cmsEscapeAttr(section.key) + '">Duplicate section</button>' : '') +
+            (capabilities.remove !== false ? '<button type="button" data-remove-section="' + cmsEscapeAttr(section.key) + '">Remove section</button>' : '') +
+          '</div></details>' : '') + '</div>' +
+          '<div class="te-block-list' + (expanded ? '' : ' is-collapsed') + '">' + fieldRows + blockContent + '</div>' +
         '</div>';
     }
 
@@ -788,12 +831,12 @@
 
     byId('te-tree').innerHTML =
       '<div class="te-tree-group te-tree-group--global"><div class="te-tree-group__label">Header</div>' + headerRow + '</div>' +
-      '<div class="te-tree-group"><div class="te-tree-group__label">Template</div>' + pageRows + '</div>' +
+      '<div class="te-tree-group"><div class="te-tree-group__label">Template</div>' + pageRows +
+        '<button type="button" class="te-add-section" id="te-add-section" title="Add a section to this page"><span aria-hidden="true">⊕</span> Add section</button></div>' +
       (unmanagedLiveSections.length ? '<div class="te-tree-group te-live-only"><div class="te-tree-group__label">Live-only sections · not editable yet</div>' +
         unmanagedLiveSections.map(function(region, index) {
           return '<button type="button" class="te-live-only-row" data-scroll-live="' + index + '"><span>' + icon.section + '</span><span><strong>' + cmsEscapeHtml(humanize(region.label.replaceAll('.', ' '))) + '</strong><small>Existing storefront · adapter needed</small></span></button>';
         }).join('') + '</div>' : '') +
-      '<button type="button" class="te-add-section" id="te-add-section" title="Add a section to this page">+ Add section</button>' +
       '<dialog class="te-section-menu" id="te-section-menu" aria-label="Add a section" hidden>' +
         '<div class="te-section-menu__head"><div><strong>Add a section</strong><small>Choose a reusable storefront component</small></div><button type="button" class="te-tree-mini" id="te-section-cancel" aria-label="Close section catalog">×</button></div>' +
         '<input class="te-section-search" id="te-section-search" placeholder="Search sections" aria-label="Search available sections" autocomplete="off">' +
@@ -841,6 +884,16 @@
         button.title = expanded ? 'Collapse blocks' : 'Expand blocks';
       });
     });
+    byId('te-tree').querySelectorAll('[data-toggle-menu]').forEach(function(button) {
+      button.addEventListener('click', function() {
+        const ref = button.dataset.toggleMenu;
+        const isOpen = !expandedMenus.has(ref);
+        if (isOpen) expandedMenus.add(ref);
+        else expandedMenus.delete(ref);
+        button.setAttribute('aria-expanded', String(isOpen));
+        button.nextElementSibling?.classList.toggle('is-collapsed', !isOpen);
+      });
+    });
     byId('te-tree').querySelectorAll('[data-scroll-live]').forEach(function(button) {
       button.addEventListener('click', function() {
         const region = unmanagedLiveSections[Number(button.dataset.scrollLive)];
@@ -857,6 +910,11 @@
       button.addEventListener('click', function(event) {
         setMiniAnchor(button, null, event);
         selectSection(button.dataset.selectSection, null, true, button.dataset.sectionOwner);
+      });
+    });
+    byId('te-tree').querySelectorAll('[data-select-field]').forEach(function(button) {
+      button.addEventListener('click', function() {
+        selectSection(button.dataset.fieldSection, button.dataset.selectField, true, button.dataset.fieldOwner);
       });
     });
     byId('te-tree').querySelectorAll('[data-select-block]').forEach(function(button) {
@@ -1064,13 +1122,25 @@
     }
 
     const inputType = field.type === 'number' ? 'number' : (field.type === 'link' || field.type === 'url' ? 'url' : 'text');
-    const multiline = field.type === 'json' || field.type === 'textarea' || (field.type === 'text' && String(value).includes('\n'));
+    const selectedText = activeFieldKey === field.key && ['text','textarea'].includes(field.type) && !/cta|button|link|href/i.test(field.key);
+    const stylePrefix = '__editor.fieldStyles.' + field.key + '.';
+    const controls = selectedText ? [
+      ['fontWeight','800','B','Bold'],
+      ['textTransform','uppercase','Aa','Uppercase'],
+      ['textAlign','center','≡','Center alignment'],
+    ] : [];
+    const formatToolbar = selectedText
+      ? '<div class="te-inline-text-toolbar" role="toolbar" aria-label="Text formatting">' + controls.map(function(item) {
+        const current = cmsGetPath(section.content,stylePrefix+item[0]);
+        return '<button type="button" data-inline-style-key="' + cmsEscapeAttr(stylePrefix+item[0]) + '" data-inline-style-value="' + item[1] + '" aria-label="' + item[3] + '" aria-pressed="' + (String(current) === item[1]) + '">' + item[2] + '</button>';
+      }).join('') + '</div>' : '';
+    const multiline = field.type === 'json' || field.type === 'textarea' || (selectedText && /headline|heading|title/i.test(field.key)) || (field.type === 'text' && String(value).includes('\n'));
     const input = multiline
       ? '<textarea id="' + id + '" rows="' + (field.type === 'json' ? 10 : field.type === 'textarea' ? 4 : 2) + '" data-field-input="' + cmsEscapeAttr(field.key) + '"' + (field.type === 'json' ? ' data-json-editor="true" spellcheck="false" class="te-json-editor"' : '') + ' placeholder="' + cmsEscapeAttr(field.placeholder || '') + '">' + cmsEscapeHtml(field.type === 'json' ? JSON.stringify(value, null, 2) : String(value)) + '</textarea>'
       : '<input id="' + id + '" type="' + inputType + '" data-field-input="' + cmsEscapeAttr(field.key) + '" value="' + safeValue + '" placeholder="' + cmsEscapeAttr(field.placeholder || '') + '"' +
         (field.min !== undefined ? ' min="' + field.min + '"' : '') + (field.max !== undefined ? ' max="' + field.max + '"' : '') + (field.step !== undefined ? ' step="' + field.step + '"' : '') + '>';
 
-    return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label for="' + id + '">' + cmsEscapeHtml(field.label) + '</label>' + input + help + '</div>';
+    return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label for="' + id + '">' + cmsEscapeHtml(selectedText ? 'Text' : field.label) + '</label>' + formatToolbar + input + help + '</div>';
   }
 
   // One contextual inspector for the selected section or block. Field types
@@ -1096,7 +1166,18 @@
       const focusedGroup = focusedKind === 'content' && /cta|button|linkLabel|action/i.test(focusedSemanticKey)
         ? 'links'
         : focusedKind;
-      if (groups[focusedGroup]?.length) visibleKinds = [focusedGroup];
+      if (groups[focusedGroup]?.length) {
+        visibleKinds = [focusedGroup];
+        // An element selection is not a license to dump the whole section's
+        // unrelated fields into its inspector. Keep paired CTA label/link
+        // settings together, but isolate headings, text and images.
+        const pair = focusedGroup === 'links' && focusedField.key.includes('.')
+          ? focusedField.key.slice(0,focusedField.key.lastIndexOf('.')+1)
+          : null;
+        groups[focusedGroup] = groups[focusedGroup].filter(function(field) {
+          return field.key === focusedField.key || !!(pair && field.key.startsWith(pair));
+        });
+      }
     }
     let html = visibleKinds.map(function(kind) {
       return '<section class="te-inspector-group" aria-label="' + titles[kind] + '">' +
@@ -1116,7 +1197,12 @@
       // Native contextual groups, not a nested generic CSS inventory card.
       // Advanced motion/responsive/visibility controls remain accessible
       // without consuming the initial editing viewport.
-      html += Object.keys(byGroup).map(function(group) {
+      const settingGroups = Object.keys(byGroup);
+      if (focusedField && fieldKind(focusedField) === 'content' && byGroup.typography) {
+        settingGroups.splice(settingGroups.indexOf('typography'),1);
+        settingGroups.unshift('typography');
+      }
+      html += settingGroups.map(function(group) {
         const title = group === 'typography' ? 'Typography' : humanize(group);
         const advanced = /^(motion|responsive|visibility|advanced)$/i.test(group);
         const fields = byGroup[group].map(function(field) {
@@ -1143,9 +1229,12 @@
     const blockMeta = currentBlockMeta();
     const blockSchema = currentBlockSchema();
     const sectionLabel = (sectionSchema && sectionSchema.label) || humanize(section.key);
+    const focusedSchema = activeFieldKey && !blockMeta ? currentSchema().find(function(field) { return field.key === activeFieldKey; }) : null;
+    const focusedTitle = focusedSchema && (/heading|headline|title/i.test(focusedSchema.key) && !/subheadline|subtitle|subheading/i.test(focusedSchema.key)
+      ? 'Heading' : /meta[0-9]+|subheadline|subtitle/i.test(focusedSchema.key) ? 'Text' : focusedSchema.label);
     byId('te-inspector-title').textContent = blockMeta
       ? ((blockSchema && blockSchema.label) || humanize(blockMeta.templateKey || blockMeta.id))
-      : sectionLabel;
+      : (focusedTitle || sectionLabel);
     byId('te-inspector-subtitle').textContent = blockMeta
       ? sectionLabel + ' · ' + blockMeta.id
       : ((pageData && pageData.title) || humanize(slug)) + ' · ' + section.key;
@@ -1162,6 +1251,18 @@
       selectSection(section.key, null, false, sectionOwner(section));
     });
     wireFields();
+    // These minimal toolbar actions are real field-style overrides: they use
+    // the same preview, undo, draft save and reset pipeline as typography.
+    panel.querySelectorAll('[data-inline-style-key]').forEach(function(button) {
+      button.addEventListener('click', function() {
+        const key = button.dataset.inlineStyleKey;
+        const styleField = fieldByKey(key);
+        if (!styleField || liveUnimported) return;
+        const current = cmsGetPath(currentSection()?.content || {}, key);
+        setFieldValue(styleField, String(current) === button.dataset.inlineStyleValue ? 'inherit' : button.dataset.inlineStyleValue);
+        renderInspector();
+      });
+    });
     panel.querySelectorAll('[data-reset-style]').forEach(function(button) {
       button.addEventListener('click',function() {
         const field=fieldByKey(button.dataset.resetStyle);
@@ -1901,6 +2002,7 @@
     activeBlockId = null;
     activeFieldKey = fieldKey || null;
     selectedStyleFieldKey = fieldKey || null;
+    expandedSections.add(activeSectionOwner + ':' + sectionKey);
 
     setInspectorVisible(true);
     renderTree();
@@ -1914,7 +2016,9 @@
     if (scrollPreview) {
       try {
         const doc = byId('theme-preview').contentDocument;
-        const target = doc && doc.querySelector('[data-cms-section="' + CSS.escape(sectionKey) + '"], [data-section-id="' + CSS.escape(sectionKey) + '"]');
+        const wrapper = doc && doc.querySelector('[data-cms-section="' + CSS.escape(sectionKey) + '"], [data-section-id="' + CSS.escape(sectionKey) + '"]');
+        const selector = fieldKey ? '[data-cms="' + CSS.escape(fieldKey) + '"]' : null;
+        const target = (selector && (wrapper?.querySelector(selector) || doc?.querySelector(selector))) || wrapper;
         if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
       } catch {}
     }
