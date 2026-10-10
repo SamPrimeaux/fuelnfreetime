@@ -118,59 +118,61 @@
     }
   }
 
-  function applyEditorSettings(sectionEl, content) {
-    const editor = content?.__editor;
-    if (!editor || typeof editor !== "object") return;
+  const authoredAttributes=new WeakMap();
+  function applyAttributeOverride(el,name,value) {
+    let source=authoredAttributes.get(el);
+    if(!source){source={};authoredAttributes.set(el,source);}
+    if(!Object.hasOwn(source,name))source[name]=el.getAttribute(name);
+    if(value===undefined||value===null||value==='inherit'){
+      const original=source[name];
+      if(original===null)el.removeAttribute(name);
+      else el.setAttribute(name,original);
+    }else el.setAttribute(name,String(value));
+  }
+  function optionalNumber(raw,min,max,unit='px') {
+    if(raw===undefined||raw===null||raw==='')return null;
+    const n=Number(raw);
+    return Number.isFinite(n)&&n>=min&&n<=max?String(n)+unit:null;
+  }
 
-    const visibility = editor.visibility || {};
-    sectionEl.hidden = visibility.enabled === false;
+  function applyEditorSettings(sectionEl,content) {
+    const editor=content?.__editor||{};
+    // No override means "restore the original authored markup/CSS", not zero.
+    const visible=editor.visibility?.enabled;
+    applyAttributeOverride(sectionEl,'hidden',visible===false?'':null);
+    const layout=editor.layout||{};
+    const width=['contained','wide','full-bleed'].includes(layout.width)?layout.width:null;
+    applyAttributeOverride(sectionEl,'data-cms-width',width);
+    applyStyleOverride(sectionEl,'text-align',['left','center','right'].includes(layout.alignment)?layout.alignment:null);
+    const columns=optionalNumber(layout.columns,1,12,'');
+    applyAttributeOverride(sectionEl,'data-cms-columns',columns);
+    applyStyleOverride(sectionEl,'--cms-layout-columns',columns);
 
-    const layout = editor.layout || {};
-    if (layout.width && layout.width !== "inherit") sectionEl.dataset.cmsWidth = layout.width;
-    else delete sectionEl.dataset.cmsWidth;
+    const spacing=editor.spacing||{};
+    const attributes={
+      paddingTop:'padding-top',paddingBottom:'padding-bottom',
+      paddingLeft:'padding-left',paddingRight:'padding-right',
+      marginTop:'margin-top',marginBottom:'margin-bottom',
+      marginLeft:'margin-left',marginRight:'margin-right'
+    };
+    for(const [key,property] of Object.entries(attributes)){
+      applyStyleOverride(sectionEl,property,optionalNumber(spacing[key],key.startsWith('margin')?-160:0,160));
+    }
+    const appearance=editor.appearance||{};
+    const color=appearance.backgroundEnabled===true&&/^#[0-9a-f]{6}$/i.test(String(appearance.backgroundColor||''))
+      ?appearance.backgroundColor:null;
+    applyStyleOverride(sectionEl,'background-color',color);
+    applyStyleOverride(sectionEl,'border-radius',optionalNumber(appearance.borderRadius,0,160));
 
-    if (layout.alignment && layout.alignment !== "inherit") {
-      sectionEl.style.textAlign = layout.alignment;
-    } else {
-      sectionEl.style.removeProperty("text-align");
-    }
-    if (Number.isFinite(Number(layout.columns))) {
-      const columns = Math.max(1, Math.min(12, Number(layout.columns)));
-      sectionEl.dataset.cmsColumns = String(columns);
-      sectionEl.style.setProperty("--cms-layout-columns", String(columns));
-    } else {
-      delete sectionEl.dataset.cmsColumns;
-      sectionEl.style.removeProperty("--cms-layout-columns");
-    }
-
-    const spacing = editor.spacing || {};
-    if (Number.isFinite(Number(spacing.paddingTop))) {
-      sectionEl.style.paddingTop = Number(spacing.paddingTop) + "px";
-    }
-    if (Number.isFinite(Number(spacing.paddingBottom))) {
-      sectionEl.style.paddingBottom = Number(spacing.paddingBottom) + "px";
-    }
-
-    const appearance = editor.appearance || {};
-    if (appearance.backgroundEnabled && appearance.backgroundColor) {
-      sectionEl.style.backgroundColor = appearance.backgroundColor;
-    } else {
-      sectionEl.style.removeProperty("background-color");
-    }
-
-    const motion = editor.motion || {};
-    if (motion.preset && motion.preset !== "inherit") sectionEl.dataset.hMotion = motion.preset;
-    if (motion.intensity !== undefined && motion.intensity !== null && motion.intensity !== "") {
-      sectionEl.dataset.hMotionIntensity = String(motion.intensity);
-    }
-
-    const responsive = editor.responsive || {};
-    sectionEl.dataset.cmsHideMobile = responsive.hideMobile === true ? "true" : "false";
-    if (responsive.carouselMobile !== undefined) {
-      sectionEl.dataset.cmsCarouselMobile = responsive.carouselMobile === false ? "false" : "true";
-    } else {
-      delete sectionEl.dataset.cmsCarouselMobile;
-    }
+    const motion=editor.motion||{};
+    applyAttributeOverride(sectionEl,'data-h-motion',
+      ['none','fade','parallax','blur-recede','horizontal-scrub','sticky','marquee'].includes(motion.preset)?motion.preset:null);
+    applyAttributeOverride(sectionEl,'data-h-motion-intensity',optionalNumber(motion.intensity,0,1,''));
+    const responsive=editor.responsive||{};
+    applyAttributeOverride(sectionEl,'data-cms-hide-mobile',
+      responsive.hideMobile===true?'true':responsive.hideMobile===false?'false':null);
+    applyAttributeOverride(sectionEl,'data-cms-carousel-mobile',
+      responsive.carouselMobile===false?'false':responsive.carouselMobile===true?'true':null);
   }
 
   function rewriteCloneIdentity(node, fromKey, toKey) {
