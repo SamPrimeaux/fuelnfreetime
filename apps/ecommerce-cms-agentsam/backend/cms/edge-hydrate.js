@@ -3,7 +3,7 @@
  * Mirrors public/js/cms-hydrate.js for published content at the edge.
  */
 
-import { getPublishedPage } from "./api.js";
+import { getPreviewPage, getPublishedPage } from "./api.js";
 
 function getPath(obj, path) {
   return path.split(".").reduce((acc, key) => (acc == null ? acc : acc[key]), obj);
@@ -22,9 +22,10 @@ function sectionsByKeyFromPages(pages) {
   return map;
 }
 
-export async function loadEdgeHydrationContext(env, pageSlug) {
+export async function loadEdgeHydrationContext(env, pageSlug, { preview = false, loadPage } = {}) {
   const slugs = pageSlug === "site" ? ["site"] : ["site", pageSlug];
-  const pages = await Promise.all(slugs.map((slug) => getPublishedPage(env, slug)));
+  const resolvePage = loadPage || (preview ? getPreviewPage : getPublishedPage);
+  const pages = await Promise.all(slugs.map((slug) => resolvePage(env, slug)));
   const sectionsByKey = sectionsByKeyFromPages(pages.filter(Boolean));
   return {
     sectionsByKey,
