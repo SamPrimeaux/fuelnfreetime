@@ -73,7 +73,11 @@ test("theme editor keeps page settings in page editor, not the compact toolbar",
   assert.doesNotMatch(themeEditor, /id="te-page-settings"|id="te-manage-page"|>Page settings</);
   assert.match(themeEditor, /id="te-save"/);
   assert.match(themeEditor, /id="te-publish"/);
-  assert.match(themeEditor, /Appearance and layout/);
+  // Contextual Shopify-style groups replace the obsolete all-purpose
+  // “Appearance and layout” drawer; the merchant selects actual elements.
+  assert.match(themeEditor, /function renderInspectorGroups/);
+  assert.match(themeEditor, /te-inspector-group__head/);
+  assert.doesNotMatch(themeEditor, /Shared storefront settings/);
   assert.match(themeEditor, /function renderInspectorGroups/);
   assert.doesNotMatch(themeEditor, /id="te-tabs"/);
   assert.doesNotMatch(themeEditor, /Page content & settings/);
