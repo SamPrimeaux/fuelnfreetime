@@ -288,6 +288,8 @@
   if (host) {
     const themeMenu = document.querySelector('.te-theme-menu');
     if (themeMenu) themeMenu.hidden = true;
+    const switcher = document.querySelector('.te-theme-switcher');
+    if (switcher) switcher.hidden = true;
   }
 
   function setMobilePane(pane) {
@@ -2927,7 +2929,7 @@
   function toggleToolbarMenu(buttonId, menuId) {
     const button = byId(buttonId), menu = byId(menuId);
     const next = menu.hidden;
-    for (const [bid, mid] of [['te-more','te-more-menu'], ['te-save-options','te-save-menu']]) {
+    for (const [bid, mid] of [['te-more','te-more-menu'], ['te-save-options','te-save-menu'], ['te-theme-trigger','te-theme-menu']]) {
       byId(mid).hidden = true;
       byId(bid).setAttribute('aria-expanded', 'false');
     }
@@ -2957,7 +2959,7 @@
     if (help) help.hidden = !help.hidden;
   });
   document.addEventListener('pointerdown', function(event) {
-    for (const [container, button, menu] of [['.te-toolbar-more','te-more','te-more-menu'], ['.te-save-actions','te-save-options','te-save-menu']]) {
+    for (const [container, button, menu] of [['.te-toolbar-more','te-more','te-more-menu'], ['.te-save-actions','te-save-options','te-save-menu'], ['.te-theme-switcher','te-theme-trigger','te-theme-menu']]) {
       if (!event.target.closest(container) && !event.target.closest('#' + menu)) {
         byId(menu).hidden = true;
         byId(button).setAttribute('aria-expanded','false');
@@ -2966,7 +2968,7 @@
   });
   document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') {
-      for (const [button, menu] of [['te-more','te-more-menu'], ['te-save-options','te-save-menu']]) {
+      for (const [button, menu] of [['te-more','te-more-menu'], ['te-save-options','te-save-menu'], ['te-theme-trigger','te-theme-menu']]) {
         byId(menu).hidden = true;
         byId(button).setAttribute('aria-expanded','false');
       }
