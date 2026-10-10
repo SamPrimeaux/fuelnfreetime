@@ -46,6 +46,7 @@ const shim = "<script>" +
  "throw Error('Unexpected API '+url);};</script>";
 
 const probe = "<script>setTimeout(function(){" +
+ "if(new URLSearchParams(location.search).get('visualRail')==='1')return;" +
  "var frame=document.getElementById('theme-preview');" +
  "var before={src:frame.getAttribute('src'),headline:frame.contentDocument?.querySelector('[data-cms-section=\"hero\"] [data-cms=\"headline\"]')?.textContent," +
  "visible:!document.getElementById('te-import-live').hidden,liveOnly:[...document.querySelectorAll('.te-live-only-row strong')].map(e=>e.textContent)," +
@@ -138,7 +139,7 @@ const probe = "<script>setTimeout(function(){" +
 const visualHook = "<script>if(new URLSearchParams(location.search).get('visualRail')==='1')setTimeout(function(){" +
  "if(innerWidth<=900)document.querySelector('[data-mobile-pane=sections]')?.click();" +
  "else document.querySelector('[data-select-field=headline][data-field-section=hero]')?.click();" +
- "},5600);</script>";
+ "},1100);</script>";
 const template = file("apps/ecommerce-cms-agentsam/frontend/static/theme-editor.html")
  .replace('<script src="/admin/js/shell.js"></script>',shim).replace("</body>",visualHook+probe+"</body>");
 const storefront=file("packages/heuristic-theme/storefront/shop.html");
@@ -199,7 +200,7 @@ try{
      await exec(chrome,[
        '--headless=new','--disable-gpu','--disable-dev-shm-usage','--no-sandbox',
        '--hide-scrollbars','--force-device-scale-factor=1',
-       '--virtual-time-budget=7100','--window-size='+width+',950',
+       '--virtual-time-budget=2300','--window-size='+width+',950',
        '--screenshot='+image,url.replace('?slug=shop','?slug=about')+'&visualRail=1',
      ],{timeout:60000,encoding:'utf8',maxBuffer:1<<20});
      assert.ok(existsSync(image) && statSync(image).size>12000,'Real '+width+'px browser screenshot missing');

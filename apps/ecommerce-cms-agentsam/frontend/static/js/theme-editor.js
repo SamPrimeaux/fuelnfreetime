@@ -301,6 +301,12 @@
     const studio = document.querySelector('.theme-studio');
     if (!studio) return;
     studio.dataset.mobilePane = pane;
+    // Contextual AI is anchored to the selected *canvas* element. Never let
+    // its floating capsule obscure mobile Sections or Settings navigation.
+    if (window.matchMedia('(max-width: 900px)').matches) {
+      if (pane !== 'preview') closeMiniAgentSam();
+      else if (inspectionEnabled && activeSectionKey) void openMiniAgentSam();
+    }
     if (pane === 'settings') setInspectorVisible(true);
     byId('te-mobile-pane-switch')?.querySelectorAll('[data-mobile-pane]').forEach(function(button) {
       const selected = button.dataset.mobilePane === pane;
@@ -1116,13 +1122,25 @@
     }
 
     const inputType = field.type === 'number' ? 'number' : (field.type === 'link' || field.type === 'url' ? 'url' : 'text');
-    const multiline = field.type === 'json' || field.type === 'textarea' || (field.type === 'text' && String(value).includes('\n'));
+    const selectedText = activeFieldKey === field.key && ['text','textarea'].includes(field.type) && !/cta|button|link|href/i.test(field.key);
+    const stylePrefix = '__editor.fieldStyles.' + field.key + '.';
+    const controls = selectedText ? [
+      ['fontWeight','800','B','Bold'],
+      ['textTransform','uppercase','Aa','Uppercase'],
+      ['textAlign','center','≡','Center alignment'],
+    ] : [];
+    const formatToolbar = selectedText
+      ? '<div class="te-inline-text-toolbar" role="toolbar" aria-label="Text formatting">' + controls.map(function(item) {
+        const current = cmsGetPath(section.content,stylePrefix+item[0]);
+        return '<button type="button" data-inline-style-key="' + cmsEscapeAttr(stylePrefix+item[0]) + '" data-inline-style-value="' + item[1] + '" aria-label="' + item[3] + '" aria-pressed="' + (String(current) === item[1]) + '">' + item[2] + '</button>';
+      }).join('') + '</div>' : '';
+    const multiline = field.type === 'json' || field.type === 'textarea' || (selectedText && /headline|heading|title/i.test(field.key)) || (field.type === 'text' && String(value).includes('\n'));
     const input = multiline
       ? '<textarea id="' + id + '" rows="' + (field.type === 'json' ? 10 : field.type === 'textarea' ? 4 : 2) + '" data-field-input="' + cmsEscapeAttr(field.key) + '"' + (field.type === 'json' ? ' data-json-editor="true" spellcheck="false" class="te-json-editor"' : '') + ' placeholder="' + cmsEscapeAttr(field.placeholder || '') + '">' + cmsEscapeHtml(field.type === 'json' ? JSON.stringify(value, null, 2) : String(value)) + '</textarea>'
       : '<input id="' + id + '" type="' + inputType + '" data-field-input="' + cmsEscapeAttr(field.key) + '" value="' + safeValue + '" placeholder="' + cmsEscapeAttr(field.placeholder || '') + '"' +
         (field.min !== undefined ? ' min="' + field.min + '"' : '') + (field.max !== undefined ? ' max="' + field.max + '"' : '') + (field.step !== undefined ? ' step="' + field.step + '"' : '') + '>';
 
-    return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label for="' + id + '">' + cmsEscapeHtml(field.label) + '</label>' + input + help + '</div>';
+    return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label for="' + id + '">' + cmsEscapeHtml(selectedText ? 'Text' : field.label) + '</label>' + formatToolbar + input + help + '</div>';
   }
 
   // One contextual inspector for the selected section or block. Field types
@@ -1148,7 +1166,18 @@
       const focusedGroup = focusedKind === 'content' && /cta|button|linkLabel|action/i.test(focusedSemanticKey)
         ? 'links'
         : focusedKind;
-      if (groups[focusedGroup]?.length) visibleKinds = [focusedGroup];
+      if (groups[focusedGroup]?.length) {
+        visibleKinds = [focusedGroup];
+        // An element selection is not a license to dump the whole section's
+        // unrelated fields into its inspector. Keep paired CTA label/link
+        // settings together, but isolate headings, text and images.
+        const pair = focusedGroup === 'links' && focusedField.key.includes('.')
+          ? focusedField.key.slice(0,focusedField.key.lastIndexOf('.')+1)
+          : null;
+        groups[focusedGroup] = groups[focusedGroup].filter(function(field) {
+          return field.key === focusedField.key || !!(pair && field.key.startsWith(pair));
+        });
+      }
     }
     let html = visibleKinds.map(function(kind) {
       return '<section class="te-inspector-group" aria-label="' + titles[kind] + '">' +
@@ -1168,7 +1197,12 @@
       // Native contextual groups, not a nested generic CSS inventory card.
       // Advanced motion/responsive/visibility controls remain accessible
       // without consuming the initial editing viewport.
-      html += Object.keys(byGroup).map(function(group) {
+      const settingGroups = Object.keys(byGroup);
+      if (focusedField && fieldKind(focusedField) === 'content' && byGroup.typography) {
+        settingGroups.splice(settingGroups.indexOf('typography'),1);
+        settingGroups.unshift('typography');
+      }
+      html += settingGroups.map(function(group) {
         const title = group === 'typography' ? 'Typography' : humanize(group);
         const advanced = /^(motion|responsive|visibility|advanced)$/i.test(group);
         const fields = byGroup[group].map(function(field) {
@@ -1217,6 +1251,18 @@
       selectSection(section.key, null, false, sectionOwner(section));
     });
     wireFields();
+    // These minimal toolbar actions are real field-style overrides: they use
+    // the same preview, undo, draft save and reset pipeline as typography.
+    panel.querySelectorAll('[data-inline-style-key]').forEach(function(button) {
+      button.addEventListener('click', function() {
+        const key = button.dataset.inlineStyleKey;
+        const styleField = fieldByKey(key);
+        if (!styleField || liveUnimported) return;
+        const current = cmsGetPath(currentSection()?.content || {}, key);
+        setFieldValue(styleField, String(current) === button.dataset.inlineStyleValue ? 'inherit' : button.dataset.inlineStyleValue);
+        renderInspector();
+      });
+    });
     panel.querySelectorAll('[data-reset-style]').forEach(function(button) {
       button.addEventListener('click',function() {
         const field=fieldByKey(button.dataset.resetStyle);

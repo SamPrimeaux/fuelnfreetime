@@ -292,6 +292,13 @@ test("About page hierarchy matches the approved nested merchant editing pattern"
     assert.equal(doc.getElementById('te-inspector-title').textContent,'Heading');
     assert.ok(doc.querySelector('[data-tree-field="headline"].is-active'), 'Selected field remains highlighted within its section');
     assert.ok(doc.getElementById('te-inspector-body').querySelector('[data-field-input="headline"]'), 'Clicked child drives the existing editable inspector');
+    assert.equal(doc.querySelector('#te-inspector-body [data-field-input="meta1"]'),null,'Meta1 must not clutter the selected Heading inspector');
+    assert.equal(doc.querySelector('#te-inspector-body [data-field-input="meta2"]'),null,'Meta2 must not clutter the selected Heading inspector');
+    assert.ok(doc.querySelector('[data-inline-style-key="__editor.fieldStyles.headline.fontWeight"]'),'Real Bold control appears beside editable Heading text');
+    const uppercase=doc.querySelector('[data-inline-style-key="__editor.fieldStyles.headline.textTransform"]');
+    assert.equal(uppercase.getAttribute('aria-pressed'),'false');
+    uppercase.click();
+    assert.equal(doc.querySelector('[data-inline-style-key="__editor.fieldStyles.headline.textTransform"]').getAttribute('aria-pressed'),'true','Text toolbar is interactive, not decorative');
     assert.equal(tree.querySelector('[data-tree-section="about:hero"] .te-tree-expand').getAttribute('aria-expanded'),'true');
     assert.ok(doc.querySelector('[data-remove-section="hero"]'), 'Existing removal operation remains available via contextual actions');
   }finally{dom.window.close();}
@@ -303,5 +310,6 @@ test("left rail visual density and touch controls are release requirements", () 
   assert.match(css,/grid-template-columns: 278px minmax\(0, 1fr\) 328px/);
   assert.match(css,/\.te-field-row\.is-active/);
   assert.match(css,/\.te-tree-actions__menu/);
+  assert.match(css,/\.te-inline-text-toolbar/);
   assert.match(css,/@media\(max-width:900px\)[\s\S]*\.te-field-row__main/);
 });

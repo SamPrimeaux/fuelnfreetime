@@ -2802,3 +2802,35 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
   .theme-studio .te-add-section,
   .theme-studio .te-add-block { min-height: 44px; }
 }
+
+/* Context-only, functional text formatting controls. The existing typography
+   fields below retain every detailed setting and Reset operation. */
+.theme-studio .te-inline-text-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  margin: 5px 0 0;
+  padding: 3px;
+  border: 1px solid #dedee5;
+  border-radius: 8px 8px 0 0;
+  background: #fafafc;
+}
+.theme-studio .te-inline-text-toolbar button {
+  min-width: 32px;
+  height: 29px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #444551;
+  font: 650 12px/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+.theme-studio .te-inline-text-toolbar button[aria-pressed="true"] {
+  color: #4b32b1;
+  background: #ece6ff;
+}
+.theme-studio .te-inline-text-toolbar button:hover { background: #eeeef3; }
+.theme-studio .te-inline-text-toolbar button:focus-visible {outline: 2px solid #6948d4;outline-offset:1px}
+.theme-studio .te-inline-text-toolbar + input,
+.theme-studio .te-inline-text-toolbar + textarea { border-radius: 0 0 8px 8px; border-top: 0; }
