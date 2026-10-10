@@ -152,9 +152,17 @@ export async function transformStorefrontHtml(response, env, slug, request) {
   if (preview) {
     // A private CMS draft cannot be inserted into a public/cached HTML response.
     const { getSessionUser } = await import("../lib/auth.js");
-    if (!(await getSessionUser(request, env))) {
+    const user = await getSessionUser(request, env);
+    if (!user) {
       return new Response("Authentication required for draft preview", {
         status: 401,
+        headers: { "cache-control": "private, no-store", "content-type": "text/plain; charset=utf-8" },
+      });
+    }
+    const { canReadCmsDraft } = await import("./api.js");
+    if (!(await canReadCmsDraft(env, slug, user.account_id))) {
+      return new Response("Draft not available for this account", {
+        status: 403,
         headers: { "cache-control": "private, no-store", "content-type": "text/plain; charset=utf-8" },
       });
     }
