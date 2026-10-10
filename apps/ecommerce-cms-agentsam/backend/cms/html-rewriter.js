@@ -148,7 +148,17 @@ export async function transformStorefrontHtml(response, env, slug, request) {
     return response;
   }
 
-  const preview = request ? new URL(request.url).searchParams.has("preview") : false;
+  const preview = request ? new URL(request.url).searchParams.get("preview") === "1" : false;
+  if (preview) {
+    // A private CMS draft cannot be inserted into a public/cached HTML response.
+    const { getSessionUser } = await import("../lib/auth.js");
+    if (!(await getSessionUser(request, env))) {
+      return new Response("Authentication required for draft preview", {
+        status: 401,
+        headers: { "cache-control": "private, no-store", "content-type": "text/plain; charset=utf-8" },
+      });
+    }
+  }
   const head = await buildHeadContext(env, slug);
   head.canonicalUrl = preview ? "" : canonicalUrlFor(request?.url);
   // Open Graph and Twitter require an absolute image URL to reliably fetch
@@ -173,8 +183,10 @@ export async function transformStorefrontHtml(response, env, slug, request) {
 
   let edgeHydrated = false;
 
-  if (!preview && slug) {
-    const hydration = await loadEdgeHydrationContext(env, slug);
+  if (slug) {
+    // Preserve source HTML/CSS and hydrate its CMS slots from the correct
+    // versioned authority: private draft for preview, publication for live.
+    const hydration = await loadEdgeHydrationContext(env, slug, { preview });
     if (hydration.hydrated) {
       edgeHydrated = true;
       rewriter = rewriter
@@ -188,6 +200,11 @@ export async function transformStorefrontHtml(response, env, slug, request) {
   const headers = new Headers(transformed.headers);
   if (edgeHydrated) {
     headers.set("X-CMS-Edge-Hydrate", "1");
+  }
+  if (preview) {
+    headers.set("Cache-Control", "private, no-store");
+    headers.set("Vary", "Cookie");
+    headers.set("X-CMS-Draft-Preview", "1");
   }
   return new Response(transformed.body, {
     status: transformed.status,
