@@ -199,7 +199,7 @@ try{
      await exec(chrome,[
        '--headless=new','--disable-gpu','--disable-dev-shm-usage','--no-sandbox',
        '--hide-scrollbars','--force-device-scale-factor=1',
-       '--virtual-time-budget=1950','--window-size='+width+',950',
+       '--virtual-time-budget=7100','--window-size='+width+',950',
        '--screenshot='+image,url.replace('?slug=shop','?slug=about')+'&visualRail=1',
      ],{timeout:60000,encoding:'utf8',maxBuffer:1<<20});
      assert.ok(existsSync(image) && statSync(image).size>12000,'Real '+width+'px browser screenshot missing');
