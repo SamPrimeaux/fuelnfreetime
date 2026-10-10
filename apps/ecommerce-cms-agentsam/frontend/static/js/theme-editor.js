@@ -728,7 +728,6 @@
       treeExpandedForPage = slug;
       expandedSections.clear();
       expandedMenus.clear();
-      if (header) { expandedMenus.add('site:header'); }
       if (header) expandedSections.add('site:header');
       pageSections.forEach(function(section) { expandedSections.add(sectionOwner(section) + ':' + section.key); });
     }
@@ -758,7 +757,7 @@
         const key = String(field.key);
         const value = cmsGetPath(section.content || {}, key);
         const isMedia = /^(media|image|video)$/.test(String(field.type).toLowerCase());
-        const isHeading = /heading|headline|title/i.test(key) && !/subtitle|subheading/i.test(key);
+        const isHeading = /heading|headline|title/i.test(key) && !/subheadline|subtitle|subheading/i.test(key);
         const kind = isMedia ? 'media' : isHeading ? 'heading' : /url|href|link/i.test(key) ? 'link' : 'text';
         const label = /meta[0-9]+/i.test(key) ? 'Text' : isHeading ? 'Heading' : isMedia ? (field.label || 'Image') : /subheadline|subtitle/i.test(key) ? 'Text' : (field.label || humanize(key));
         const preview = (typeof value === 'string' && !isMedia && !/url|href|link/i.test(key)) ? value.replace(/\s+/g, ' ').trim().slice(0, 60) : '';
@@ -1197,7 +1196,7 @@
     const blockSchema = currentBlockSchema();
     const sectionLabel = (sectionSchema && sectionSchema.label) || humanize(section.key);
     const focusedSchema = activeFieldKey && !blockMeta ? currentSchema().find(function(field) { return field.key === activeFieldKey; }) : null;
-    const focusedTitle = focusedSchema && (/heading|headline|title/i.test(focusedSchema.key) && !/subtitle|subheading/i.test(focusedSchema.key)
+    const focusedTitle = focusedSchema && (/heading|headline|title/i.test(focusedSchema.key) && !/subheadline|subtitle|subheading/i.test(focusedSchema.key)
       ? 'Heading' : /meta[0-9]+|subheadline|subtitle/i.test(focusedSchema.key) ? 'Text' : focusedSchema.label);
     byId('te-inspector-title').textContent = blockMeta
       ? ((blockSchema && blockSchema.label) || humanize(blockMeta.templateKey || blockMeta.id))

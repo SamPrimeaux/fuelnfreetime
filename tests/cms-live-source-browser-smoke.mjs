@@ -27,13 +27,18 @@ shop.content_authority = "storefront-html";
 shop.live_route = "/shop";
 shop.sections = shop.sections.map(s => ({...s,version:1}));
 const site = getRegistryPage("site");
-const pages = {ok:true,pages:[{slug:"shop",title:"Shop",status:"draft",has_live_storefront:true, cms_published:false,draft_exists:true}]};
+const about = getRegistryPage("about");
+about.status = 'draft';
+about.content_authority = 'cms-draft-linked';
+about.sections = about.sections.map(section => ({...section,status:'draft',version:1}));
+const pages = {ok:true,pages:[{slug:"shop",title:"Shop",status:"draft",has_live_storefront:true, cms_published:false,draft_exists:true},{slug:"about",title:"About",status:"draft",has_live_storefront:true,cms_published:false,draft_exists:true}]};
 const shim = "<script>" +
  "window.__nativeConfirmCount=0;window.confirm=()=>{window.__nativeConfirmCount++;return true;};window.__submitted=null;window.__linked=false;window.__saved=[];window.__isNewPage=new URLSearchParams(location.search).get('unseeded')==='1';window.__nativeDraft=new URLSearchParams(location.search).get('native')==='1';" +
  "window.renderShell=function(_,html){document.body.insertAdjacentHTML('afterbegin',html);};" +
  "window.adminFetch=async function(url,options){" +
  "if(url.endsWith('/registry'))return " + JSON.stringify(registryForAdmin()) + ";" +
  "if(url.endsWith('/pages/site'))return {page:" + JSON.stringify(site) + "};" +
+ "if(url.endsWith('/pages/about'))return {page:" + JSON.stringify(about) + ",seeded:false};" +
  "if(url.endsWith('/pages/shop/import-live')){window.__submitted=JSON.parse(options.body);window.__linked=true;return {ok:true,published:false};}" +
  "if(url.includes('/pages/shop/sections/')&&options?.method==='PUT'){window.__saved.push({...JSON.parse(options.body),key:url.split('/').pop()});return {ok:true,version:2,updated_at:'2026-10-07T00:00:00Z'};}" +
  "if(url.endsWith('/pages/shop'))return {seeded:!window.__isNewPage||window.__linked,page:{...(" + JSON.stringify(shop) + "),content_authority:window.__linked?'cms-draft-linked':window.__nativeDraft?'cms-draft-only':'storefront-html'}};" +
@@ -137,7 +142,18 @@ const visualHook = "<script>if(new URLSearchParams(location.search).get('visualR
 const template = file("apps/ecommerce-cms-agentsam/frontend/static/theme-editor.html")
  .replace('<script src="/admin/js/shell.js"></script>',shim).replace("</body>",visualHook+probe+"</body>");
 const storefront=file("packages/heuristic-theme/storefront/shop.html");
+const aboutStorefront=file("packages/heuristic-theme/storefront/about.html");
 const assets = {
+ "/admin/js/agentsam.js":"apps/ecommerce-cms-agentsam/frontend/static/js/agentsam.js",
+ "/admin/js/theme-editor-mini-agentsam.mjs":"apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor-mini-agentsam.mjs",
+ "/admin/workbench/mini-agentsam.js":"apps/ecommerce-cms-agentsam/packages/agentsam-workbench/src/mini-agentsam.js",
+ "/admin/workbench/composer.js":"apps/ecommerce-cms-agentsam/packages/agentsam-workbench/src/composer.js",
+ "/admin/brand/mini-agentsam-trigger.svg":"apps/ecommerce-cms-agentsam/frontend/static/brand/mini-agentsam-trigger.svg",
+ "/admin/brand/agentsam-sidekick-symbol.svg":"apps/ecommerce-cms-agentsam/frontend/static/brand/agentsam-sidekick-symbol.svg",
+ "/css/heuristic-theme.css":"packages/heuristic-theme/storefront/css/heuristic-theme.css",
+ "/css/store-shell.css":"packages/heuristic-theme/storefront/css/store-shell.css",
+ "/css/store-shop.css":"packages/heuristic-theme/storefront/css/store-shop.css",
+ "/css/global-footer.css":"packages/heuristic-theme/storefront/css/global-footer.css",
  "/admin/js/pages-shared.js":"apps/ecommerce-cms-agentsam/frontend/static/js/pages-shared.js",
  "/admin/js/portable-sections.js":"packages/theme-contract/runtime/portable-sections.js",
  "/admin/js/theme-preview-registry.js":"packages/theme-contract/runtime/theme-preview-registry.js",
@@ -152,7 +168,13 @@ const server=http.createServer((req,res)=>{
  const url=new URL(req.url||"/","http://localhost").pathname;
  if(url==="/admin/theme-editor")res.writeHead(200,{"content-type":"text/html"}).end(template);
  else if(url==="/shop")res.writeHead(200,{"content-type":"text/html"}).end(storefront);
- else if(assets[url])res.writeHead(200,{"content-type":url.endsWith(".css")?"text/css":"application/javascript"}).end(file(assets[url]));
+ else if(url==="/about")res.writeHead(200,{"content-type":"text/html"}).end(aboutStorefront);
+ else if(assets[url])res.writeHead(200,{"content-type":url.endsWith(".css")?"text/css":url.endsWith(".svg")?"image/svg+xml":"application/javascript"}).end(file(assets[url]));
+ else if(url.startsWith('/assets/presets/fuel-free-time/')){
+   const media=path.join(root,'packages/heuristic-theme/storefront',url);
+   if(existsSync(media))res.writeHead(200,{"content-type":"image/webp"}).end(readFileSync(media));
+   else res.writeHead(404).end();
+ }
  else if(url.startsWith("/api/"))res.writeHead(404,{"content-type":"application/json"}).end('{"error":"not published"}');
  else res.writeHead(404).end();
 });
@@ -171,13 +193,13 @@ try{
  if (process.env.THEME_STUDIO_VISUALS === '1') {
    const output = path.join(root, 'artifacts/theme-studio');
    mkdirSync(output, { recursive: true });
-   for (const [width,name] of [[1440,'shop-desktop-rail'],[390,'shop-mobile-sections']]) {
+   for (const [width,name] of [[1440,'about-desktop-rail'],[390,'about-mobile-sections']]) {
      const image = path.join(output, name + '.png');
      await exec(chrome,[
        '--headless=new','--disable-gpu','--disable-dev-shm-usage','--no-sandbox',
        '--hide-scrollbars','--force-device-scale-factor=1',
        '--virtual-time-budget=1950','--window-size='+width+',950',
-       '--screenshot='+image,url+'&visualRail=1',
+       '--screenshot='+image,url.replace('?slug=shop','?slug=about')+'&visualRail=1',
      ],{timeout:60000,encoding:'utf8',maxBuffer:1<<20});
      assert.ok(existsSync(image) && statSync(image).size>12000,'Real '+width+'px browser screenshot missing');
      console.log('VISUAL: '+image);
