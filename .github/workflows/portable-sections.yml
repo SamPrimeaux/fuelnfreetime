@@ -73,6 +73,8 @@ jobs:
           node-version: '22'
       - name: Install locked runtime and renderer packages
         run: npm ci --ignore-scripts
+      - name: Install isolated DOM fixture for real editor test
+        run: npm install --no-save --ignore-scripts --package-lock=false jsdom@26
       - name: Verify architecture authority, package inventory and legacy paths
         run: npm run check:authority
       - name: Verify syntax
