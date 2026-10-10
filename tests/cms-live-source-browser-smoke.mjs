@@ -4,7 +4,7 @@
  */
 import assert from "node:assert/strict";
 import http from "node:http";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, mkdirSync, statSync } from "node:fs";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
@@ -128,8 +128,14 @@ const probe = "<script>setTimeout(function(){" +
  "pre.textContent=JSON.stringify({before,imported:window.__submitted,linked:window.__linked,saved:window.__saved," +
  "saveState:document.getElementById('te-save-state')?.textContent});document.body.append(pre);},1900);" +
  "},2200)</script>";
+// Browser screenshots use the actual editor markup and its own CSS/DOM.
+// They are release evidence, not a hand-drawn approximation of the sidebar.
+const visualHook = "<script>if(new URLSearchParams(location.search).get('visualRail')==='1')setTimeout(function(){" +
+ "if(innerWidth<=900)document.querySelector('[data-mobile-pane=sections]')?.click();" +
+ "else document.querySelector('[data-select-field=headline][data-field-section=hero]')?.click();" +
+ "},950);</script>";
 const template = file("apps/ecommerce-cms-agentsam/frontend/static/theme-editor.html")
- .replace('<script src="/admin/js/shell.js"></script>',shim).replace("</body>",probe+"</body>");
+ .replace('<script src="/admin/js/shell.js"></script>',shim).replace("</body>",visualHook+probe+"</body>");
 const storefront=file("packages/heuristic-theme/storefront/shop.html");
 const assets = {
  "/admin/js/pages-shared.js":"apps/ecommerce-cms-agentsam/frontend/static/js/pages-shared.js",
@@ -161,6 +167,21 @@ try{
   const match=dom.match(/<pre id="browser-result">([^<]+)<\/pre>/);
   assert.ok(match,"Browser did not complete editor test at "+width+"px");
   results.set(scenario==="live"?width:scenario,JSON.parse(match[1].replaceAll("&quot;",'"').replaceAll("&amp;","&").replaceAll("&lt;","<").replaceAll("&gt;",">")));
+ }
+ if (process.env.THEME_STUDIO_VISUALS === '1') {
+   const output = path.join(root, 'artifacts/theme-studio');
+   mkdirSync(output, { recursive: true });
+   for (const [width,name] of [[1440,'shop-desktop-rail'],[390,'shop-mobile-sections']]) {
+     const image = path.join(output, name + '.png');
+     await exec(chrome,[
+       '--headless=new','--disable-gpu','--disable-dev-shm-usage','--no-sandbox',
+       '--hide-scrollbars','--force-device-scale-factor=1',
+       '--virtual-time-budget=1950','--window-size='+width+',950',
+       '--screenshot='+image,url+'&visualRail=1',
+     ],{timeout:60000,encoding:'utf8',maxBuffer:1<<20});
+     assert.ok(existsSync(image) && statSync(image).size>12000,'Real '+width+'px browser screenshot missing');
+     console.log('VISUAL: '+image);
+   }
  }
 }finally{server.close()}
 const result=results.get(1440);
