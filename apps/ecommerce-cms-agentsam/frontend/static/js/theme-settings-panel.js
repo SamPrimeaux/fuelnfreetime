@@ -214,8 +214,12 @@ function mediaSample(i){
  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 140"><rect width="240" height="140" fill="#e5d6c8"/><rect x="35" y="25" width="175" height="90" rx="23" fill="#a07365"/></svg>`
  ][i]);
 }
-function dismiss(){
- if(!popup)return;popup.remove();popup=null;focusReturn?.focus?.();focusReturn=null;
+function dismiss(restoreFocus=true){
+ if(!popup)return;
+ popup.remove();
+ popup=null;
+ if(restoreFocus)focusReturn?.focus?.();
+ focusReturn=null;
 }
 function dialog(title,html,apply){
  dismiss();focusReturn=document.activeElement;
@@ -359,7 +363,8 @@ function openCategory(key){
  const selected=root.querySelector('[data-ts-category="'+key+'"] > h3 > [data-ts-toggle]');
  const scrollHost=root.closest('[data-drawer-panel="theme-settings"]');
  const oldTop=selected?.getBoundingClientRect().top;
- dismiss();
+ // Switching categories must not restore focus into the panel being hidden.
+ dismiss(false);
  category=next;
  root.dataset.openCategory=category;
  root.querySelectorAll("[data-ts-category]").forEach(section=>{
