@@ -138,7 +138,7 @@ const probe = "<script>setTimeout(function(){" +
 const visualHook = "<script>if(new URLSearchParams(location.search).get('visualRail')==='1')setTimeout(function(){" +
  "if(innerWidth<=900)document.querySelector('[data-mobile-pane=sections]')?.click();" +
  "else document.querySelector('[data-select-field=headline][data-field-section=hero]')?.click();" +
- "},950);</script>";
+ "},5600);</script>";
 const template = file("apps/ecommerce-cms-agentsam/frontend/static/theme-editor.html")
  .replace('<script src="/admin/js/shell.js"></script>',shim).replace("</body>",visualHook+probe+"</body>");
 const storefront=file("packages/heuristic-theme/storefront/shop.html");
