@@ -65,7 +65,7 @@ export function bindGeneratedSettings(body,wrapper,transport,schema={}) {
     if(input.dataset.settingType==='boolean')input.addEventListener('click',()=>{
       const next=input.getAttribute('aria-checked')!=='true';input.setAttribute('aria-checked',String(next));apply(key,next);
     });
-    else input.addEventListener(['select','media','video','product','collection','variant'].includes(input.dataset.settingType)?'change':'input',()=>apply(key,convert(input.value)));
+    else input.addEventListener(['select','media','video','model3d','product','collection','variant'].includes(input.dataset.settingType)?'change':'input',()=>apply(key,convert(input.value)));
   });
   return transport;
 }
