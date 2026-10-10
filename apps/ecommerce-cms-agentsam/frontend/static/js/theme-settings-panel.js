@@ -353,14 +353,33 @@ function renderFields(){
  syntax();updatePreview();
 }
 function openCategory(key){
- dismiss();category=category===key?"":key;
+ // The category key is the single source of truth: never accumulate open panels.
+ if(!root||!categories.some(([id])=>id===key))return;
+ const next=category===key?"":key;
+ const selected=root.querySelector('[data-ts-category="'+key+'"] > h3 > [data-ts-toggle]');
+ const scrollHost=root.closest('[data-drawer-panel="theme-settings"]');
+ const oldTop=selected?.getBoundingClientRect().top;
+ dismiss();
+ category=next;
+ root.dataset.openCategory=category;
  root.querySelectorAll("[data-ts-category]").forEach(section=>{
- const isOpen=section.dataset.tsCategory===category;
- section.classList.toggle("is-open",isOpen);
- section.querySelector("[data-ts-toggle]").setAttribute("aria-expanded",String(isOpen));
- section.querySelector("[data-ts-panel]").hidden=!isOpen;
+  const isOpen=section.dataset.tsCategory===category;
+  const trigger=section.querySelector("[data-ts-toggle]");
+  const panel=section.querySelector("[data-ts-panel]");
+  section.classList.toggle("is-open",isOpen);
+  trigger.setAttribute("aria-expanded",String(isOpen));
+  trigger.dataset.state=isOpen?"open":"closed";
+  panel.hidden=!isOpen;
+  panel.setAttribute("aria-hidden",String(!isOpen));
+  panel.toggleAttribute("inert",!isOpen);
  });
- renderFields();applyWhitelistedPreview();
+ renderFields();
+ applyWhitelistedPreview();
+ // Collapsing a long category above the clicked row must not make the row jump.
+ if(scrollHost&&oldTop!==undefined){
+  const movement=selected.getBoundingClientRect().top-oldTop;
+  if(Number.isFinite(movement)&&Math.abs(movement)>1)scrollHost.scrollTop+=movement;
+ }
 }
 function mount(){
  if(document.getElementById("ts-theme-root"))return true;
@@ -369,7 +388,7 @@ function mount(){
  load();drawer.innerHTML='<div id="ts-theme-root" class="ts-theme-root"></div>';root=drawer.firstElementChild;
  root.innerHTML=`<div class="ts-heading"><h2>Theme settings</h2><span>Preview</span></div><div class="ts-categories"></div><div class="ts-theme-style"><span>Theme style</span><span title="Theme style switching is deferred until backend mapping">ⓘ</span></div><p class="ts-review-note" data-ts-review-note>Preview only · preserved for this browser session · not published</p>`;
  rail=root.querySelector(".ts-categories");
- rail.innerHTML=categories.map(([id,label])=>`<section class="ts-category" data-ts-category="${id}"><h3><button type="button" data-ts-toggle aria-expanded="false" aria-controls="ts-panel-${id}"><span>${esc(label)}</span><svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button></h3><div id="ts-panel-${id}" data-ts-panel="${id}" class="ts-category-content" hidden></div></section>`).join("");
+ rail.innerHTML=categories.map(([id,label])=>`<section class="ts-category" data-ts-category="${id}"><h3><button type="button" data-ts-toggle aria-expanded="false" aria-controls="ts-panel-${id}" data-state="closed"><span>${esc(label)}</span><svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button></h3><div id="ts-panel-${id}" data-ts-panel="${id}" class="ts-category-content" aria-hidden="true" inert hidden></div></section>`).join("");
  rail.addEventListener("mouseover",e=>{
  if(category!=="cards"||!v("cards.second")||imageIndex!==0)return;
  const card=e.target.closest(".ts-product");
@@ -403,7 +422,7 @@ function mount(){
  document.getElementById("theme-preview")?.addEventListener("load",applyWhitelistedPreview);
  const previewDevice=document.getElementById("te-preview-device");
  if(previewDevice)new MutationObserver(updatePreview).observe(previewDevice,{attributes:true,attributeFilter:["data-device"]});
- window.ThemeSettingsPanel={open:openCategory,refresh:updatePreview,getState:()=>({category,values:{...state},links:{...paletteLinks},storage:"sessionStorage",published:false})};
+ window.ThemeSettingsPanel={open:openCategory,close:()=>{if(category)openCategory(category);},refresh:updatePreview,getState:()=>({category,values:{...state},links:{...paletteLinks},storage:"sessionStorage",published:false})};
  return true;
 }
 if(!mount()){
