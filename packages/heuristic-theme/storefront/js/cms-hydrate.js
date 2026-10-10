@@ -69,6 +69,55 @@
     return { content, field: path };
   }
 
+  // Inline overrides are sparse and reversible. Authored markup, classes,
+  // layout, animation and inline styles are retained when values inherit.
+  const authoredInline = new WeakMap();
+  function applyStyleOverride(el,property,value) {
+    if(!el)return;
+    let originals=authoredInline.get(el);
+    if(!originals){originals={};authoredInline.set(el,originals);}
+    if(!Object.hasOwn(originals,property))originals[property]={
+      value:el.style.getPropertyValue(property),priority:el.style.getPropertyPriority(property)
+    };
+    if(value===undefined||value===null||value===''||value==='inherit'){
+      const source=originals[property];
+      if(source.value)el.style.setProperty(property,source.value,source.priority);
+      else el.style.removeProperty(property);
+    } else el.style.setProperty(property,String(value));
+  }
+  const styleFieldMap={
+    fontSize:['font-size','px',8,180],
+    fontWeight:['font-weight','',100,900],
+    lineHeight:['line-height','',0.8,3],
+    letterSpacing:['letter-spacing','px',-5,24],
+    textAlign:['text-align',null,['left','center','right']],
+    textTransform:['text-transform',null,['none','uppercase','lowercase','capitalize']],
+    color:['color','hex'],backgroundColor:['background-color','hex'],
+    paddingTop:['padding-top','px',0,160],paddingBottom:['padding-bottom','px',0,160],
+    paddingLeft:['padding-left','px',0,160],paddingRight:['padding-right','px',0,160],
+    borderRadius:['border-radius','px',0,160]
+  };
+  function normalizedStyleOverride(key, raw) {
+    const d=styleFieldMap[key];
+    if(!d||raw==null||raw===''||raw==='inherit')return null;
+    if(d[1]==='hex')return /^#[0-9a-f]{6}$/i.test(String(raw))?String(raw):null;
+    if(Array.isArray(d[2]))return d[2].includes(raw)?raw:null;
+    const n=Number(raw);
+    if(!Number.isFinite(n)||n<d[2]||n>d[3])return null;
+    return String(n)+(d[1]||'');
+  }
+  function applyFieldStyles(node,field,content) {
+    const fields=content?.__editor?.fieldStyles||{};
+    const override=getPath(fields,field);
+    const properties=override&&typeof override==='object'?override:{};
+    // Button labels/links style their interactive host, not only the label span.
+    const el=/^(?:cta|button|link|action)/i.test(field)?node.closest('a,button')||node:node;
+    for(const [key,d] of Object.entries(styleFieldMap)){
+      const validated=normalizedStyleOverride(key,properties[key]);
+      applyStyleOverride(el,d[0],validated);
+    }
+  }
+
   function applyEditorSettings(sectionEl, content) {
     const editor = content?.__editor;
     if (!editor || typeof editor !== "object") return;
@@ -399,6 +448,7 @@
     document.querySelectorAll("[data-cms]").forEach((el) => {
       const resolved = resolveSlot(el, byKey);
       if (!resolved) return;
+      applyFieldStyles(el,resolved.field,resolved.content);
 
       const value = getPath(resolved.content, resolved.field);
       if (value == null || value === "") return;
