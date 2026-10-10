@@ -391,6 +391,7 @@ function mount(){
  const drawer=document.querySelector('[data-drawer-panel="theme-settings"]');
  if(!drawer)return false;
  load();drawer.innerHTML='<div id="ts-theme-root" class="ts-theme-root"></div>';root=drawer.firstElementChild;
+ root.dataset.openCategory="";
  root.innerHTML=`<div class="ts-heading"><h2>Theme settings</h2><span>Preview</span></div><div class="ts-categories"></div><div class="ts-theme-style"><span>Theme style</span><span title="Theme style switching is deferred until backend mapping">ⓘ</span></div><p class="ts-review-note" data-ts-review-note>Preview only · preserved for this browser session · not published</p>`;
  rail=root.querySelector(".ts-categories");
  rail.innerHTML=categories.map(([id,label])=>`<section class="ts-category" data-ts-category="${id}"><h3><button type="button" data-ts-toggle aria-expanded="false" aria-controls="ts-panel-${id}" data-state="closed"><span>${esc(label)}</span><svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button></h3><div id="ts-panel-${id}" data-ts-panel="${id}" class="ts-category-content" aria-hidden="true" inert hidden></div></section>`).join("");
