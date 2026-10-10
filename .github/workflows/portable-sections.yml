@@ -52,6 +52,7 @@ on:
       - apps/ecommerce-cms-agentsam/frontend/static/js/generation-stream.mjs
       - tests/cms-slot-binding-browser-smoke.mjs
       - tests/cms-legacy-field-style-browser-smoke.mjs
+      - tests/cms-legacy-authored-slot-registration.test.mjs
       - apps/ecommerce-cms-agentsam/tests/theme-toolbar-behavior.test.mjs
       - scripts/sync-app-frontend.mjs
       - tests/portable-sections.test.mjs
@@ -103,6 +104,8 @@ jobs:
         run: node tests/cms-live-source-browser-smoke.mjs
       - name: Actual storefront media and CTA edits in Chrome
         run: node tests/cms-slot-binding-browser-smoke.mjs
+      - name: Full authored Heuristic section and nested block slot registration
+        run: node --test tests/cms-legacy-authored-slot-registration.test.mjs
       - name: Merchant legacy Hero overrides and reset preserve authored HTML and CSS
         run: node tests/cms-legacy-field-style-browser-smoke.mjs
       - name: Selected legacy field inspector saves overrides and resets in canonical CMS draft
