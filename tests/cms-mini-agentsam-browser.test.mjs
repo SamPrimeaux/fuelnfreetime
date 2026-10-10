@@ -43,7 +43,7 @@ const probe=`<script>(async function(){
   (document.getElementById('te-field-hero-headline') || selected).focus();
   await sleep(160);
   const initialHidden=!document.querySelector('[data-mini-agentsam]') || document.querySelector('[data-mini-agentsam]').shadowRoot.querySelector('.composer').hidden;
-  const miniToggle=document.getElementById('te-mini-agent-toggle');
+  const miniToggle=document.getElementById('te-agent-open');
   miniToggle.click();
   const portal=await until(()=>{const p=document.querySelector('[data-mini-agentsam]');return p&&!p.shadowRoot.querySelector('.composer').hidden?p:null});
   const mini=portal.shadowRoot;
@@ -132,7 +132,7 @@ try{
  assert.equal(result.afterApplyWrites,0,'Only Save may persist a draft');
  assert.equal(result.beforeField,result.initialValue);
  assert.equal(result.fieldAfter,message);
- assert.match(result.dirty,/Unpublished changes/);
+ assert.match(result.dirty,/Unsaved changes/);
  assert.equal(result.savedWrites,1);
  assert.equal(result.saved.content.headline,message);
  assert.deepEqual(result.errors,[]);
