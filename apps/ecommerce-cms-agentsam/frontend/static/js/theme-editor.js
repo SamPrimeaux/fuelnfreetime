@@ -69,6 +69,8 @@
   const dirtyVersions = new Map();
   let autosaveTimer = null;
   let saveInFlight = null;
+  let publishInFlight = false;
+  let hasEditedThisSession = false;
   let autosaveFailed = false;
   let device = localStorage.getItem('fnf-theme-editor-device') || 'desktop';
   let inspectionEnabled = true;
@@ -546,13 +548,19 @@
     dirtyVersions.set(ref, (dirtyVersions.get(ref) || 0) + 1);
     if (sectionOwner(section) === 'site') siteDraftTouched = true;
     autosaveFailed = false;
+    hasEditedThisSession = true;
     setDirty(true);
   }
 
   function setDirty(value) {
     dirty = Boolean(value);
     const save = byId('te-save');
-    if (save) save.disabled = liveUnimported || !dirty;
+    if (save) {
+      save.disabled = liveUnimported || (!dirty && !hasEditedThisSession);
+      save.classList.toggle('is-dirty', dirty);
+      save.setAttribute('aria-label', dirty ? 'Save unsaved draft changes' : 'Save draft — latest changes already saved');
+      save.title = dirty ? 'Save draft changes (⌘S)' : 'Draft is saved — Save again if needed (⌘S)';
+    }
     if (liveUnimported) setSaveState('Preview only');
     else if (dirty) setSaveState('Unsaved changes', 'dirty');
     else setSaveState('Saved', 'saved');
@@ -2163,7 +2171,11 @@
     }
     clearTimeout(autosaveTimer);
     const refs = Array.from(dirtySections);
-    if (!dirty || !refs.length) return true;
+    if (!dirty || !refs.length) {
+      if (!automatic) setNote('All draft changes are saved.', 'success');
+      setSaveState('Saved', 'saved');
+      return true;
+    }
     const snapshots = refs.map(function(ref) {
       const parsed = parseDirtyRef(ref);
       const section = findSection(parsed.key, parsed.owner);
@@ -2225,7 +2237,7 @@
         setSaveState(conflict ? 'Save conflict' : 'Save failed — Retry', 'error');
         return false;
       } finally {
-        if (button) button.disabled = !dirty;
+        if (button) button.disabled = liveUnimported || (!dirty && !hasEditedThisSession);
       }
     })();
     saveInFlight = operation;
@@ -2238,7 +2250,11 @@
   }
 
   async function publishPage() {
-    if (!window.confirm('Publish the reviewed draft to the live storefront? This is separate from Save.')) return false;
+    // The explicit Publish live menu action is the merchant confirmation.
+    // Keep publish capability/preflight checks without a second browser-native dialog.
+    if (publishInFlight) return false;
+    byId('te-save-menu').hidden = true;
+    byId('te-save-options').setAttribute('aria-expanded', 'false');
     if (generationLock.locked()) { setNote('Wait for generation to finish.'); return false; }
     if (liveUnimported) {
       setNote('Import the existing live page before publishing any CMS draft.', 'error');
@@ -2249,6 +2265,7 @@
       return;
     }
     const button = byId('te-publish');
+    publishInFlight = true;
     button.disabled = true;
     button.textContent = 'Publishing…';
     try {
@@ -2274,7 +2291,8 @@
       setNote(error.message || String(error), 'error');
       setSaveState('Publish failed', 'error');
     } finally {
-      button.disabled = false;
+      publishInFlight = false;
+      syncPublishCapability();
       button.textContent = 'Publish live…';
     }
   }
