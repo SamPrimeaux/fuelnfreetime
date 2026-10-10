@@ -139,7 +139,7 @@ const fieldMap=new Map(Object.values(forms).flat().filter(x=>x.key).map(x=>[x.ke
 const defaults={};fieldMap.forEach((x,k)=>defaults[k]=x.initial);
 for(let i=0;i<4;i++)defaults["palette."+i]=["#FFFFFF","#000000","#303030","#DADADA"][i];
 let state={...defaults},paletteLinks={},category="",popup=null,focusReturn=null,
- selectedVariant=1,imageIndex=0,searchQuery="",brandName="Store",media={};
+ selectedVariant=1,imageIndex=0,searchQuery="",brandName="Store",media={},paletteCount=4;
 let root=null,rail=null;
 const esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const validColor=x=>x==="transparent"||/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(x));
@@ -147,7 +147,7 @@ const hex=x=>validColor(x)&&x!=="transparent"?x:"#000000";
 const v=k=>state[k]??defaults[k]??"";
 const localKey=()=> "ia:theme-ui-review:v1:"+(document.querySelector("#te-theme-name")?.textContent||"installed")+":"+(new URLSearchParams(location.search).get("slug")||"page");
 const reviewNote=()=>root?.querySelector("[data-ts-review-note]");
-function load(){try{const data=JSON.parse(sessionStorage.getItem(localKey())||"null");if(data){Object.keys(defaults).forEach(k=>{if(data.values&&k in data.values)state[k]=data.values[k];});paletteLinks=data.links||{};brandName=data.brandName||"Store";}}catch{}}
+function load(){try{const data=JSON.parse(sessionStorage.getItem(localKey())||"null");if(data){Object.keys(defaults).forEach(k=>{if(data.values&&k in data.values)state[k]=data.values[k];});Object.entries(data.values||{}).forEach(([k,value])=>{if(/^palette\.\d+$/.test(k)){state[k]=value;paletteCount=Math.max(paletteCount,Number(k.split(".")[1])+1);}});paletteLinks=data.links||{};brandName=data.brandName||"Store";}}catch{}}
 function save(){
  try{sessionStorage.setItem(localKey(),JSON.stringify({values:state,links:paletteLinks,brandName}));}
  catch{if(reviewNote())reviewNote().textContent="Preview only · session storage unavailable";}
@@ -167,7 +167,7 @@ function inputFor(d){
  const k=esc(d.key),label=esc(d.label);
  if(d.type==="group")return `<h3 class="ts-group">${label}</h3>`;
  if(d.type==="help")return `<p class="ts-helper">${label}</p>`;
- if(d.type==="palette")return `<div class="ts-palette">${[0,1,2,3].map(i=>`<button type="button" data-ts-action="paletteEdit" data-ts-index="${i}" aria-label="Edit palette color ${i+1}" title="Edit palette color ${i+1}" class="ts-palette-chip" style="background:${hex(v("palette."+i))}"></button>`).join("")}${button("+",'data-ts-action="paletteAdd" class="ts-palette-plus" aria-label="Add palette color" title="Add palette color"')}</div>`;
+ if(d.type==="palette")return `<div class="ts-palette">${Array.from({length:paletteCount},(_,i)=>i).map(i=>`<button type="button" data-ts-action="paletteEdit" data-ts-index="${i}" aria-label="Edit palette color ${i+1}" title="Edit palette color ${i+1}" class="ts-palette-chip" style="background:${hex(v("palette."+i))}"></button>`).join("")}${button("+",'data-ts-action="paletteAdd" class="ts-palette-plus" aria-label="Add palette color" title="Add palette color"')}</div>`;
  if(d.type==="name")return `<div class="ts-name-row">${button("Manage store name",'class="ts-link" data-ts-action="name"')}</div>`;
  if(d.type==="media")return `<div class="ts-media-field"><label>${label}</label><div data-ts-media="${k}"></div></div>`;
  if(d.type==="code")return `<div class="ts-code-field"><label for="ts-css-code">CSS</label><div class="ts-code"><pre data-ts-syntax aria-hidden="true"></pre><textarea id="ts-css-code" data-ts-key="${k}" aria-label="Custom CSS" spellcheck="false" rows="7">${esc(v(d.key))}</textarea></div>${button("Learn more about custom CSS",'data-ts-action="cssHelp" class="ts-link"')}</div>`;
@@ -235,7 +235,7 @@ function dialog(title,html,apply){
 }
 function palettePicker(key,paletteIndex=null){
  const value=paletteIndex===null?v(key):v("palette."+paletteIndex);
- const html=`<label>Color<input type="color" data-ts-color-native value="${hex(value)}"></label><label>Hex<input data-ts-color-hex type="text" value="${hex(value)}" spellcheck="false"></label><div class="ts-palette">${[0,1,2,3].map(i=>button(" ",`data-ts-palette-use="${i}" class="ts-palette-chip" style="background:${hex(v("palette."+i))}" aria-label="Use palette ${i+1}"`)).join("")}</div>${paletteIndex===null?'<label class="ts-transparency"><input type="checkbox" data-ts-transparent> Transparent</label>':""}<div data-ts-error role="alert"></div>`;
+ const html=`<label>Color<input type="color" data-ts-color-native value="${hex(value)}"></label><label>Hex<input data-ts-color-hex type="text" value="${hex(value)}" spellcheck="false"></label><div class="ts-palette">${Array.from({length:paletteCount},(_,i)=>i).map(i=>button(" ",`data-ts-palette-use="${i}" class="ts-palette-chip" style="background:${hex(v("palette."+i))}" aria-label="Use palette ${i+1}"`)).join("")}</div>${paletteIndex===null?'<label class="ts-transparency"><input type="checkbox" data-ts-transparent> Transparent</label>':""}<div data-ts-error role="alert"></div>`;
  const d=dialog("Choose color",html,box=>{
  const c=box.querySelector("[data-ts-color-hex]").value.trim();const transparent=box.querySelector("[data-ts-transparent]")?.checked;
  if(!transparent&&!validColor(c)){box.querySelector("[data-ts-error]").textContent="Enter a valid hex value.";return false;}
@@ -245,6 +245,7 @@ function palettePicker(key,paletteIndex=null){
    set(key,val);
  }else{
    state["palette."+paletteIndex]=val;
+   paletteCount=Math.max(paletteCount,paletteIndex+1);
    Object.keys(paletteLinks).forEach(k=>{if(paletteLinks[k]===paletteIndex)state[k]=val;sync(k);});
    save();renderPalette();updatePreview();applyWhitelistedPreview();
  }
@@ -256,7 +257,7 @@ function palettePicker(key,paletteIndex=null){
 function renderPalette(){
  const node=root?.querySelector(".ts-palette:not(.ts-modal .ts-palette)");
  if(!node)return;
- node.querySelectorAll("[data-ts-index]").forEach(x=>x.style.background=hex(v("palette."+x.dataset.tsIndex)));
+ node.innerHTML=Array.from({length:paletteCount},(_,i)=>`<button type="button" data-ts-action="paletteEdit" data-ts-index="${i}" aria-label="Edit palette color ${i+1}" title="Edit palette color ${i+1}" class="ts-palette-chip" style="background:${hex(v("palette."+i))}"></button>`).join("")+button("+",'data-ts-action="paletteAdd" class="ts-palette-plus" aria-label="Add palette color" title="Add palette color"');
 }
 function chooseMedia(key){
  const html=`<p class="ts-helper">Local preview illustrations only; no production media changes.</p><div class="ts-media-choices">${[0,1,2].map(i=>`<button type="button" data-ts-image-choice="${i}"><img src="${esc(mediaSample(i))}" alt="Sample illustration ${i+1}"></button>`).join("")}</div><label class="ts-upload">Choose image from device<input type="file" accept="image/*" data-ts-upload></label><p data-ts-selected-label class="ts-helper">Select an image to continue.</p>`;
@@ -278,7 +279,7 @@ function action(button){
  const a=button.dataset.tsAction,key=button.dataset.tsKey;
  if(a==="color")return palettePicker(key);
  if(a==="paletteEdit")return palettePicker(null,+button.dataset.tsIndex);
- if(a==="paletteAdd")return dialog("Palette slots","<p>The initial four theme palette slots may be edited directly. Additional slots are deferred until the theme schema is approved.</p>");
+ if(a==="paletteAdd")return palettePicker(null,paletteCount);
  if(["media","explore"].includes(a))return chooseMedia(key);
  if(a==="mediaRemove"){delete media[key];return updateMedia(key);}
  if(["collection","link"].includes(a))return resourcePicker(key);
@@ -297,7 +298,7 @@ function demo(cat){
  const product=()=>`<div class="ts-product" style="background:${hex(v("cards.bg"))};color:${hex(v("cards.text"))}"><div class="ts-product-image" data-ts-image style="background:${["#8d9791","#a4b7b7","#c4afa1"][imageIndex]}"><span>Media ${imageIndex+1} / 3</span>${v("cards.carousel")?`<div>${button("‹",'data-ts-action="previousImage" aria-label="Previous image"')}${button("›",'data-ts-action="nextImage" aria-label="Next image"')}</div>`:""}</div><strong>Field Collection</strong><small>${price("cards")}</small>${v("cards.quick")?previewButton("Quick add","cart"):""}</div>`;
  switch(cat){
  case "brand":return `<strong>${esc(brandName)}</strong><p>Asset previews appear in their own fields above.</p>`;
- case "palette":return `<div class="ts-demo-colors">${[0,1,2,3].map(i=>`<span style="background:${hex(v("palette."+i))}"></span>`).join("")}</div>`;
+ case "palette":return `<div class="ts-demo-colors">${Array.from({length:paletteCount},(_,i)=>i).map(i=>`<span style="background:${hex(v("palette."+i))}"></span>`).join("")}</div>`;
  case "type":return `<h2 style="font-family:${esc(v("type.font.Heading"))},sans-serif;font-size:clamp(22px,5vw,${parseInt(v("type.h1.size"))}px);text-transform:${v("type.h1.case")==="Uppercase"?"uppercase":"none"};color:${hex(v("type.text"))};line-height:${{Tight:1.1,Normal:1.35,Loose:1.65}[v("type.h1.line")]}">Designed for living</h2><p style="font-family:${esc(v("type.font.Body"))},sans-serif;font-size:${esc(v("type.p.size"))};line-height:${{Tight:1.1,Normal:1.4,Loose:1.7}[v("type.p.line")]}">Typography preview, with responsive sizing.</p>`;
  case "page":return `<div class="ts-page-example" style="background:${hex(v("page.bg"))}"><div style="width:${{Narrow:"48%",Standard:"64%",Wide:"83%","Full width":"100%"}[v("page.width")]}">Content width</div></div>`;
  case "motion":return `<div tabindex="0" class="ts-motion-card ${v("motion.hover").toLowerCase().replace(/ /g,"-")}">Hover or focus for the chosen effect</div>`;
