@@ -23,6 +23,8 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
+      - name: Install isolated DOM test dependency
+        run: npm install --no-save --ignore-scripts --package-lock=false jsdom@26
       - name: Unit and control contracts
         run: node --test apps/ecommerce-cms-agentsam/tests/theme-settings-panel.test.mjs
       - name: Real Chromium interaction and screenshots
