@@ -2552,3 +2552,253 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
   .theme-studio-toolbar__right {gap:2px}
   .theme-studio-toolbar__right .te-icon-btn {width:29px;min-width:29px;flex-basis:29px}
 }
+
+/* Merchant page hierarchy — Shopify-density design with real schema-backed
+   field selections. Only the Theme Studio rail is affected; admin/mobile dock
+   and shared Theme Settings retain their own styles. */
+@media (min-width: 901px) {
+  .theme-studio:not([data-editor-drawer="closed"]) .theme-studio-workspace {
+    grid-template-columns: 278px minmax(0, 1fr) 328px;
+  }
+}
+.theme-studio .theme-studio-tree {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: none;
+  width: auto;
+  padding: 12px 12px 24px;
+  overflow-x: hidden;
+  color: #23232a;
+  background: #fff;
+}
+.theme-studio .te-panel-title--compact {
+  padding: 3px 6px 15px;
+  border-bottom: 1px solid #e8e8eb;
+}
+.theme-studio .te-panel-title--compact h2 { font-size: 14px; font-weight: 650; letter-spacing: -.015em; }
+.theme-studio .te-tree-group {
+  margin: 0;
+  padding: 17px 0 15px;
+  border-bottom: 1px solid #e8e8ed;
+}
+.theme-studio .te-tree-group--global { padding-block: 17px 15px; }
+.theme-studio .te-tree-group--global + .te-tree-group { border-top: 0; }
+.theme-studio .te-tree-group__label {
+  padding: 0 8px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .09em;
+  line-height: 1.4;
+  color: #686a72;
+}
+.theme-studio .te-tree-section { margin: 1px 0; }
+.theme-studio .te-tree-row {
+  min-height: 36px;
+  padding: 2px 5px 2px 1px;
+  gap: 1px;
+  border-radius: 7px;
+  position: relative;
+}
+.theme-studio .te-tree-row__main {
+  min-height: 32px;
+  padding: 4px 2px;
+  gap: 9px;
+}
+.theme-studio .te-tree-row__icon {
+  width: 19px;
+  height: 19px;
+  border: 0;
+  border-radius: 4px;
+  color: #747782;
+}
+.theme-studio .te-tree-row__icon svg { width: 17px; height: 17px; }
+.theme-studio .te-tree-row__name {
+  color: inherit;
+  font-size: 12.5px;
+  font-weight: 550;
+  line-height: 1.3;
+}
+.theme-studio .te-tree-row__meta { display: none; }
+.theme-studio .te-tree-row.is-active {
+  background: #1857cd;
+  color: #fff;
+}
+.theme-studio .te-tree-row.is-active .te-tree-row__icon {
+  background: transparent;
+  border: 0;
+  color: #fff;
+}
+.theme-studio .te-tree-row.is-active .te-tree-expand { color: #fff; }
+.theme-studio .te-tree-row.is-active .te-tree-actions > summary { color: #fff; }
+.theme-studio .te-tree-expand,
+.theme-studio .te-tree-expand-placeholder {
+  flex-basis: 20px;
+  width: 20px;
+  height: 30px;
+}
+.theme-studio .te-tree-expand > span { font-size: 17px; }
+.theme-studio .te-block-list {
+  margin: 1px 0 6px 31px;
+  padding: 0 0 0 7px;
+  border-left: 1px solid #ebebef;
+}
+.theme-studio .te-field-row,
+.theme-studio .te-block-row {
+  display: flex;
+  align-items: center;
+  position: relative;
+  min-height: 32px;
+  border-radius: 6px;
+  padding: 1px 4px 1px 1px;
+  color: #353640;
+  gap: 3px;
+}
+.theme-studio .te-field-row:hover,
+.theme-studio .te-block-row:hover { background: #f4f4f6; }
+.theme-studio .te-field-row.is-active,
+.theme-studio .te-block-row.is-active { color: #5933b3; background: #f0eaff; }
+.theme-studio .te-field-row__main,
+.theme-studio .te-block-row__main {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 30px;
+  padding: 4px 3px;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.theme-studio .te-field-row__label,
+.theme-studio .te-block-row__copy strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.theme-studio .te-field-row__preview { color: #8b8d97; font-style: italic; font-weight: 400; }
+.theme-studio .te-field-row.is-active .te-field-row__preview { color: #7f62b9; }
+.theme-studio .te-field-row__icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  display: inline-grid;
+  place-items: center;
+  color: #777985;
+}
+.theme-studio .te-field-row__icon::after { content: '≡'; font-size: 16px; line-height: 1; }
+.theme-studio .te-field-row__icon--heading::after { content: '☰'; font-size: 12px; }
+.theme-studio .te-field-row__icon--media::after {
+  content: ''; width: 12px; height: 10px; border: 1.3px solid currentColor; border-radius: 2px;
+  background: linear-gradient(137deg, transparent 52%, currentColor 53%, currentColor 61%, transparent 62%);
+}
+.theme-studio .te-field-row__icon--link::after { content: '↗'; font-size: 14px; }
+.theme-studio .te-block-row__copy small { display: none; }
+.theme-studio .te-tree-actions { position: relative; flex: 0 0 auto; }
+.theme-studio .te-tree-actions > summary {
+  display: grid; place-items: center;
+  width: 28px; height: 28px;
+  list-style: none;
+  color: #6e7080;
+  font-size: 13px;
+  letter-spacing: -.14em;
+  padding-right: 3px;
+  cursor: pointer;
+  border-radius: 5px;
+  opacity: 0;
+}
+.theme-studio .te-tree-actions > summary::-webkit-details-marker { display: none; }
+.theme-studio .te-tree-row:hover .te-tree-actions > summary,
+.theme-studio .te-block-row:hover .te-tree-actions > summary,
+.theme-studio .te-tree-row.is-active .te-tree-actions > summary,
+.theme-studio .te-tree-actions[open] > summary,
+.theme-studio .te-tree-actions > summary:focus-visible { opacity: 1; }
+.theme-studio .te-tree-actions > summary:hover { background: #e9e6f7; color: #47359e; }
+.theme-studio .te-tree-actions__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 90;
+  display: grid;
+  gap: 2px;
+  min-width: 156px;
+  padding: 5px;
+  border-radius: 9px;
+  border: 1px solid #dedee5;
+  box-shadow: 0 12px 30px #17172a24;
+  background: #fff;
+  color: #282831;
+}
+.theme-studio .te-tree-actions__menu button {
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 5px;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  font: 500 12px/1.3 system-ui, sans-serif;
+  cursor: pointer;
+}
+.theme-studio .te-tree-actions__menu button:hover,
+.theme-studio .te-tree-actions__menu button:focus-visible { background: #f0ecff; outline-color: #6f44d8; }
+.theme-studio .te-menu-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  min-height: 31px;
+  padding: 3px 8px 3px 4px;
+  border: 0;
+  border-radius: 6px;
+  color: #33343e;
+  background: transparent;
+  text-align: left;
+  font: 500 12px/1.35 system-ui, sans-serif;
+  cursor: pointer;
+}
+.theme-studio .te-menu-row:hover { background: #f4f4f6; }
+.theme-studio .te-menu-row .te-menu-chevron { margin-left: auto; font-size: 14px; color: #777985; }
+.theme-studio .te-menu-row[aria-expanded="false"] .te-menu-chevron { transform: rotate(-90deg); }
+.theme-studio .te-menu-children { margin: 0 0 3px 12px; padding-left: 7px; border-left: 1px solid #ececf0; }
+.theme-studio .te-menu-children.is-collapsed { display: none; }
+.theme-studio .te-add-block,
+.theme-studio .te-add-section {
+  border: 0;
+  min-height: 33px;
+  height: auto;
+  background: transparent;
+  color: #1755d6;
+  font: 550 12px/1.4 system-ui, sans-serif;
+  text-align: left;
+  padding: 6px 7px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.theme-studio .te-add-section { display: block; margin: 5px 0 0 25px; width: calc(100% - 25px); }
+.theme-studio .te-add-block { width: 100%; }
+.theme-studio .te-add-block > span,
+.theme-studio .te-add-section > span { font-size: 16px; margin-right: 3px; vertical-align: -1px; }
+.theme-studio .te-add-block:hover,
+.theme-studio .te-add-section:hover { background: #edf2ff; }
+.theme-studio .te-insert-line { height: 6px; margin: 0 7px; }
+.theme-studio .te-tree-actions button:focus-visible,
+.theme-studio .te-field-row__main:focus-visible,
+.theme-studio .te-block-row__main:focus-visible,
+.theme-studio .te-menu-row:focus-visible { outline: 2px solid #2761df; outline-offset: 1px; }
+@media(max-width:900px) {
+  .theme-studio .theme-studio-tree { width: 100%; padding: 12px 16px 22px; }
+  .theme-studio .te-tree-actions > summary { opacity: 1; width: 36px; height: 36px; }
+  .theme-studio .te-field-row__main,
+  .theme-studio .te-block-row__main,
+  .theme-studio .te-menu-row { min-height: 42px; }
+  .theme-studio .te-tree-row { min-height: 44px; }
+  .theme-studio .te-add-section,
+  .theme-studio .te-add-block { min-height: 44px; }
+}
