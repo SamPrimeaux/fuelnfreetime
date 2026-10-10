@@ -55,9 +55,9 @@ const probe = "<script>setTimeout(function(){" +
  "inspectorScrollable:getComputedStyle(document.querySelector('.te-inspector-body')).overflowY==='auto'};" +
  "before.mediaControls={sort:!!document.getElementById('te-media-sort'),drop:!!document.getElementById('te-media-dropzone'),upload:!!document.getElementById('te-media-upload'),feedback:!!document.getElementById('te-media-alert')};" +
  "if(window.innerWidth>900){" +
- "var inspectorToggle=document.getElementById('te-inspector-toggle');var inspectorPanel=document.querySelector('.theme-editor-panel');" +
- "inspectorToggle.click();before.panelClosed=getComputedStyle(inspectorPanel).display==='none';" +
- "inspectorToggle.click();before.panelRestored=getComputedStyle(inspectorPanel).display!=='none';" +
+ "var inspectorClose=document.getElementById('te-inspector-close');var inspectorReopen=document.getElementById('te-inspect-mode');var inspectorPanel=document.querySelector('.theme-editor-panel');" +
+ "inspectorClose.click();before.panelClosed=getComputedStyle(inspectorPanel).display==='none';" +
+ "inspectorReopen.click();before.panelRestored=getComputedStyle(inspectorPanel).display!=='none';" +
  "}" +
  "settingsButton?.click();" +
  "before.toolbar.settingsOpened=!document.querySelector('[data-drawer-panel=\\\"theme-settings\\\"]').hidden;" +
@@ -180,8 +180,8 @@ assert.equal(result.before.toolbar.options,3);
 assert.equal(result.before.toolbar.noOverflow,true);
 assert.deepEqual(result.before.mediaControls,{sort:true,drop:true,upload:true,feedback:true},
   "Media dialog must expose real sort, drop/upload, and local status");
-assert.equal(result.before.panelClosed,true,"Inspector toggle must reclaim canvas width");
-assert.equal(result.before.panelRestored,true,"Inspector toggle must restore settings without dropping selection");
+assert.equal(result.before.panelClosed,true,"Inspector close X must reclaim canvas width");
+assert.equal(result.before.panelRestored,true,"Canvas inspect button must restore settings without dropping selection");
 assert.equal(result.before.toolbar.saveInTop,true,"Save draft must be in the top toolbar");
 assert.equal(result.before.toolbar.inspectorScrollable,true,"Inspector must scroll without obstructing media");
 assert.equal(result.before.catalog.compact,true,"Add Section picker must be contextual and compact");
@@ -222,7 +222,7 @@ assert.deepEqual({ eyebrow:productGrid?.eyebrow,title:productGrid?.title },
 assert.ok(!("products" in productGrid), "Products must stay bound to the commerce API, not copied into CMS configuration");
 assert.equal(result.linked,true);
 assert.ok(result.saved.some(s=>s.content.headline==="Private autosave browser proof"),"Editing a native field should automatically persist a private draft");
-assert.equal(result.saveState,"Saved privately","Autosave should report completion without publishing");
+assert.equal(result.saveState,"Saved","Autosave must confirm draft persistence without publishing");
 console.log("PASS: real Shop content enters the CMS editor, then autosaves a private field edit");
 const automaticallyOpened = results.get("auto");
 assert.equal(automaticallyOpened.before.autoDraft,true,"A page with no existing draft should initialize its private revision automatically");
