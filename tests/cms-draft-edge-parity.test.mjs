@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {loadEdgeHydrationContext, applyCmsSlotValue} from "../apps/ecommerce-cms-agentsam/backend/cms/edge-hydrate.js";
+import {loadEdgeHydrationContext, applyCmsSlotValue, CmsSectionScopeHandler, CmsSlotHandler} from "../apps/ecommerce-cms-agentsam/backend/cms/edge-hydrate.js";
+import {transformStorefrontHtml} from "../apps/ecommerce-cms-agentsam/backend/cms/html-rewriter.js";
+import {canReadCmsDraft} from "../apps/ecommerce-cms-agentsam/backend/cms/api.js";
 
 const published={
  site:{slug:"site",sections:[{key:"header",content:{background:"#fdfdfd",brand:"Published logo",nav:{link:"/shop"}}}]},
@@ -38,4 +40,54 @@ test("old annotated HTML keeps attributes, classes, styles and media while slots
  assert.match(attrs.get("style"),/padding: 12px/);
  assert.match(attrs.get("style"),/draft-hero.webp/);
  assert.doesNotMatch(attrs.get("style"),/original.jpg/);
+});
+
+test("legacy section-relative HTML slots resolve without replacing its classes or layout",()=>{
+ const scope={stack:[]},section=new CmsSectionScopeHandler(scope);
+ const slots=new CmsSlotHandler({header:{title:"Ready to ride"},hero:{title:"Original editorial scene"}},scope);
+ const captured=[];
+ const element=(attrs)=>({
+  getAttribute(k){return attrs[k]??null;},
+  setInnerContent(value){captured.push(value);},
+  onEndTag(fn){this.end=fn;},
+  end(){},
+ });
+ const header=element({"data-cms-section":"header",class:"old-header old-glass"});
+ const hero=element({"data-cms-section":"hero",class:"original-shape"});
+ section.element(header);
+ slots.element(element({"data-cms":"title","data-cms-attr":"textContent"}));
+ section.element(hero);
+ slots.element(element({"data-cms":"title","data-cms-attr":"textContent"}));
+ hero.end();
+ slots.element(element({"data-cms":"title","data-cms-attr":"textContent"}));
+ header.end();
+ assert.deepEqual(captured,["Ready to ride","Original editorial scene","Ready to ride"]);
+ assert.deepEqual(scope.stack,[]);
+ assert.equal(header.getAttribute("class"),"old-header old-glass");
+ assert.equal(hero.getAttribute("class"),"original-shape");
+});
+
+test("preview HTML rejects unauthenticated requests without hydration or shared caching",async()=>{
+ const response=new Response("<!doctype html><h1>Public scene</h1>",{headers:{"content-type":"text/html"}});
+ const preview=await transformStorefrontHtml(response,{}, "shop",new Request("https://test.invalid/shop?preview=1"));
+ assert.equal(preview.status,401);
+ assert.match(preview.headers.get("cache-control"),/no-store/);
+ assert.doesNotMatch(await preview.text(),/Public scene/);
+});
+
+test("preview requires canonical site and page ownership in the same account",async()=>{
+ const visited=[];
+ const env={DB:{prepare(sql){
+   return {bind(...args){
+     visited.push(args);
+     return {first:async()=>args[1]==="site"?{id:"owned-site"}:null};
+   }};
+ }}};
+ assert.equal(await canReadCmsDraft(env,"shop","acct_demo"),false);
+ assert.deepEqual(visited,[["acct_demo","site"],["acct_demo","shop"]]);
+ assert.equal(await canReadCmsDraft(env,"shop",null),false);
+ const second={DB:{prepare(){
+  return {bind(){return {first:async()=>({id:"owned"})}}};
+ }}};
+ assert.equal(await canReadCmsDraft(second,"shop","acct_demo"),true);
 });
