@@ -368,6 +368,22 @@ export async function getPublishedPage(env, slug) {
   return null;
 }
 
+/** Account gate for private storefront draft HTML AND draft JSON endpoints.
+ * The legacy page row is not an authorization authority; canonical cms_pages
+ * is. Global site settings must belong to the same account as the page.
+ */
+export async function canReadCmsDraft(env, slug, accountId) {
+  if (typeof accountId !== "string" || !accountId.trim() || !/^[a-z0-9-]+$/.test(slug)) return false;
+  const slugs = slug === "site" ? ["site"] : ["site", slug];
+  for (const scopedSlug of slugs) {
+    const page = await env.DB.prepare(
+      "SELECT id FROM cms_pages WHERE account_id = ? AND slug = ? LIMIT 1"
+    ).bind(accountId, scopedSlug).first();
+    if (!page) return false;
+  }
+  return true;
+}
+
 export async function getPreviewPage(env, slug) {
   const page = await loadPageRow(env, slug);
   if (!page) {
@@ -1363,6 +1379,9 @@ export async function handlePublicCmsApi(request, env, url) {
     const { getSessionUser } = await import("../lib/auth.js");
     const user = await getSessionUser(request, env);
     if (!user) return json({ error: "Unauthorized" }, { status: 401 });
+    if (!(await canReadCmsDraft(env, slug, user.account_id))) {
+      return json({ error: "CMS draft not available for this account" }, { status: 403 });
+    }
 
     const page = await getPreviewPage(env, slug);
     if (!page) return json({ error: "Page not found" }, { status: 404 });
