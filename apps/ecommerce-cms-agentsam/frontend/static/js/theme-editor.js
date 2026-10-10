@@ -211,7 +211,7 @@
             '<div class="te-preview-status"><span class="te-preview-mode">Local draft preview</span><span class="te-selected-path" id="te-selected-path">Select a section in the preview or tree</span></div>',
           '</main>',
           '<aside class="theme-editor-panel">',
-            '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><div class="te-inspector-tools"><button type="button" id="te-agent-open" class="te-agent-open" aria-label="Ask miniAgentSam about the selected section" title="Ask miniAgentSam about this section"><img src="/admin/brand/agentsam-mark.svg" width="16" height="12" alt="" aria-hidden="true"> Ask AgentSam</button><span class="te-badge" id="te-section-status">draft</span><button type="button" class="te-icon-btn te-inspector-close" id="te-inspector-close" aria-label="Close settings panel" title="Close settings panel">×</button></div></div>',
+            '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><div class="te-inspector-tools"><button type="button" id="te-agent-open" class="te-agent-open" aria-label="Open miniAgentSam beside the selected element" title="Ask miniAgentSam about this selection"><img src="/admin/brand/agentsam-sidekick-symbol.svg" width="20" height="20" alt="" aria-hidden="true"></button><span class="te-badge" id="te-section-status">draft</span><button type="button" class="te-icon-btn te-inspector-close" id="te-inspector-close" aria-label="Close settings panel" title="Close settings panel">×</button></div></div>',
             '<div class="te-inspector-body" id="te-inspector-body"></div><div data-composer-slot="editor"></div>',
             '<div class="te-inspector-save"><p class="te-note" id="te-note" role="status" aria-live="polite"></p></div>',
           '</aside>',
@@ -2925,7 +2925,9 @@
   });
   function toggleMiniAgentSam(anchor) {
     if (miniAgentSamVisible) { closeMiniAgentSam(); return; }
-    setMiniAnchor(anchor);
+    // A click in the inspector is not a new canvas selection: retain the
+    // genuine selected-element coordinates captured from the preview iframe.
+    if (!miniAnchor?.element?.isConnected) setMiniAnchor(anchor);
     void openMiniAgentSam();
   }
   byId('te-mini-agent-toggle')?.addEventListener('click', function(event) {
