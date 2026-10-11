@@ -42,6 +42,9 @@ const probe=`<script>(async function(){
   const preview=document.getElementById('theme-preview');
   const heading=await until(()=>preview.contentDocument?.querySelector('[data-cms="headline"]'));
   heading.click();
+  const editSheetMode=innerWidth<=900 ? document.querySelector('.theme-studio')?.dataset.mobilePane : null;
+  const previewVisibleDuringEdit=innerWidth<=900 ? getComputedStyle(document.querySelector('.theme-studio-canvas')).display!=='none' : true;
+  if(innerWidth<=900)document.querySelector('[data-mobile-pane="preview"]').click();
   const portal=await until(()=>{const p=document.querySelector('[data-mini-agentsam]');return p&&!p.shadowRoot.querySelector('.composer').hidden?p:null});
   const mini=portal.shadowRoot;
   const initialVisible=!mini.querySelector('.composer').hidden;
@@ -70,7 +73,7 @@ const probe=`<script>(async function(){
   document.getElementById('te-save').click();
   await until(()=>window.__writes.length===1);
   const miniRect=mini.querySelector('.composer').getBoundingClientRect();
-  const result={initialValue,initialVisible,beforeChatCount,caption,composerVisible:true,localReviewExists,sideAssistantOpen,focusedGroups,sourceRect:{left:sourceRect.left,right:sourceRect.right,top:sourceRect.top,bottom:sourceRect.bottom},initialComposerRect:{left:initialComposerRect.left,right:initialComposerRect.right,top:initialComposerRect.top,bottom:initialComposerRect.bottom},arrow,proposed,canApply,beforeField,beforeWrites,fieldAfter,dirty,afterApplyWrites,savedWrites:window.__writes.length,saved:window.__writes[0],chatCount:window.__chatCount,viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,composerRect:{left:miniRect.left,right:miniRect.right,top:miniRect.top,bottom:miniRect.bottom},errors:window.__agentErrors};
+  const result={initialValue,initialVisible,beforeChatCount,editSheetMode,previewVisibleDuringEdit,caption,composerVisible:true,localReviewExists,sideAssistantOpen,focusedGroups,sourceRect:{left:sourceRect.left,right:sourceRect.right,top:sourceRect.top,bottom:sourceRect.bottom},initialComposerRect:{left:initialComposerRect.left,right:initialComposerRect.right,top:initialComposerRect.top,bottom:initialComposerRect.bottom},arrow,proposed,canApply,beforeField,beforeWrites,fieldAfter,dirty,afterApplyWrites,savedWrites:window.__writes.length,saved:window.__writes[0],chatCount:window.__chatCount,viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,composerRect:{left:miniRect.left,right:miniRect.right,top:miniRect.top,bottom:miniRect.bottom},errors:window.__agentErrors};
   const pre=document.createElement('pre');pre.id='mini-result';pre.textContent=JSON.stringify(result);document.body.append(pre);
  }catch(error){const pre=document.createElement('pre');pre.id='mini-result';pre.textContent=JSON.stringify({fatal:String(error),note:document.getElementById('te-note')?.textContent,errors:window.__agentErrors,html:document.getElementById('te-inspector-body')?.innerText?.slice(0,150)});document.body.append(pre);}
 })()</script>`;
@@ -117,6 +120,10 @@ try{
  const result=JSON.parse(match[1].replaceAll('&quot;','"').replaceAll('&amp;','&').replaceAll('&lt;','<').replaceAll('&gt;','>'));
  console.log(JSON.stringify(result,null,2));
  assert.equal(result.fatal,undefined);
+ if(width<=900){
+   assert.equal(result.editSheetMode,'settings','Selecting a heading opens mobile live editing controls');
+   assert.equal(result.previewVisibleDuringEdit,true,'The storefront remains visible behind the mobile editor');
+ }
  assert.equal(result.composerVisible,true);
  assert.equal(result.initialVisible,true,'Selecting a CMS section must reveal contextual miniAgentSam beside the selected canvas element');
  assert.equal(result.beforeChatCount,0,'Selection must never send an AI request');
