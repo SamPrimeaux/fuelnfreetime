@@ -3050,3 +3050,10 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
 @media(prefers-reduced-motion:reduce) {
   .theme-studio .te-mobile-selection-bar {transition:none;}
 }
+
+/* Mobile polish: one heading row, and more of the selected storefront in view. */
+@media (max-width:900px) {
+  .theme-studio .te-inspector-head { display:none!important; }
+  .theme-studio .theme-studio-tree,
+  .theme-studio .theme-editor-panel { height:min(50%,475px)!important; }
+}
