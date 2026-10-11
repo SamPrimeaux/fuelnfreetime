@@ -103,10 +103,12 @@ const probe = "<script>setTimeout(function(){" +
  "modes[0].click();var treeVisible=getComputedStyle(tree).display!=='none';" +
  "var heroRow=document.querySelector('[data-select-section=hero]');if(heroRow)heroRow.click();" +
  "var selectedPreviewVisible=getComputedStyle(preview).display!=='none';" +
+ "var sheetMode=document.querySelector('.theme-studio')?.dataset.mobilePane;" +
+ "var editSheetVisible=getComputedStyle(inspector).display!=='none';" +
  "modes[2].click();var settingsVisible=getComputedStyle(inspector).display!=='none';" +
  "modes[1].click();var backToPreview=getComputedStyle(preview).display!=='none';" +
  "before.mobile={viewport:window.innerWidth,navVisible:getComputedStyle(nav).display!=='none'," +
- "initialPreview,treeVisible,selectedPreviewVisible,settingsVisible,backToPreview," +
+ "initialPreview,treeVisible,selectedPreviewVisible,sheetMode,editSheetVisible,settingsVisible,backToPreview," +
  "treeHasAdd:!!document.getElementById('te-add-section')," +
  "noOverflow:document.documentElement.scrollWidth<=window.innerWidth+1};" +
  "}" +
@@ -139,6 +141,7 @@ const probe = "<script>setTimeout(function(){" +
 const visualHook = "<script>if(new URLSearchParams(location.search).get('visualRail')==='1')setTimeout(function(){" +
  "if(innerWidth<=900)document.querySelector('[data-mobile-pane=sections]')?.click();" +
  "else document.querySelector('[data-select-field=headline][data-field-section=hero]')?.click();" +
+ "if(new URLSearchParams(location.search).get('visualEdit')==='1')document.querySelector('[data-select-field=headline][data-field-section=hero]')?.click();" +
  "},1100);</script>";
 const template = file("apps/ecommerce-cms-agentsam/frontend/static/theme-editor.html")
  .replace('<script src="/admin/js/shell.js"></script>',shim).replace("</body>",visualHook+probe+"</body>");
@@ -195,13 +198,13 @@ try{
  if (process.env.THEME_STUDIO_VISUALS === '1') {
    const output = path.join(root, 'artifacts/theme-studio');
    mkdirSync(output, { recursive: true });
-   for (const [width,name] of [[1440,'about-desktop-rail'],[390,'about-mobile-sections']]) {
+   for (const [width,name] of [[1440,'about-desktop-rail'],[390,'about-mobile-sections'],[390,'about-mobile-live-edit']]) {
      const image = path.join(output, name + '.png');
      await exec(chrome,[
        '--headless=new','--disable-gpu','--disable-dev-shm-usage','--no-sandbox',
        '--hide-scrollbars','--force-device-scale-factor=1',
        '--virtual-time-budget=2300','--window-size='+width+',950',
-       '--screenshot='+image,url.replace('?slug=shop','?slug=about')+'&visualRail=1',
+       '--screenshot='+image,url.replace('?slug=shop','?slug=about')+'&visualRail=1' + (name==='about-mobile-live-edit'?'&visualEdit=1':''),
      ],{timeout:60000,encoding:'utf8',maxBuffer:1<<20});
      assert.ok(existsSync(image) && statSync(image).size>12000,'Real '+width+'px browser screenshot missing');
      console.log('VISUAL: '+image);
@@ -291,6 +294,8 @@ for(const width of [744,390]){
  assert.equal(mobile.initialPreview,true);
  assert.equal(mobile.treeVisible,true, "The section tree must be accessible on tablets and phones");
  assert.equal(mobile.selectedPreviewVisible,true, "Selecting a section must keep the mobile storefront visible");
+ assert.equal(mobile.sheetMode,'settings', "Selection must open the live-editing sheet, not switch to a full-screen inspector");
+ assert.equal(mobile.editSheetVisible,true,"The selected editor controls must appear with the storefront still visible");
  assert.equal(mobile.settingsVisible,true, "The explicit Settings pane must expose editable controls");
  assert.equal(mobile.backToPreview,true);
  assert.equal(mobile.treeHasAdd,true);
