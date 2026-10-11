@@ -197,12 +197,13 @@
           '</div>',
         '</header>',
         '<div class="theme-studio-workspace">',
-          '<nav class="te-mobile-pane-switch" id="te-mobile-pane-switch" aria-label="Editor workspace view">',
+          '<nav class="te-mobile-pane-switch" id="te-mobile-pane-switch" aria-label="Mobile editor navigation">',
             '<button type="button" data-mobile-pane="sections">Sections</button>',
             '<button type="button" data-mobile-pane="preview" aria-current="true">Preview</button>',
-            '<button type="button" data-mobile-pane="settings">Settings</button>',
+            '<button type="button" data-mobile-pane="settings">Edit</button>',
           '</nav>',
           '<aside class="theme-studio-tree" id="te-editor-drawer">' +
+            '<div class="te-mobile-sheet-head"><button type="button" class="te-mobile-sheet-grip" data-sheet-grip="sections" aria-label="Resize sections" title="Drag or press arrows to resize"><span></span></button><div class="te-mobile-sheet-head__row"><strong id="te-mobile-sections-title">Sections</strong><div><button type="button" data-sheet-expand="sections" aria-label="Expand sections sheet">⤢</button><button type="button" data-sheet-close="sections" aria-label="Close sections">×</button></div></div></div>' +
             '<section class="te-drawer-panel" data-drawer-panel="sections"><div class="te-panel-title te-panel-title--compact"><h2 id="te-tree-title">Page</h2></div><div id="te-tree"></div><section id="te-block-panel" data-surface="left" hidden></section></section>' +
             '<section class="te-drawer-panel" data-drawer-panel="theme-settings" hidden></section>' +
             '<section class="te-drawer-panel" data-drawer-panel="app-embeds" hidden><div class="te-panel-title"><span class="te-panel-kicker">Storefront</span><h2>App embeds</h2><p>Extensions that run on the storefront, not admin apps.</p></div><input class="te-page-search" id="te-embed-search" placeholder="Search app embeds" aria-label="Search app embeds"><div class="te-empty" id="te-embed-empty">No storefront embeds are installed for this theme.</div></section>' +
@@ -212,7 +213,9 @@
             '<div class="te-preview-stage"><div class="te-preview-device" id="te-preview-device" data-device="desktop"><iframe id="theme-preview" title="Storefront preview" class="theme-editor-preview"></iframe></div></div>',
             '<div class="te-preview-status"><span class="te-preview-mode">Local draft preview</span><span class="te-selected-path" id="te-selected-path">Select a section in the preview or tree</span></div>',
           '</main>',
+          '<div class="te-mobile-selection-bar"><button type="button" id="te-mobile-edit-selection"><span id="te-mobile-selection-label">Select an element</span><span>Edit <span aria-hidden="true">⌃</span></span></button></div>',
           '<aside class="theme-editor-panel">',
+            '<div class="te-mobile-sheet-head"><button type="button" class="te-mobile-sheet-grip" data-sheet-grip="settings" aria-label="Resize inspector" title="Drag or press arrows to resize"><span></span></button><div class="te-mobile-sheet-head__row"><strong id="te-mobile-edit-title">Edit selection</strong><div><button type="button" data-sheet-expand="settings" aria-label="Expand editor">⤢</button><button type="button" data-sheet-close="settings" aria-label="Close editor">×</button></div></div></div>',
             '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><div class="te-inspector-tools"><button type="button" id="te-agent-open" class="te-agent-open" aria-label="Open miniAgentSam beside the selected element" title="Ask miniAgentSam about this selection"><img src="/admin/brand/mini-agentsam-trigger.svg" width="20" height="20" alt="" aria-hidden="true"></button><span class="te-badge" id="te-section-status">draft</span><button type="button" class="te-icon-btn te-inspector-close" id="te-inspector-close" aria-label="Close settings panel" title="Close settings panel">×</button></div></div>',
             '<div class="te-inspector-body" id="te-inspector-body"></div><div data-composer-slot="editor" hidden aria-hidden="true"></div>',
             '<div class="te-inspector-save"><p class="te-note" id="te-note" role="status" aria-live="polite"></p></div>',
@@ -296,14 +299,25 @@
     if (switcher) switcher.hidden = true;
   }
 
+  let mobileSheetSize = 'half';
+  function isPhoneEditor() { return window.matchMedia('(max-width: 900px)').matches; }
+  function setMobileSheetSize(size) {
+    if (!['half','expanded'].includes(size)) return;
+    mobileSheetSize = size;
+    const studio = document.querySelector('.theme-studio');
+    if (studio) studio.dataset.mobileSheet = size;
+    if (isPhoneEditor() && studio?.dataset.mobilePane === 'settings') window.requestAnimationFrame?.(revealSelectedMobile);
+    document.querySelectorAll('[data-sheet-expand]').forEach(function(button) {
+      button.setAttribute('aria-label', size === 'expanded' ? 'Reduce sheet to half height' : 'Expand sheet');
+      button.setAttribute('aria-pressed', String(size === 'expanded'));
+    });
+  }
   function setMobilePane(pane) {
     if (!['sections', 'preview', 'settings'].includes(pane)) return;
     const studio = document.querySelector('.theme-studio');
     if (!studio) return;
     studio.dataset.mobilePane = pane;
-    // Contextual AI is anchored to the selected *canvas* element. Never let
-    // its floating capsule obscure mobile Sections or Settings navigation.
-    if (window.matchMedia('(max-width: 900px)').matches) {
+    if (isPhoneEditor()) {
       if (pane !== 'preview') closeMiniAgentSam();
       else if (inspectionEnabled && activeSectionKey) void openMiniAgentSam();
     }
@@ -314,6 +328,42 @@
       if (selected) button.setAttribute('aria-current', 'true');
       else button.removeAttribute('aria-current');
     });
+  }
+  function wireMobileSheets() {
+    document.querySelectorAll('[data-sheet-close]').forEach(function(button) {
+      button.addEventListener('click', function() { setMobilePane('preview'); });
+    });
+    document.querySelectorAll('[data-sheet-expand]').forEach(function(button) {
+      button.addEventListener('click', function() { setMobileSheetSize(mobileSheetSize === 'expanded' ? 'half' : 'expanded'); });
+    });
+    document.querySelectorAll('[data-sheet-grip]').forEach(function(grip) {
+      let start = null;
+      grip.tabIndex = 0;
+      grip.addEventListener('pointerdown', function(event) {
+        if (!isPhoneEditor()) return;
+        start = { y: event.clientY, id: event.pointerId };
+        grip.setPointerCapture?.(event.pointerId);
+      });
+      grip.addEventListener('pointerup', function(event) {
+        if (!start || start.id !== event.pointerId) return;
+        const difference = event.clientY - start.y;
+        start = null;
+        if (difference > 65) setMobilePane('preview');
+        else if (difference < -55) setMobileSheetSize('expanded');
+        else if (difference > 25) setMobileSheetSize('half');
+      });
+      grip.addEventListener('pointercancel', function() { start = null; });
+      grip.addEventListener('keydown', function(event) {
+        if (event.key === 'ArrowUp') { event.preventDefault(); setMobileSheetSize('expanded'); }
+        if (event.key === 'ArrowDown') { event.preventDefault(); if (mobileSheetSize === 'expanded') setMobileSheetSize('half'); else setMobilePane('preview'); }
+        if (event.key === 'Escape') { event.preventDefault(); setMobilePane('preview'); }
+      });
+    });
+    byId('te-mobile-edit-selection')?.addEventListener('click', function() {
+      if (activeSectionKey) { setMobileSheetSize('half'); setMobilePane('settings'); }
+      else setMobilePane('sections');
+    });
+    setMobileSheetSize('half');
   }
 
   function humanize(value) {
@@ -1232,6 +1282,8 @@
     const focusedSchema = activeFieldKey && !blockMeta ? currentSchema().find(function(field) { return field.key === activeFieldKey; }) : null;
     const focusedTitle = focusedSchema && (/heading|headline|title/i.test(focusedSchema.key) && !/subheadline|subtitle|subheading/i.test(focusedSchema.key)
       ? 'Heading' : /meta[0-9]+|subheadline|subtitle/i.test(focusedSchema.key) ? 'Text' : focusedSchema.label);
+    byId('te-mobile-edit-title').textContent = focusedTitle || (blockMeta ? 'Edit block' : sectionLabel);
+    byId('te-mobile-selection-label').textContent = focusedTitle || (blockMeta ? 'Block' : sectionLabel);
     byId('te-inspector-title').textContent = blockMeta
       ? ((blockSchema && blockSchema.label) || humanize(blockMeta.templateKey || blockMeta.id))
       : (focusedTitle || sectionLabel);
@@ -2009,7 +2061,7 @@
     renderInspector();
     // Keep the selected storefront element visible on mobile. The merchant
     // enters editing controls via the dedicated Settings pane.
-    if (window.matchMedia('(max-width: 900px)').matches) setMobilePane('preview');
+    if (isPhoneEditor()) { setMobileSheetSize('half'); setMobilePane('settings'); }
     const prefix = activeSectionOwner === 'site' ? 'Global' : slug;
     byId('te-selected-path').textContent = fieldKey ? prefix + ' / ' + sectionKey + ' / ' + fieldKey : prefix + ' / ' + sectionKey;
 
@@ -2027,7 +2079,7 @@
     publishGenerationSelection();
     // The inspector chooses the target. The mini composer appears at that
     // selection without another trigger or any automatic model request.
-    if (inspectionEnabled) void openMiniAgentSam();
+    if (inspectionEnabled && (!isPhoneEditor() || document.querySelector('.theme-studio')?.dataset.mobilePane === 'preview')) void openMiniAgentSam();
     else closeMiniAgentSam();
   }
 
@@ -2052,7 +2104,7 @@
     renderInspector();
     // Keep the selected storefront element visible on mobile. The merchant
     // enters editing controls via the dedicated Settings pane.
-    if (window.matchMedia('(max-width: 900px)').matches) setMobilePane('preview');
+    if (isPhoneEditor()) { setMobileSheetSize('half'); setMobilePane('settings'); }
     const prefix = activeSectionOwner === 'site' ? 'Global' : slug;
     byId('te-selected-path').textContent = activeFieldKey
       ? prefix + ' / ' + sectionKey + ' / ' + blockId + ' / ' + activeFieldKey.replace(blockId + '.', '')
@@ -2071,7 +2123,7 @@
     publishGenerationSelection();
     // The inspector chooses the target. The mini composer appears at that
     // selection without another trigger or any automatic model request.
-    if (inspectionEnabled) void openMiniAgentSam();
+    if (inspectionEnabled && (!isPhoneEditor() || document.querySelector('.theme-studio')?.dataset.mobilePane === 'preview')) void openMiniAgentSam();
     else closeMiniAgentSam();
   }
 
@@ -2159,6 +2211,27 @@
     highlightPreviewSelection();
   }
 
+  function revealSelectedMobile() {
+    if (!isPhoneEditor() || document.querySelector('.theme-studio')?.dataset.mobilePane !== 'settings' || !activeFieldKey) return;
+    const frame = byId('theme-preview');
+    const sheet = document.querySelector('.theme-editor-panel');
+    try {
+      const selected = frame?.contentDocument?.querySelector('[data-theme-editor-selected="true"]');
+      if (!selected || !sheet || !frame?.contentWindow) return;
+      const rect = selected.getBoundingClientRect();
+      const outer = frame.getBoundingClientRect();
+      const sheetTop = sheet.getBoundingClientRect().top;
+      const scale = outer.width / Math.max(1, frame.contentWindow.innerWidth || outer.width);
+      const top = outer.top + rect.top * scale;
+      const bottom = outer.top + rect.bottom * scale;
+      const overflow = bottom - sheetTop + 18;
+      if (overflow > 0 && top > outer.top + 15 && typeof frame.contentWindow.scrollBy === 'function') {
+        const delta = Math.min(overflow, top - outer.top - 15);
+        frame.contentWindow.scrollBy({ top: delta / scale, behavior: 'smooth' });
+      }
+    } catch { /* Unavailable iframe metrics must never block the inspector. */ }
+  }
+
   function highlightPreviewSelection() {
     if (!inspectionEnabled) return;
     let doc;
@@ -2194,7 +2267,7 @@
     } else if (miniAnchor?.frame) {
       setMiniAnchor(null);
     }
-
+    if (selected && isPhoneEditor()) window.requestAnimationFrame?.(revealSelectedMobile);
   }
 
   function setDevice(next) {
@@ -2790,7 +2863,7 @@
     }
   }
 
-  function setEditorDrawer(next) {
+  function setEditorDrawer(next, showMobileSheet = true) {
     const aside = byId('te-editor-drawer');
     if (aside && editorDrawer) drawerScroll[editorDrawer] = aside.scrollTop;
     editorDrawer = editorDrawer === next ? null : next;
@@ -2806,6 +2879,13 @@
       panel.hidden = panel.dataset.drawerPanel !== editorDrawer;
     });
     if (aside && editorDrawer) aside.scrollTop = drawerScroll[editorDrawer] || 0;
+    const mobileHeading = byId('te-mobile-sections-title');
+    if (mobileHeading) mobileHeading.textContent = editorDrawer === 'theme-settings' ? 'Theme settings'
+      : editorDrawer === 'app-embeds' ? 'App embeds' : 'Sections';
+    if (isPhoneEditor() && showMobileSheet) {
+      if (editorDrawer) { setMobileSheetSize('half'); setMobilePane('sections'); }
+      else setMobilePane('preview');
+    }
   }
 
   let editorLeaving = false;
@@ -3038,8 +3118,12 @@
   });
 
   byId('te-page-search').addEventListener('input', function(event) { renderPageOptions(event.target.value); });
+  wireMobileSheets();
   byId('te-mobile-pane-switch').querySelectorAll('[data-mobile-pane]').forEach(function(button) {
-    button.addEventListener('click', function() { setMobilePane(button.dataset.mobilePane); });
+    button.addEventListener('click', function() {
+      if (button.dataset.mobilePane === 'sections' && editorDrawer !== 'sections') setEditorDrawer('sections');
+      setMobilePane(button.dataset.mobilePane);
+    });
   });
   setMobilePane('preview');
   byId('te-refresh').addEventListener('click', refreshPreview);
@@ -3386,7 +3470,7 @@
     },
   };
   setDevice(device);
-  setEditorDrawer('sections');
+  setEditorDrawer('sections', false);
   loadThemeIdentity();
   loadPage();
 })();

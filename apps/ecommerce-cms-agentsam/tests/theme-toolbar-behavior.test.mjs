@@ -234,7 +234,7 @@ test("old Shop Hero selection exposes editable original text styling and Reset w
 });
 
 
-test("mobile selection stays on preview and Settings is a dedicated opt-in pane", async () => {
+test("mobile selection opens a half-height editor while leaving the preview mounted", async () => {
   const {dom,doc}=await editorFixture({mobile:true});
   try {
     const studio=doc.querySelector('.theme-studio');
@@ -242,11 +242,27 @@ test("mobile selection stays on preview and Settings is a dedicated opt-in pane"
     const hero=doc.querySelector('[data-select-section="hero"]');
     assert.ok(hero);
     hero.click();
-    assert.equal(studio.dataset.mobilePane,'preview','selecting should not cover the canvas with an inspector');
-    doc.querySelector('#te-mobile-pane-switch [data-mobile-pane="settings"]').click();
-    assert.equal(studio.dataset.mobilePane,'settings','settings are available by explicit mobile navigation');
+    assert.equal(studio.dataset.mobilePane,'settings','selection must open the live-editing bottom sheet');
+    assert.equal(studio.dataset.mobileSheet,'half','default editing view keeps substantial preview area');
+    assert.equal(doc.querySelector('.theme-studio-canvas').isConnected,true,'storefront remains mounted behind the sheet');
+    const grip=doc.querySelector('[data-sheet-grip="settings"]');
+    grip.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'ArrowUp',bubbles:true}));
+    assert.equal(studio.dataset.mobileSheet,'expanded','accessible keyboard drag handle can expand the sheet');
+    grip.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}));
+    assert.equal(studio.dataset.mobileSheet,'half','sheet can return to half height');
+    doc.querySelector('[data-sheet-close="settings"]').click();
+    assert.equal(studio.dataset.mobilePane,'preview','closing restores full preview and compact edit handle');
+    doc.querySelector('#te-mobile-edit-selection').click();
+    assert.equal(studio.dataset.mobilePane,'settings','compact edit handle reopens selected element');
     doc.querySelector('#te-mobile-pane-switch [data-mobile-pane="sections"]').click();
-    assert.equal(studio.dataset.mobilePane,'sections','page hierarchy is a full independent mobile pane');
+    assert.equal(studio.dataset.mobilePane,'sections','page hierarchy is an overlay sheet, not a separate page');
+    doc.querySelector('[data-sheet-close="sections"]').click();
+    assert.equal(studio.dataset.mobilePane,'preview');
+    doc.querySelector('[data-drawer-mode="theme-settings"]').click();
+    assert.equal(studio.dataset.mobilePane,'sections','global Theme Settings must remain reachable in the mobile sheet');
+    assert.equal(doc.querySelector('[data-drawer-panel="theme-settings"]').hidden,false,'original Theme Settings panel is preserved');
+    doc.querySelector('#te-mobile-pane-switch [data-mobile-pane="sections"]').click();
+    assert.equal(doc.querySelector('[data-drawer-panel="sections"]').hidden,false,'Sections tab returns to the real page hierarchy');
   } finally {
     dom.window.close();
   }
@@ -312,4 +328,17 @@ test("left rail visual density and touch controls are release requirements", () 
   assert.match(css,/\.te-tree-actions__menu/);
   assert.match(css,/\.te-inline-text-toolbar/);
   assert.match(css,/@media\(max-width:900px\)[\s\S]*\.te-field-row__main/);
+});
+
+
+test("mobile sheet CSS preserves live canvas and does not touch the separate admin dock", () => {
+  const css=readFileSync(new URL('../frontend/static/css/theme-editor.css',import.meta.url),'utf8');
+  assert.match(css,/Mobile live editor — screenshot-approved preview with draggable inspector/);
+  assert.match(css,/data-mobile-pane="sections"\] \.theme-studio-canvas/);
+  assert.match(css,/data-mobile-pane="settings"\] \.theme-studio-canvas/);
+  assert.match(css,/height:min\(54%,510px\)/);
+  assert.match(css,/data-mobile-sheet="expanded"/);
+  assert.match(css,/\.te-mobile-sheet-grip/);
+  assert.match(css,/\.te-mobile-selection-bar/);
+  assert.doesNotMatch(css,/\.admin-mobile-dock/);
 });
