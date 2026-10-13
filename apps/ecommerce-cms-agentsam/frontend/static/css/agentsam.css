@@ -397,9 +397,7 @@ body.agentsam-overlay-mode.agentsam-open {
   width: 23px;
   height: 23px;
   display: block;
-  background-color: currentColor;
-  -webkit-mask: url("/admin/brand/agentsam-mark.svg") center / contain no-repeat;
-  mask: url("/admin/brand/agentsam-mark.svg") center / contain no-repeat;
+  background: url("/admin/brand/agentsam-gorilla-tiny.svg") center / contain no-repeat;
 }
 .agentsam-head { flex-wrap: wrap; gap: 8px; }
 .agentsam-head [data-assistant-actions] { display: flex; gap: 4px; margin-left: auto; }

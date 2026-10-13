@@ -5,6 +5,7 @@ export function createThemeEditorMiniAgentSam({ onProposal, onClose }) {
   const conversations = new Map();
   const mini = createMiniAgentSam({
     preferAbove: true,
+    iconUrl: '/admin/brand/agentsam-gorilla-tiny.svg',
     resultStatus: 'AgentSam request sent',
     capabilities: { list: () => [] },
     async send({ prompt, resource, signal }) {
