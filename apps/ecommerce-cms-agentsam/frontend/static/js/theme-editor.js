@@ -1140,7 +1140,9 @@
         '</div><div class="te-media-actions"><button type="button" class="te-media-button" data-pick-media="' + cmsEscapeAttr(field.key) + '">Choose</button>' +
         '<label class="te-media-button" style="display:inline-flex;align-items:center">Upload<input type="file" hidden data-upload-media="' + cmsEscapeAttr(field.key) + '" accept="' + (field.type === 'video' ? 'video/*' : field.type === 'model3d' ? 'model/*,.glb,.gltf,.usdz' : 'image/*,video/*,.glb,.gltf,.usdz') + '"></label>' +
         (mediaUndo.has(mediaUndoKey(field.key)) ? '<button type="button" class="te-media-button" data-undo-media="' + cmsEscapeAttr(field.key) + '" title="Undo the previous media change">Undo media</button>' : '') +
-        (viewableMediaHref(value) ? '<a class="te-media-view-original" data-view-original="' + cmsEscapeAttr(field.key) + '" href="' + cmsEscapeAttr(viewableMediaHref(value)) + '" target="_blank" rel="noopener noreferrer" aria-label="View original media in a new tab">View original ↗</a>' : '') +
+        '<a class="te-media-view-original" data-view-original="' + cmsEscapeAttr(field.key) + '"' +
+        (viewableMediaHref(value) ? ' href="' + cmsEscapeAttr(viewableMediaHref(value)) + '"' : ' hidden') +
+        ' target="_blank" rel="noopener noreferrer" aria-label="View original media in a new tab">View original ↗</a>' +
         '</div><div class="te-media-feedback" data-media-feedback role="status" aria-live="polite"></div></div>' +
         '<details class="te-media-advanced"><summary>Source details</summary><label for="' + id + '">Media source URL</label>' +
         '<input class="te-media-url" id="' + id + '" data-field-input="' + cmsEscapeAttr(field.key) + '" value="' + safeValue + '" placeholder="Enter a media URL or path"></details>' + help + '</div>';
