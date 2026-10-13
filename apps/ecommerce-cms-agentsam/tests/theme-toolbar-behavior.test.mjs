@@ -472,3 +472,18 @@ test("mobile sheet CSS preserves live canvas and does not touch the separate adm
   assert.match(css,/\.te-inspector-head \{ display:none!important/);
   assert.doesNotMatch(css,/\.admin-mobile-dock/);
 });
+
+test("mobile scroll handoff remains browser-first and miniAgentSam honors canvas bounds", () => {
+  const css=readFileSync(new URL("../frontend/static/css/theme-editor.css",import.meta.url),"utf8");
+  const workbench=readFileSync(new URL("../packages/agentsam-workbench/src/mini-agentsam.js",import.meta.url),"utf8");
+  const adapter=readFileSync(new URL("../frontend/static/js/theme-editor-mini-agentsam.mjs",import.meta.url),"utf8");
+  const editor=readFileSync(new URL("../frontend/static/js/theme-editor.js",import.meta.url),"utf8");
+  assert.match(css,/Mobile Safari scroll handoff/);
+  assert.match(css,/overscroll-behavior-y: auto/);
+  assert.match(workbench,/host\.positionBounds/,"Shared composer supports optional, nonbreaking positioning region");
+  assert.match(adapter,/positionBounds,/,"Theme Studio uses the same shared miniAgentSam with canvas bounds");
+  assert.match(editor,/positionBounds: function\(\)/);
+  assert.match(editor,/querySelector\('\.theme-studio \.te-preview-stage'\)/);
+  assert.match(css,/grid-template-rows: minmax\(0, 1fr\) var\(--te-mobile-tabs-height\)/,
+    "Three-tab mobile navigation is retained");
+});

@@ -102,16 +102,26 @@ export function createMiniAgentSam(host) {
     const width = composer.offsetWidth;
     const height = composer.offsetHeight;
     const gap = 12;
-    const clamp = (value, max) => Math.max(gap, Math.min(Math.max(gap, max - gap), value));
+    // An editor can reserve its toolbar, sheet, and bottom navigation. When
+    // absent, preserve the normal full-viewport placement for every other
+    // miniAgentSam consumer (Product Studio included).
+    const region = typeof host.positionBounds === 'function' ? host.positionBounds() : null;
+    const valid = region && [region.left, region.top, region.right, region.bottom].every(Number.isFinite);
+    const leftEdge = valid ? Math.max(gap, region.left + gap) : gap;
+    const topEdge = valid ? Math.max(gap, region.top + gap) : gap;
+    const rightEdge = valid ? Math.min(innerWidth - gap, region.right - gap) : innerWidth - gap;
+    const bottomEdge = valid ? Math.min(innerHeight - gap, region.bottom - gap) : innerHeight - gap;
+    const boundX = (x) => Math.max(leftEdge, Math.min(Math.max(leftEdge, rightEdge - width), x));
+    const boundY = (y) => Math.max(topEdge, Math.min(Math.max(topEdge, bottomEdge - height), y));
     const centerX = r.left + r.width / 2;
     const centerY = r.top + r.height / 2;
-    const xCenter = clamp(centerX - width / 2, innerWidth - width);
-    const yCenter = clamp(centerY - height / 2, innerHeight - height);
+    const xCenter = boundX(centerX - width / 2);
+    const yCenter = boundY(centerY - height / 2);
     const candidates = [
-      { left: xCenter, top: clamp(r.top - height - gap, innerHeight - height) },
-      { left: xCenter, top: clamp(r.top + r.height + gap, innerHeight - height) },
-      { left: clamp(r.left + r.width + gap, innerWidth - width), top: yCenter },
-      { left: clamp(r.left - width - gap, innerWidth - width), top: yCenter },
+      { left: xCenter, top: boundY(r.top - height - gap) },
+      { left: xCenter, top: boundY(r.top + r.height + gap) },
+      { left: boundX(r.left + r.width + gap), top: yCenter },
+      { left: boundX(r.left - width - gap), top: yCenter },
     ];
     if (host.preferAbove !== true) [candidates[0], candidates[1]] = [candidates[1], candidates[0]];
     // Favor positions outside the selected element; when the selection fills

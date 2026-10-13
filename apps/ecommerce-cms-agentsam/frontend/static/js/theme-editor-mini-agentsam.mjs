@@ -1,10 +1,11 @@
 import { createMiniAgentSam } from '/admin/workbench/mini-agentsam.js';
 
 /** The existing CMS owns page/field state; this adapter owns no page persistence. */
-export function createThemeEditorMiniAgentSam({ onProposal, onClose }) {
+export function createThemeEditorMiniAgentSam({ onProposal, onClose, positionBounds }) {
   const conversations = new Map();
   const mini = createMiniAgentSam({
     preferAbove: true,
+    positionBounds,
     iconUrl: '/admin/brand/agentsam-gorilla-tiny.svg',
     resultStatus: 'AgentSam request sent',
     capabilities: { list: () => [] },

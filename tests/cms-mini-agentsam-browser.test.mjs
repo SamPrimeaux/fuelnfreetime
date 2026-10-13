@@ -60,6 +60,8 @@ const probe=`<script>(async function(){
   const caption=document.getElementById('te-selected-path').textContent;
   const sourceRect=mini.querySelector('.outline').getBoundingClientRect();
   const initialComposerRect=mini.querySelector('.composer').getBoundingClientRect();
+  const toolbarBottom=document.querySelector('.theme-studio-toolbar').getBoundingClientRect().bottom;
+  const previewBounds=document.querySelector('.te-preview-stage').getBoundingClientRect();
   const arrow=mini.querySelector('.send').textContent.trim();
   mini.querySelector('textarea').value='Rewrite the selected headline to sound more compelling.';
   mini.querySelector('.send').click();
@@ -81,7 +83,7 @@ const probe=`<script>(async function(){
   document.getElementById('te-save').click();
   stage='draft save';await until(()=>window.__writes.length===1);
   const miniRect=mini.querySelector('.composer').getBoundingClientRect();
-  const result={initialValue,initialVisible,beforeChatCount,editSheetMode,previewVisibleDuringEdit,caption,composerVisible:true,localReviewExists,sideAssistantOpen,focusedGroups,sourceRect:{left:sourceRect.left,right:sourceRect.right,top:sourceRect.top,bottom:sourceRect.bottom},initialComposerRect:{left:initialComposerRect.left,right:initialComposerRect.right,top:initialComposerRect.top,bottom:initialComposerRect.bottom},arrow,proposed,canApply,beforeField,beforeWrites,fieldAfter,dirty,afterApplyWrites,savedWrites:window.__writes.length,saved:window.__writes[0],chatCount:window.__chatCount,viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,composerRect:{left:miniRect.left,right:miniRect.right,top:miniRect.top,bottom:miniRect.bottom},errors:window.__agentErrors};
+  const result={initialValue,initialVisible,beforeChatCount,editSheetMode,previewVisibleDuringEdit,caption,composerVisible:true,localReviewExists,sideAssistantOpen,focusedGroups,sourceRect:{left:sourceRect.left,right:sourceRect.right,top:sourceRect.top,bottom:sourceRect.bottom},initialComposerRect:{left:initialComposerRect.left,right:initialComposerRect.right,top:initialComposerRect.top,bottom:initialComposerRect.bottom},toolbarBottom,previewBounds:{top:previewBounds.top,bottom:previewBounds.bottom},arrow,proposed,canApply,beforeField,beforeWrites,fieldAfter,dirty,afterApplyWrites,savedWrites:window.__writes.length,saved:window.__writes[0],chatCount:window.__chatCount,viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,composerRect:{left:miniRect.left,right:miniRect.right,top:miniRect.top,bottom:miniRect.bottom},errors:window.__agentErrors};
   const pre=document.createElement('pre');pre.id='mini-result';pre.textContent=JSON.stringify(result);document.body.append(pre);
  }catch(error){const pre=document.createElement('pre');pre.id='mini-result';const portal=document.querySelector('[data-mini-agentsam]');pre.textContent=JSON.stringify({fatal:String(error),stage,viewport:innerWidth,visualHeight:window.visualViewport?.height,mobilePane:document.querySelector('.theme-studio')?.dataset.mobilePane,inspection:document.getElementById('te-inspect-mode')?.getAttribute('aria-pressed'),portalMounted:!!portal,composerHidden:portal?.shadowRoot?.querySelector('.composer')?.hidden,selectedPath:document.getElementById('te-selected-path')?.textContent,note:document.getElementById('te-note')?.textContent,errors:window.__agentErrors,html:document.getElementById('te-inspector-body')?.innerText?.slice(0,150)});document.body.append(pre);}
 })()</script>`;
@@ -131,6 +133,10 @@ try{
  if(width<=900){
    assert.equal(result.editSheetMode,'settings','Selecting a heading opens mobile live editing controls');
    assert.equal(result.previewVisibleDuringEdit,true,'The storefront remains visible behind the mobile editor');
+   assert.ok(result.initialComposerRect.top >= result.toolbarBottom-2,
+     'miniAgentSam must not cover the mobile Theme Studio toolbar');
+   assert.ok(result.initialComposerRect.bottom <= result.previewBounds.bottom+2,
+     'miniAgentSam must fit above the mobile navigation, within preview space');
  }
  assert.equal(result.composerVisible,true);
  assert.equal(result.initialVisible,true,'Selecting a CMS section must reveal contextual miniAgentSam beside the selected canvas element');
