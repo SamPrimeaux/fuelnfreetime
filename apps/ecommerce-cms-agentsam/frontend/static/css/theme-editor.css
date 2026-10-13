@@ -935,7 +935,7 @@
   min-height: 0;
   padding: 16px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(142px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(164px, 1fr));
   align-content: start;
   gap: 12px;
 }
@@ -962,6 +962,9 @@
 .te-media-dialog__footer button:disabled { opacity: .4; cursor: not-allowed; }
 
 .te-media-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   padding: 0;
   border: 1px solid var(--te-border);
   border-radius: 9px;
@@ -980,14 +983,20 @@
 }
 
 .te-media-card__thumb {
-  aspect-ratio: 1 / 1;
-  background: #f5f5f3;
+  position: relative;
   display: grid;
   place-items: center;
+  width: 100%;
+  flex: none;
+  aspect-ratio: 4 / 3;
+  background: #f5f5f3;
   overflow: hidden;
 }
 
 .te-media-card__thumb img {
+  position: absolute;
+  inset: 0;
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -2208,9 +2217,8 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
 .te-media-alert[hidden] { display: none; }
 .te-media-alert[data-state="error"] { color: var(--te-danger); background: #fff1ed; }
 .te-media-alert[data-state="success"] { color: var(--te-success); background: #e9f8ed; }
-.te-media-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); padding: 12px 18px; gap: 10px; }
+.te-media-grid { grid-template-columns: repeat(auto-fill, minmax(164px, 1fr)); padding: 12px 18px; gap: 12px; }
 .te-media-card__copy { min-height: 40px; }
-.te-media-card__thumb { aspect-ratio: 4 / 3; }
 @media(max-width:640px) {
   .te-media-dialog { height: calc(100dvh - 20px); }
   .te-media-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -2256,7 +2264,7 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
   height: 33px;
   flex: 0 0 33px;
 }
-.te-agentsam-mark img { display: block; width: 20px; height: 16px; object-fit: contain; }
+.te-agentsam-mark img { display: block; width: 20px; height: 20px; object-fit: contain; }
 .te-agentsam-mark[aria-expanded="true"] { background: #eeeaff; border-color: #b4b0ed; }
 .theme-studio-toolbar .te-icon-btn:disabled { opacity: .34; cursor: not-allowed; }
 .theme-studio-toolbar .te-icon-btn:disabled:hover { background: #fff; border-color: var(--te-border); }
