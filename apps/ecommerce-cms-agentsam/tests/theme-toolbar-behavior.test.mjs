@@ -61,7 +61,7 @@ test("real editor mounts compact toolbar, one drawer and installed page tree", a
     assert.equal(doc.querySelectorAll("#te-save").length, 1);
     assert.equal(doc.querySelector("#te-save").textContent, "Save");
     assert.equal(doc.querySelector("#te-publish").textContent, "Publish live…");
-    assert.equal(doc.querySelector(".te-agentsam-mark img")?.getAttribute("src"), "/admin/brand/agentsam-sidekick-symbol.svg");
+    assert.equal(doc.querySelector(".te-agentsam-mark img")?.getAttribute("src"), "/admin/brand/agentsam-gorilla-tiny.svg");
     assert.ok(doc.getElementById("agentsam-drawer"));
     doc.getElementById("agentsam-toggle").click();
     assert.equal(doc.body.classList.contains("agentsam-open"), true);
