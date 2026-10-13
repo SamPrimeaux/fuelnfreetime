@@ -191,7 +191,16 @@
             '<button type="button" class="te-icon-btn" id="te-redo" aria-label="Redo" title="Redo (⌘⇧Z)" disabled>', icon.redo, '</button>',
             '<div class="te-toolbar-more">',
               '<button type="button" class="te-icon-btn" id="te-more" aria-label="More editor actions" aria-haspopup="true" aria-expanded="false" title="More actions">', icon.more, '</button>',
-              '<div class="te-toolbar-dropdown" id="te-more-menu" hidden><button type="button" id="te-view-draft">View draft in new tab</button><button type="button" id="te-shortcuts">Keyboard shortcuts</button><div id="te-shortcuts-help" class="te-shortcuts-help" hidden>⌘S · Save<br>⌘Z · Undo<br>⌘⇧Z · Redo<br>⌘⌃1 · Sections<br>⌘⌃2 · Theme settings<br>⌘⌃3 · App embeds</div></div>',
+              '<div class="te-toolbar-dropdown" id="te-more-menu" hidden>' +
+                '<button type="button" class="te-mobile-more-entry" id="te-more-settings">Theme settings</button>' +
+                '<button type="button" class="te-mobile-more-entry" id="te-more-inspect" aria-pressed="true">Canvas inspection</button>' +
+                '<button type="button" class="te-mobile-more-entry" id="te-more-embeds">App embeds</button>' +
+                '<div class="te-mobile-more-group" role="group" aria-label="Theme previews"><span>Theme previews</span>' +
+                  ((window.ThemeStudioPreview && window.ThemeStudioPreview.themes) || []).map(function(theme) {
+                    return '<button type="button" class="te-mobile-more-entry" data-theme-preview="' + cmsEscapeAttr(theme.id) + '" aria-pressed="' + String(theme.id === selectedTheme) + '">' + cmsEscapeHtml(theme.name) + '</button>';
+                  }).join('') + '</div>' +
+                '<button type="button" class="te-mobile-more-entry" id="te-more-publish">Publish live…</button>' +
+                '<button type="button" id="te-view-draft">View draft in new tab</button><button type="button" id="te-shortcuts">Keyboard shortcuts</button><div id="te-shortcuts-help" class="te-shortcuts-help" hidden>⌘S · Save<br>⌘Z · Undo<br>⌘⇧Z · Redo<br>⌘⌃1 · Sections<br>⌘⌃2 · Theme settings<br>⌘⌃3 · App embeds</div></div>',
             '</div>',
             '<div class="te-save-actions"><button type="button" class="te-toolbar-btn is-primary" id="te-save" title="Save private draft (⌘S)">Save</button><button type="button" class="te-save-caret" id="te-save-options" aria-label="Additional save options" title="Additional save options" aria-haspopup="true" aria-expanded="false">⌄</button>',
               '<div class="te-toolbar-dropdown te-save-menu" id="te-save-menu" hidden><button type="button" id="te-publish" title="Publish reviewed revision">Publish live…</button></div>',
@@ -3219,6 +3228,32 @@
     }
   }
   byId('te-more').addEventListener('click', function() { toggleToolbarMenu('te-more','te-more-menu'); });
+  // Mobile keeps the actual editing controls; secondary actions live behind More.
+  function closeToolbarMore() {
+    const menu = byId('te-more-menu');
+    if (menu) menu.hidden = true;
+    byId('te-more')?.setAttribute('aria-expanded', 'false');
+  }
+  byId('te-more-settings').addEventListener('click', function() {
+    closeToolbarMore();
+    setEditorDrawer('theme-settings');
+  });
+  byId('te-more-embeds').addEventListener('click', function() {
+    closeToolbarMore();
+    setEditorDrawer('app-embeds');
+  });
+  byId('te-more-inspect').addEventListener('click', function() {
+    closeToolbarMore();
+    byId('te-inspect-mode').click();
+    this.setAttribute('aria-pressed', byId('te-inspect-mode').getAttribute('aria-pressed'));
+  });
+  byId('te-more-publish').addEventListener('click', function() {
+    closeToolbarMore();
+    byId('te-publish').click(); // preserve the existing publish preflight and approval gate
+  });
+  document.querySelectorAll('#te-more-menu [data-theme-preview]').forEach(function(button) {
+    button.addEventListener('click', closeToolbarMore);
+  });
   byId('te-save-options').addEventListener('click', function() { toggleToolbarMenu('te-save-options','te-save-menu'); });
   byId('te-shortcuts').addEventListener('click', function() {
     const help = byId('te-shortcuts-help');

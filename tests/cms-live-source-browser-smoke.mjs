@@ -67,7 +67,8 @@ const probe = "<script>setTimeout(function(){" +
  "}" +
  "settingsButton?.click();" +
  "before.toolbar.settingsOpened=!document.querySelector('[data-drawer-panel=\\\"theme-settings\\\"]').hidden;" +
- "before.toolbar.options=document.querySelectorAll('[data-theme-preview]').length;" +
+ "before.toolbar.options=document.querySelectorAll('#te-theme-menu [data-theme-preview]').length;" +
+ "before.toolbar.mobileOptions=document.querySelectorAll('#te-more-menu [data-theme-preview]').length;" +
  "document.querySelector('[data-drawer-mode=\\\"sections\\\"]')?.click();" +
  "document.getElementById('te-add-section')?.click();" +
  "var catalog=document.getElementById('te-section-menu');" +
@@ -226,6 +227,7 @@ assert.equal(result.before.toolbar.themeSettings,true);
 assert.equal(result.before.toolbar.pageVisible,true);
 assert.equal(result.before.toolbar.settingsOpened,true);
 assert.equal(result.before.toolbar.options,3);
+ assert.equal(result.before.toolbar.mobileOptions,3,"Mobile More must expose the same registered theme previews");
 assert.equal(result.before.toolbar.noOverflow,true);
 assert.deepEqual(result.before.mediaControls,{sort:true,drop:true,upload:true,feedback:true},
   "Media dialog must expose real sort, drop/upload, and local status");
@@ -305,7 +307,7 @@ for(const width of [744,390]){
  assert.equal(results.get(width).before.toolbar.legacyTabs,0);
  assert.equal(results.get(width).before.toolbar.pageVisible,true);
  assert.equal(results.get(width).before.toolbar.settingsOpened,true);
- assert.equal(results.get(width).linked,true);
+ assert.equal(results.get(width).linked,true,"Mobile draft import did not complete: "+JSON.stringify({width,reviewOpened:results.get(width).before.reviewOpened,reviewProtected:results.get(width).before.reviewProtected,importMode:results.get(width).imported?.mode,saveState:results.get(width).saveState,selectedSheet:results.get(width).before.mobile?.sheetMode,viewport:results.get(width).before.mobile?.viewport}));
  assert.ok(results.get(width).saved.some(s=>s.content.headline==="Private autosave browser proof"),"Mobile edits must autosave too");
  console.log("PASS: "+width+"px mobile CMS Sections / Preview / Settings editor");
 }
