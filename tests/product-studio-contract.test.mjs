@@ -200,9 +200,41 @@ test("artwork preparation is opt-in and preserves the original asset", async () 
   assert.match(workspace, /Remove connected flat background/);
   assert.match(workspace, /checked=\{removeFlatBackground\}/);
   assert.match(workspace, /Trim transparent edges/);
-  assert.match(workspace, /Original artwork is unchanged/);
+  assert.match(workspace, /derivativeRole: "original\/master", transformPolicy: "preserve"/);
+  assert.match(workspace, /derivativeRole: "manufacturing", transformPolicy: "preserve", sourceAsset: asset/);
   assert.match(workspace, /Original and prepared artwork comparison/);
   assert.match(workspace, /studio\/prepared/);
   assert.match(workspace, /removeConnectedFlatBackground/);
   assert.match(workspace, /alphaBounds/);
+});
+
+test("back print location never falls through to a front-only catalog photograph", async () => {
+  const { selectStudioSideImage } = await import(
+    "../apps/ecommerce-cms-agentsam/frontend/src/pages/products/studio-side-image.ts"
+  );
+  const front = "https://example.test/front.jpg";
+  const back = "https://example.test/back-blue.jpg";
+  const mockups = [
+    { active: 1, print_location_id: "front", preview_url: front },
+    { active: 1, print_location_id: "back", preview_url: "https://example.test/back-red.jpg", variant_scope_json: '["red"]' },
+    { active: 1, print_location_id: "back", preview_url: back, variant_scope_json: '["blue"]' },
+  ];
+  assert.equal(selectStudioSideImage(mockups, "back", "blue", null, front, false), back);
+  assert.equal(selectStudioSideImage(mockups, "back", "green", null, front, false), null);
+  assert.equal(selectStudioSideImage(mockups, "back", "green", "https://example.test/back-artboard.png", front, false),
+    "https://example.test/back-artboard.png");
+  assert.equal(selectStudioSideImage(mockups, "front", "green", null, front, true), front);
+});
+
+test("Product Studio canvas and Options share print-area selection without standing references UI", async () => {
+  const workspace = await readFile(
+    new URL("../apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(workspace, /role="group" aria-label="Print location"/);
+  assert.match(workspace, /choosePrintLocation\(candidate\.print_location_id\)/);
+  assert.match(workspace, /style=\{\{ \.\.\.placementFrameStyle, aspectRatio: ratio \}\}/);
+  assert.match(workspace, /miniAgentSamTokens\.icon/);
+  assert.doesNotMatch(workspace, /Provider references \(/);
+  assert.doesNotMatch(workspace, /POSITIONING GUIDE/);
 });
