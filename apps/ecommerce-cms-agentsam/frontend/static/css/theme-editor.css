@@ -3226,3 +3226,18 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
     bottom: calc(var(--te-mobile-tabs-height) + 12px)!important;
   }
 }
+
+/* Mobile Safari scroll handoff — do not trap a gesture at the sheet's edge.
+   This is independent of the 100dvh editor height, which has ONE owner.
+   Safari owns the floating address bar; this doesn't paint behind it. */
+@media (max-width: 900px) {
+  body.shell-mode-theme-editor .console-shell,
+  body.shell-mode-theme-editor .console-main--bleed,
+  .theme-studio .te-preview-stage,
+  .theme-studio .theme-studio-tree,
+  .theme-studio .te-drawer-panel,
+  .theme-studio .te-inspector-body {
+    overscroll-behavior-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
