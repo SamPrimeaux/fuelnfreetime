@@ -1624,6 +1624,7 @@
 .ps-mini-head button { border: 0; background: transparent; text-decoration: underline; font-size: 10px; }
 .ps-mini-image { position: relative; aspect-ratio: 4 / 5; background: #fff; overflow: hidden; }
 .ps-mini-image > img, .ps-mini-image > .ps-image-fallback { width: 100%; height: 100%; object-fit: contain; }
+.ps-mini-silhouette { display: block; width: 100%; height: 100%; object-fit: contain; opacity: .8; }
 .ps-mini-placement { position: absolute; left: 50%; top: 50%; width: 34%; transform: translate(-50%,-50%); aspect-ratio: 1; pointer-events: none; }
 .ps-mini-placement img { position: absolute; max-height: none; object-fit: contain; }
 .ps-mini-map small { display: block; padding: 7px 8px; font-size: 9px; color: var(--ps-muted); line-height: 1.3; }
@@ -1653,15 +1654,15 @@
 }
 
 /* Flat production-coordinate editor. Photo and provider renders stay in the mini preview. */
-.ps-product-design-preview { width: min(100%, 760px); }
-.ps-product-design-image { background: #f4f5ef; border: 1px solid #dbe0d4; min-height: 540px; }
-.ps-design-guide { position: relative; width: 100%; min-height: 540px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 58px 20px 40px; isolation: isolate; }
+.ps-product-design-preview { width: min(100%, 590px); max-width: 100%; }
+.ps-product-design-image { background: transparent; border: 0; box-shadow: none; min-height: 0; overflow: visible; }
+.ps-design-guide { position: relative; width: 100%; min-height: 0; padding: 0; display: block; isolation: isolate; overflow: hidden; border-radius: 10px; }
 .ps-design-guide__identity { position: absolute; top: 17px; left: 18px; z-index: 2; display: grid; gap: 3px; }
 .ps-design-guide__identity span { color: #6d7865; font-size: 9px; font-weight: 750; letter-spacing: .11em; text-transform: uppercase; }
 .ps-design-guide__identity strong { font-size: 13px; color: #2c3728; }
 .ps-design-guide__identity small { font-size: 10px; color: #687664; }
-.ps-design-garment-guide { position: absolute; width: min(100%, 560px); height: 95%; max-height: 540px; left: 50%; top: 51%; transform: translate(-50%, -50%); pointer-events: none; opacity: .65; }
-.ps-design-print-area { position: relative; width: min(68%, 345px); max-height: 395px; min-height: 150px; overflow: hidden; border: 2px solid #758e65; background: #ffffffcf; box-shadow: 0 3px 25px #26352918; isolation: isolate; }
+.ps-design-garment-guide { position: absolute; width: 100%; height: 100%; max-height: none; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none; opacity: .65; }
+.ps-design-print-area { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: min(44%, 290px); min-height: 0; max-height: none; overflow: hidden; border: 1px dashed #758e65; background: #ffffff0a; box-shadow: none; isolation: isolate; }
 .ps-design-print-area.is-gridded { background-image: linear-gradient(#7c987123 1px,transparent 1px),linear-gradient(90deg,#7c987123 1px,transparent 1px),linear-gradient(#4b714a24 1px,transparent 1px),linear-gradient(90deg,#4b714a24 1px,transparent 1px); background-size: 10% 10%,10% 10%,50% 50%,50% 50%; }
 .ps-design-crosshair-x,.ps-design-crosshair-y { position: absolute; z-index: 1; pointer-events: none; }
 .ps-design-crosshair-x { top: 50%; left: 0; right: 0; border-top: 1px dashed #71956891; }
@@ -1670,12 +1671,15 @@
 .ps-design-print-area .ps-artwork-layer { z-index: 3; }
 .ps-artwork-layer--interactive { cursor: move; outline: none; }
 .ps-artwork-layer--interactive:focus-visible { outline: 2px solid #2e5827; outline-offset: 4px; }
-.ps-design-dimensions { position: absolute; bottom: 16px; font-size: 10px; font-weight: 600; color: #687663; }
+.ps-design-dimensions { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); padding: 3px 6px; white-space: nowrap; font-size: 10px; font-weight: 600; color: #687663; background: #f8f7fae6; border-radius: 4px; }
 .ps-precision-control { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; color: #43553f; }
 .ps-precision-control input { width: 55px; min-height: 32px; border: 1px solid #c9d3c1; border-radius: 6px; background: #fff; padding: 3px 5px; font: inherit; }
 .ps-mini-map { width: clamp(145px, 22%, 210px); }
 .ps-mini-image { aspect-ratio: 4 / 5; }
-@media (max-width: 760px) { .ps-product-design-image,.ps-design-guide { min-height: 390px; } .ps-design-guide { padding: 70px 10px 35px; } .ps-design-print-area { width: min(65%, 250px); } .ps-mini-map { position: relative; width: min(100%, 260px); } .ps-design-guide__identity { left: 12px; top: 12px; } }
+.ps-print-side-toggle { display: flex; align-items: center; justify-content: center; width: fit-content; max-width: 100%; margin: 12px auto 0; padding: 3px; gap: 3px; background: var(--ps-paper); border: 1px solid var(--ps-line); border-radius: 10px; }
+.ps-print-side-toggle button { min-height: 40px; min-width: 76px; border: 0; background: transparent; color: var(--ps-muted); border-radius: 7px; font-size: 12px; font-weight: 650; padding: 7px 14px; cursor: pointer; }
+.ps-print-side-toggle button.is-active { background: var(--ps-accent-soft); color: var(--ps-accent); }
+@media (max-width: 760px) { .ps-product-design-image,.ps-design-guide { min-height: 0; } .ps-mini-map { position: relative; width: min(100%, 210px); margin: 12px auto 0; } .ps-print-side-toggle { flex-wrap: wrap; } }
 
 /* Full-bleed, focused Product Studio: editor owns the canvas, not admin navigation. */
 body.product-studio-focused.console-theme { --c-nav-w: 0px; }
@@ -1694,7 +1698,7 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
 .product-studio-shell .ps-stage { background-image: radial-gradient(#c8c1d3 0.8px, transparent 0.8px); }
 .product-studio-shell .ps-design-guide { background: #f8f7fa; }
 .product-studio-shell .ps-design-product-image {
-  position: absolute; inset: 20px 0 15px; width: 100%; height: calc(100% - 35px);
+  position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: contain; object-position: center; pointer-events: none;
 }
 .product-studio-shell .ps-design-print-area {
@@ -1708,7 +1712,7 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
 }
 .product-studio-shell .ps-design-crosshair-x { border-color: color-mix(in srgb,var(--ps-accent) 30%,transparent); }
 .product-studio-shell .ps-design-crosshair-y { border-color: color-mix(in srgb,var(--ps-accent) 30%,transparent); }
-.product-studio-shell .ps-design-safe-outline { border-color: color-mix(in srgb,var(--ps-accent) 55%,transparent); }
+.product-studio-shell .ps-design-product-image.is-geometry-mapped { object-fit: fill; }
 .product-studio-shell .ps-artwork-layer--interactive:focus-visible { outline-color: var(--ps-accent); }
 .product-studio-shell .ps-canvas-controls input { accent-color: var(--ps-accent); }
 @media (max-width: 760px) {
@@ -1716,8 +1720,8 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
   .product-studio-shell .ps-workspace-body { min-height: 0; }
   .product-studio-shell .ps-stage-column { padding: 0 8px 80px; }
   .product-studio-shell .ps-stage { padding: 12px 6px; }
-  .product-studio-shell .ps-product-design-image, .product-studio-shell .ps-design-guide { min-height: 340px; }
-  .product-studio-shell .ps-design-product-image { inset: 10px 0; height: calc(100% - 20px); }
+  .product-studio-shell .ps-product-design-image, .product-studio-shell .ps-design-guide { min-height: 0; }
+  .product-studio-shell .ps-design-product-image { inset: 0; height: 100%; }
 }
 
 /* Product Studio interactive selection and contextual AgentSam */
@@ -1773,3 +1777,12 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
   .product-studio-shell .ps-studio-context { justify-content: center; }
   .product-studio-shell .ps-selection-handle { width: 16px; height: 16px; }
 }
+
+/* Contextual miniAgentSam identity: icon only; composer remains the editing surface. */
+.product-studio-shell .ps-studio-context .ps-agent-trigger--icon {
+  width: 40px; min-width: 40px; height: 40px; padding: 4px; border-radius: 50%;
+}
+.product-studio-shell .ps-agent-trigger--icon img {
+  display: block; width: 28px; height: 28px; object-fit: cover; border-radius: 50%;
+}
+.product-studio-shell .ps-quality--warning { color: #a65a21; }

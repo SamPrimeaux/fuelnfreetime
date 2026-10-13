@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
-import { createMiniAgentSam } from "../../../../packages/agentsam-workbench/src/mini-agentsam.js";
+import { createMiniAgentSam, miniAgentSamTokens } from "../../../../packages/agentsam-workbench/src/mini-agentsam.js";
+import { selectStudioSideImage } from "./studio-side-image";
 import { adminFetch, adminFormFetch } from "../../lib/api";
 import { evaluateManufacturingCompatibility } from "../../../../packages/agentsam-merch/src/index.js";
 import StudioIcon from "./StudioIcon";
@@ -19,6 +20,18 @@ import {
   type ProductDetail,
 } from "./studio-model";
 
+
+function NeutralGarmentSilhouette({ isFront, mini = false }: { isFront: boolean; mini?: boolean }) {
+  return (
+    <svg className={mini ? "ps-mini-silhouette" : "ps-design-garment-guide"}
+      viewBox="0 0 500 560" role="img" aria-label={isFront ? "Front garment outline" : "Back garment outline"}
+      preserveAspectRatio="xMidYMid meet">
+      <path d="M170 66 L210 45 Q250 92 290 45 L330 66 L451 142 L407 236 L345 203 L345 502 Q250 527 155 502 L155 203 L93 236 L49 142 Z" fill="#d8ddd3" stroke="#aab5a4" strokeWidth="2" />
+      <path d={isFront ? "M210 45 Q250 126 290 45" : "M210 45 Q250 70 290 45"} fill="none" stroke="#aab5a4" strokeWidth="2" />
+      <path d="M155 203 L170 66 M345 203 L330 66" fill="none" stroke="#b7c0b1" strokeWidth="1.4" />
+    </svg>
+  );
+}
 
 function removeConnectedFlatBackground(
   pixels: Uint8ClampedArray,
@@ -170,6 +183,7 @@ export default function StudioWorkspace({
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [locationId, setLocationId] = useState(
+    detail.print_locations.find((l) => l.enabled && /(?:^|[_\s-])front(?:$|[_\s-])/i.test(l.name || l.print_location_id))?.print_location_id ||
     detail.print_locations.find((l) => l.enabled)?.print_location_id || "",
   );
   const initialVariant =
@@ -265,9 +279,23 @@ export default function StudioWorkspace({
     detail.images[0]?.url ||
     detail.mockups.find((mockup) => mockup.active && mockup.preview_url)
       ?.preview_url;
-  // Prefer the chosen variant over an artboard supplied for another color.
-  // This image is a placement approximation, not a production mockup.
-  const designImage = variantImage(variant) || location?.artboard_image_url || baseImage;
+  const enabledLocations = detail.print_locations.filter((candidate) => candidate.enabled);
+  const isFrontLocation = /(?:^|[_\s-])front(?:$|[_\s-])/i.test(location?.name || locationId);
+  const designImage = selectStudioSideImage(
+    detail.mockups, locationId, variantId, location?.artboard_image_url,
+    variantImage(variant) || baseImage, isFrontLocation,
+  );
+  const artboardAspectRatio = location?.artboard_width && location?.artboard_height
+    ? Number(location.artboard_width) / Number(location.artboard_height)
+    : 4 / 5;
+  function choosePrintLocation(nextLocationId: string) {
+    if (nextLocationId === locationId) return;
+    setLocationId(nextLocationId);
+    setPreparedAsset(null);
+    setPreviewAsset(null);
+    setProviderRenderUrl(null);
+    setArtworkSelected(false);
+  }
   const catalogId = catalogProductId(detail.product);
   useEffect(() => {
     const controller = new AbortController();
@@ -343,7 +371,7 @@ export default function StudioWorkspace({
           if (prepared) setPreparedAsset(prepared);
           if (preview) setPreviewAsset(preview);
         }
-        setNotice(`Restored ${saved.state} product draft.`);
+        // Restoring an existing draft is normal; no standing success notice.
       })
       .catch((e) => {
         if (!controller.signal.aborted) setError(e.message);
@@ -760,10 +788,12 @@ export default function StudioWorkspace({
     }
   }
 
-  const quality =
-    dimensions && printPixels
-      ? dimensions.width / ((printPixels.width * scale) / 100)
-      : null;
+  const requiredPrintPixels = printPixels ? {
+    width: Math.ceil((printPixels.width * scale) / 100),
+    height: Math.ceil((printPixels.height * scale) / 100),
+  } : null;
+  const lowResolution = Boolean(dimensions && requiredPrintPixels &&
+    (dimensions.width < requiredPrintPixels.width || dimensions.height < requiredPrintPixels.height));
   const manufacturingPreflight = dimensions && printPixels && asset && location
     ? evaluateManufacturingCompatibility(
         { format: asset.filename?.split(".").pop(), widthPx: dimensions.width,
@@ -909,13 +939,7 @@ export default function StudioWorkspace({
                             ? "is-active"
                             : ""
                         }
-                        onClick={() => {
-                          if (candidate.print_location_id === locationId) return;
-                          setLocationId(candidate.print_location_id);
-                          setPreparedAsset(null); // Production dimensions are print-area specific.
-                          setPreviewAsset(null);
-                          setProviderRenderUrl(null);
-                        }}
+                        onClick={() => choosePrintLocation(candidate.print_location_id)}
                         aria-pressed={
                           locationId === candidate.print_location_id
                         }
@@ -927,19 +951,12 @@ export default function StudioWorkspace({
               </div>
               <div className="ps-paper-note">
                 <StudioIcon name="tools" />
-                <strong>Designed for the details.</strong>
+                <strong>Print dimensions</strong>
                 <p>{printSizeLabel(location)}</p>
-                <small>
-                  {location?.dpi || 300} DPI{" "}
-                  {location?.dpi
-                    ? "provider target"
-                    : "recommended for raster artwork"}
-                  . Keep important elements inside the safe area.
-                </small>
+                <small>{location?.dpi || 300} DPI</small>
               </div>
               <div className="ps-paper-note ps-workflow-note">
-                <strong>Design first. Sell when you're ready.</strong>
-                <p>Finish your artwork here. Continue to Product Details for pricing, description, SEO, collections, and publishing.</p>
+                <strong>Product details</strong>
                 <button type="button" className="ps-button" disabled={Boolean(busy)} onClick={() => void continueToProductDetails()}>
                   Next step · Product details →
                 </button>
@@ -1125,16 +1142,13 @@ export default function StudioWorkspace({
                   placeholder="Placement notes, color direction, changes for the next version…"
                 />
               </label>
-              <p className="ps-panel-intro">
-                Notes belong to this product design. AgentSam annotation is intentionally limited to customer-facing storefront previews, never this admin shell.
-              </p>
               <label className="ps-check">
                 <input
                   type="checkbox"
                   checked={guides}
                   onChange={(e) => setGuides(e.target.checked)}
                 />{" "}
-                Show safe-area guide
+                Show print bounds
               </label>
               <button
                 className="ps-button ps-wide"
@@ -1143,15 +1157,15 @@ export default function StudioWorkspace({
               >
                 {busy === "prepare" ? "Preparing…" : preparedAsset ? "Rebuild production artwork" : "Prepare for print"}
               </button>
-              <div className="ps-paper-note ps-prep-options">
-                <strong>Image editing</strong>
-                <button type="button" className="ps-button ps-wide"
-                  disabled={!asset || !subjectRemovalAvailable || Boolean(busy)}
-                  onClick={() => void removeBackgroundAI()}>
-                  {busy === "remove-background" ? "Removing background…" : subjectRemovalAvailable ? "Remove BG · AI cutout" : "Remove BG · provider unavailable"}
-                </button>
-                <small>Subject segmentation creates a separate transparent asset. It never overwrites your original.</small>
-              </div>
+              {subjectRemovalAvailable && (
+                <div className="ps-prep-options">
+                  <button type="button" className="ps-button ps-wide"
+                    disabled={!asset || Boolean(busy)}
+                    onClick={() => void removeBackgroundAI()}>
+                    {busy === "remove-background" ? "Removing background…" : "Remove background"}
+                  </button>
+                </div>
+              )}
               <div className="ps-paper-note ps-prep-options">
                 <strong>Artwork preparation</strong>
                 <label className="ps-check">
@@ -1170,13 +1184,7 @@ export default function StudioWorkspace({
                   />{" "}
                   Trim transparent edges
                 </label>
-                <small>
-                  Background removal is opt-in and deterministic: it removes only edge-connected pixels close to the sampled border color. Preview before using the derivative.
-                </small>
               </div>
-              <p className="ps-panel-intro">
-                Preparation creates a versioned transparent PNG at the provider print-area dimensions and leaves the original asset untouched.
-              </p>
               {asset && preparedAsset && (
                 <div className="ps-derivative-compare" aria-label="Original and prepared artwork comparison">
                   <figure>
@@ -1204,20 +1212,9 @@ export default function StudioWorkspace({
                 Save product draft
               </button>
               <div className="ps-workflow-note">
-                <p>Completeful fulfillment setup and publishing are managed from Product Details. This design remains an unpublished draft.</p>
                 <button type="button" className="ps-button ps-wide ps-primary" disabled={Boolean(busy)} onClick={() => void continueToProductDetails()}>
                   Next step · Product details →
                 </button>
-              </div>
-              <div className="ps-paper-note">
-                <strong>Draft status</strong>
-                <p>{draft?.state || "Not saved yet"}</p>
-                <small>
-                  {asset ? `Original #${asset.id}` : "No original artwork"}
-                  {preparedAsset ? ` · Prepared #${preparedAsset.id}` : " · Not prepared"}
-                  {previewAsset ? ` · Preview #${previewAsset.id}` : ""}
-                  {draft?.completeful_design_id ? " · Completeful design linked" : ""}
-                </small>
               </div>
             </>
           )}
@@ -1230,11 +1227,13 @@ export default function StudioWorkspace({
                 {location?.name || "Choose a print area"}
               </span>
             </div>
-            <span>{providerRenderUrl ? "Completeful render" : "Placement preview · provider render comes next"}</span>
           </div>
           <div className="ps-studio-context">
-            <button type="button" className="ps-agent-trigger" aria-label={agentVisible ? "Hide miniAgentSam" : "Ask miniAgentSam about this design"} aria-pressed={agentVisible} onClick={openMiniAgentSam}>
-              <StudioIcon name="spark" size={16} /> {agentVisible ? "Hide AgentSam" : "Ask AgentSam"}
+            <button type="button" className="ps-agent-trigger ps-agent-trigger--icon"
+              aria-label={agentVisible ? "Close miniAgentSam" : "Open miniAgentSam"}
+              aria-pressed={agentVisible} title={agentVisible ? "Close miniAgentSam" : "Open miniAgentSam"}
+              onClick={openMiniAgentSam}>
+              <img src={miniAgentSamTokens.icon} alt="" aria-hidden="true" />
             </button>
             <button type="button" onClick={() => setGuides((current) => !current)} aria-pressed={guides}>{guides ? "Hide guides" : "Show guides"}</button>
           </div>
@@ -1256,22 +1255,14 @@ export default function StudioWorkspace({
           <div className="ps-stage" data-agentsam-resource="product-design-stage">
             <div className="ps-product-design-preview" style={{ transform: `scale(${canvasZoom / 100})` }}>
               <div className="ps-product-design-image">
-                <div className="ps-design-guide" aria-label="Neutral positioning guide for the selected print area">
-                  <div className="ps-design-guide__identity">
-                    <span>Design artboard</span>
-                    <strong>{location?.name || "Selected print area"}</strong>
-                    <small>Neutral positioning guide · not a supplier proof</small>
-                  </div>
+                <div className="ps-design-guide" style={{ aspectRatio: artboardAspectRatio }}
+                  aria-label={`${location?.name || "Selected"} garment design view`}>
                   {designImage ? (
-                    <img className="ps-design-product-image" src={designImage} alt="Selected product preview; artwork placement is approximate" />
+                    <img className={"ps-design-product-image" + (hasProviderPlacementFrame ? " is-geometry-mapped" : "")} src={designImage} alt={`${location?.name || "Selected"} garment view`} />
                   ) : /shirt|tee|hoodie|sweatshirt|tank|jersey/i.test(detail.product.name) && (
-                    <svg className="ps-design-garment-guide" viewBox="0 0 500 560" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
-                      <path d="M170 66 L210 45 Q250 92 290 45 L330 66 L451 142 L407 236 L345 203 L345 502 Q250 527 155 502 L155 203 L93 236 L49 142 Z" fill="#d8ddd3" stroke="#aab5a4" strokeWidth="2"/>
-                      <path d="M210 45 Q250 126 290 45" fill="none" stroke="#aab5a4" strokeWidth="2"/>
-                      <path d="M155 203 L170 66 M345 203 L330 66" fill="none" stroke="#b7c0b1" strokeWidth="1.4"/>
-                    </svg>
+                    <NeutralGarmentSilhouette isFront={isFrontLocation} />
                   )}
-                  <div className={"ps-design-print-area" + (guides ? " is-gridded" : "")} style={{ aspectRatio: ratio }}
+                  <div className={"ps-design-print-area" + (guides ? " is-gridded" : "")} style={{ ...placementFrameStyle, aspectRatio: ratio }}
                     onPointerDown={(event) => {
                       const target = event.target as HTMLElement;
                       if (target.closest(".ps-selection-handle")) startDrag(event, "resize");
@@ -1285,7 +1276,6 @@ export default function StudioWorkspace({
                     {guides && <>
                       <span className="ps-design-crosshair-x" aria-hidden="true" />
                       <span className="ps-design-crosshair-y" aria-hidden="true" />
-                      <span className="ps-design-safe-outline" aria-hidden="true" />
                     </>}
                     {asset && showArtwork ? (
                       <img
@@ -1331,7 +1321,6 @@ export default function StudioWorkspace({
                   </div>
                   <span className="ps-design-dimensions">{printSizeLabel(location)} · {printPixels ? `${printPixels.width} × ${printPixels.height} px` : "Provider dimensions unavailable"}</span>
                 </div>
-                <span className="ps-preview-badge">POSITIONING GUIDE</span>
               </div>
               <div className="ps-product-design-caption">
                 <strong>{variant?.variant_title || variant?.name || detail.product.name}</strong>
@@ -1350,61 +1339,47 @@ export default function StudioWorkspace({
               {miniMapOpen && (
                 <>
                   <div className="ps-mini-image" aria-label="Live placement approximation for the selected variant">
-                    <ProductImage key={variantId} sources={providerRenderUrl ? [providerRenderUrl] : [designImage, baseImage]} alt={`Selected garment variant: ${variant?.variant_title || variant?.name || detail.product.name}`} />
+                    {providerRenderUrl || designImage
+                      ? <ProductImage key={`${variantId}:${locationId}`} sources={[providerRenderUrl || designImage || undefined]} alt={`${location?.name || "Selected"} garment variant: ${variant?.variant_title || variant?.name || detail.product.name}`} />
+                      : /shirt|tee|hoodie|sweatshirt|tank|jersey/i.test(detail.product.name)
+                        ? <NeutralGarmentSilhouette isFront={isFrontLocation} mini />
+                        : <ProductImage sources={[]} alt="No verified view available for this print location" />}
                     {!providerRenderUrl && asset && showArtwork && (
                       <div className="ps-mini-placement" style={placementFrameStyle}>
                         <img src={asset.url} alt="" style={{ width: `${scale}%`, left: `${x}%`, top: `${y}%`, transform: `translate(-50%, -50%) rotate(${rotation}deg)` }} />
                       </div>
                     )}
                   </div>
-                  <small>{providerRenderUrl ? "Completeful render" : "Placement approximation"} · {variant?.variant_title || variant?.name || "Selected color"}</small>
+                  <small>{providerRenderUrl ? "Completeful render" : designImage ? location?.name || "Selected view" : `${location?.name || "Selected"} outline guide`} · {variant?.variant_title || variant?.name || "Selected color"}</small>
                 </>
               )}
             </div>
           </div>
+          {enabledLocations.length > 1 && (
+            <div className="ps-print-side-toggle" role="group" aria-label="Print location">
+              {enabledLocations.map((candidate) => (
+                <button type="button" key={candidate.print_location_id}
+                  className={locationId === candidate.print_location_id ? "is-active" : ""}
+                  aria-pressed={locationId === candidate.print_location_id}
+                  onClick={() => choosePrintLocation(candidate.print_location_id)}>
+                  {candidate.name}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="ps-canvas-controls">
             <button type="button" onClick={() => setCanvasZoom(100)}>Fit · 100%</button>
             <label>Canvas zoom <input type="range" min="75" max="160" step="5" value={canvasZoom} onChange={(event) => setCanvasZoom(Number(event.target.value))} /></label>
             <span>{canvasZoom}%</span>
           </div>
-          <details className="ps-reference-drawer">
-            <summary>Provider references ({detail.mockups.filter((m) => m.active && m.preview_url).length})</summary>
-            <div className="ps-mockup-grid">
-              {detail.mockups
-                .filter((m) => m.active && m.preview_url)
-                .map((m) => (
-                  <figure key={m.mockup_id}>
-                    <ProductImage sources={[m.preview_url]} alt={m.name} />
-                    <figcaption>{m.name}</figcaption>
-                  </figure>
-                ))}
-              {!detail.mockups.some((m) => m.active && m.preview_url) && (
-                <p>No provider reference images are supplied for this product.</p>
-              )}
-              <p className="ps-reference-note">
-                References show provider-supplied product views only. They are not rendered previews of your artwork.
-              </p>
-            </div>
-          </details>
-          <div className="ps-quality" aria-live="polite">
-            <span>
-              {dimensions
-                ? `${dimensions.width} × ${dimensions.height} px`
-                : "Original artwork preserved"}
-            </span>
-            <span
-              className={quality != null && quality < 1 ? "needs-review" : ""}
-            >
-              {manufacturingPreflight?.status === "unsupported" ||
-                manufacturingPreflight?.status === "needs_variant"
-                ? manufacturingPreflight.issues[0]?.message || "Artwork needs a different source"
-                : quality == null
-                  ? "Check print requirements before production"
-                  : quality < 1
-                    ? "Source resolution below print-area target"
-                    : "Source pixels meet selected artboard; supplier acceptance unverified"}
-            </span>
-          </div>
+          {(manufacturingPreflight?.status === "unsupported" ||
+            manufacturingPreflight?.status === "needs_variant" || lowResolution) && (
+            <p className="ps-quality ps-quality--warning" role="status">
+              {lowResolution && dimensions && requiredPrintPixels
+                ? `Artwork is ${dimensions.width} × ${dimensions.height} px; this placement needs ${requiredPrintPixels.width} × ${requiredPrintPixels.height} px for ${location?.dpi || 300} DPI.`
+                : manufacturingPreflight?.issues[0]?.message || "Choose artwork compatible with this print area."}
+            </p>
+          )}
           {reply && (
             <details open className="ps-ai-reply">
               <summary>Creative direction</summary>

@@ -1,3 +1,4 @@
+export const miniAgentSamTokens: { readonly accent: string; readonly icon: string };
 export interface MiniAgentSam {
   select(resource: unknown, bounds: () => DOMRect | null): void;
   close(): void;
