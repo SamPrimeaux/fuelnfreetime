@@ -935,7 +935,7 @@
   min-height: 0;
   padding: 16px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(164px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(142px, 1fr));
   align-content: start;
   gap: 12px;
 }
@@ -962,9 +962,6 @@
 .te-media-dialog__footer button:disabled { opacity: .4; cursor: not-allowed; }
 
 .te-media-card {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
   padding: 0;
   border: 1px solid var(--te-border);
   border-radius: 9px;
@@ -983,20 +980,14 @@
 }
 
 .te-media-card__thumb {
-  position: relative;
+  aspect-ratio: 1 / 1;
+  background: #f5f5f3;
   display: grid;
   place-items: center;
-  width: 100%;
-  flex: none;
-  aspect-ratio: 4 / 3;
-  background: #f5f5f3;
   overflow: hidden;
 }
 
 .te-media-card__thumb img {
-  position: absolute;
-  inset: 0;
-  display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -2217,8 +2208,9 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
 .te-media-alert[hidden] { display: none; }
 .te-media-alert[data-state="error"] { color: var(--te-danger); background: #fff1ed; }
 .te-media-alert[data-state="success"] { color: var(--te-success); background: #e9f8ed; }
-.te-media-grid { grid-template-columns: repeat(auto-fill, minmax(164px, 1fr)); padding: 12px 18px; gap: 12px; }
+.te-media-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); padding: 12px 18px; gap: 10px; }
 .te-media-card__copy { min-height: 40px; }
+.te-media-card__thumb { aspect-ratio: 4 / 3; }
 @media(max-width:640px) {
   .te-media-dialog { height: calc(100dvh - 20px); }
   .te-media-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -2264,7 +2256,7 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
   height: 33px;
   flex: 0 0 33px;
 }
-.te-agentsam-mark img { display: block; width: 20px; height: 20px; object-fit: contain; }
+.te-agentsam-mark img { display: block; width: 20px; height: 16px; object-fit: contain; }
 .te-agentsam-mark[aria-expanded="true"] { background: #eeeaff; border-color: #b4b0ed; }
 .theme-studio-toolbar .te-icon-btn:disabled { opacity: .34; cursor: not-allowed; }
 .theme-studio-toolbar .te-icon-btn:disabled:hover { background: #fff; border-color: var(--te-border); }
@@ -3064,4 +3056,81 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
   .theme-studio .te-inspector-head { display:none!important; }
   .theme-studio .theme-studio-tree,
   .theme-studio .theme-editor-panel { height:min(50%,475px)!important; }
+}
+
+/* Preview-first mobile toolbar: page identity outranks theme selection.
+   Secondary desktop actions are still reachable through the mobile More menu.
+   Keep desktop three-column layout and admin dock unchanged. */
+.te-mobile-more-entry,.te-mobile-more-group { display:none; }
+@media (max-width:900px) {
+  body.shell-mode-theme-editor .theme-studio,
+  .theme-studio { grid-template-rows:52px minmax(0,1fr); }
+  .theme-studio-toolbar {
+    height:52px;min-height:52px;max-height:52px;
+    display:grid;grid-template-columns:28px minmax(0,1fr) auto;
+    grid-template-rows:52px;grid-template-areas:"left center actions";
+    column-gap:4px;row-gap:0;padding:0 6px;overflow:visible;
+  }
+  .theme-studio-toolbar__left {grid-area:left;width:28px;min-width:0;gap:0;overflow:visible;}
+  .theme-studio-toolbar__left [data-drawer-mode] {display:none;}
+  .theme-studio-toolbar__left #te-exit {width:28px;height:34px;padding:0;}
+  .theme-studio-toolbar__center {
+    grid-area:center;display:flex;justify-content:stretch;
+    min-width:0;width:100%;height:52px;gap:0;border:0;
+  }
+  .theme-studio-toolbar .te-theme-switcher,
+  .theme-studio-toolbar .te-theme-identity {display:none;}
+  /* Remains in the accessibility tree so save/error states aren't lost. */
+  .theme-studio-toolbar .te-save-state {
+    position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+    overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0;
+  }
+  .theme-studio-toolbar .te-page-menu {flex:1 1 0;min-width:0;width:100%;}
+  .theme-studio-toolbar .te-page-trigger {
+    width:100%;min-width:0;max-width:none;height:34px;
+    padding:0 7px;justify-content:space-between;gap:4px;
+  }
+  .theme-studio-toolbar .te-page-trigger__content {min-width:0;overflow:hidden;}
+  .theme-studio-toolbar #te-page-title {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .theme-studio-toolbar .te-page-popover {
+    left:0;width:min(340px,calc(100vw - 12px));
+    max-width:calc(100vw - 12px);
+  }
+  .theme-studio-toolbar__right {
+    grid-area:actions;display:flex;align-items:center;justify-content:flex-end;
+    min-width:0;width:auto;max-width:none;overflow:visible;gap:2px;
+  }
+  .theme-studio-toolbar__right .te-device-switch,
+  .theme-studio-toolbar__right #te-inspect-mode,
+  .theme-studio-toolbar__right .te-toolbar-separator {display:none;}
+  .theme-studio-toolbar__right #te-undo {order:1;}
+  .theme-studio-toolbar__right #te-redo {order:2;}
+  .theme-studio-toolbar__right #agentsam-toggle {order:3;}
+  .theme-studio-toolbar__right .te-toolbar-more {order:4;}
+  .theme-studio-toolbar__right .te-save-actions {order:5;margin-left:0;}
+  .theme-studio-toolbar__right .te-icon-btn {
+    width:27px;min-width:27px;height:34px;flex:0 0 27px;padding:0;
+  }
+  .theme-studio-toolbar .te-save-actions>#te-save {
+    min-width:43px;height:34px;padding:0 7px;
+  }
+  .theme-studio-toolbar .te-save-caret {width:19px;height:34px;padding:0;}
+  #te-more-menu {width:220px;max-width:calc(100vw - 16px);max-height:min(72dvh,480px);overflow-y:auto;}
+  #te-more-menu .te-mobile-more-entry {
+    display:block;width:100%;min-height:38px;text-align:left;
+  }
+  #te-more-menu .te-mobile-more-group {display:block;padding:7px 0;border-top:1px solid var(--te-border);}
+  #te-more-menu .te-mobile-more-group>span {
+    display:block;padding:4px 10px;color:var(--te-muted);
+    font:600 10px/1.3 system-ui,sans-serif;
+  }
+  #te-more-menu [data-theme-preview][aria-pressed="true"] {color:var(--te-accent);background:var(--te-soft);}
+}
+@media (max-width:370px) {
+  .theme-studio-toolbar {column-gap:3px;padding-inline:4px;}
+  .theme-studio-toolbar__right {gap:1px;}
+  .theme-studio-toolbar__right .te-icon-btn {width:25px;min-width:25px;flex-basis:25px;}
+  .theme-studio-toolbar__right .te-save-caret {display:none;}
+  .theme-studio-toolbar .te-save-actions>#te-save {border-radius:8px;min-width:43px;padding-inline:6px;}
+  .theme-studio-toolbar .te-page-trigger__content>svg {display:none;}
 }

@@ -37,26 +37,24 @@
   }
 
   function selectedMiniBounds() {
-    // Anchor the contextual composer to the entire selected DOM element, not
-    // a 2px point within its text/button. The workbench can then avoid it.
     const anchor = miniAnchor;
     const element = anchor?.element?.isConnected ? anchor.element : null;
-    const resolved = element || byId('te-inspector-title');
+    if (!element && anchor?.fallbackX != null && !anchor.frame) return {
+      left: anchor.fallbackX, top: anchor.fallbackY, width: 2, height: 2,
+    };
+    const resolved = element || byId('te-agent-open');
     if (!resolved) return { left: 12, top: 72, width: 30, height: 25 };
     const rect = resolved.getBoundingClientRect();
+    const x = anchor?.rx !== null && anchor?.rx !== undefined ? rect.left + rect.width * anchor.rx : rect.left + rect.width / 2;
+    const y = anchor?.ry !== null && anchor?.ry !== undefined ? rect.top + rect.height * anchor.ry : rect.top;
     const frame = anchor?.frame;
-    if (frame?.isConnected) {
+    if (frame && frame.isConnected) {
       const outer = frame.getBoundingClientRect();
       const sx = outer.width / Math.max(frame.clientWidth, 1);
       const sy = outer.height / Math.max(frame.clientHeight, 1);
-      return {
-        left: outer.left + rect.left * sx,
-        top: outer.top + rect.top * sy,
-        width: Math.max(2, rect.width * sx),
-        height: Math.max(2, rect.height * sy),
-      };
+      return { left: outer.left + x * sx, top: outer.top + y * sy, width: 2, height: 2 };
     }
-    return { left: rect.left, top: rect.top, width: Math.max(2, rect.width), height: Math.max(2, rect.height) };
+    return { left: x, top: y, width: 2, height: 2 };
   }
   let pendingAgentProposal = null;
   let patchTimer = null;
@@ -179,7 +177,7 @@
             '<span class="te-save-state" id="te-save-state" role="status" aria-live="polite" title="Loading" aria-label="Loading">Loading</span>',
           '</div>',
           '<div class="theme-studio-toolbar__right">',
-            '<button type="button" class="te-icon-btn te-agentsam-mark" id="agentsam-toggle" aria-label="Open AgentSam Side Assistant" title="AgentSam Side Assistant" aria-expanded="false"><img src="/admin/brand/agentsam-gorilla-tiny.svg" width="20" height="20" alt="" aria-hidden="true"></button>',
+            '<button type="button" class="te-icon-btn te-agentsam-mark" id="agentsam-toggle" aria-label="Open AgentSam Side Assistant" title="AgentSam Side Assistant" aria-expanded="false"><img src="/admin/brand/agentsam-sidekick-symbol.svg" width="20" height="20" alt="" aria-hidden="true"></button>',
             '<button type="button" class="te-icon-btn" id="te-inspect-mode" aria-label="Canvas inspection on" title="Canvas inspection on — select sections in the preview" aria-pressed="true">', icon.inspect, '</button>',
             '<span class="te-toolbar-separator" aria-hidden="true"></span>',
             '<div class="te-device-switch" aria-label="Preview device">',
@@ -191,7 +189,16 @@
             '<button type="button" class="te-icon-btn" id="te-redo" aria-label="Redo" title="Redo (⌘⇧Z)" disabled>', icon.redo, '</button>',
             '<div class="te-toolbar-more">',
               '<button type="button" class="te-icon-btn" id="te-more" aria-label="More editor actions" aria-haspopup="true" aria-expanded="false" title="More actions">', icon.more, '</button>',
-              '<div class="te-toolbar-dropdown" id="te-more-menu" hidden><button type="button" id="te-view-draft">View draft in new tab</button><button type="button" id="te-shortcuts">Keyboard shortcuts</button><div id="te-shortcuts-help" class="te-shortcuts-help" hidden>⌘S · Save<br>⌘Z · Undo<br>⌘⇧Z · Redo<br>⌘⌃1 · Sections<br>⌘⌃2 · Theme settings<br>⌘⌃3 · App embeds</div></div>',
+              '<div class="te-toolbar-dropdown" id="te-more-menu" hidden>' +
+                '<button type="button" class="te-mobile-more-entry" id="te-more-settings">Theme settings</button>' +
+                '<button type="button" class="te-mobile-more-entry" id="te-more-inspect" aria-pressed="true">Canvas inspection</button>' +
+                '<button type="button" class="te-mobile-more-entry" id="te-more-embeds">App embeds</button>' +
+                '<div class="te-mobile-more-group" role="group" aria-label="Theme previews"><span>Theme previews</span>' +
+                  ((window.ThemeStudioPreview && window.ThemeStudioPreview.themes) || []).map(function(theme) {
+                    return '<button type="button" class="te-mobile-more-entry" data-theme-preview="' + cmsEscapeAttr(theme.id) + '" aria-pressed="' + String(theme.id === selectedTheme) + '">' + cmsEscapeHtml(theme.name) + '</button>';
+                  }).join('') + '</div>' +
+                '<button type="button" class="te-mobile-more-entry" id="te-more-publish">Publish live…</button>' +
+                '<button type="button" id="te-view-draft">View draft in new tab</button><button type="button" id="te-shortcuts">Keyboard shortcuts</button><div id="te-shortcuts-help" class="te-shortcuts-help" hidden>⌘S · Save<br>⌘Z · Undo<br>⌘⇧Z · Redo<br>⌘⌃1 · Sections<br>⌘⌃2 · Theme settings<br>⌘⌃3 · App embeds</div></div>',
             '</div>',
             '<div class="te-save-actions"><button type="button" class="te-toolbar-btn is-primary" id="te-save" title="Save private draft (⌘S)">Save</button><button type="button" class="te-save-caret" id="te-save-options" aria-label="Additional save options" title="Additional save options" aria-haspopup="true" aria-expanded="false">⌄</button>',
               '<div class="te-toolbar-dropdown te-save-menu" id="te-save-menu" hidden><button type="button" id="te-publish" title="Publish reviewed revision">Publish live…</button></div>',
@@ -218,7 +225,7 @@
           '<div class="te-mobile-selection-bar"><button type="button" id="te-mobile-edit-selection"><span id="te-mobile-selection-label">Select an element</span><span>Edit <span aria-hidden="true">⌃</span></span></button></div>',
           '<aside class="theme-editor-panel">',
             '<div class="te-mobile-sheet-head"><button type="button" class="te-mobile-sheet-grip" data-sheet-grip="settings" aria-label="Resize inspector" title="Drag or press arrows to resize"><span></span></button><div class="te-mobile-sheet-head__row"><strong id="te-mobile-edit-title">Edit selection</strong><div><button type="button" data-sheet-expand="settings" aria-label="Expand editor">⤢</button><button type="button" data-sheet-close="settings" aria-label="Close editor">×</button></div></div></div>',
-            '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><div class="te-inspector-tools"><span class="te-badge" id="te-section-status">draft</span><button type="button" class="te-icon-btn te-inspector-close" id="te-inspector-close" aria-label="Close settings panel" title="Close settings panel">×</button></div></div>',
+            '<div class="te-inspector-head"><div class="te-inspector-title"><strong id="te-inspector-title">Section</strong><span id="te-inspector-subtitle">Choose a section</span></div><div class="te-inspector-tools"><button type="button" id="te-agent-open" class="te-agent-open" aria-label="Open miniAgentSam beside the selected element" title="Ask miniAgentSam about this selection"><img src="/admin/brand/mini-agentsam-trigger.svg" width="20" height="20" alt="" aria-hidden="true"></button><span class="te-badge" id="te-section-status">draft</span><button type="button" class="te-icon-btn te-inspector-close" id="te-inspector-close" aria-label="Close settings panel" title="Close settings panel">×</button></div></div>',
             '<div class="te-inspector-body" id="te-inspector-body"></div><div data-composer-slot="editor" hidden aria-hidden="true"></div>',
             '<div class="te-inspector-save"><p class="te-note" id="te-note" role="status" aria-live="polite"></p></div>',
           '</aside>',
@@ -2965,11 +2972,6 @@
     return mediaLibrary;
   }
 
-  // Match Media Library's delivery URL precedence for R2-backed assets.
-  function mediaAssetUrl(asset) {
-    return asset?.delivery_url || asset?.url || '';
-  }
-
   function renderMediaGrid(query) {
     const needle = String(query || '').trim().toLowerCase();
     const filter = byId('te-media-filter').value;
@@ -2993,9 +2995,9 @@
     if (count) count.textContent = assets.length + ' of ' + mediaLibrary.length + ' assets';
 
     byId('te-media-grid').innerHTML = assets.length ? assets.map(function(asset) {
-      const url = mediaAssetUrl(asset);
-      const isImage = String(asset.content_type || '').startsWith('image/') || /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(asset.r2_key || asset.filename || url);
-      const selected = selectedMediaAsset && mediaAssetUrl(selectedMediaAsset) === url;
+      const url = asset.url || '';
+      const isImage = String(asset.content_type || '').startsWith('image/') || /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(url);
+      const selected = selectedMediaAsset && selectedMediaAsset.url === url;
       const name = asset.filename || asset.r2_key || 'Asset';
       return '<button type="button" class="te-media-card' + (selected ? ' is-selected' : '') +
         '" data-media-url="' + cmsEscapeAttr(url) + '" aria-pressed="' + Boolean(selected) + '" title="' + cmsEscapeAttr(name) + '"' +
@@ -3013,17 +3015,15 @@
     });
     byId('te-media-grid').querySelectorAll('[data-media-url]').forEach(function(card) {
       card.addEventListener('click', function() {
-        selectedMediaAsset = mediaLibrary.find(function(asset) { return mediaAssetUrl(asset) === card.dataset.mediaUrl; }) || null;
+        selectedMediaAsset = mediaLibrary.find(function(asset) { return asset.url === card.dataset.mediaUrl; }) || null;
         byId('te-media-selected-name').textContent = selectedMediaAsset?.filename || 'Select an asset to preview';
-        byId('te-media-confirm').disabled = !mediaAssetUrl(selectedMediaAsset);
+        byId('te-media-confirm').disabled = !selectedMediaAsset?.url;
         renderMediaGrid(byId('te-media-search').value);
       });
     });
   }
 
   async function openMediaPicker(fieldKey) {
-    // Do not float the contextual assistant above the asset-picker dialog.
-    closeMiniAgentSam();
     mediaTarget = fieldKey;
     selectedMediaAsset = null;
     byId('te-media-modal').hidden = false;
@@ -3139,6 +3139,16 @@
   byId('te-import-live').addEventListener('click', function() {
     return liveUnimported ? importLiveSource() : stageMissingSourceSections();
   });
+  function toggleMiniAgentSam(anchor) {
+    if (miniAgentSamVisible) { closeMiniAgentSam(); return; }
+    // A click in the inspector is not a new canvas selection: retain the
+    // genuine selected-element coordinates captured from the preview iframe.
+    if (!miniAnchor?.element?.isConnected) setMiniAnchor(anchor);
+    void openMiniAgentSam();
+  }
+  byId('te-agent-open').addEventListener('click', function(event) {
+    toggleMiniAgentSam(event.currentTarget);
+  });
   document.addEventListener('pointerdown', function(event) {
     const picker = byId('te-section-menu');
     if (picker?.open && !picker.contains(event.target) &&
@@ -3219,6 +3229,32 @@
     }
   }
   byId('te-more').addEventListener('click', function() { toggleToolbarMenu('te-more','te-more-menu'); });
+  // Mobile keeps the actual editing controls; secondary actions live behind More.
+  function closeToolbarMore() {
+    const menu = byId('te-more-menu');
+    if (menu) menu.hidden = true;
+    byId('te-more')?.setAttribute('aria-expanded', 'false');
+  }
+  byId('te-more-settings').addEventListener('click', function() {
+    closeToolbarMore();
+    setEditorDrawer('theme-settings');
+  });
+  byId('te-more-embeds').addEventListener('click', function() {
+    closeToolbarMore();
+    setEditorDrawer('app-embeds');
+  });
+  byId('te-more-inspect').addEventListener('click', function() {
+    closeToolbarMore();
+    byId('te-inspect-mode').click();
+    this.setAttribute('aria-pressed', byId('te-inspect-mode').getAttribute('aria-pressed'));
+  });
+  byId('te-more-publish').addEventListener('click', function() {
+    closeToolbarMore();
+    byId('te-publish').click(); // preserve the existing publish preflight and approval gate
+  });
+  document.querySelectorAll('#te-more-menu [data-theme-preview]').forEach(function(button) {
+    button.addEventListener('click', closeToolbarMore);
+  });
   byId('te-save-options').addEventListener('click', function() { toggleToolbarMenu('te-save-options','te-save-menu'); });
   byId('te-shortcuts').addEventListener('click', function() {
     const help = byId('te-shortcuts-help');
@@ -3297,8 +3333,8 @@
   byId('te-media-sort').addEventListener('change', function() { renderMediaGrid(byId('te-media-search').value); });
   byId('te-media-cancel').addEventListener('click', closeMediaPicker);
   byId('te-media-confirm').addEventListener('click', function() {
-    if (!mediaTarget || !mediaAssetUrl(selectedMediaAsset)) return;
-    setMediaValue(mediaTarget, mediaAssetUrl(selectedMediaAsset));
+    if (!mediaTarget || !selectedMediaAsset?.url) return;
+    setMediaValue(mediaTarget, selectedMediaAsset.url);
   });
   async function uploadIntoPicker(files) {
     if (!files.length) return;
@@ -3312,7 +3348,7 @@
       if (mediaTarget && assets[0]) {
         selectedMediaAsset = assets[0];
         byId('te-media-selected-name').textContent = assets[0].filename || 'Uploaded media';
-        byId('te-media-confirm').disabled = !mediaAssetUrl(assets[0]);
+        byId('te-media-confirm').disabled = !assets[0].url;
         renderMediaGrid(byId('te-media-search').value);
         status.textContent = 'Uploaded. Choose Use media to stage this asset in the private draft.';
         status.dataset.state = 'success';

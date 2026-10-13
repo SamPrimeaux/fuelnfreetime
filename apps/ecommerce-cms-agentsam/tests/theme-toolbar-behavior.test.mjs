@@ -9,7 +9,7 @@ const { JSDOM } = require("jsdom");
 const root = new URL("../frontend/static/js/", import.meta.url);
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 
-async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = [] } = {}) {
+async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = [], themePreviews = [] } = {}) {
   const dom = new JSDOM("<!doctype html><html><body></body></html>", {
     url: "https://editor.test/admin/theme-editor?slug=" + pageSlug,
     runScripts: "outside-only",
@@ -17,6 +17,7 @@ async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = 
   });
   const w = dom.window;
   w.structuredClone = globalThis.structuredClone;
+  if (themePreviews.length) w.ThemeStudioPreview = { themes: themePreviews };
   w.HTMLElement.prototype.scrollIntoView = () => {};
   const writes = [];
   const publishes = [];
@@ -360,6 +361,38 @@ test("left rail visual density and touch controls are release requirements", () 
   assert.match(css,/@media\(max-width:900px\)[\s\S]*\.te-field-row__main/);
 });
 
+
+test("mobile toolbar gives Page priority without hiding real undo/redo, inspect, theme and publish actions", async () => {
+  const { dom, doc } = await editorFixture({ mobile: true, themePreviews: [
+    { id: "heuristic", name: "Heuristic", status: "installed" },
+    { id: "revise", name: "Revise", status: "preview" },
+  ] });
+  try {
+    assert.equal(doc.querySelector("#te-page-title")?.textContent, "Shop");
+    assert.ok(doc.getElementById("te-undo"), "real undo action preserved");
+    assert.ok(doc.getElementById("te-redo"), "real redo action preserved");
+    assert.ok(doc.getElementById("agentsam-toggle"), "real Gorilla button preserved");
+    assert.ok(doc.getElementById("te-more-inspect"), "mobile canvas inspection is reachable");
+    assert.ok(doc.getElementById("te-more-settings"), "existing Theme Settings are reachable");
+    assert.ok(doc.getElementById("te-more-publish"), "publishing remains reachable at 320px");
+    assert.ok(doc.querySelector("#te-more-menu [data-theme-preview]"), "theme previews remain accessible as secondary actions");
+    assert.ok(doc.getElementById("te-inspect-mode"), "original canvas inspection control remains");
+    const before = doc.getElementById("te-inspect-mode").getAttribute("aria-pressed");
+    doc.getElementById("te-more-inspect").click();
+    assert.notEqual(doc.getElementById("te-inspect-mode").getAttribute("aria-pressed"), before);
+    doc.getElementById("te-more-settings").click();
+    assert.equal(doc.querySelector('[data-drawer-panel="theme-settings"]').hidden, false);
+  } finally { dom.window.close(); }
+});
+
+test("mobile stylesheet prevents horizontal toolbar scrolling while retaining page-first structure", () => {
+  const css = readFileSync(new URL("../frontend/static/css/theme-editor.css", import.meta.url), "utf8");
+  assert.match(css, /Preview-first mobile toolbar: page identity outranks theme selection/);
+  assert.match(css, /grid-template-columns:28px minmax\(0,1fr\) auto/);
+  assert.match(css, /grid-template-rows:52px/);
+  assert.match(css, /\.theme-studio-toolbar__right[\s\S]*?max-width:none;overflow:visible/);
+  assert.match(css, /#te-more-menu[\s\S]*?te-mobile-more-entry/);
+});
 
 test("mobile sheet CSS preserves live canvas and does not touch the separate admin dock", () => {
   const css=readFileSync(new URL('../frontend/static/css/theme-editor.css',import.meta.url),'utf8');
