@@ -3,7 +3,9 @@ import { defineTool, type ToolInput } from "../types.ts";
 
 export const modelsInputSchema = {
   type: "object",
-  properties: { task_type: { type: "string" }, lane: { type: "string" } },
+  // The current legacy executor always lists all active models; it does not filter.
+  // Do not advertise controls that the handler silently ignores.
+  properties: {},
   additionalProperties: false,
 } as const satisfies JSONSchema;
 export type ModelsListInput = ToolInput<typeof modelsInputSchema>;
