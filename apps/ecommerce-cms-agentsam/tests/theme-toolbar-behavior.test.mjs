@@ -424,11 +424,11 @@ test("mobile sheet CSS preserves live canvas and does not touch the separate adm
   assert.match(css,/Mobile live editor — screenshot-approved preview with draggable inspector/);
   assert.match(css,/data-mobile-pane="sections"\] \.theme-studio-canvas/);
   assert.match(css,/data-mobile-pane="settings"\] \.theme-studio-canvas/);
-  assert.match(css,/height:min\(54%,510px\)/);
+  assert.match(css,/height:min\(39%,370px\)/);
   assert.match(css,/data-mobile-sheet="expanded"/);
   assert.match(css,/\.te-mobile-sheet-grip/);
   assert.match(css,/\.te-mobile-selection-bar/);
-  assert.match(css,/height:min\(50%,475px\)/);
+  assert.match(css,/data-mobile-sheet="compact"/);
   assert.match(css,/\.te-inspector-head \{ display:none!important/);
   assert.doesNotMatch(css,/\.admin-mobile-dock/);
 });
