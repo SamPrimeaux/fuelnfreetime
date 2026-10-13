@@ -3211,6 +3211,7 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
     grid-template-rows: minmax(0, 1fr) var(--te-mobile-tabs-height);
   }
   .theme-studio .te-mobile-pane-switch {
+    box-sizing: border-box; /* padding and border must fit INSIDE the grid row */
     height: var(--te-mobile-tabs-height);
     min-height: var(--te-mobile-tabs-height);
     padding-bottom: max(5px, env(safe-area-inset-bottom, 0px));

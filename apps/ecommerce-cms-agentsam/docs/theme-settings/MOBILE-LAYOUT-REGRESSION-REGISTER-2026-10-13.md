@@ -29,6 +29,14 @@ Status: **Open until verified on a real iPhone in regular Safari.** Applies to t
 | MOB-10 | Mobile editor must not drift into duplicated mockup-only interactions. Require touch and Save/reload validations in real pages for heading styles, section reorder, asset selection, Header/Footer, miniAgentSam. | Open acceptance |
 | MOB-11 | CSS contains overlapping mobile declarations, fixed inspector offsets and `!important` sizing; a single layout contract is preferable to additional overrides. | Open technical debt |
 
+## 2026-10-13 follow-up: dashboard-versus-editor evidence and concrete shared-shell mismatch
+
+Two side-by-side iPhone Safari screenshots show the normal dashboard content and its preserved mobile dock extending lower into the available page than Theme Studio's white Sections / Preview / Edit tab row. The issue is **not** unique to a merchant page or hero. Earlier accounts that treated the entire gap as unreachable native Safari chrome were incomplete.
+
+Source inspection found that `frontend/static/css/console.css` reserves `calc(100dvh - var(--c-topbar-h))` for every full-bleed `.console-main--bleed`. The normal dashboard mounts a top bar, whereas `frontend/shell.js` omits that top bar for `shell-mode-theme-editor`. This branch adds an exact editor-specific override to remove the hidden header's reservation while retaining the header deduction elsewhere.
+
+The added browser fixture compares the exact shared shell class combinations, verifies the editor's tab row reaches the shell bottom and confirms an ordinary dashboard still preserves its own topbar layout. The *real iPhone Safari result remains the final acceptance gate*. If a residual gap remains, capture computed shell/main/tab rectangles and `visualViewport` and distinguish it from browser-owned chrome; do not blindly add another `100dvh`/negative-offset rule.
+
 ## Physical iPhone Safari release gate
 
 1. Confirm which Git SHA and Worker deployment version the live editor actually serves before screenshots. Compare in an ordinary Safari tab, **not** installed as a web app.

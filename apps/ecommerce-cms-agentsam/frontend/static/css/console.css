@@ -621,6 +621,15 @@ body.console-theme.console-body-bleed .console-main--bleed {
   height: calc(100dvh - var(--c-topbar-h));
 }
 
+/* Theme Studio does not mount the normal admin topbar. Do not reserve
+   --c-topbar-h (56px) inside its full-bleed main: the editor already owns
+   the entire shell viewport, including the mobile Sections/Preview/Edit row.
+   This override is editor-only: dashboard pages retain topbar clearance. */
+body.console-theme.console-body-bleed.shell-mode-theme-editor .console-main--bleed {
+  height: 100%;
+  min-height: 0;
+}
+
 body.console-shell-loading .admin-drawer,
 body.console-shell-loading .admin-drawer-backdrop,
 body.console-shell-loading .agentsam-drawer,
