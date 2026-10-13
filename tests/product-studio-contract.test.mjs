@@ -235,7 +235,7 @@ test("Product Studio canvas and Options share print-area selection without stand
   assert.match(workspace, /role="group" aria-label="Print location"/);
   assert.match(workspace, /choosePrintLocation\(candidate\.print_location_id\)/);
   assert.match(workspace, /style=\{\{ \.\.\.placementFrameStyle, aspectRatio: ratio \}\}/);
-  assert.match(workspace, /miniAgentSamTokens\.icon/);
+  assert.match(workspace, /src="\/admin\/brand\/mini-agentsam-trigger\.svg"/);
   assert.doesNotMatch(workspace, /Provider references \(/);
   assert.doesNotMatch(workspace, /POSITIONING GUIDE/);
 });

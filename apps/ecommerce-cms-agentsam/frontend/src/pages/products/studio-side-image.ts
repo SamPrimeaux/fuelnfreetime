@@ -9,8 +9,14 @@ export type StudioSideMockup = {
   variant_scope_json?: string | null;
 };
 
-function scopeMatchesVariant(scope: string | null | undefined, variantId: string): boolean {
-  if (!scope?.trim()) return true;
+/**
+ * Completeful uses attribute scopes such as {"Color":"Moss"} for garment
+ * mockups, NOT necessarily a list of variant IDs. Never reject a real
+ * provider Back image merely because its scope is attribute-based.
+ */
+function scopeMatchesVariant(scope: string | null | undefined, variantId: string,
+  attributes: Record<string, string>): boolean {
+  if (!scope?.trim()) return false;
   try {
     const parsed: unknown = JSON.parse(scope);
     if (Array.isArray(parsed)) return parsed.some((value) => String(value) === variantId);
@@ -20,11 +26,19 @@ function scopeMatchesVariant(scope: string | null | undefined, variantId: string
         const candidate = values[key];
         if (Array.isArray(candidate)) return candidate.some((value) => String(value) === variantId);
       }
+      const entries = Object.entries(values);
+      if (!entries.length) return false;
+      return entries.every(([key, value]) => {
+        if (value == null || typeof value === "object") return false;
+        const found = Object.entries(attributes).find(([candidate]) =>
+          candidate.trim().toLowerCase() === key.trim().toLowerCase());
+        return Boolean(found && found[1].trim().toLowerCase() === String(value).trim().toLowerCase());
+      });
     }
   } catch {
     return false;
   }
-  return false; // Unknown scopes are not proof of the selected garment color.
+  return false;
 }
 
 export function selectStudioSideImage(
@@ -34,6 +48,7 @@ export function selectStudioSideImage(
   artboardImage: string | null | undefined,
   frontVariantImage: string | null | undefined,
   isFront: boolean,
+  variantAttributes: Record<string, string> = {},
 ): string | null {
   const sideMockups = mockups.filter((mockup) =>
     mockup.active !== 0 &&
@@ -42,7 +57,7 @@ export function selectStudioSideImage(
   );
   const exactVariant = sideMockups.find((mockup) =>
     Boolean(mockup.variant_scope_json?.trim()) &&
-    scopeMatchesVariant(mockup.variant_scope_json, variantId)
+    scopeMatchesVariant(mockup.variant_scope_json, variantId, variantAttributes)
   );
   if (exactVariant?.preview_url) return exactVariant.preview_url;
   // Generic artboard photos and unscoped mockups often depict only the

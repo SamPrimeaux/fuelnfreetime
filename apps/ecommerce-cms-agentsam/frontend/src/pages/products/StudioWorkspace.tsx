@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
-import { createMiniAgentSam, miniAgentSamTokens } from "../../../../packages/agentsam-workbench/src/mini-agentsam.js";
+import { createMiniAgentSam } from "../../../../packages/agentsam-workbench/src/mini-agentsam.js";
 import { selectStudioSideImage } from "./studio-side-image";
 import { fabricColorFromImagePixels, validProviderFabricHex } from "./studio-fabric-color";
 import { adminFetch, adminFormFetch } from "../../lib/api";
@@ -215,7 +215,8 @@ export default function StudioWorkspace({
   const [artworkSelected, setArtworkSelected] = useState(false);
   const [agentVisible, setAgentVisible] = useState(false);
   const miniRef = useRef<ReturnType<typeof createMiniAgentSam> | null>(null);
-  const miniSendRef = useRef<(message: string, signal: AbortSignal) => Promise<{ reply: string }>>(async () => ({ reply: "" }));
+  const miniSendRef = useRef<(message: string, signal: AbortSignal, resource: unknown) => Promise<{ reply: string }>>(async () => ({ reply: "" }));
+  const miniTriggerRef = useRef<HTMLButtonElement>(null);
   const dragRef = useRef<{ mode: "move" | "resize"; startX: number; startY: number; x: number; y: number; scale: number } | null>(null);
   const [reply, setReply] = useState("");
   const [conversationId, setConversationId] = useState<string>();
@@ -229,7 +230,7 @@ export default function StudioWorkspace({
       preferAbove: true,
       resultStatus: "Reply ready · review the result",
       capabilities: { list: () => [] },
-      send: ({ prompt: text, signal }) => miniSendRef.current(text, signal),
+      send: ({ prompt: text, signal, resource }) => miniSendRef.current(text, signal, resource),
       onResult: (result) => setReply(result.reply),
       onClose: () => setAgentVisible(false),
     });
@@ -239,9 +240,14 @@ export default function StudioWorkspace({
 
   function openMiniAgentSam() {
     if (agentVisible) { miniRef.current?.close(); return; }
-    miniRef.current?.select(
-      { type: "product_artwork", productId: catalogId, variantId, locationId, assetId: asset?.id || null },
-      () => (stage.current?.querySelector(".ps-artwork-layer") || stage.current)?.getBoundingClientRect() || null,
+    if (!miniRef.current) {
+      setError("miniAgentSam is unavailable. Reload the editor to try again.");
+      return;
+    }
+    miniRef.current.select(
+      { type: "product_artwork", surface: "product-studio",
+        productId: catalogId, variantId, locationId, assetId: asset?.id || null },
+      () => miniTriggerRef.current?.getBoundingClientRect() || null,
     );
     setAgentVisible(true);
   }
@@ -297,7 +303,7 @@ export default function StudioWorkspace({
   const isFrontLocation = /(?:^|[_\s-])front(?:$|[_\s-])/i.test(location?.name || locationId);
   const designImage = selectStudioSideImage(
     detail.mockups, locationId, variantId, location?.artboard_image_url,
-    variantImage(variant) || baseImage, isFrontLocation,
+    variantImage(variant) || baseImage, isFrontLocation, selectedAttributes,
   );
   // Provider print-location images are often color-agnostic placeholders.
   // Sample only the SELECTED variant photo; if CORS prevents inspection, show
@@ -643,7 +649,7 @@ export default function StudioWorkspace({
       if (fileInput.current) fileInput.current.value = "";
     }
   }
-  async function askAI(generate: boolean, text: string, signal?: AbortSignal): Promise<{ reply: string }> {
+  async function askAI(generate: boolean, text: string, signal?: AbortSignal, selectedResource?: unknown): Promise<{ reply: string }> {
     if (!text.trim()) throw new Error("Describe what you would like AgentSam to make or change.");
     if (busy) throw new Error("Another operation is running.");
     setBusy(generate ? "generate" : "ideas");
@@ -665,10 +671,15 @@ export default function StudioWorkspace({
         method: "POST",
         signal,
         body: JSON.stringify({
-          message: `${generate ? "Create standalone artwork" : "Brainstorm three concise visual directions"} for ${detail.product.name}. ${text}`,
+          message: text.trim(),
           conversation_id: conversationId,
           ...creative,
-          context: { page: "/admin/products/create", ...creative },
+          context: {
+            page: "/admin/products/create",
+            workflow_key: "product_studio",
+            selected_resource: selectedResource,
+            ...creative,
+          },
         }),
       });
       setReply(result.reply);
@@ -696,9 +707,9 @@ export default function StudioWorkspace({
     }
   }
   useEffect(() => {
-    miniSendRef.current = (message, signal) => {
-      const generate = /^(create|generate|make|draw|design|render|illustrate|\/image)\b/i.test(message);
-      return askAI(generate, message, signal);
+    miniSendRef.current = (message, signal, resource) => {
+      const generate = /^\/image\b/i.test(message);
+      return askAI(generate, message, signal, resource);
     };
   });
   async function saveDraft(nextPrepared: MediaAsset | null = preparedFor === currentPlacementKey ? preparedAsset : null,
@@ -982,6 +993,14 @@ export default function StudioWorkspace({
           <h1>{detail.product.name}</h1>
         </div>
         <div className="ps-workspace-actions">
+          <button type="button" ref={miniTriggerRef}
+            className="ps-agent-trigger ps-agent-trigger--icon ps-agent-trigger--header"
+            aria-label={agentVisible ? "Close miniAgentSam" : "Open miniAgentSam"}
+            aria-pressed={agentVisible}
+            title={agentVisible ? "Close miniAgentSam" : "Open miniAgentSam"}
+            onClick={openMiniAgentSam}>
+            <img src="/admin/brand/mini-agentsam-trigger.svg" alt="" aria-hidden="true" />
+          </button>
           <a className="ps-text-button" href="/admin/products/help/artwork">
             <StudioIcon name="tools" size={15} />
             <span>Artwork help</span>
@@ -1320,14 +1339,6 @@ export default function StudioWorkspace({
             <div>
               <strong>Product design</strong>
             </div>
-          </div>
-          <div className="ps-studio-context">
-            <button type="button" className="ps-agent-trigger ps-agent-trigger--icon"
-              aria-label={agentVisible ? "Close miniAgentSam" : "Open miniAgentSam"}
-              aria-pressed={agentVisible} title={agentVisible ? "Close miniAgentSam" : "Open miniAgentSam"}
-              onClick={openMiniAgentSam}>
-              <img src={miniAgentSamTokens.icon} alt="" aria-hidden="true" />
-            </button>
           </div>
           {asset && !currentRenderUrl && artworkSelected && (
             <div className="ps-artwork-toolbar" role="toolbar" aria-label="Selected artwork tools">
