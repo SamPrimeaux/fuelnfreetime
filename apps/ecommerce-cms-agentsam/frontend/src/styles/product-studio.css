@@ -2024,3 +2024,23 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
 /* Do not wash out verified variant fabric colors through semi-transparent SVG. */
 .product-studio-shell .ps-design-garment-guide,
 .product-studio-shell .ps-mini-silhouette { opacity: 1; }
+
+/* Product Studio miniAgentSam is a persistent header action, not a scrolled
+   canvas widget. Composer is still the shared agentsam-workbench instance. */
+.product-studio-shell .ps-workspace-header { position: relative; z-index: 8; }
+.product-studio-shell .ps-workspace-actions .ps-agent-trigger--header {
+  flex: 0 0 38px; width: 38px; height: 38px; min-width: 38px; padding: 4px;
+  display: inline-grid; place-items: center; cursor: pointer;
+  border: 1px solid var(--ps-line); background: transparent; border-radius: 11px;
+}
+.product-studio-shell .ps-workspace-actions .ps-agent-trigger--header[aria-pressed="true"] {
+  border-color: var(--ps-accent); background: var(--ps-accent-soft);
+}
+.product-studio-shell .ps-workspace-actions .ps-agent-trigger--header img {
+  width: 26px; height: 26px; object-fit: contain; display: block;
+}
+@media (max-width: 760px) {
+  .product-studio-shell .ps-workspace-actions .ps-agent-trigger--header {
+    width: 36px; height: 36px; min-width: 36px; flex-basis: 36px;
+  }
+}

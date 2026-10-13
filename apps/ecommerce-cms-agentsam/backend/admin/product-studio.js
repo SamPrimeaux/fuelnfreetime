@@ -178,7 +178,15 @@ async function resolveMockup(env, draft, selection) {
   const rows = results || [];
   if (!rows.length) return null;
   const attrs = variantAttributes(selection.variants[0]);
-  return rows.find((row) => scopeMatches(parseJson(row.variant_scope_json, {}), attrs)) || rows[0];
+  // Never silently render a different garment color. Completeful scopes
+  // mockups by attributes such as {"Color":"Moss"}.
+  return rows.find((row) => {
+    const scope = parseJson(row.variant_scope_json, {});
+    return Object.keys(scope).length > 0 && scopeMatches(scope, attrs);
+  }) || rows.find((row) => {
+    const scope = parseJson(row.variant_scope_json, {});
+    return Object.keys(scope).length === 0;
+  }) || null;
 }
 
 async function beginOperation(env, { operationKey, operationType, draftId, shopId, idempotencyKey }) {
@@ -760,7 +768,7 @@ async function createProductFromDraft(request, env, id) {
     .bind(draft.product_id).first();
   if (!product) return json({ ok: false, error: "Storefront product not found" }, { status: 404 });
   if (Number(product.price_cents) <= 0) {
-    return json({ ok: false, error: "Set the retail price in Product Details before connecting fulfillment" }, { status: 400 });
+    return json({ ok: false, error: "Set the retail price in Product Details before creating the Completeful product" }, { status: 400 });
   }
   // Snapshot the latest commercial values at provider-creation time.
   await env.DB.prepare(

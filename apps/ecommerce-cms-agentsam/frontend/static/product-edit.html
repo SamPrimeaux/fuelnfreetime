@@ -762,28 +762,22 @@ function renderStudioDesign(draft, fulfillment, source = null) {
   designContext = draft ? { draft, fulfillment } : null;
   card.hidden = isNew;
   root.replaceChildren();
-  const sourceLabel = document.createElement("p");
-  sourceLabel.className = "product-card-hint";
-  sourceLabel.textContent = source?.kind === "connected_provider"
-    ? "Supplier: Completeful · " + (source.sync_status || "not yet connected") +
-      ". Product, variants, and storefront publishing remain in this editor."
-    : "Source: Store-managed · local, manual, or independently sourced inventory. " +
-      "Product, variants, and storefront publishing remain in this editor.";
-  root.append(sourceLabel);
+  // Provider account integration is handled centrally. Product-specific
+  // creation state must never be mislabeled as an API connection.
+  if (source?.kind === "connected_provider" && fulfillment?.completeful_store_product_id) {
+    const supplier = document.createElement("span");
+    supplier.className = "product-design-status";
+    supplier.textContent = "Completeful product ready";
+    root.append(supplier);
+  }
   if (!draft) {
     const guidance = document.createElement("p");
     guidance.className = "product-card-hint";
-    guidance.textContent = "Use Media above to attach artwork. The product can be edited and published without a supplier connector.";
+    guidance.textContent = "Add a design to make a custom product.";
     root.append(guidance);
     return;
   }
 
-  const text = document.createElement("p");
-  text.className = "product-card-hint";
-  text.textContent = "Design " + draft.state + " · local draft #" + draft.product_id +
-    " · " + (draft.prepared_media_asset_id ? "prepared artwork available" :
-      draft.original_media_asset_id ? "original artwork saved" : "no artwork selected");
-  root.append(text);
 
   const actions = document.createElement("div");
   actions.className = "product-design-actions";
@@ -794,48 +788,38 @@ function renderStudioDesign(draft, fulfillment, source = null) {
   actions.append(edit);
 
   const linkId = fulfillment?.completeful_store_product_id;
-  if (linkId) {
-    const attached = document.createElement("span");
-    attached.className = "product-design-status";
-    attached.textContent = "Completeful linked · " + linkId;
-    actions.append(attached);
-  } else {
-    const connect = document.createElement("button");
-    connect.type = "button";
-    connect.className = "btn ghost small";
-    connect.id = "connect-fulfillment-btn";
-    connect.textContent = "Connect Completeful fulfillment";
-    connect.title = "Requires saved retail price and original or prepared artwork. Does not publish.";
-    connect.addEventListener("click", async () => {
+  if (!linkId) {
+    const create = document.createElement("button");
+    create.type = "button";
+    create.className = "btn ghost small";
+    create.id = "create-provider-product-btn";
+    create.textContent = "Create with Completeful";
+    create.title = "Creates this product and selected variants in your existing Completeful account; does not publish.";
+    create.addEventListener("click", async () => {
       if (dirty || saveInFlight) {
-        showNote("Save product details before connecting fulfillment.", "error");
+        showNote("Save product details before creating the supplier product.", "error");
         return;
       }
-      connect.disabled = true;
-      connect.textContent = "Connecting Completeful…";
+      if (!window.confirm("Create this product in your connected Completeful shop? This will not publish the storefront listing.")) return;
+      create.disabled = true;
+      create.textContent = "Creating product…";
       try {
         const result = await adminFetch(
           "/api/admin/product-studio/drafts/" + encodeURIComponent(draft.id) + "/create-product",
           { method: "POST" }
         );
         await loadProduct();
-        showNote(result.already_linked ? "Completeful product already linked." :
-          "Completeful product linked. Storefront product remains unpublished.", "success");
+        showNote(result.already_linked ? "Supplier product already exists." :
+          "Product created with Completeful. Storefront listing remains a draft.", "success");
       } catch (error) {
-        showNote(error.message || "Could not connect fulfillment", "error");
-        connect.textContent = "Retry Completeful connection";
-        connect.disabled = false;
+        showNote(error.message || "Could not create supplier product", "error");
+        create.textContent = "Retry product creation";
+        create.disabled = false;
       }
     });
-    actions.append(connect);
+    actions.append(create);
   }
   root.append(actions);
-  const guidance = document.createElement("p");
-  guidance.className = "product-card-hint";
-  guidance.textContent = "The creative draft is saved independently of your commercial details. " +
-    (linkId ? "Review all variants and product media before activating the storefront listing." :
-      "Set price and description, then connect fulfillment. Product stays a draft until you publish it.");
-  root.append(guidance);
 }
 
 async function loadProduct() {
