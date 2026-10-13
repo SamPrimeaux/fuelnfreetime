@@ -2256,7 +2256,7 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
   height: 33px;
   flex: 0 0 33px;
 }
-.te-agentsam-mark img { display: block; width: 20px; height: 16px; object-fit: contain; }
+.te-agentsam-mark img { display: block; width: 20px; height: 20px; object-fit: contain; }
 .te-agentsam-mark[aria-expanded="true"] { background: #eeeaff; border-color: #b4b0ed; }
 .theme-studio-toolbar .te-icon-btn:disabled { opacity: .34; cursor: not-allowed; }
 .theme-studio-toolbar .te-icon-btn:disabled:hover { background: #fff; border-color: var(--te-border); }
