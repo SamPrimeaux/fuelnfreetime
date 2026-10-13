@@ -310,16 +310,16 @@
     if (switcher) switcher.hidden = true;
   }
 
-  let mobileSheetSize = 'half';
+  let mobileSheetSize = 'half'; // Balanced default: storefront and inspector remain visible together.
   function isPhoneEditor() { return window.matchMedia('(max-width: 900px)').matches; }
   function setMobileSheetSize(size) {
-    if (!['half','expanded'].includes(size)) return;
+    if (!['compact','half','expanded'].includes(size)) return;
     mobileSheetSize = size;
     const studio = document.querySelector('.theme-studio');
     if (studio) studio.dataset.mobileSheet = size;
     if (isPhoneEditor() && studio?.dataset.mobilePane === 'settings') window.requestAnimationFrame?.(revealSelectedMobile);
     document.querySelectorAll('[data-sheet-expand]').forEach(function(button) {
-      button.setAttribute('aria-label', size === 'expanded' ? 'Reduce sheet to half height' : 'Expand sheet');
+      button.setAttribute('aria-label', size === 'expanded' ? 'Reduce sheet to balanced height' : 'Expand sheet');
       button.setAttribute('aria-pressed', String(size === 'expanded'));
     });
   }
@@ -345,7 +345,7 @@
       button.addEventListener('click', function() { setMobilePane('preview'); });
     });
     document.querySelectorAll('[data-sheet-expand]').forEach(function(button) {
-      button.addEventListener('click', function() { setMobileSheetSize(mobileSheetSize === 'expanded' ? 'half' : 'expanded'); });
+      button.addEventListener('click', function() { setMobileSheetSize(mobileSheetSize === 'expanded' ? 'half' : mobileSheetSize === 'compact' ? 'half' : 'expanded'); });
     });
     document.querySelectorAll('[data-sheet-grip]').forEach(function(grip) {
       let start = null;
@@ -359,14 +359,14 @@
         if (!start || start.id !== event.pointerId) return;
         const difference = event.clientY - start.y;
         start = null;
-        if (difference > 65) setMobilePane('preview');
-        else if (difference < -55) setMobileSheetSize('expanded');
-        else if (difference > 25) setMobileSheetSize('half');
+        if (difference > 65 && mobileSheetSize === 'compact') setMobilePane('preview');
+        else if (difference < -55) setMobileSheetSize(mobileSheetSize === 'compact' ? 'half' : 'expanded');
+        else if (difference > 25) setMobileSheetSize(mobileSheetSize === 'expanded' ? 'half' : 'compact');
       });
       grip.addEventListener('pointercancel', function() { start = null; });
       grip.addEventListener('keydown', function(event) {
-        if (event.key === 'ArrowUp') { event.preventDefault(); setMobileSheetSize('expanded'); }
-        if (event.key === 'ArrowDown') { event.preventDefault(); if (mobileSheetSize === 'expanded') setMobileSheetSize('half'); else setMobilePane('preview'); }
+        if (event.key === 'ArrowUp') { event.preventDefault(); setMobileSheetSize(mobileSheetSize === 'compact' ? 'half' : 'expanded'); }
+        if (event.key === 'ArrowDown') { event.preventDefault(); if (mobileSheetSize === 'expanded') setMobileSheetSize('half'); else if (mobileSheetSize === 'half') setMobileSheetSize('compact'); else setMobilePane('preview'); }
         if (event.key === 'Escape') { event.preventDefault(); setMobilePane('preview'); }
       });
     });
@@ -1113,6 +1113,14 @@
     });
   }
 
+  // Source paths remain CMS data, never the default merchant-facing field.
+  // Only open conventional web/file paths, never executable protocols or
+  // protocol-relative links supplied by imported content.
+  function viewableMediaHref(value) {
+    const source = String(value || '').trim();
+    return /^(https?:\/\/|\/(?!\/))/i.test(source) ? source : '';
+  }
+
   function renderField(section, field) {
     const value = valueForField(section, field);
     const safeValue = cmsEscapeAttr(typeof value === 'object' ? JSON.stringify(value) : String(value));
@@ -1123,17 +1131,21 @@
       const isModel = field.type === 'model3d' || /\.(glb|gltf|usdz)(\?|$)/i.test(String(value));
       const isImage = !isModel && field.type !== 'video' && /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(String(value));
       const isVideo = field.type === 'video' || /\.(mp4|mov|webm)(\?|$)/i.test(String(value));
-      let preview = '<div class="te-media-empty">' + (value ? cmsEscapeHtml(String(value).split('/').pop()) : 'Drop media here or choose from library') + '</div>';
+      let preview = '<div class="te-media-empty">' + (value ? 'Media selected' : 'Drop media here or choose from library') + '</div>';
       if (value && isImage) preview = '<img src="' + safeValue + '" alt="">';
       if (value && isVideo && !isModel) preview = '<video src="' + safeValue + '" muted playsinline></video>';
-      if (value && isModel) preview = '<div class="te-media-empty" role="status">3D model · ' + cmsEscapeHtml(String(value).split('/').pop()) + '</div>';
+      if (value && isModel) preview = '<div class="te-media-empty" role="status">3D model selected</div>';
       return '<div class="te-field" data-field-key="' + cmsEscapeAttr(field.key) + '"><label>' + cmsEscapeHtml(field.label) + '</label>' +
         '<div class="te-media-drop" data-media-drop="' + cmsEscapeAttr(field.key) + '"><div class="te-media-preview">' + preview +
         '</div><div class="te-media-actions"><button type="button" class="te-media-button" data-pick-media="' + cmsEscapeAttr(field.key) + '">Choose</button>' +
         '<label class="te-media-button" style="display:inline-flex;align-items:center">Upload<input type="file" hidden data-upload-media="' + cmsEscapeAttr(field.key) + '" accept="' + (field.type === 'video' ? 'video/*' : field.type === 'model3d' ? 'model/*,.glb,.gltf,.usdz' : 'image/*,video/*,.glb,.gltf,.usdz') + '"></label>' +
         (mediaUndo.has(mediaUndoKey(field.key)) ? '<button type="button" class="te-media-button" data-undo-media="' + cmsEscapeAttr(field.key) + '" title="Undo the previous media change">Undo media</button>' : '') +
+        '<a class="te-media-view-original" data-view-original="' + cmsEscapeAttr(field.key) + '"' +
+        (viewableMediaHref(value) ? ' href="' + cmsEscapeAttr(viewableMediaHref(value)) + '"' : ' hidden') +
+        ' target="_blank" rel="noopener noreferrer" aria-label="View original media in a new tab">View original ↗</a>' +
         '</div><div class="te-media-feedback" data-media-feedback role="status" aria-live="polite"></div></div>' +
-        '<input class="te-media-url" id="' + id + '" data-field-input="' + cmsEscapeAttr(field.key) + '" value="' + safeValue + '" placeholder="' + cmsEscapeAttr(field.placeholder || 'Media URL or path') + '">' + help + '</div>';
+        '<details class="te-media-advanced"><summary>Source details</summary><label for="' + id + '">Media source URL</label>' +
+        '<input class="te-media-url" id="' + id + '" data-field-input="' + cmsEscapeAttr(field.key) + '" value="' + safeValue + '" placeholder="Enter a media URL or path"></details>' + help + '</div>';
     }
 
     if (field.type === 'boolean') {
@@ -1594,8 +1606,15 @@
     const isImage = !isModel && !isVideo && /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(String(value));
     if (value && isVideo) preview.innerHTML = '<video src="' + cmsEscapeAttr(value) + '" muted playsinline></video>';
     else if (value && isImage) preview.innerHTML = '<img src="' + cmsEscapeAttr(value) + '" alt="">';
-    else if (value && isModel) preview.innerHTML = '<div class="te-media-empty" role="status">3D model · ' + cmsEscapeHtml(String(value).split('/').pop()) + '</div>';
-    else preview.innerHTML = '<div class="te-media-empty">' + (value ? cmsEscapeHtml(String(value).split('/').pop()) : 'Drop media here or choose from library') + '</div>';
+    else if (value && isModel) preview.innerHTML = '<div class="te-media-empty" role="status">3D model selected</div>';
+    else preview.innerHTML = '<div class="te-media-empty">' + (value ? 'Media selected' : 'Drop media here or choose from library') + '</div>';
+    const openLink = zone.querySelector('[data-view-original]');
+    if (openLink) {
+      const href = viewableMediaHref(value);
+      openLink.hidden = !href;
+      if (href) openLink.href = href;
+      else openLink.removeAttribute('href');
+    }
   }
 
   function mediaUndoKey(fieldKey) {
@@ -1884,7 +1903,7 @@
       if (previewBlobUrl) URL.revokeObjectURL(previewBlobUrl);
       previewBlobUrl = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
       byId('te-open-tab').href = previewBlobUrl;
-      byId('te-preview-label').textContent = humanize(selectedTheme) + ' preview — ' + ((pageData && pageData.title) || humanize(slug));
+      byId('te-preview-label').textContent = 'Preview — ' + ((pageData && pageData.title) || humanize(slug));
       return;
     }
 
@@ -2299,7 +2318,7 @@
         if (preview?.html) {
           byId('theme-preview').removeAttribute('src');
           byId('theme-preview').srcdoc = preview.html;
-          byId('te-preview-label').textContent = 'Draft theme preview — ' + ((pageData && pageData.title) || humanize(slug));
+          byId('te-preview-label').textContent = 'Draft preview — ' + ((pageData && pageData.title) || humanize(slug));
           byId('te-open-tab').removeAttribute('href');
         }
       } catch (error) {
@@ -2329,7 +2348,7 @@
     byId('te-open-tab').href = liveUnimported ? route : route + separator + 'preview=1';
     byId('te-preview-label').textContent = slug === 'bridge-fly'
       ? 'Aviation scene · authenticated preview only'
-      : liveUnimported ? 'Live storefront — source inspection' : 'Heuristic draft preview — ' + ((pageData && pageData.title) || humanize(slug));
+      : liveUnimported ? 'Live storefront — source inspection' : 'Draft preview — ' + ((pageData && pageData.title) || humanize(slug));
   }
 
   function schedulePreview() {

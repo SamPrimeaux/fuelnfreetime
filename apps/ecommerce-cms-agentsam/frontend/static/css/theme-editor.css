@@ -736,7 +736,7 @@
 .te-media-preview video {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
 }
 
@@ -769,9 +769,34 @@
 
 .te-media-button:hover { background: #f4f4f1; }
 
-.te-media-url {
-  margin-top: 7px;
+.te-media-view-original {
+  display:inline-flex;
+  align-items:center;
+  min-height:28px;
+  color:#5d37b7;
+  text-decoration:none;
+  font-size:11px;
+  font-weight:650;
+  white-space:nowrap;
 }
+.te-media-view-original:hover {text-decoration:underline;}
+.te-media-view-original[hidden] {display:none;}
+.te-media-advanced {
+  margin:6px 0 0;
+  border:1px solid #eae9e6;
+  border-radius:8px;
+  background:#fafaf9;
+}
+.te-media-advanced summary {
+  cursor:pointer;
+  padding:7px 10px;
+  color:#767571;
+  font-size:11px;
+}
+.te-media-advanced:not([open]) {border:0;background:transparent;}
+.te-media-advanced:not([open]) summary {padding:3px 0 0;}
+.te-media-advanced label {padding:0 10px;font-size:11px;}
+.te-media-url {margin:7px 10px 10px;width:calc(100% - 20px)!important;}
 
 .te-setting-card {
   border: 1px solid var(--te-border);
@@ -2873,7 +2898,15 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
     flex-direction:column;
     z-index:1;
   }
-  .theme-studio .te-preview-bar { height:32px;min-height:32px;flex:0 0 32px; }
+  .theme-studio .te-preview-bar {
+    height:28px;min-height:28px;flex:0 0 28px;
+    justify-content:flex-end;padding-inline:7px;
+  }
+  /* The Page selector already identifies the page. No internal theme-status banner. */
+  .theme-studio .te-preview-bar #te-preview-label {display:none;}
+  .theme-studio .te-preview-bar__actions .te-icon-btn {
+    width:26px;min-width:26px;height:26px;padding:0;
+  }
   .theme-studio .te-preview-status { display:none; }
   .theme-studio .te-preview-stage { flex:1 1 auto;min-height:0;height:auto;padding:0;overflow:hidden; }
   .theme-studio .te-preview-device,
@@ -2917,7 +2950,7 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
     grid-column:1;
     grid-row:1;
     box-sizing:border-box;
-    height:min(54%,510px)!important;
+    height:min(39%,370px)!important;
     max-height:calc(100% - 110px)!important;
     min-height:0!important;
     width:100%!important;
@@ -2932,8 +2965,10 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
     z-index:12;
     overscroll-behavior:contain;
   }
+  .theme-studio[data-mobile-sheet="compact"] .theme-studio-tree,
+  .theme-studio[data-mobile-sheet="compact"] .theme-editor-panel {height:min(25%,230px)!important;}
   .theme-studio[data-mobile-sheet="expanded"] .theme-studio-tree,
-  .theme-studio[data-mobile-sheet="expanded"] .theme-editor-panel {height:min(76%,720px)!important;}
+  .theme-studio[data-mobile-sheet="expanded"] .theme-editor-panel {height:min(70%,650px)!important;}
   .theme-studio[data-mobile-pane="sections"] .theme-studio-tree,
   .theme-studio[data-mobile-pane="settings"] .theme-editor-panel {
     display:flex!important;
@@ -3005,6 +3040,20 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
     padding:8px 16px 24px;
   }
   .theme-studio .te-drawer-panel[hidden] {display:none!important;}
+  /* Media inspector is a compact asset card, not an oversized photo above a raw path. */
+  .theme-studio .te-media-drop {
+    display:grid;
+    grid-template-columns: minmax(88px,34%) minmax(0,1fr);
+    align-items:stretch;
+  }
+  .theme-studio .te-media-preview {height:102px;min-height:102px;overflow:hidden;}
+  .theme-studio .te-media-actions {
+    min-height:102px;display:flex;flex-wrap:wrap;justify-content:flex-start;
+    align-content:center;gap:7px;padding:9px;border-top:0;border-left:1px solid #e7e7e2;
+  }
+  .theme-studio .te-media-actions .te-media-button {height:34px;min-height:34px;font-size:12px;}
+  .theme-studio .te-media-actions .te-media-view-original {width:100%;}
+  .theme-studio .te-media-drop [data-media-feedback] {grid-column:1/-1;}
   .theme-studio .te-inspector-head {
     flex:0 0 auto;
     padding:10px 15px;
@@ -3063,7 +3112,11 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
 @media (max-width:900px) {
   .theme-studio .te-inspector-head { display:none!important; }
   .theme-studio .theme-studio-tree,
-  .theme-studio .theme-editor-panel { height:min(50%,475px)!important; }
+  .theme-studio .theme-editor-panel { height:min(39%,370px)!important; }
+  .theme-studio[data-mobile-sheet="compact"] .theme-studio-tree,
+  .theme-studio[data-mobile-sheet="compact"] .theme-editor-panel {height:min(25%,230px)!important;}
+  .theme-studio[data-mobile-sheet="expanded"] .theme-studio-tree,
+  .theme-studio[data-mobile-sheet="expanded"] .theme-editor-panel {height:min(70%,650px)!important;}
 }
 
 /* Preview-first mobile toolbar: page identity outranks theme selection.

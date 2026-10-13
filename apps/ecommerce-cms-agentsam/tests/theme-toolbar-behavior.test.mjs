@@ -394,16 +394,41 @@ test("mobile stylesheet prevents horizontal toolbar scrolling while retaining pa
   assert.match(css, /#te-more-menu[\s\S]*?te-mobile-more-entry/);
 });
 
+
+test("media fields show a compact asset card with View original and a collapsed, editable source", async () => {
+  const { dom, doc } = await editorFixture();
+  try {
+    doc.querySelector('[data-select-section="hero"]').click();
+    const media = doc.querySelector('[data-media-drop]');
+    assert.ok(media, "existing media inspector remains mounted");
+    const details = doc.querySelector(".te-media-advanced");
+    const source = details?.querySelector("[data-field-input]");
+    assert.ok(source, "canonical URL remains editable and uses existing save listeners");
+    assert.equal(details.open, false, "raw URL is concealed by default");
+    assert.ok(doc.querySelector("[data-view-original]"), "merchant can open the original asset");
+    assert.match(source.value, /^\//, "original path is retained, not transformed or rewritten");
+  } finally {dom.window.close();}
+});
+
+test("mobile editing sheet offers compact, balanced and expanded heights without hiding preview", () => {
+  const css = readFileSync(new URL("../frontend/static/css/theme-editor.css", import.meta.url), "utf8");
+  assert.match(css, /data-mobile-sheet="compact"/);
+  assert.match(css, /height:min\(39%,370px\)!important/);
+  assert.match(css, /height:min\(70%,650px\)!important/);
+  assert.match(css, /te-preview-bar #te-preview-label \{display:none;\}/);
+  assert.match(css, /\.te-media-preview[\s\S]*?object-fit: contain/);
+});
+
 test("mobile sheet CSS preserves live canvas and does not touch the separate admin dock", () => {
   const css=readFileSync(new URL('../frontend/static/css/theme-editor.css',import.meta.url),'utf8');
   assert.match(css,/Mobile live editor — screenshot-approved preview with draggable inspector/);
   assert.match(css,/data-mobile-pane="sections"\] \.theme-studio-canvas/);
   assert.match(css,/data-mobile-pane="settings"\] \.theme-studio-canvas/);
-  assert.match(css,/height:min\(54%,510px\)/);
+  assert.match(css,/height:min\(39%,370px\)/);
   assert.match(css,/data-mobile-sheet="expanded"/);
   assert.match(css,/\.te-mobile-sheet-grip/);
   assert.match(css,/\.te-mobile-selection-bar/);
-  assert.match(css,/height:min\(50%,475px\)/);
+  assert.match(css,/data-mobile-sheet="compact"/);
   assert.match(css,/\.te-inspector-head \{ display:none!important/);
   assert.doesNotMatch(css,/\.admin-mobile-dock/);
 });
