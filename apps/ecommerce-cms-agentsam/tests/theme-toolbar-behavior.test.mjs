@@ -9,7 +9,7 @@ const { JSDOM } = require("jsdom");
 const root = new URL("../frontend/static/js/", import.meta.url);
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 
-async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = [], themePreviews = [] } = {}) {
+async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = [], themePreviews = [], visualViewportHeight = null } = {}) {
   const dom = new JSDOM("<!doctype html><html><body></body></html>", {
     url: "https://editor.test/admin/theme-editor?slug=" + pageSlug,
     runScripts: "outside-only",
@@ -17,6 +17,13 @@ async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = 
   });
   const w = dom.window;
   w.structuredClone = globalThis.structuredClone;
+  if (visualViewportHeight != null) {
+    const viewport = new w.EventTarget();
+    viewport.height = visualViewportHeight;
+    viewport.offsetTop = 0;
+    viewport.scale = 1;
+    Object.defineProperty(w, "visualViewport", { configurable: true, value: viewport });
+  }
   if (themePreviews.length) w.ThemeStudioPreview = { themes: themePreviews };
   w.HTMLElement.prototype.scrollIntoView = () => {};
   const writes = [];
@@ -417,6 +424,43 @@ test("mobile editing sheet offers compact, balanced and expanded heights without
   assert.match(css, /height:min\(70%,650px\)!important/);
   assert.match(css, /te-preview-bar #te-preview-label \{display:none;\}/);
   assert.match(css, /\.te-media-preview[\s\S]*?object-fit: contain/);
+});
+
+
+test("Theme Studio standalone metadata uses product identity and keeps Safari viewport-fit", () => {
+  const html=readFileSync(new URL("../frontend/static/theme-editor.html",import.meta.url),"utf8");
+  assert.match(html,/viewport-fit=cover/);
+  assert.match(html,/apple-mobile-web-app-capable" content="yes"/);
+  assert.match(html,/apple-mobile-web-app-title" content="Theme Studio"/);
+  assert.match(html,/\/admin\/brand\/agentsam-gorilla-tiny\.svg/);
+  assert.doesNotMatch(html,/<title>[^<]*Fuel & Free Time/);
+});
+
+test("mobile browser chrome and keyboard resize editor viewport without changing tabs or draft", async () => {
+  const {dom,w,doc,writes}=await editorFixture({mobile:true, visualViewportHeight:690});
+  try {
+    const studio=doc.querySelector(".theme-studio");
+    assert.equal(studio.style.getPropertyValue("--te-visual-viewport-height"),"690px");
+    const tabs=doc.getElementById("te-mobile-pane-switch");
+    assert.equal(tabs.querySelectorAll("[data-mobile-pane]").length,3);
+    w.visualViewport.height=435;
+    w.visualViewport.dispatchEvent(new w.Event("resize"));
+    assert.equal(studio.style.getPropertyValue("--te-visual-viewport-height"),"435px");
+    assert.equal(writes.length,0,"viewport changes never edit or publish merchant content");
+    assert.equal(tabs.querySelectorAll("[data-mobile-pane]").length,3);
+    w.visualViewport.scale=2;
+    w.visualViewport.dispatchEvent(new w.Event("resize"));
+    assert.equal(studio.style.getPropertyValue("--te-visual-viewport-height"),"","pinch zoom falls back to CSS viewport");
+  } finally {dom.window.close();}
+});
+
+test("mobile standalone safe-area consumes actual tab height without extra blank row", () => {
+  const css=readFileSync(new URL("../frontend/static/css/theme-editor.css",import.meta.url),"utf8");
+  assert.match(css,/iPhone Safari \/ Home Screen web app viewport contract/);
+  assert.match(css,/grid-template-rows: minmax\(0, 1fr\) var\(--te-mobile-tabs-height\)/);
+  assert.match(css,/height: min\(100dvh, var\(--te-visual-viewport-height, 100dvh\)\)/);
+  assert.match(css,/bottom: var\(--te-mobile-tabs-height\)/);
+  assert.doesNotMatch(css,/\.admin-mobile-dock/);
 });
 
 test("mobile sheet CSS preserves live canvas and does not touch the separate admin dock", () => {

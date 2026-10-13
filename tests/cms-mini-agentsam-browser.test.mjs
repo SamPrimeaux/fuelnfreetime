@@ -41,8 +41,15 @@ const probe=`<script>(async function(){
   // and anchors the mini composer to the canvas, not a generic section row.
   if(innerWidth<=900)document.querySelector('[data-mobile-pane="preview"]').click();
   const preview=document.getElementById('theme-preview');
-  stage='canvas heading';const heading=await until(()=>preview.contentDocument?.querySelector('[data-cms="headline"]'));
+  // The CMS node may render before the iframe load handler binds the real
+  // selection listener. Wait for that existing editor readiness marker.
+  stage='canvas selection ready';const heading=await until(()=>{
+    const doc=preview.contentDocument;
+    return doc?.documentElement?.dataset.fnfThemeEditorBound==='1'
+      ? doc.querySelector('[data-cms="headline"]') : null;
+  });
   heading.click();
+  stage='selection confirmed';await until(()=>/hero.*headline/i.test(document.getElementById('te-selected-path')?.textContent||''));
   const editSheetMode=innerWidth<=900 ? document.querySelector('.theme-studio')?.dataset.mobilePane : null;
   const previewVisibleDuringEdit=innerWidth<=900 ? getComputedStyle(document.querySelector('.theme-studio-canvas')).display!=='none' : true;
   if(innerWidth<=900)document.querySelector('[data-mobile-pane="preview"]').click();
@@ -76,7 +83,7 @@ const probe=`<script>(async function(){
   const miniRect=mini.querySelector('.composer').getBoundingClientRect();
   const result={initialValue,initialVisible,beforeChatCount,editSheetMode,previewVisibleDuringEdit,caption,composerVisible:true,localReviewExists,sideAssistantOpen,focusedGroups,sourceRect:{left:sourceRect.left,right:sourceRect.right,top:sourceRect.top,bottom:sourceRect.bottom},initialComposerRect:{left:initialComposerRect.left,right:initialComposerRect.right,top:initialComposerRect.top,bottom:initialComposerRect.bottom},arrow,proposed,canApply,beforeField,beforeWrites,fieldAfter,dirty,afterApplyWrites,savedWrites:window.__writes.length,saved:window.__writes[0],chatCount:window.__chatCount,viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,composerRect:{left:miniRect.left,right:miniRect.right,top:miniRect.top,bottom:miniRect.bottom},errors:window.__agentErrors};
   const pre=document.createElement('pre');pre.id='mini-result';pre.textContent=JSON.stringify(result);document.body.append(pre);
- }catch(error){const pre=document.createElement('pre');pre.id='mini-result';pre.textContent=JSON.stringify({fatal:String(error),note:document.getElementById('te-note')?.textContent,errors:window.__agentErrors,html:document.getElementById('te-inspector-body')?.innerText?.slice(0,150)});document.body.append(pre);}
+ }catch(error){const pre=document.createElement('pre');pre.id='mini-result';const portal=document.querySelector('[data-mini-agentsam]');pre.textContent=JSON.stringify({fatal:String(error),stage,viewport:innerWidth,visualHeight:window.visualViewport?.height,mobilePane:document.querySelector('.theme-studio')?.dataset.mobilePane,inspection:document.getElementById('te-inspect-mode')?.getAttribute('aria-pressed'),portalMounted:!!portal,composerHidden:portal?.shadowRoot?.querySelector('.composer')?.hidden,selectedPath:document.getElementById('te-selected-path')?.textContent,note:document.getElementById('te-note')?.textContent,errors:window.__agentErrors,html:document.getElementById('te-inspector-body')?.innerText?.slice(0,150)});document.body.append(pre);}
 })()</script>`;
 const template=file('apps/ecommerce-cms-agentsam/frontend/static/theme-editor.html')
  .replace('<script src="/admin/js/shell.js"></script>',shim+'<script src="/admin/js/agentsam.js"></script>')
