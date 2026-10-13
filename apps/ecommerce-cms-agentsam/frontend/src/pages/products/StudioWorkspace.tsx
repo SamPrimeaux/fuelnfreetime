@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { createMiniAgentSam, miniAgentSamTokens } from "../../../../packages/agentsam-workbench/src/mini-agentsam.js";
 import { selectStudioSideImage } from "./studio-side-image";
+import { fabricColorFromImagePixels, validProviderFabricHex } from "./studio-fabric-color";
 import { adminFetch, adminFormFetch } from "../../lib/api";
 import { effectiveArtworkDpi, providerPrintSizeIn, evaluateManufacturingCompatibility } from "../../../../packages/agentsam-merch/src/index.js";
 import StudioIcon from "./StudioIcon";
@@ -21,12 +22,12 @@ import {
 } from "./studio-model";
 
 
-function NeutralGarmentSilhouette({ isFront, mini = false }: { isFront: boolean; mini?: boolean }) {
+function NeutralGarmentSilhouette({ isFront, mini = false, fabricColor }: { isFront: boolean; mini?: boolean; fabricColor?: string | null }) {
   return (
     <svg className={mini ? "ps-mini-silhouette" : "ps-design-garment-guide"}
       viewBox="0 0 500 560" role="img" aria-label={isFront ? "Front garment outline" : "Back garment outline"}
       preserveAspectRatio="xMidYMid meet">
-      <path d="M170 66 L210 45 Q250 92 290 45 L330 66 L451 142 L407 236 L345 203 L345 502 Q250 527 155 502 L155 203 L93 236 L49 142 Z" fill="#d8ddd3" stroke="#aab5a4" strokeWidth="2" />
+      <path d="M170 66 L210 45 Q250 92 290 45 L330 66 L451 142 L407 236 L345 203 L345 502 Q250 527 155 502 L155 203 L93 236 L49 142 Z" fill={fabricColor || "#b7bbb9"} stroke="#81878a" strokeWidth="2" />
       <path d={isFront ? "M210 45 Q250 126 290 45" : "M210 45 Q250 70 290 45"} fill="none" stroke="#aab5a4" strokeWidth="2" />
       <path d="M155 203 L170 66 M345 203 L330 66" fill="none" stroke="#b7c0b1" strokeWidth="1.4" />
     </svg>
@@ -174,6 +175,11 @@ export default function StudioWorkspace({
   const [miniMapOpen, setMiniMapOpen] = useState(true);
   const [canvasZoom, setCanvasZoom] = useState(100);
   const [media, setMedia] = useState<MediaAsset[]>([]);
+  const [albums, setAlbums] = useState<Array<{ id: number; name: string; asset_count?: number }>>([]);
+  const [albumId, setAlbumId] = useState(0);
+  const [mediaPage, setMediaPage] = useState(1);
+  const [mediaHasMore, setMediaHasMore] = useState(false);
+  const [fabricSample, setFabricSample] = useState<{ variantId: string; color: string | null } | null>(null);
   const [asset, setAsset] = useState<MediaAsset | null>(null);
   const [preparedAsset, setPreparedAsset] = useState<MediaAsset | null>(null);
   const [preparedFor, setPreparedFor] = useState<string | null>(null);
@@ -206,8 +212,9 @@ export default function StudioWorkspace({
   const [flipY, setFlipY] = useState(false);
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [mediaSearch, setMediaSearch] = useState("");
+  const [mediaQuery, setMediaQuery] = useState("");
   const [showArtwork, setShowArtwork] = useState(true);
-  const [guides, setGuides] = useState(true);
+  const [guides, setGuides] = useState(false);
   const [dimensions, setDimensions] = useState<{
     width: number;
     height: number;
@@ -283,6 +290,9 @@ export default function StudioWorkspace({
     detail.variants.find((v) => catalogVariantId(v) === variantId) ||
     detail.variants[0];
   const selectedAttributes = variantAttributes(variant);
+  const directFabricHex = Object.values(selectedAttributes).map(validProviderFabricHex).find(Boolean) || null;
+  const selectedFabricColor = directFabricHex || (fabricSample?.variantId === variantId ? fabricSample.color : null);
+  const selectedVariantPhoto = variantImage(variant);
   const optionAxes = variantAxes(detail.variants);
   const baseImage =
     variantImage(variant) ||
@@ -296,6 +306,32 @@ export default function StudioWorkspace({
     detail.mockups, locationId, variantId, location?.artboard_image_url,
     variantImage(variant) || baseImage, isFrontLocation,
   );
+  // Provider print-location images are often color-agnostic placeholders.
+  // Sample only the SELECTED variant photo; if CORS prevents inspection, show
+  // a neutral back outline, never a falsely black or color-mismatched preview.
+  useEffect(() => {
+    if (!selectedVariantPhoto) return;
+    let active = true;
+    const photo = new Image();
+    photo.crossOrigin = "anonymous";
+    photo.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = 48; canvas.height = 48;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx) return;
+        ctx.drawImage(photo, 0, 0, 48, 48);
+        const imageData = ctx.getImageData(0, 0, 48, 48);
+        const color = fabricColorFromImagePixels(imageData.data, 48, 48);
+        if (active) setFabricSample({ variantId, color });
+      } catch {
+        if (active) setFabricSample({ variantId, color: null });
+      }
+    };
+    photo.onerror = () => { if (active) setFabricSample({ variantId, color: null }); };
+    photo.src = selectedVariantPhoto;
+    return () => { active = false; };
+  }, [selectedVariantPhoto, variantId]);
   const artboardAspectRatio = location?.artboard_width && location?.artboard_height
     ? Number(location.artboard_width) / Number(location.artboard_height)
     : 4 / 5;
@@ -402,6 +438,13 @@ export default function StudioWorkspace({
     return () => controller.abort();
   }, [catalogId, detail.product.default_title, detail.product.name]);
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setMediaQuery(mediaSearch.trim());
+      setMediaPage(1);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [mediaSearch]);
+  useEffect(() => {
     if (tab !== "upload") return;
     const controller = new AbortController();
     queueMicrotask(() => {
@@ -410,14 +453,25 @@ export default function StudioWorkspace({
         setError("");
       }
     });
-    adminFetch<{ assets: MediaAsset[] }>("/api/admin/media?view=all", {
-      signal: controller.signal,
-    })
+    const query = new URLSearchParams({
+      view: "images", page_size: "48", page: String(mediaPage),
+      ...(albumId > 0 ? { album_id: String(albumId) } : {}),
+      ...(mediaQuery ? { q: mediaQuery } : {}),
+    });
+    adminFetch<{
+      assets: MediaAsset[];
+      albums?: Array<{ id: number; name: string; asset_count?: number }>;
+      pagination?: { has_next?: boolean };
+    }>(`/api/admin/media?${query}`, { signal: controller.signal })
       .then((d) => {
-        if (!controller.signal.aborted)
-          setMedia(
-            d.assets.filter((a) => a.content_type?.startsWith("image/") || /\.(png|jpe?g|webp|svg)$/i.test(a.filename)),
-          );
+        if (controller.signal.aborted) return;
+        const artwork = d.assets.filter((a) =>
+          a.content_type?.startsWith("image/") || /\.(png|jpe?g|webp|svg)$/i.test(a.filename));
+        setMedia((current) => mediaPage === 1 ? artwork : [
+          ...current, ...artwork.filter((a) => !current.some((item) => item.id === a.id)),
+        ]);
+        setMediaHasMore(Boolean(d.pagination?.has_next));
+        if (d.albums) setAlbums(d.albums);
       })
       .catch((e) => {
         if (!controller.signal.aborted) setError(e.message);
@@ -426,7 +480,7 @@ export default function StudioWorkspace({
         if (!controller.signal.aborted) setBusy("");
       });
     return () => controller.abort();
-  }, [tab]);
+  }, [tab, albumId, mediaPage, mediaQuery]);
   useEffect(() => {
     if (!asset) return;
     let active = true;
@@ -513,6 +567,19 @@ export default function StudioWorkspace({
           "Original PDF saved to the media library. Add a PNG preview to position it in the Studio; the PDF remains untouched.",
         );
       } else if (uploaded) {
+        if (albumId > 0) {
+          // Existing Media Album membership; no duplicate storage or new folder.
+          try {
+            await adminFetch("/api/admin/media/batch", {
+              method: "POST",
+              body: JSON.stringify({ action: "album_add", ids: [uploaded.id], album_id: albumId }),
+            });
+          } catch {
+            // Upload is still valid; do not lose the placed artwork because
+            // optional album organization failed.
+            setNotice("Artwork uploaded; adding it to the album needs a retry.");
+          }
+        }
         setMedia((current) => [uploaded, ...current.filter((item) => item.id !== uploaded.id)]);
         choose(uploaded);
       }
@@ -822,7 +889,7 @@ export default function StudioWorkspace({
       })
     : null;
   const sourceIsVector = Boolean(asset && /\.svg$/i.test(asset.filename));
-  const filteredMedia = media.filter((item) => item.filename.toLowerCase().includes(mediaSearch.trim().toLowerCase()));
+  const filteredMedia = media;
   const lowResolution = Boolean(effectiveDpi && location?.dpi && effectiveDpi.dpi < Number(location.dpi));
   const currentPlacementKey = placementKey(asset?.id, variantId, locationId, x, y, scale, rotation, flipX, flipY);
   const preparedIsCurrent = Boolean(preparedAsset && preparedFor === currentPlacementKey);
@@ -957,35 +1024,9 @@ export default function StudioWorkspace({
                   {variant?.sku ? ` · ${variant.sku}` : ""}
                 </p>
               )}
-              <div className="ps-field">
-                <strong>Print area</strong>
-                <div className="ps-option-choices ps-option-choices--compact">
-                  {detail.print_locations
-                    .filter((candidate) => candidate.enabled)
-                    .map((candidate) => (
-                      <button
-                        type="button"
-                        key={candidate.print_location_id}
-                        className={
-                          locationId === candidate.print_location_id
-                            ? "is-active"
-                            : ""
-                        }
-                        onClick={() => choosePrintLocation(candidate.print_location_id)}
-                        aria-pressed={
-                          locationId === candidate.print_location_id
-                        }
-                      >
-                        <span>{candidate.name}</span>
-                      </button>
-                    ))}
-                </div>
-              </div>
-              <div className="ps-paper-note">
-                <StudioIcon name="tools" />
-                <strong>Print dimensions</strong>
-                <p>{printSizeLabel(location)}</p>
-                <small>{location?.dpi || 300} DPI</small>
+              <div className="ps-print-details" title="Provider print area dimensions">
+                <span>{printSizeLabel(location)}</span>
+                <span>{location?.dpi ? `${location.dpi} DPI` : "DPI not specified"}</span>
               </div>
               <button
                 className="ps-button ps-wide"
@@ -1008,9 +1049,16 @@ export default function StudioWorkspace({
               <input ref={fileInput} type="file" hidden accept=".png,.jpg,.jpeg,.webp,.svg,.pdf"
                 onChange={(event) => void upload(event.target.files?.[0])} />
               <div className="ps-asset-rail__heading">
-                <strong>Media library</strong>
-                <span>{media.length}</span>
+                <strong>Artwork</strong>
+                <a href="/admin/media" title="Organize media albums" aria-label="Organize media albums">Manage</a>
               </div>
+              <select className="ps-asset-album" value={albumId} aria-label="Artwork album"
+                onChange={(event) => { setAlbumId(Number(event.target.value)); setMediaPage(1); setMedia([]); }}>
+                <option value={0}>All artwork</option>
+                {albums.map((album) => (
+                  <option key={album.id} value={album.id}>{album.name} ({album.asset_count ?? 0})</option>
+                ))}
+              </select>
               <label className="ps-asset-search">
                 <StudioIcon name="search" size={15} />
                 <input type="search" value={mediaSearch} onChange={(event) => setMediaSearch(event.target.value)}
@@ -1029,11 +1077,15 @@ export default function StudioWorkspace({
                   </button>
                 ))}
               </div>
-              {!busy && !media.length && (
-                <p className="ps-asset-status">Upload artwork to start your library.</p>
+              {!busy && filteredMedia.length === 0 && (
+                <p className="ps-asset-status">{mediaSearch ? "No matching artwork." :
+                  albumId ? "This album has no artwork yet." : "Choose or upload your first artwork."}</p>
               )}
-              {!busy && media.length > 0 && filteredMedia.length === 0 && (
-                <p className="ps-asset-status">No matching artwork.</p>
+              {mediaHasMore && (
+                <button type="button" className="ps-button ps-wide"
+                  disabled={busy === "library"} onClick={() => setMediaPage((page) => page + 1)}>
+                  Load more artwork
+                </button>
               )}
             </div>
           )}
@@ -1247,14 +1299,17 @@ export default function StudioWorkspace({
             </div>
           )}
           <div className="ps-stage" data-agentsam-resource="product-design-stage">
-            <div className="ps-product-design-preview" style={{ transform: `scale(${canvasZoom / 100})` }}>
+            <div className="ps-product-design-preview" style={{
+              transform: `scale(${canvasZoom / 100})`,
+              width: `min(100%, 880px, calc((100dvh - 290px) * ${artboardAspectRatio}))`,
+            }}>
               <div className="ps-product-design-image">
                 <div className="ps-design-guide" style={{ aspectRatio: artboardAspectRatio }}
                   aria-label={`${location?.name || "Selected"} garment design view`}>
                   {designImage ? (
                     <img className={"ps-design-product-image" + (hasProviderPlacementFrame ? " is-geometry-mapped" : "")} src={designImage} alt={`${location?.name || "Selected"} garment view`} />
                   ) : /shirt|tee|hoodie|sweatshirt|tank|jersey/i.test(detail.product.name) && (
-                    <NeutralGarmentSilhouette isFront={isFrontLocation} />
+                    <NeutralGarmentSilhouette isFront={isFrontLocation} fabricColor={selectedFabricColor} />
                   )}
                   <div className={"ps-design-print-area" + (guides ? " is-gridded" : "")} style={{ ...placementFrameStyle, aspectRatio: ratio }}
                     onPointerDown={(event) => {
@@ -1295,10 +1350,8 @@ export default function StudioWorkspace({
                         }}
                       />
                     ) : (
-                      <button className="ps-placement-empty" type="button" onClick={() => openTab("upload")}>
-                        <StudioIcon name="upload" />
-                        Add artwork
-                      </button>
+                      <button className="ps-placement-empty" type="button"
+                        aria-label="Add artwork" title="Add artwork" onClick={() => openTab("upload")} />
                     )}
                     {asset && showArtwork && artworkSelected && (
                       <div className="ps-selection-frame" aria-hidden="true" style={{
@@ -1336,7 +1389,7 @@ export default function StudioWorkspace({
                     {currentRenderUrl || designImage
                       ? <ProductImage key={`${variantId}:${locationId}`} sources={[currentRenderUrl || designImage || undefined]} alt={`${location?.name || "Selected"} garment variant: ${variant?.variant_title || variant?.name || detail.product.name}`} />
                       : /shirt|tee|hoodie|sweatshirt|tank|jersey/i.test(detail.product.name)
-                        ? <NeutralGarmentSilhouette isFront={isFrontLocation} mini />
+                        ? <NeutralGarmentSilhouette isFront={isFrontLocation} mini fabricColor={selectedFabricColor} />
                         : <ProductImage sources={[]} alt="No verified view available for this print location" />}
                     {!currentRenderUrl && asset && showArtwork && (
                       <div className="ps-mini-placement" style={placementFrameStyle}>
@@ -1344,7 +1397,10 @@ export default function StudioWorkspace({
                       </div>
                     )}
                   </div>
-                  <small>{currentRenderUrl ? "Completeful render" : designImage ? location?.name || "Selected view" : `${location?.name || "Selected"} outline guide`} · {variant?.variant_title || variant?.name || "Selected color"}</small>
+                  <small>{currentRenderUrl ? "Completeful render" : designImage
+                    ? location?.name || "Selected view"
+                    : selectedFabricColor ? `${location?.name || "Selected"} · color guide` : `${location?.name || "Selected"} · neutral guide`}
+                    {" · "}{variant?.variant_title || variant?.name || "Selected color"}</small>
                 </>
               )}
             </div>
