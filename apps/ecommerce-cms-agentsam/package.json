@@ -15,7 +15,9 @@
     "build": "npm run build:frontend && npm run build:assets",
     "dev": "npm run build && wrangler dev",
     "deploy": "npm run build && wrangler deploy",
-    "test:package": "node --test tests/package-boundaries.test.mjs"
+    "test:package": "node --test tests/package-boundaries.test.mjs && npm run test:tools",
+    "typecheck:tools": "tsc --project tsconfig.tools.json",
+    "test:tools": "npm run typecheck:tools && node --test tests/typed-tool-registry.test.mjs && node backend/tools/doctor.mjs"
   },
   "dependencies": {
     "@inneranimalmedia/revise-theme": "0.2.0",
@@ -27,6 +29,8 @@
   },
   "devDependencies": {
     "esbuild": "0.28.2",
-    "wrangler": "4.149.0"
+    "wrangler": "4.149.0",
+    "typescript": "~6.0.2",
+    "json-schema-to-ts": "3.1.1"
   }
 }
