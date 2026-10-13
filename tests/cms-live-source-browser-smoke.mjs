@@ -307,7 +307,7 @@ for(const width of [744,390]){
  assert.equal(results.get(width).before.toolbar.legacyTabs,0);
  assert.equal(results.get(width).before.toolbar.pageVisible,true);
  assert.equal(results.get(width).before.toolbar.settingsOpened,true);
- assert.equal(results.get(width).linked,true);
+ assert.equal(results.get(width).linked,true,"Mobile draft import did not complete: "+JSON.stringify({width,reviewOpened:results.get(width).before.reviewOpened,reviewProtected:results.get(width).before.reviewProtected,importMode:results.get(width).imported?.mode,saveState:results.get(width).saveState,selectedSheet:results.get(width).before.mobile?.sheetMode,viewport:results.get(width).before.mobile?.viewport}));
  assert.ok(results.get(width).saved.some(s=>s.content.headline==="Private autosave browser proof"),"Mobile edits must autosave too");
  console.log("PASS: "+width+"px mobile CMS Sections / Preview / Settings editor");
 }
