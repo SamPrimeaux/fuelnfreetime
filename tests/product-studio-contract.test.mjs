@@ -200,7 +200,8 @@ test("artwork preparation is opt-in and preserves the original asset", async () 
   assert.match(workspace, /Remove connected flat background/);
   assert.match(workspace, /checked=\{removeFlatBackground\}/);
   assert.match(workspace, /Trim transparent edges/);
-  assert.match(workspace, /Original artwork is unchanged/);
+  assert.match(workspace, /derivativeRole: "original\/master", transformPolicy: "preserve"/);
+  assert.match(workspace, /derivativeRole: "manufacturing", transformPolicy: "preserve", sourceAsset: asset/);
   assert.match(workspace, /Original and prepared artwork comparison/);
   assert.match(workspace, /studio\/prepared/);
   assert.match(workspace, /removeConnectedFlatBackground/);

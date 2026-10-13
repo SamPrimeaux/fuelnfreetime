@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { createMiniAgentSam, miniAgentSamTokens } from "../../../../packages/agentsam-workbench/src/mini-agentsam.js";
 import { selectStudioSideImage } from "./studio-side-image";
 import { adminFetch, adminFormFetch } from "../../lib/api";
-import { evaluateManufacturingCompatibility } from "../../../../packages/agentsam-merch/src/index.js";
+import { effectiveArtworkDpi, providerPrintSizeIn, evaluateManufacturingCompatibility } from "../../../../packages/agentsam-merch/src/index.js";
 import StudioIcon from "./StudioIcon";
 import ProductImage from "./ProductImage";
 import {
@@ -135,7 +135,7 @@ type StudioDraft = {
   state: "draft" | "prepared" | "rendering" | "rendered" | "created" | "published" | "error";
   selected_variant_ids: string[];
   print_location_ids: string[];
-  placement?: { x?: number; y?: number; scale?: number; rotation?: number; notes?: string };
+  placement?: { x?: number; y?: number; scale?: number; rotation?: number; flipX?: boolean; flipY?: boolean; notes?: string };
   original_media_asset_id?: number | null;
   prepared_media_asset_id?: number | null;
   preview_media_asset_id?: number | null;
@@ -149,10 +149,14 @@ type StudioDraft = {
   version: number;
 };
 
+function placementKey(assetId: number | null | undefined, variantId: string, locationId: string,
+  x: number, y: number, scale: number, rotation: number, flipX: boolean, flipY: boolean) {
+  return JSON.stringify([assetId || null, variantId, locationId, x, y, scale, rotation, flipX, flipY]);
+}
+
 const tabs = [
   { id: "options", label: "Options", icon: "options" },
   { id: "upload", label: "Upload", icon: "upload" },
-  { id: "designs", label: "Designs", icon: "image" },
   { id: "layers", label: "Layers", icon: "layers" },
   { id: "tools", label: "Tools", icon: "tools" },
 ];
@@ -172,6 +176,7 @@ export default function StudioWorkspace({
   const [media, setMedia] = useState<MediaAsset[]>([]);
   const [asset, setAsset] = useState<MediaAsset | null>(null);
   const [preparedAsset, setPreparedAsset] = useState<MediaAsset | null>(null);
+  const [preparedFor, setPreparedFor] = useState<string | null>(null);
   const [previewAsset, setPreviewAsset] = useState<MediaAsset | null>(null);
   const [draft, setDraft] = useState<StudioDraft | null>(null);
   const [title, setTitle] = useState(detail.product.default_title || detail.product.name);
@@ -197,6 +202,10 @@ export default function StudioWorkspace({
   const [x, setX] = useState(50);
   const [y, setY] = useState(50);
   const [rotation, setRotation] = useState(0);
+  const [flipX, setFlipX] = useState(false);
+  const [flipY, setFlipY] = useState(false);
+  const [snapEnabled, setSnapEnabled] = useState(true);
+  const [mediaSearch, setMediaSearch] = useState("");
   const [showArtwork, setShowArtwork] = useState(true);
   const [guides, setGuides] = useState(true);
   const [dimensions, setDimensions] = useState<{
@@ -252,18 +261,20 @@ export default function StudioWorkspace({
     const dy = ((event.clientY - from.startY) / Math.max(1, rect.height)) * 100;
     if (from.mode === "resize") setScale(Math.max(5, Math.min(150, Math.round(from.scale + dx * 2))));
     else {
-      setX(Math.max(0, Math.min(100, Math.round(from.x + dx))));
-      setY(Math.max(0, Math.min(100, Math.round(from.y + dy))));
+      const snap = (value: number) => {
+        const rounded = Math.max(0, Math.min(100, Math.round(value)));
+        return snapEnabled && Math.abs(rounded - Math.round(rounded / 5) * 5) < 2
+          ? Math.round(rounded / 5) * 5 : rounded;
+      };
+      setX(snap(from.x + dx));
+      setY(snap(from.y + dy));
     }
   }
 
   function openTab(next: string) {
     setPanelOpen((current) => next === tab ? !current : true);
     setTab(next);
-    if (window.matchMedia("(max-width: 760px)").matches)
-      requestAnimationFrame(() =>
-        panel.current?.scrollIntoView({ block: "start" }),
-      );
+    // On small screens the tools remain in a compact bottom pane; keep the canvas visible.
   }
   const location = detail.print_locations.find(
     (l) => l.print_location_id === locationId,
@@ -340,7 +351,7 @@ export default function StudioWorkspace({
     : { aspectRatio: ratio };
   useEffect(() => {
     const controller = new AbortController();
-    setBusy("restore");
+    queueMicrotask(() => { if (!controller.signal.aborted) setBusy("restore"); });
     adminFetch<{ draft: StudioDraft | null }>(
       `/api/admin/product-studio/drafts?catalog_product_id=${encodeURIComponent(catalogId)}`,
       { signal: controller.signal },
@@ -356,9 +367,18 @@ export default function StudioWorkspace({
           setY(Number(saved.placement.y ?? 50));
           setScale(Number(saved.placement.scale ?? 80));
           setRotation(Number(saved.placement.rotation ?? 0));
+          setFlipX(Boolean(saved.placement.flipX));
+          setFlipY(Boolean(saved.placement.flipY));
           setNotes(String(saved.placement.notes || ""));
         }
         setProviderRenderUrl(saved.completeful_render_url || null);
+        if (saved.prepared_media_asset_id) {
+          setPreparedFor(placementKey(saved.original_media_asset_id,
+            saved.selected_variant_ids?.[0] || "", saved.print_location_ids?.[0] || "",
+            Number(saved.placement?.x ?? 50), Number(saved.placement?.y ?? 50),
+            Number(saved.placement?.scale ?? 80), Number(saved.placement?.rotation ?? 0),
+            Boolean(saved.placement?.flipX), Boolean(saved.placement?.flipY)));
+        }
         if (saved.original_media_asset_id || saved.prepared_media_asset_id || saved.preview_media_asset_id) {
           const library = await adminFetch<{ assets: MediaAsset[] }>("/api/admin/media?view=all", {
             signal: controller.signal,
@@ -382,7 +402,7 @@ export default function StudioWorkspace({
     return () => controller.abort();
   }, [catalogId, detail.product.default_title, detail.product.name]);
   useEffect(() => {
-    if (tab !== "designs") return;
+    if (tab !== "upload") return;
     const controller = new AbortController();
     queueMicrotask(() => {
       if (!controller.signal.aborted) {
@@ -396,7 +416,7 @@ export default function StudioWorkspace({
       .then((d) => {
         if (!controller.signal.aborted)
           setMedia(
-            d.assets.filter((a) => a.content_type?.startsWith("image/")),
+            d.assets.filter((a) => a.content_type?.startsWith("image/") || /\.(png|jpe?g|webp|svg)$/i.test(a.filename)),
           );
       })
       .catch((e) => {
@@ -427,10 +447,12 @@ export default function StudioWorkspace({
     setDimensions(null);
     setAsset(a);
     setPreparedAsset(null);
+    setPreparedFor(null);
     setPreviewAsset(null);
     setProviderRenderUrl(null);
     setShowArtwork(true);
-    setNotice("Artwork added. Review its placement on the selected product and print area.");
+    setArtworkSelected(true);
+    setNotice("");
     if (window.matchMedia("(max-width: 760px)").matches)
       requestAnimationFrame(() =>
         stage.current?.scrollIntoView({ block: "start" }),
@@ -445,8 +467,8 @@ export default function StudioWorkspace({
         `/api/admin/media/${encodeURIComponent(asset.id)}/remove-background`, { method: "POST" },
       );
       if (!result.ok || !result.asset) throw new Error("Background removal did not produce a derivative.");
+      setMedia((current) => [result.asset!, ...current.filter((item) => item.id !== result.asset!.id)]);
       choose(result.asset);
-      setNotice("Transparent derivative saved to Media Library. Original artwork preserved. Verify print resolution before production.");
     } catch (error) {
       setError(error instanceof Error ? error.message : "Subject segmentation failed.");
     } finally {
@@ -491,6 +513,7 @@ export default function StudioWorkspace({
           "Original PDF saved to the media library. Add a PNG preview to position it in the Studio; the PDF remains untouched.",
         );
       } else if (uploaded) {
+        setMedia((current) => [uploaded, ...current.filter((item) => item.id !== uploaded.id)]);
         choose(uploaded);
       }
     } catch (e) {
@@ -538,7 +561,7 @@ export default function StudioWorkspace({
         await upload(
           new File(
             [bytes],
-            `studio-artwork-${Date.now()}.${mime === "image/jpeg" ? "jpg" : "png"}`,
+            `studio-artwork-${crypto.randomUUID().slice(0, 12)}.${mime === "image/jpeg" ? "jpg" : "png"}`,
             { type: mime },
           ),
         );
@@ -547,16 +570,19 @@ export default function StudioWorkspace({
     } catch (e) {
       const message = e instanceof Error ? e.message : "Creative request failed";
       setError(message);
-      throw new Error(message);
+      throw new Error(message, { cause: e });
     } finally {
       setBusy("");
     }
   }
-  miniSendRef.current = (message, signal) => {
-    const generate = /^(create|generate|make|draw|design|render|illustrate|\/image)\b/i.test(message);
-    return askAI(generate, message, signal);
-  };
-  async function saveDraft(nextPrepared: MediaAsset | null = preparedAsset, nextPreview: MediaAsset | null = previewAsset) {
+  useEffect(() => {
+    miniSendRef.current = (message, signal) => {
+      const generate = /^(create|generate|make|draw|design|render|illustrate|\/image)\b/i.test(message);
+      return askAI(generate, message, signal);
+    };
+  });
+  async function saveDraft(nextPrepared: MediaAsset | null = preparedFor === currentPlacementKey ? preparedAsset : null,
+    nextPreview: MediaAsset | null = preparedFor === currentPlacementKey ? previewAsset : null) {
     if (!variantId || !locationId) {
       setError("Choose a product option and print area before saving.");
       return null;
@@ -575,14 +601,15 @@ export default function StudioWorkspace({
           original_media_asset_id: asset?.id || null,
           prepared_media_asset_id: nextPrepared?.id || null,
           preview_media_asset_id: nextPreview?.id || null,
-          placement: { x, y, scale, rotation },
+          placement: { x, y, scale, rotation, flipX, flipY },
           notes,
           title: title.trim() || detail.product.name,
         }),
       });
       setDraft(result.draft);
-      setProviderRenderUrl(result.draft.completeful_render_url || null);
-      setNotice(`Saved product draft · ${result.draft.state}.`);
+      setProviderRenderUrl(preparedFor === currentPlacementKey || Boolean(nextPrepared)
+        ? result.draft.completeful_render_url || null : null);
+      setNotice("");
       return result.draft;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save product draft");
@@ -639,6 +666,7 @@ export default function StudioWorkspace({
     const h = (crop.height / crop.width) * w;
     ctx.translate((width * x) / 100, (height * y) / 100);
     ctx.rotate((rotation * Math.PI) / 180);
+    ctx.scale(flipX ? -1 : 1, flipY ? -1 : 1);
     ctx.drawImage(source, crop.x, crop.y, crop.width, crop.height, -w / 2, -h / 2, w, h);
     return new Promise<Blob>((resolve, reject) =>
       canvas.toBlob(
@@ -673,7 +701,7 @@ export default function StudioWorkspace({
       const blob = await new Promise<Blob>((resolve, reject) =>
         canvas.toBlob((value) => (value ? resolve(value) : reject(new Error("Preview export failed"))), "image/png"),
       );
-      const filename = `placement-${catalogId.slice(0, 8)}-${locationId.slice(0, 8)}-${Date.now()}.png`;
+      const filename = `placement-${catalogId.slice(0, 8)}-${locationId.slice(0, 8)}-${crypto.randomUUID().slice(0, 12)}.png`;
       return (await uploadMediaFile(
         new File([blob], filename, { type: "image/png" }), "studio/previews",
         { derivativeRole: "mockup", transformPolicy: "preserve", sourceAsset: prepared },
@@ -694,22 +722,19 @@ export default function StudioWorkspace({
           "Original artwork requires a different source version for this print area.");
       }
       const blob = await buildPreparedArtworkBlob();
-      const filename = `prepared-${catalogId.slice(0, 8)}-${locationId.slice(0, 8)}-${Date.now()}.png`;
+      const filename = `prepared-${catalogId.slice(0, 8)}-${locationId.slice(0, 8)}-${crypto.randomUUID().slice(0, 12)}.png`;
       const uploaded = await uploadMediaFile(
         new File([blob], filename, { type: "image/png" }), "studio/prepared",
         { derivativeRole: "manufacturing", transformPolicy: "preserve", sourceAsset: asset },
       );
       if (!uploaded) throw new Error("Prepared artwork was not saved");
       setPreparedAsset(uploaded);
+      setPreparedFor(currentPlacementKey);
+      setPreviewAsset(null);
       setProviderRenderUrl(null);
       const preview = await persistPlacementPreview(uploaded);
       if (preview) setPreviewAsset(preview);
-      const saved = await saveDraft(uploaded, preview || previewAsset);
-      if (saved) {
-        setNotice(
-          `Prepared ${printPixels?.width} × ${printPixels?.height} PNG. Original artwork is unchanged; supplier acceptance still requires verification.`,
-        );
-      }
+      await saveDraft(uploaded, preview || null);
       return uploaded;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Artwork preparation failed");
@@ -720,12 +745,12 @@ export default function StudioWorkspace({
   }
 
   async function renderMockup() {
-    let saved = await saveDraft();
-    if (!saved) return;
-    if (!preparedAsset) {
-      setError("Prepare the artwork first so Completeful receives the production raster, not a browser-only placement.");
+    if (!preparedAsset || preparedFor !== currentPlacementKey) {
+      setError("Prepare the updated artwork before rendering the mockup.");
       return;
     }
+    let saved = await saveDraft();
+    if (!saved) return;
     setBusy("render");
     setError("");
     try {
@@ -788,12 +813,20 @@ export default function StudioWorkspace({
     }
   }
 
-  const requiredPrintPixels = printPixels ? {
-    width: Math.ceil((printPixels.width * scale) / 100),
-    height: Math.ceil((printPixels.height * scale) / 100),
-  } : null;
-  const lowResolution = Boolean(dimensions && requiredPrintPixels &&
-    (dimensions.width < requiredPrintPixels.width || dimensions.height < requiredPrintPixels.height));
+  const physicalPrintSize = providerPrintSizeIn(location);
+  const effectiveDpi = dimensions && physicalPrintSize && asset && !/\.svg$/i.test(asset.filename)
+    ? effectiveArtworkDpi({
+        sourceWidthPx: dimensions.width, sourceHeightPx: dimensions.height,
+        printWidthIn: physicalPrintSize.width, printHeightIn: physicalPrintSize.height,
+        placementWidthPercent: scale,
+      })
+    : null;
+  const sourceIsVector = Boolean(asset && /\.svg$/i.test(asset.filename));
+  const filteredMedia = media.filter((item) => item.filename.toLowerCase().includes(mediaSearch.trim().toLowerCase()));
+  const lowResolution = Boolean(effectiveDpi && location?.dpi && effectiveDpi.dpi < Number(location.dpi));
+  const currentPlacementKey = placementKey(asset?.id, variantId, locationId, x, y, scale, rotation, flipX, flipY);
+  const preparedIsCurrent = Boolean(preparedAsset && preparedFor === currentPlacementKey);
+  const currentRenderUrl = preparedIsCurrent ? providerRenderUrl : null;
   const manufacturingPreflight = dimensions && printPixels && asset && location
     ? evaluateManufacturingCompatibility(
         { format: asset.filename?.split(".").pop(), widthPx: dimensions.width,
@@ -820,7 +853,6 @@ export default function StudioWorkspace({
           <span>Product details</span>
         </button>
         <div>
-          <small>YOUR WORKSPACE</small>
           <h1>{detail.product.name}</h1>
         </div>
         <div className="ps-workspace-actions">
@@ -955,12 +987,6 @@ export default function StudioWorkspace({
                 <p>{printSizeLabel(location)}</p>
                 <small>{location?.dpi || 300} DPI</small>
               </div>
-              <div className="ps-paper-note ps-workflow-note">
-                <strong>Product details</strong>
-                <button type="button" className="ps-button" disabled={Boolean(busy)} onClick={() => void continueToProductDetails()}>
-                  Next step · Product details →
-                </button>
-              </div>
               <button
                 className="ps-button ps-wide"
                 onClick={() => setTab("upload")}
@@ -970,83 +996,46 @@ export default function StudioWorkspace({
             </>
           )}
           {tab === "upload" && (
-            <>
-              <button
-                className="ps-upload-zone"
-                disabled={Boolean(busy)}
+            <div className="ps-asset-rail">
+              <button type="button" className="ps-upload-zone" disabled={Boolean(busy)}
                 onClick={() => fileInput.current?.click()}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  if (!busy) void upload(e.dataTransfer.files[0]);
-                }}
-              >
-                <StudioIcon name="upload" size={32} />
-                <strong>
-                  {busy === "upload"
-                    ? "Uploading your artwork…"
-                    : "Drop an idea here."}
-                </strong>
-                <span>Or tap to choose a file</span>
-                <small>PNG, JPG, WebP, SVG, PDF · up to 20 MB</small>
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => { event.preventDefault(); if (!busy) void upload(event.dataTransfer.files[0]); }}>
+                <StudioIcon name="upload" size={21} />
+                <strong>{busy === "upload" ? "Uploading…" : "Choose files"}</strong>
+                <small>or drop artwork here</small>
               </button>
-              <input
-                ref={fileInput}
-                type="file"
-                hidden
-                accept=".png,.jpg,.jpeg,.webp,.svg,.pdf"
-                onChange={(e) => void upload(e.target.files?.[0])}
-              />
-              <div className="ps-upload-tips">
-                <h3>A better file. A better finish.</h3>
-                <a className="ps-upload-help-link" href="/admin/products/help/artwork">
-                  Review artwork requirements
-                </a>
-                <p>
-                  <strong>PNG</strong> for transparent backgrounds. JPG images
-                  include their background.
-                </p>
-                <p>
-                  <strong>SVG / PDF</strong> preserve vector artwork. Outline
-                  text or embed fonts. PDF originals are stored; use PNG for
-                  canvas previews.
-                </p>
-                <p>
-                  <strong>300 DPI</strong> at final print size is the raster
-                  target. Use RGB / sRGB and keep the highest quality original.
-                </p>
-                <p>
-                  Safe-area guides are an editing aid. Confirm the provider’s
-                  bleed and placement requirements before printing.
-                </p>
+              <input ref={fileInput} type="file" hidden accept=".png,.jpg,.jpeg,.webp,.svg,.pdf"
+                onChange={(event) => void upload(event.target.files?.[0])} />
+              <div className="ps-asset-rail__heading">
+                <strong>Media library</strong>
+                <span>{media.length}</span>
               </div>
-            </>
-          )}
-          {tab === "designs" && (
-            <>
-              <p className="ps-panel-intro">
-                Your media library, right where you need it.
-              </p>
-              {busy === "library" && <p role="status">Loading your designs…</p>}
+              <label className="ps-asset-search">
+                <StudioIcon name="search" size={15} />
+                <input type="search" value={mediaSearch} onChange={(event) => setMediaSearch(event.target.value)}
+                  placeholder="Find artwork" aria-label="Search media library" />
+              </label>
+              {busy === "library" && <p className="ps-asset-status" role="status">Loading artwork…</p>}
               <div className="ps-media-grid">
-                {media.map((a) => (
-                  <button
-                    key={a.id}
-                    onClick={() => choose(a)}
-                    aria-label={`Use ${a.filename}`}
-                    className={asset?.id === a.id ? "is-active" : ""}
-                  >
-                    <img src={a.url} alt="" loading="lazy" />
-                    <span>{a.filename}</span>
+                {filteredMedia.map((item) => (
+                  <button type="button" key={item.id} title={item.filename}
+                    aria-label={`Place ${item.filename}`}
+                    aria-pressed={asset?.id === item.id}
+                    onClick={() => choose(item)}
+                    className={asset?.id === item.id ? "is-active" : ""}>
+                    <img src={item.url} alt="" loading="lazy" />
+                    <span>{item.filename}</span>
                   </button>
                 ))}
               </div>
               {!busy && !media.length && (
-                <button className="ps-button" onClick={() => setTab("upload")}>
-                  Upload your first design
-                </button>
+                <p className="ps-asset-status">Upload artwork to start your library.</p>
               )}
-            </>
+              {!busy && media.length > 0 && filteredMedia.length === 0 && (
+                <p className="ps-asset-status">No matching artwork.</p>
+              )}
+            </div>
           )}
           {tab === "layers" && (
             <>
@@ -1102,6 +1091,10 @@ export default function StudioWorkspace({
                       onChange={(e) => setRotation(Number(e.target.value))}
                     />
                   </label>
+                  <label className="ps-check">
+                    <input type="checkbox" checked={flipY} onChange={(event) => setFlipY(event.target.checked)} />
+                    Flip vertically
+                  </label>
                   <button
                     className="ps-button"
                     onClick={() => {
@@ -1119,7 +1112,7 @@ export default function StudioWorkspace({
                   <p>Your artwork layer will appear here.</p>
                   <button
                     className="ps-button"
-                    onClick={() => setTab("designs")}
+                    onClick={() => setTab("upload")}
                   >
                     Choose artwork
                   </button>
@@ -1148,14 +1141,18 @@ export default function StudioWorkspace({
                   checked={guides}
                   onChange={(e) => setGuides(e.target.checked)}
                 />{" "}
-                Show print bounds
+                Show grid
+              </label>
+              <label className="ps-check">
+                <input type="checkbox" checked={snapEnabled} onChange={(event) => setSnapEnabled(event.target.checked)} />
+                Snap to grid
               </label>
               <button
                 className="ps-button ps-wide"
                 disabled={!asset || Boolean(busy)}
                 onClick={() => void prepareArtwork()}
               >
-                {busy === "prepare" ? "Preparing…" : preparedAsset ? "Rebuild production artwork" : "Prepare for print"}
+                {busy === "prepare" ? "Preparing…" : preparedIsCurrent ? "Rebuild production artwork" : "Prepare for print"}
               </button>
               {subjectRemovalAvailable && (
                 <div className="ps-prep-options">
@@ -1185,7 +1182,7 @@ export default function StudioWorkspace({
                   Trim transparent edges
                 </label>
               </div>
-              {asset && preparedAsset && (
+              {asset && preparedAsset && preparedIsCurrent && (
                 <div className="ps-derivative-compare" aria-label="Original and prepared artwork comparison">
                   <figure>
                     <img src={asset.url} alt="Original artwork" />
@@ -1199,23 +1196,11 @@ export default function StudioWorkspace({
               )}
               <button
                 className="ps-button ps-wide"
-                disabled={!preparedAsset || Boolean(busy)}
+                disabled={!preparedIsCurrent || Boolean(busy)}
                 onClick={() => void renderMockup()}
               >
                 {busy === "render" ? "Rendering with Completeful…" : "Render Completeful mockup"}
               </button>
-              <button
-                className="ps-button ps-wide"
-                disabled={Boolean(busy)}
-                onClick={() => void saveDraft()}
-              >
-                Save product draft
-              </button>
-              <div className="ps-workflow-note">
-                <button type="button" className="ps-button ps-wide ps-primary" disabled={Boolean(busy)} onClick={() => void continueToProductDetails()}>
-                  Next step · Product details →
-                </button>
-              </div>
             </>
           )}
         </aside>
@@ -1223,9 +1208,6 @@ export default function StudioWorkspace({
           <div className="ps-stage-toolbar">
             <div>
               <strong>Product design</strong>
-              <span className="ps-stage-subtitle">
-                {location?.name || "Choose a print area"}
-              </span>
             </div>
           </div>
           <div className="ps-studio-context">
@@ -1235,21 +1217,33 @@ export default function StudioWorkspace({
               onClick={openMiniAgentSam}>
               <img src={miniAgentSamTokens.icon} alt="" aria-hidden="true" />
             </button>
-            <button type="button" onClick={() => setGuides((current) => !current)} aria-pressed={guides}>{guides ? "Hide guides" : "Show guides"}</button>
           </div>
-          {asset && !providerRenderUrl && artworkSelected && (
-            <div className="ps-artwork-toolbar" role="toolbar" aria-label="Artwork placement controls">
-              <button type="button" onClick={() => { setTab("layers"); setPanelOpen(true); }}>Edit placement</button>
-              <button type="button" onClick={() => { setTab("tools"); setPanelOpen(true); setRemoveFlatBackground(true); }} title="Configure background removal before preparing a derivative">Cutout setup</button>
-              <button type="button" onClick={() => setScale((value) => Math.max(5, value - 10))} aria-label="Make artwork smaller">−</button>
-              <span aria-live="polite">{scale}%</span>
-              <button type="button" onClick={() => setScale((value) => Math.min(150, value + 10))} aria-label="Make artwork larger">+</button>
-              <button type="button" onClick={() => { setX(50); setY(50); }}>Center</button>
-              <button type="button" onClick={() => setRotation((value) => ((value + 270) % 360) - 180)}>Rotate 90°</button>
-              <label className="ps-precision-control">X <input type="number" min="0" max="100" step="1" value={x} onChange={(event) => setX(Math.max(0, Math.min(100, Number(event.target.value))))} aria-label="Artwork X position percent" /></label>
-              <label className="ps-precision-control">Y <input type="number" min="0" max="100" step="1" value={y} onChange={(event) => setY(Math.max(0, Math.min(100, Number(event.target.value))))} aria-label="Artwork Y position percent" /></label>
-              <label className="ps-precision-control">Angle <input type="number" min="-180" max="180" step="1" value={rotation} onChange={(event) => setRotation(Math.max(-180, Math.min(180, Number(event.target.value))))} aria-label="Artwork rotation degrees" /></label>
-              <button type="button" onClick={() => setGuides((value) => !value)} aria-pressed={guides}>{guides ? "Hide grid" : "Show grid"}</button>
+          {asset && !currentRenderUrl && artworkSelected && (
+            <div className="ps-artwork-toolbar" role="toolbar" aria-label="Selected artwork tools">
+              <button type="button" title="Edit artwork placement" aria-label="Edit artwork placement"
+                onClick={() => { setTab("layers"); setPanelOpen(true); }}><StudioIcon name="pen" size={17} /></button>
+              <button type="button" title="Background cutout" aria-label="Background cutout"
+                onClick={() => { setTab("tools"); setPanelOpen(true); setRemoveFlatBackground(true); }}><StudioIcon name="image" size={17} /></button>
+              <span className="ps-artwork-toolbar__divider" aria-hidden="true" />
+              <button type="button" title="Reduce artwork size" aria-label="Reduce artwork size"
+                onClick={() => setScale((value) => Math.max(5, value - 5))}>−</button>
+              <output aria-label="Artwork size" className="ps-artwork-scale">{scale}%</output>
+              <button type="button" title="Increase artwork size" aria-label="Increase artwork size"
+                onClick={() => setScale((value) => Math.min(150, value + 5))}>+</button>
+              <button type="button" title="Center artwork" aria-label="Center artwork"
+                onClick={() => { setX(50); setY(50); }}><StudioIcon name="center" size={17} /></button>
+              <button type="button" title="Rotate 90 degrees" aria-label="Rotate artwork 90 degrees"
+                onClick={() => setRotation((value) => ((value + 270) % 360) - 180)}><StudioIcon name="rotate" size={17} /></button>
+              <button type="button" title="Flip horizontally" aria-label="Flip artwork horizontally"
+                aria-pressed={flipX} onClick={() => setFlipX((value) => !value)}><StudioIcon name="flip" size={17} /></button>
+              <span className="ps-artwork-toolbar__divider" aria-hidden="true" />
+              <output className={"ps-dpi-badge" + (lowResolution ? " is-low" : "")}
+                aria-label={sourceIsVector ? "Vector artwork" : effectiveDpi ? `Effective print resolution ${effectiveDpi.dpi} DPI` : "DPI unavailable"}
+                title={effectiveDpi
+                  ? `${dimensions?.width} × ${dimensions?.height} source pixels at ${effectiveDpi.printedWidthIn.toFixed(1)} × ${effectiveDpi.printedHeightIn.toFixed(1)} printed inches`
+                  : sourceIsVector ? "Vector artwork does not have a fixed raster DPI" : "Select a print area with verified physical dimensions"}>
+                {sourceIsVector ? "Vector" : effectiveDpi ? `${effectiveDpi.dpi} DPI` : "DPI —"}
+              </output>
             </div>
           )}
           <div className="ps-stage" data-agentsam-resource="product-design-stage">
@@ -1297,7 +1291,7 @@ export default function StudioWorkspace({
                           width: `${scale}%`,
                           left: `${x}%`,
                           top: `${y}%`,
-                          transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+                          transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})`,
                         }}
                       />
                     ) : (
@@ -1339,18 +1333,18 @@ export default function StudioWorkspace({
               {miniMapOpen && (
                 <>
                   <div className="ps-mini-image" aria-label="Live placement approximation for the selected variant">
-                    {providerRenderUrl || designImage
-                      ? <ProductImage key={`${variantId}:${locationId}`} sources={[providerRenderUrl || designImage || undefined]} alt={`${location?.name || "Selected"} garment variant: ${variant?.variant_title || variant?.name || detail.product.name}`} />
+                    {currentRenderUrl || designImage
+                      ? <ProductImage key={`${variantId}:${locationId}`} sources={[currentRenderUrl || designImage || undefined]} alt={`${location?.name || "Selected"} garment variant: ${variant?.variant_title || variant?.name || detail.product.name}`} />
                       : /shirt|tee|hoodie|sweatshirt|tank|jersey/i.test(detail.product.name)
                         ? <NeutralGarmentSilhouette isFront={isFrontLocation} mini />
                         : <ProductImage sources={[]} alt="No verified view available for this print location" />}
-                    {!providerRenderUrl && asset && showArtwork && (
+                    {!currentRenderUrl && asset && showArtwork && (
                       <div className="ps-mini-placement" style={placementFrameStyle}>
-                        <img src={asset.url} alt="" style={{ width: `${scale}%`, left: `${x}%`, top: `${y}%`, transform: `translate(-50%, -50%) rotate(${rotation}deg)` }} />
+                        <img src={asset.url} alt="" style={{ width: `${scale}%`, left: `${x}%`, top: `${y}%`, transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})` }} />
                       </div>
                     )}
                   </div>
-                  <small>{providerRenderUrl ? "Completeful render" : designImage ? location?.name || "Selected view" : `${location?.name || "Selected"} outline guide`} · {variant?.variant_title || variant?.name || "Selected color"}</small>
+                  <small>{currentRenderUrl ? "Completeful render" : designImage ? location?.name || "Selected view" : `${location?.name || "Selected"} outline guide`} · {variant?.variant_title || variant?.name || "Selected color"}</small>
                 </>
               )}
             </div>
@@ -1375,8 +1369,8 @@ export default function StudioWorkspace({
           {(manufacturingPreflight?.status === "unsupported" ||
             manufacturingPreflight?.status === "needs_variant" || lowResolution) && (
             <p className="ps-quality ps-quality--warning" role="status">
-              {lowResolution && dimensions && requiredPrintPixels
-                ? `Artwork is ${dimensions.width} × ${dimensions.height} px; this placement needs ${requiredPrintPixels.width} × ${requiredPrintPixels.height} px for ${location?.dpi || 300} DPI.`
+              {lowResolution && effectiveDpi
+                ? `${effectiveDpi.dpi} DPI at this size. Reduce artwork to reach ${location?.dpi} DPI.`
                 : manufacturingPreflight?.issues[0]?.message || "Choose artwork compatible with this print area."}
             </p>
           )}

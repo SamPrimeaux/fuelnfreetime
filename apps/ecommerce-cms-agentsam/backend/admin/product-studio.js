@@ -313,6 +313,8 @@ async function saveDraft(request, env) {
     y: Number(body.placement?.y ?? draft?.placement?.y ?? 50),
     scale: Number(body.placement?.scale ?? draft?.placement?.scale ?? 80),
     rotation: Number(body.placement?.rotation ?? draft?.placement?.rotation ?? 0),
+    flipX: Boolean(body.placement?.flipX ?? draft?.placement?.flipX ?? false),
+    flipY: Boolean(body.placement?.flipY ?? draft?.placement?.flipY ?? false),
     notes: String(body.notes ?? draft?.placement?.notes ?? "").slice(0, 10000),
   };
   const state = preparedMediaId ? "prepared" : "draft";
@@ -326,6 +328,8 @@ async function saveDraft(request, env) {
       y: Number(value.placement?.y ?? 50),
       scale: Number(value.placement?.scale ?? 80),
       rotation: Number(value.placement?.rotation ?? 0),
+      flipX: Boolean(value.placement?.flipX ?? false),
+      flipY: Boolean(value.placement?.flipY ?? false),
     });
   const designChanged =
     !draft ||

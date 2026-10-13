@@ -1786,3 +1786,109 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
   display: block; width: 28px; height: 28px; object-fit: cover; border-radius: 50%;
 }
 .product-studio-shell .ps-quality--warning { color: #a65a21; }
+
+/* Product Studio polishing: content-first asset rail and icon tools. */
+.product-studio-shell .ps-toolpanel { padding-top: 14px; }
+.product-studio-shell .ps-panel-heading h2 { margin: 3px 0 12px; font-size: 19px; }
+.product-studio-shell .ps-eyebrow { display: none; }
+.product-studio-shell .ps-asset-rail { display: grid; align-content: start; gap: 10px; min-width: 0; }
+.product-studio-shell .ps-upload-zone {
+  flex-direction: row; flex-wrap: wrap; gap: 8px; min-height: 68px;
+  padding: 12px; border-radius: 9px; cursor: pointer; background: transparent;
+  color: var(--ps-ink); text-align: left;
+}
+.product-studio-shell .ps-upload-zone svg { flex: 0 0 20px; }
+.product-studio-shell .ps-upload-zone strong { font-size: 12px; }
+.product-studio-shell .ps-upload-zone small { margin-left: auto; font-size: 10px; }
+.product-studio-shell .ps-asset-rail__heading {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin: 6px 0 0; font-size: 12px;
+}
+.product-studio-shell .ps-asset-rail__heading span { color: var(--ps-muted); }
+.product-studio-shell .ps-asset-search {
+  display: flex; align-items: center; gap: 8px; border: 1px solid var(--ps-line);
+  border-radius: 8px; background: white; padding: 0 9px; min-height: 38px; color: var(--ps-muted);
+}
+.product-studio-shell .ps-asset-search input {
+  width: 100%; min-width: 0; border: 0; outline: 0; background: transparent;
+  font-size: 12px; color: var(--ps-ink);
+}
+.product-studio-shell .ps-media-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px;
+  max-height: min(60dvh, 620px); align-content: start;
+}
+.product-studio-shell .ps-media-grid button { cursor: pointer; padding: 3px; border-radius: 8px; }
+.product-studio-shell .ps-media-grid button.is-active {
+  border-color: var(--ps-accent); outline: 1px solid var(--ps-accent);
+}
+.product-studio-shell .ps-media-grid img { object-fit: contain; background: #ececf0; }
+.product-studio-shell .ps-media-grid span {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  display: block; max-width: 100%; font-size: 10px; padding: 3px;
+}
+.product-studio-shell .ps-asset-status { margin: 4px 0; font-size: 11px; color: var(--ps-muted); }
+
+/* Keep the garment central, while giving preview a real nonoverlapping lane. */
+.product-studio-shell .ps-stage-column { padding-inline: clamp(8px, 1.7vw, 24px); }
+.product-studio-shell .ps-stage-toolbar { padding: 9px 0 4px; }
+.product-studio-shell .ps-stage {
+  display: grid; grid-template-columns: minmax(0, 1fr) clamp(125px, 12vw, 170px);
+  justify-items: center; gap: 12px; padding: 12px; min-height: 0;
+}
+.product-studio-shell .ps-product-design-preview { width: min(100%, 720px); justify-self: center; }
+.product-studio-shell .ps-mini-map {
+  position: relative; inset: auto; width: 100%; align-self: end; justify-self: end;
+  margin: 0; max-width: 170px; box-shadow: 0 4px 16px #1c271516;
+}
+.product-studio-shell .ps-mini-image { aspect-ratio: 4 / 5; }
+.product-studio-shell .ps-studio-context { margin-bottom: 4px; }
+.product-studio-shell .ps-artwork-toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+  width: fit-content; max-width: 100%; gap: 3px; padding: 5px;
+  margin: 5px auto 8px; border: 1px solid var(--ps-line);
+  box-shadow: 0 4px 18px #2f22470a; position: relative; z-index: 2;
+}
+.product-studio-shell .ps-artwork-toolbar button {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 38px; min-height: 38px; padding: 7px; border-radius: 7px; cursor: pointer;
+}
+.product-studio-shell .ps-artwork-toolbar button[aria-pressed="true"] { background: #e1d5fa; }
+.product-studio-shell .ps-artwork-toolbar__divider { width: 1px; height: 22px; background: var(--ps-line); margin: 0 4px; }
+.product-studio-shell .ps-artwork-scale { min-width: 43px; text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; }
+.product-studio-shell .ps-dpi-badge {
+  padding: 8px; border-radius: 7px; font-size: 11px; font-weight: 700;
+  font-variant-numeric: tabular-nums; color: var(--ps-ink); background: var(--ps-paper);
+}
+.product-studio-shell .ps-dpi-badge.is-low { color: #a54524; background: #fff0e8; }
+.product-studio-shell .ps-stage .ps-design-guide { box-shadow: none; }
+.product-studio-shell .ps-design-dimensions { max-width: calc(100% - 12px); overflow: hidden; text-overflow: ellipsis; }
+.product-studio-shell .ps-quality--warning { width: fit-content; max-width: 100%; margin: 5px auto; }
+@media (min-width: 761px) and (max-width: 1080px) {
+  .product-studio-shell .ps-workspace-body:not(.is-panel-collapsed) {
+    grid-template-columns: 62px 216px minmax(0, 1fr);
+  }
+  .product-studio-shell .ps-stage { grid-template-columns: minmax(0, 1fr); }
+  .product-studio-shell .ps-mini-map { width: 120px; }
+}
+@media (max-width: 760px) {
+  .product-studio-shell .ps-stage-column { padding: 0 8px 35px; }
+  .product-studio-shell .ps-stage { display: flex; flex-direction: column; padding: 8px; gap: 8px; }
+  .product-studio-shell .ps-product-design-preview { width: min(100%, 460px); }
+  .product-studio-shell .ps-mini-map { width: 116px; margin-left: auto; }
+  .product-studio-shell .ps-media-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); max-height: 150px; }
+  .product-studio-shell .ps-artwork-toolbar { width: 100%; max-width: 100%; }
+  .product-studio-shell .ps-artwork-toolbar button { min-width: 40px; min-height: 40px; }
+  .product-studio-shell .ps-asset-search input { font-size: 16px; }
+  .product-studio-shell .ps-toolpanel:not([hidden]) {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    z-index: 25; max-height: min(40dvh, 340px); overflow-y: auto;
+    padding: 10px 14px calc(12px + env(safe-area-inset-bottom));
+    border: 1px solid var(--ps-line); border-bottom: 0;
+    border-radius: 16px 16px 0 0; box-shadow: 0 -8px 28px #1b172522;
+  }
+  .product-studio-shell .ps-toolpanel .ps-panel-heading h2 { font-size: 16px; margin: 0 0 7px; }
+  .product-studio-shell .ps-studio-context { justify-content: flex-end; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .product-studio-shell .ps-artwork-toolbar, .product-studio-shell .ps-toolpanel { transition: none; }
+}

@@ -31,3 +31,4 @@ export {
 } from "./adapters-completeful.js";
 
 export { PRODUCT_SOURCE_KINDS, resolveProductSource, groupProductInventory, validateInventoryAdjustment } from "./product-spine.js";
+export { effectiveArtworkDpi, providerPrintSizeIn } from "./effective-dpi.js";

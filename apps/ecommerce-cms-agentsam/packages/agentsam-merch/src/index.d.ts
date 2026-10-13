@@ -177,3 +177,11 @@ export function approvalsComplete(candidate: CollectionCandidate): boolean;
 
 export function completefulProfileContext(product?: Record<string, unknown>, location?: Record<string, unknown>): Readonly<Record<string, unknown>>;
 export function completefulTarget(location?: Record<string, unknown>): Readonly<ManufacturingTarget>;
+
+export function providerPrintSizeIn(location: {
+  unit?: string | null; dpi?: number | null; file_width?: number | null; file_height?: number | null;
+} | null | undefined): { width: number; height: number } | null;
+export function effectiveArtworkDpi(input: {
+  sourceWidthPx: number; sourceHeightPx: number; printWidthIn: number;
+  printHeightIn: number; placementWidthPercent: number;
+}): { dpi: number; printedWidthIn: number; printedHeightIn: number; fitsPrintHeight: boolean } | null;
