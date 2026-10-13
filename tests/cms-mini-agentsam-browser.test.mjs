@@ -41,8 +41,15 @@ const probe=`<script>(async function(){
   // and anchors the mini composer to the canvas, not a generic section row.
   if(innerWidth<=900)document.querySelector('[data-mobile-pane="preview"]').click();
   const preview=document.getElementById('theme-preview');
-  stage='canvas heading';const heading=await until(()=>preview.contentDocument?.querySelector('[data-cms="headline"]'));
+  // The CMS node may render before the iframe load handler binds the real
+  // selection listener. Wait for that existing editor readiness marker.
+  stage='canvas selection ready';const heading=await until(()=>{
+    const doc=preview.contentDocument;
+    return doc?.documentElement?.dataset.fnfThemeEditorBound==='1'
+      ? doc.querySelector('[data-cms="headline"]') : null;
+  });
   heading.click();
+  stage='selection confirmed';await until(()=>/hero.*headline/i.test(document.getElementById('te-selected-path')?.textContent||''));
   const editSheetMode=innerWidth<=900 ? document.querySelector('.theme-studio')?.dataset.mobilePane : null;
   const previewVisibleDuringEdit=innerWidth<=900 ? getComputedStyle(document.querySelector('.theme-studio-canvas')).display!=='none' : true;
   if(innerWidth<=900)document.querySelector('[data-mobile-pane="preview"]').click();
