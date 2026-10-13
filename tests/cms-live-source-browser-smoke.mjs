@@ -108,10 +108,14 @@ const probe = "<script>setTimeout(function(){" +
  "var editSheetVisible=getComputedStyle(inspector).display!=='none';" +
  "modes[2].click();var settingsVisible=getComputedStyle(inspector).display!=='none';" +
  "modes[1].click();var backToPreview=getComputedStyle(preview).display!=='none';" +
+ "var tabBounds=nav.getBoundingClientRect();" +
+ "var studioBounds=document.querySelector('.theme-studio').getBoundingClientRect();" +
  "before.mobile={viewport:window.innerWidth,navVisible:getComputedStyle(nav).display!=='none'," +
  "initialPreview,treeVisible,selectedPreviewVisible,sheetMode,editSheetVisible,settingsVisible,backToPreview," +
  "treeHasAdd:!!document.getElementById('te-add-section')," +
- "noOverflow:document.documentElement.scrollWidth<=window.innerWidth+1};" +
+ "noOverflow:document.documentElement.scrollWidth<=window.innerWidth+1," +
+ "bottomGap:Math.round(window.innerHeight-tabBounds.bottom),studioBottom:Math.round(studioBounds.bottom)," +
+ "tabBottom:Math.round(tabBounds.bottom),innerHeight:window.innerHeight};" +
  "}" +
  "before.saveDisabled=document.getElementById('te-save').disabled;" +
  "if(!window.__isNewPage&&!window.__nativeDraft){" +
@@ -243,6 +247,14 @@ assert.equal(result.before.catalog.closed,true,"Section picker must close withou
 assert.deepEqual(result.before.blockCatalog,{open:true,collectionCard:true,noNestedSelector:true,closed:true},
   "Add Block must open the same accessible picker and show only compatible block definitions");
 assert.equal(results.get(1000).before.toolbar.noOverflow,true,"Mid-size desktop should fit all three editor panes");
+for (const width of [744,390]) {
+  const layout=results.get(width).before.mobile;
+  assert.ok(layout,"Mobile geometry must be measured at "+width+"px");
+  assert.ok(Math.abs(layout.bottomGap)<=2,
+    "Browser tabs must meet the content viewport bottom at "+width+"px: "+
+    JSON.stringify({gap:layout.bottomGap,studioBottom:layout.studioBottom,tabBottom:layout.tabBottom,innerHeight:layout.innerHeight}));
+  assert.equal(layout.noOverflow,true);
+}
 assert.ok(result.before.blockInspector,"The real collection card must remain selectable");
 assert.match(result.before.blockInspector.title,/Collection card/i);
 assert.deepEqual(result.before.blockInspector.groups,["Content","Media","Buttons and links"]);
