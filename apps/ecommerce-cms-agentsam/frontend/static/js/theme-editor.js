@@ -2965,6 +2965,11 @@
     return mediaLibrary;
   }
 
+  // Match Media Library's delivery URL precedence for R2-backed assets.
+  function mediaAssetUrl(asset) {
+    return asset?.delivery_url || asset?.url || '';
+  }
+
   function renderMediaGrid(query) {
     const needle = String(query || '').trim().toLowerCase();
     const filter = byId('te-media-filter').value;
@@ -2988,9 +2993,9 @@
     if (count) count.textContent = assets.length + ' of ' + mediaLibrary.length + ' assets';
 
     byId('te-media-grid').innerHTML = assets.length ? assets.map(function(asset) {
-      const url = asset.url || '';
-      const isImage = String(asset.content_type || '').startsWith('image/') || /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(url);
-      const selected = selectedMediaAsset && selectedMediaAsset.url === url;
+      const url = mediaAssetUrl(asset);
+      const isImage = String(asset.content_type || '').startsWith('image/') || /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(asset.r2_key || asset.filename || url);
+      const selected = selectedMediaAsset && mediaAssetUrl(selectedMediaAsset) === url;
       const name = asset.filename || asset.r2_key || 'Asset';
       return '<button type="button" class="te-media-card' + (selected ? ' is-selected' : '') +
         '" data-media-url="' + cmsEscapeAttr(url) + '" aria-pressed="' + Boolean(selected) + '" title="' + cmsEscapeAttr(name) + '"' +
@@ -3008,9 +3013,9 @@
     });
     byId('te-media-grid').querySelectorAll('[data-media-url]').forEach(function(card) {
       card.addEventListener('click', function() {
-        selectedMediaAsset = mediaLibrary.find(function(asset) { return asset.url === card.dataset.mediaUrl; }) || null;
+        selectedMediaAsset = mediaLibrary.find(function(asset) { return mediaAssetUrl(asset) === card.dataset.mediaUrl; }) || null;
         byId('te-media-selected-name').textContent = selectedMediaAsset?.filename || 'Select an asset to preview';
-        byId('te-media-confirm').disabled = !selectedMediaAsset?.url;
+        byId('te-media-confirm').disabled = !mediaAssetUrl(selectedMediaAsset);
         renderMediaGrid(byId('te-media-search').value);
       });
     });
@@ -3292,8 +3297,8 @@
   byId('te-media-sort').addEventListener('change', function() { renderMediaGrid(byId('te-media-search').value); });
   byId('te-media-cancel').addEventListener('click', closeMediaPicker);
   byId('te-media-confirm').addEventListener('click', function() {
-    if (!mediaTarget || !selectedMediaAsset?.url) return;
-    setMediaValue(mediaTarget, selectedMediaAsset.url);
+    if (!mediaTarget || !mediaAssetUrl(selectedMediaAsset)) return;
+    setMediaValue(mediaTarget, mediaAssetUrl(selectedMediaAsset));
   });
   async function uploadIntoPicker(files) {
     if (!files.length) return;
@@ -3307,7 +3312,7 @@
       if (mediaTarget && assets[0]) {
         selectedMediaAsset = assets[0];
         byId('te-media-selected-name').textContent = assets[0].filename || 'Uploaded media';
-        byId('te-media-confirm').disabled = !assets[0].url;
+        byId('te-media-confirm').disabled = !mediaAssetUrl(assets[0]);
         renderMediaGrid(byId('te-media-search').value);
         status.textContent = 'Uploaded. Choose Use media to stage this asset in the private draft.';
         status.dataset.state = 'success';
