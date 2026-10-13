@@ -2025,6 +2025,21 @@
         .then(function(module) { return module.createThemeEditorMiniAgentSam({
           onProposal: presentAgentProposal,
           onClose: function() { miniAgentSamVisible = false; },
+          positionBounds: function() {
+            // Keep the composer in the *visible canvas*, clear of the fixed
+            // editor toolbar, mobile tabs, and Safari's native controls.
+            // This does not affect the selected CMS node or its data.
+            if (!isPhoneEditor()) return null;
+            const canvas = document.querySelector('.theme-studio .te-preview-stage');
+            const tabs = byId('te-mobile-pane-switch');
+            if (!canvas) return null;
+            const box = canvas.getBoundingClientRect();
+            if (box.width < 100 || box.height < 80) return null;
+            return {
+              left: box.left, top: box.top, right: box.right,
+              bottom: Math.min(box.bottom, tabs?.getBoundingClientRect().top ?? box.bottom),
+            };
+          },
         }); })
         .catch(function(error) { miniAgentSamPromise = null; throw error; });
     }
