@@ -15,8 +15,8 @@ export const semanticSearchInputSchema = {
   type: "object",
   properties: {
     query: { type: "string", minLength: 1 },
-    source_type: { type: "string" },
-    limit: { type: "integer", minimum: 1, maximum: 100 },
+    source_type: { type: "string", enum: ["product", "cms", "skill", "repo", "brand"] },
+    top_k: { type: "integer", minimum: 1, maximum: 100, default: 8 },
   },
   required: ["query"],
   additionalProperties: false,
