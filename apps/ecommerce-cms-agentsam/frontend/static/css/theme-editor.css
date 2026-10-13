@@ -3196,15 +3196,14 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
   .theme-studio-toolbar .te-page-trigger__content>svg {display:none;}
 }
 
-/* iPhone Safari / Home Screen web app viewport contract.
-   The address bar belongs to Safari and cannot be rendered under by the page.
-   Avoid any extra app-reserved gap, and keep the tabs inside the safe area in
-   standalone mode without modifying the separate admin mobile dock. */
+/* Safari browser-first: don't double-clamp 100dvh to visualViewport.height.
+   The native Safari address bar is separate; the editor itself must end at
+   the browser content bottom without inserting a gray spacer. */
 @media (max-width:900px) {
   .theme-studio {
     --te-mobile-tabs-height: max(61px, calc(56px + env(safe-area-inset-bottom, 0px)));
-    height: min(100dvh, var(--te-visual-viewport-height, 100dvh));
-    max-height: min(100dvh, var(--te-visual-viewport-height, 100dvh));
+    height: 100dvh;
+    max-height: 100dvh;
     min-height: 0;
   }
   .theme-studio .theme-studio-workspace,

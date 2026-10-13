@@ -313,32 +313,10 @@
   let mobileSheetSize = 'half'; // Balanced default: storefront and inspector remain visible together.
   function isPhoneEditor() { return window.matchMedia('(max-width: 900px)').matches; }
 
-  // The visual viewport can shrink independently from 100dvh when Safari's
-  // toolbar or iOS keyboard changes. Constrain only Theme Studio, not the
-  // merchant storefront, outer admin shell, or preserved mobile dock.
-  function syncMobileVisualViewport() {
-    const studio = document.querySelector('.theme-studio');
-    if (!studio) return;
-    const viewport = window.visualViewport;
-    if (!isPhoneEditor() || !viewport || viewport.scale !== 1 ||
-        !Number.isFinite(viewport.height) || viewport.height <= 0) {
-      studio.style.removeProperty('--te-visual-viewport-height');
-      return;
-    }
-    const top = Math.max(0, studio.getBoundingClientRect().top - (viewport.offsetTop || 0));
-    const available = Math.floor(viewport.height - top);
-    if (available < 240) {
-      studio.style.removeProperty('--te-visual-viewport-height');
-      return;
-    }
-    studio.style.setProperty('--te-visual-viewport-height', available + 'px');
-  }
-  syncMobileVisualViewport();
-  window.addEventListener('resize', syncMobileVisualViewport, { passive: true });
-  window.addEventListener('orientationchange', syncMobileVisualViewport, { passive: true });
-  window.visualViewport?.addEventListener('resize', syncMobileVisualViewport, { passive: true });
-  window.visualViewport?.addEventListener('scroll', syncMobileVisualViewport, { passive: true });
-  document.addEventListener('visibilitychange', syncMobileVisualViewport);
+  // CSS 100dvh is the sole mobile editor-height authority.
+  // A secondary visualViewport.height minus layout top calculation shortens
+  // the editor on Safari and strands the tabs above a blank app-owned band.
+  // Keyboard focus/scroll handling must not resize the entire editor.
   function setMobileSheetSize(size) {
     if (!['compact','half','expanded'].includes(size)) return;
     mobileSheetSize = size;
