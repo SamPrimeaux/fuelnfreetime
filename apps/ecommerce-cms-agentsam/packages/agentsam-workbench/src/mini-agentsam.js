@@ -39,7 +39,7 @@ export function createMiniAgentSam(host) {
   <div class="hint" role="status" aria-live="polite" hidden>Click an element to annotate · Esc to exit</div>
   <section class="composer" aria-label="miniAgentSam" hidden>
     <div class="row">
-      <img class="icon" src="${miniAgentSamTokens.icon}" alt="AgentSam">
+      <img class="icon" src="${host.iconUrl || miniAgentSamTokens.icon}" alt="AgentSam">
       <textarea aria-label="Ask for changes" placeholder="Ask for changes" rows="1" wrap="off"></textarea>
       <button class="expand" aria-label="Expand message preview" aria-expanded="false">↗</button>
       <button class="more" aria-label="More miniAgentSam tools" aria-expanded="false">…</button>
@@ -101,18 +101,26 @@ export function createMiniAgentSam(host) {
 
     const width = composer.offsetWidth;
     const height = composer.offsetHeight;
-    const left = Math.max(
-      12,
-      Math.min(innerWidth - width - 12, r.left + r.width / 2 - width / 2),
-    );
-    const below = r.top + r.height + 10;
-    const above = r.top - height - 10;
-    const preferAbove = host.preferAbove === true;
-    const desiredTop = preferAbove
-      ? (above >= 12 ? above : below)
-      : (below + height <= innerHeight - 12 ? below : above);
-    const top = Math.max(12, Math.min(innerHeight - height - 12, desiredTop));
-    Object.assign(composer.style, { left: `${left}px`, top: `${top}px` });
+    const gap = 12;
+    const clamp = (value, max) => Math.max(gap, Math.min(Math.max(gap, max - gap), value));
+    const centerX = r.left + r.width / 2;
+    const centerY = r.top + r.height / 2;
+    const xCenter = clamp(centerX - width / 2, innerWidth - width);
+    const yCenter = clamp(centerY - height / 2, innerHeight - height);
+    const candidates = [
+      { left: xCenter, top: clamp(r.top - height - gap, innerHeight - height) },
+      { left: xCenter, top: clamp(r.top + r.height + gap, innerHeight - height) },
+      { left: clamp(r.left + r.width + gap, innerWidth - width), top: yCenter },
+      { left: clamp(r.left - width - gap, innerWidth - width), top: yCenter },
+    ];
+    if (host.preferAbove !== true) [candidates[0], candidates[1]] = [candidates[1], candidates[0]];
+    // Favor positions outside the selected element; when the selection fills
+    // most of the viewport, choose the smallest overlap instead.
+    const overlap = ({ left, top }) => Math.max(0, Math.min(left + width, r.left + r.width) - Math.max(left, r.left))
+      * Math.max(0, Math.min(top + height, r.top + r.height) - Math.max(top, r.top));
+    candidates.sort((a, b) => overlap(a) - overlap(b));
+    const best = candidates[0];
+    Object.assign(composer.style, { left: `${best.left}px`, top: `${best.top}px` });
   }
 
   const menuCleanup = attachCapabilityMenu(input, {

@@ -9,7 +9,7 @@ const { JSDOM } = require("jsdom");
 const root = new URL("../frontend/static/js/", import.meta.url);
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 
-async function editorFixture({ mobile = false, pageSlug = "shop" } = {}) {
+async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = [] } = {}) {
   const dom = new JSDOM("<!doctype html><html><body></body></html>", {
     url: "https://editor.test/admin/theme-editor?slug=" + pageSlug,
     runScripts: "outside-only",
@@ -34,6 +34,7 @@ async function editorFixture({ mobile = false, pageSlug = "shop" } = {}) {
     if (url.endsWith("/pages/site")) return { page: site };
     if (url.endsWith("/pages/" + pageSlug)) return { page, seeded: false };
     if (url.endsWith("/pages")) return { pages: [{ slug: pageSlug, title: page.title, live_route: "/" + pageSlug }] };
+    if (url.startsWith("/api/admin/media?")) return { assets: mediaAssets, pagination: { pages: 1 } };
     if (url.endsWith("/pages/shop/publish") && options.method === "POST") {
       publishes.push({url,method:options.method});
       return w.__publishResponder ? w.__publishResponder() : { published_at: "2026-10-10T05:00:00Z" };
@@ -68,12 +69,13 @@ test("real editor mounts compact toolbar, one drawer and installed page tree", a
     doc.getElementById("agentsam-toggle").click();
     assert.equal(doc.body.classList.contains("agentsam-open"), false);
     assert.equal(doc.getElementById("te-mini-agent-toggle"), null, "no redundant floating trigger: selecting automatically reveals the composer");
-    assert.equal(doc.getElementById("te-agent-open").querySelector("img")?.getAttribute("src"), "/admin/brand/mini-agentsam-trigger.svg", "fallback is the same recognizable mini icon");
+    assert.equal(doc.getElementById("te-agent-open"), null, "the inspector status header does not duplicate miniAgentSam");
     assert.equal(doc.querySelector('[data-composer-slot="editor"]').hidden, true, "no redundant inspector composer");
     assert.equal(doc.getElementById("te-inspector-toggle"), null);
     assert.equal(doc.querySelectorAll('.theme-studio-toolbar__right .te-icon-btn[title*="Canvas inspection"]').length, 1);
     assert.ok(doc.getElementById("te-inspect-mode").innerHTML.includes("M12.034 12.681"));
-    assert.ok(readFileSync(new URL("../frontend/static/brand/agentsam-sidekick-symbol.svg", import.meta.url), "utf8").includes("<svg"));
+    assert.ok(readFileSync(new URL("../frontend/static/brand/agentsam-gorilla-tiny.svg", import.meta.url), "utf8").includes("<svg"));
+    assert.ok(readFileSync(new URL("../frontend/static/brand/agentsam-sidekick-symbol.svg", import.meta.url), "utf8").includes("<svg"), "original legacy asset remains preserved");
     assert.equal(doc.getElementById("te-tree-path"), null);
     assert.equal(doc.getElementById("te-library-browse"), null);
     doc.getElementById("te-add-section").click();
@@ -96,6 +98,34 @@ test("real editor mounts compact toolbar, one drawer and installed page tree", a
     doc.getElementById("te-save-options").click();
     assert.equal(doc.getElementById("te-more-menu").hidden, true);
     assert.equal(doc.getElementById("te-save-menu").hidden, false);
+  } finally {
+    dom.window.close();
+  }
+});
+
+
+test("Theme Studio media picker previews R2 delivery_url assets and stages the chosen image without publishing", async () => {
+  const delivered = "https://assets.example.test/media/hero-original.png";
+  const { dom, doc, publishes } = await editorFixture({
+    mediaAssets: [{ id: 42, filename: "hero-original.png", r2_key: "images/hero-original.png", content_type: "image/png", delivery_url: delivered, folder: "campaigns" }]
+  });
+  try {
+    doc.querySelector('[data-select-section="hero"]').click();
+    const choose = doc.querySelector('[data-pick-media]');
+    assert.ok(choose, "Hero offers the real media picker");
+    choose.click();
+    await tick();
+    await tick();
+    const img = doc.querySelector('#te-media-grid .te-media-card__thumb img');
+    assert.ok(img, "An image preview is rendered");
+    assert.equal(img.getAttribute("src"), delivered, "Preview uses the same delivery URL as Media Library");
+    const card = doc.querySelector('#te-media-grid .te-media-card');
+    assert.equal(card.getAttribute("data-media-url"), delivered);
+    card.click();
+    assert.equal(doc.getElementById("te-media-confirm").disabled, false);
+    doc.getElementById("te-media-confirm").click();
+    assert.equal(doc.getElementById("te-media-modal").hidden, true, "Selection returns to the existing inspector");
+    assert.equal(publishes.length, 0, "Choosing media must not publish a theme");
   } finally {
     dom.window.close();
   }
