@@ -64,7 +64,7 @@ test("theme editor keeps page settings in page editor, not the compact toolbar",
 
   assert.doesNotMatch(themeEditor, /Full editor/);
   assert.doesNotMatch(themeEditor, /te-full-editor/);
-  assert.match(themeEditor, /Draft theme preview|Theme preview</);
+  assert.match(themeEditor, /Draft preview|Preview —/);
   assert.match(themeEditor, /id="te-theme-name"/);
   assert.match(themeEditor, /data-drawer-mode="theme-settings"/);
   assert.match(themeEditor, /id="te-theme-trigger"/);
