@@ -45,10 +45,10 @@ export function selectStudioSideImage(
     scopeMatchesVariant(mockup.variant_scope_json, variantId)
   );
   if (exactVariant?.preview_url) return exactVariant.preview_url;
-  // A variant catalog image is color-correct, but can only represent the front.
-  if (isFront && frontVariantImage) return frontVariantImage;
-  const unscoped = sideMockups.find((mockup) => !mockup.variant_scope_json?.trim());
-  if (unscoped?.preview_url) return unscoped.preview_url;
-  if (artboardImage) return artboardImage;
+  // Generic artboard photos and unscoped mockups often depict only the
+  // default (black) garment, regardless of the selected color. A preview of
+  // an unverified color is worse than a truthful side-correct silhouette.
+  // A front catalog image is safe only for the selected front variant.
+  if (isFront) return frontVariantImage || artboardImage || null;
   return null;
 }

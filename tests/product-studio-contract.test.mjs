@@ -221,8 +221,9 @@ test("back print location never falls through to a front-only catalog photograph
   ];
   assert.equal(selectStudioSideImage(mockups, "back", "blue", null, front, false), back);
   assert.equal(selectStudioSideImage(mockups, "back", "green", null, front, false), null);
-  assert.equal(selectStudioSideImage(mockups, "back", "green", "https://example.test/back-artboard.png", front, false),
-    "https://example.test/back-artboard.png");
+  // A shared provider Back artboard can be black even when the selected
+  // variant is Brick/Denim; use the color-correct silhouette instead.
+  assert.equal(selectStudioSideImage(mockups, "back", "green", "https://example.test/back-artboard.png", front, false), null);
   assert.equal(selectStudioSideImage(mockups, "front", "green", null, front, true), front);
 });
 
