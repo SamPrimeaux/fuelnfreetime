@@ -3,7 +3,9 @@ import { createMiniAgentSam, miniAgentSamTokens } from "../../../../packages/age
 import { selectStudioSideImage } from "./studio-side-image";
 import { fabricColorFromImagePixels, validProviderFabricHex } from "./studio-fabric-color";
 import { adminFetch, adminFormFetch } from "../../lib/api";
-import { effectiveArtworkDpi, providerPrintSizeIn, evaluateManufacturingCompatibility } from "../../../../packages/agentsam-merch/src/index.js";
+import { evaluateManufacturingCompatibility } from "../../../../packages/agentsam-merch/src/index.js";
+import { studioArtworkQuality, type ArtworkCrop } from "./studio-artwork-quality";
+import { alphaBounds } from "./studio-alpha-bounds";
 import StudioIcon from "./StudioIcon";
 import ProductImage from "./ProductImage";
 import {
@@ -112,31 +114,16 @@ function removeConnectedFlatBackground(
   return removed;
 }
 
-function alphaBounds(pixels: Uint8ClampedArray, width: number, height: number) {
-  let left = width;
-  let top = height;
-  let right = -1;
-  let bottom = -1;
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      if (pixels[(y * width + x) * 4 + 3] <= 8) continue;
-      left = Math.min(left, x);
-      top = Math.min(top, y);
-      right = Math.max(right, x);
-      bottom = Math.max(bottom, y);
-    }
-  }
-  if (right < left || bottom < top) return { x: 0, y: 0, width, height };
-  return { x: left, y: top, width: right - left + 1, height: bottom - top + 1 };
-}
-
 type StudioDraft = {
   id: string;
   product_id: number;
   state: "draft" | "prepared" | "rendering" | "rendered" | "created" | "published" | "error";
   selected_variant_ids: string[];
   print_location_ids: string[];
-  placement?: { x?: number; y?: number; scale?: number; rotation?: number; flipX?: boolean; flipY?: boolean; notes?: string };
+  placement?: {
+    x?: number; y?: number; scale?: number; rotation?: number; flipX?: boolean; flipY?: boolean;
+    trimTransparent?: boolean; removeFlatBackground?: boolean; notes?: string;
+  };
   original_media_asset_id?: number | null;
   prepared_media_asset_id?: number | null;
   preview_media_asset_id?: number | null;
@@ -151,8 +138,10 @@ type StudioDraft = {
 };
 
 function placementKey(assetId: number | null | undefined, variantId: string, locationId: string,
-  x: number, y: number, scale: number, rotation: number, flipX: boolean, flipY: boolean) {
-  return JSON.stringify([assetId || null, variantId, locationId, x, y, scale, rotation, flipX, flipY]);
+  x: number, y: number, scale: number, rotation: number, flipX: boolean, flipY: boolean,
+  trimTransparent: boolean, removeFlatBackground: boolean) {
+  return JSON.stringify([assetId || null, variantId, locationId, x, y, scale, rotation, flipX, flipY,
+    trimTransparent, removeFlatBackground]);
 }
 
 const tabs = [
@@ -188,6 +177,10 @@ export default function StudioWorkspace({
   const [title, setTitle] = useState(detail.product.default_title || detail.product.name);
   const [providerRenderUrl, setProviderRenderUrl] = useState<string | null>(null);
   const [trimTransparent, setTrimTransparent] = useState(false);
+  const [croppedPreview, setCroppedPreview] = useState<{
+    key: string; url: string; crop: ArtworkCrop;
+  } | null>(null);
+  const [cropError, setCropError] = useState("");
   const [removeFlatBackground, setRemoveFlatBackground] = useState(false);
   const [subjectRemovalAvailable, setSubjectRemovalAvailable] = useState(false);
   const [busy, setBusy] = useState("");
@@ -405,6 +398,8 @@ export default function StudioWorkspace({
           setRotation(Number(saved.placement.rotation ?? 0));
           setFlipX(Boolean(saved.placement.flipX));
           setFlipY(Boolean(saved.placement.flipY));
+          setTrimTransparent(Boolean(saved.placement.trimTransparent));
+          setRemoveFlatBackground(Boolean(saved.placement.removeFlatBackground));
           setNotes(String(saved.placement.notes || ""));
         }
         setProviderRenderUrl(saved.completeful_render_url || null);
@@ -413,7 +408,8 @@ export default function StudioWorkspace({
             saved.selected_variant_ids?.[0] || "", saved.print_location_ids?.[0] || "",
             Number(saved.placement?.x ?? 50), Number(saved.placement?.y ?? 50),
             Number(saved.placement?.scale ?? 80), Number(saved.placement?.rotation ?? 0),
-            Boolean(saved.placement?.flipX), Boolean(saved.placement?.flipY)));
+            Boolean(saved.placement?.flipX), Boolean(saved.placement?.flipY),
+            Boolean(saved.placement?.trimTransparent), Boolean(saved.placement?.removeFlatBackground)));
         }
         if (saved.original_media_asset_id || saved.prepared_media_asset_id || saved.preview_media_asset_id) {
           const library = await adminFetch<{ assets: MediaAsset[] }>("/api/admin/media?view=all", {
@@ -497,8 +493,65 @@ export default function StudioWorkspace({
       active = false;
     };
   }, [asset]);
+  // Use the exact processing and alpha-bound logic used for print preparation
+  // so preview dimensions, source pixel counts, and exported pixels agree.
+  useEffect(() => {
+    if (!asset || (!trimTransparent && !removeFlatBackground)) return;
+    let active = true;
+    let objectUrl: string | null = null;
+    const key = JSON.stringify([asset.id, asset.url, trimTransparent, removeFlatBackground]);
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
+        if (canvas.width * canvas.height > 32_000_000) throw new Error("Artwork is too large to inspect in the browser");
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        if (!context) throw new Error("Cannot inspect artwork pixels");
+        context.drawImage(image, 0, 0);
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+        if (removeFlatBackground) {
+          removeConnectedFlatBackground(pixels.data, canvas.width, canvas.height);
+          context.putImageData(pixels, 0, 0);
+        }
+        const crop = trimTransparent
+          ? alphaBounds(pixels.data, canvas.width, canvas.height)
+          : { x: 0, y: 0, width: canvas.width, height: canvas.height };
+        const preview = document.createElement("canvas");
+        preview.width = crop.width;
+        preview.height = crop.height;
+        const previewContext = preview.getContext("2d");
+        if (!previewContext) throw new Error("Cannot preview trimmed artwork");
+        previewContext.drawImage(canvas, crop.x, crop.y, crop.width, crop.height,
+          0, 0, crop.width, crop.height);
+        preview.toBlob((blob) => {
+          if (!active) return;
+          if (!blob) {
+            setCropError("Unable to preview artwork crop");
+            return;
+          }
+          objectUrl = URL.createObjectURL(blob);
+          setCroppedPreview({ key, crop, url: objectUrl });
+          setCropError("");
+        }, "image/png");
+      } catch (e) {
+        if (active) setCropError(e instanceof Error ? e.message : "Unable to inspect artwork crop");
+      }
+    };
+    image.onerror = () => { if (active) setCropError("Unable to read artwork for print preparation"); };
+    image.src = asset.url;
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [asset, trimTransparent, removeFlatBackground]);
+
   function choose(a: MediaAsset) {
     setDimensions(null);
+    setCroppedPreview(null);
+    setCropError("");
     setAsset(a);
     setPreparedAsset(null);
     setPreparedFor(null);
@@ -668,7 +721,7 @@ export default function StudioWorkspace({
           original_media_asset_id: asset?.id || null,
           prepared_media_asset_id: nextPrepared?.id || null,
           preview_media_asset_id: nextPreview?.id || null,
-          placement: { x, y, scale, rotation, flipX, flipY },
+          placement: { x, y, scale, rotation, flipX, flipY, trimTransparent, removeFlatBackground },
           notes,
           title: title.trim() || detail.product.name,
         }),
@@ -780,6 +833,10 @@ export default function StudioWorkspace({
   }
 
   async function prepareArtwork() {
+    if (cropPending || cropError) {
+      setError("Wait for artwork inspection or fix the crop before preparation.");
+      return null;
+    }
     setBusy("prepare");
     setError("");
     try {
@@ -880,24 +937,26 @@ export default function StudioWorkspace({
     }
   }
 
-  const physicalPrintSize = providerPrintSizeIn(location);
-  const effectiveDpi = dimensions && physicalPrintSize && asset && !/\.svg$/i.test(asset.filename)
-    ? effectiveArtworkDpi({
-        sourceWidthPx: dimensions.width, sourceHeightPx: dimensions.height,
-        printWidthIn: physicalPrintSize.width, printHeightIn: physicalPrintSize.height,
-        placementWidthPercent: scale,
-      })
-    : null;
-  const sourceIsVector = Boolean(asset && /\.svg$/i.test(asset.filename));
+  const cropKey = asset ? JSON.stringify([asset.id, asset.url, trimTransparent, removeFlatBackground]) : "";
+  const cropPending = Boolean(asset && (trimTransparent || removeFlatBackground) &&
+    croppedPreview?.key !== cropKey);
+  const artworkCrop = trimTransparent && croppedPreview?.key === cropKey ? croppedPreview.crop : null;
+  const artworkPreviewUrl = croppedPreview?.key === cropKey ? croppedPreview.url : asset?.url;
+  const quality = studioArtworkQuality({
+    location, source: dimensions, crop: artworkCrop, cropPending, scalePercent: scale,
+    fileName: asset?.filename,
+  });
+  const effectiveDpi = quality.result;
+  const lowResolution = quality.lowResolution;
   const filteredMedia = media;
-  const lowResolution = Boolean(effectiveDpi && location?.dpi && effectiveDpi.dpi < Number(location.dpi));
-  const currentPlacementKey = placementKey(asset?.id, variantId, locationId, x, y, scale, rotation, flipX, flipY);
+  const currentPlacementKey = placementKey(asset?.id, variantId, locationId, x, y, scale, rotation, flipX, flipY, trimTransparent, removeFlatBackground);
   const preparedIsCurrent = Boolean(preparedAsset && preparedFor === currentPlacementKey);
   const currentRenderUrl = preparedIsCurrent ? providerRenderUrl : null;
-  const manufacturingPreflight = dimensions && printPixels && asset && location
+  const manufacturingPreflight = dimensions && !cropPending && printPixels && asset && location
     ? evaluateManufacturingCompatibility(
-        { format: asset.filename?.split(".").pop(), widthPx: dimensions.width,
-          heightPx: dimensions.height, bytes: asset.size_bytes },
+        { format: asset.filename?.split(".").pop(),
+          widthPx: artworkCrop?.width ?? dimensions.width,
+          heightPx: artworkCrop?.height ?? dimensions.height, bytes: asset.size_bytes },
         { id: "fnf.catalog-raster", manufacturer: "completeful",
           process: String(detail.product.print_type || "catalog").toLowerCase(),
           format: "png", allowRaster: true, allowVector: false,
@@ -905,7 +964,7 @@ export default function StudioWorkspace({
           source: { kind: "catalog-artboard", verified: false } },
         { printWidthIn: ((printPixels.width * scale) / 100) / (Number(location.dpi) || 300),
           printHeightIn: ((printPixels.width * scale) / 100) / (Number(location.dpi) || 300) *
-            dimensions.height / Math.max(1, dimensions.width) },
+            (artworkCrop?.height ?? dimensions.height) / Math.max(1, artworkCrop?.width ?? dimensions.width) },
       )
     : null;
   return (
@@ -1290,11 +1349,8 @@ export default function StudioWorkspace({
                 aria-pressed={flipX} onClick={() => setFlipX((value) => !value)}><StudioIcon name="flip" size={17} /></button>
               <span className="ps-artwork-toolbar__divider" aria-hidden="true" />
               <output className={"ps-dpi-badge" + (lowResolution ? " is-low" : "")}
-                aria-label={sourceIsVector ? "Vector artwork" : effectiveDpi ? `Effective print resolution ${effectiveDpi.dpi} DPI` : "DPI unavailable"}
-                title={effectiveDpi
-                  ? `${dimensions?.width} × ${dimensions?.height} source pixels at ${effectiveDpi.printedWidthIn.toFixed(1)} × ${effectiveDpi.printedHeightIn.toFixed(1)} printed inches`
-                  : sourceIsVector ? "Vector artwork does not have a fixed raster DPI" : "Select a print area with verified physical dimensions"}>
-                {sourceIsVector ? "Vector" : effectiveDpi ? `${effectiveDpi.dpi} DPI` : "DPI —"}
+                aria-label={quality.aria} title={quality.detail}>
+                {quality.badge}
               </output>
             </div>
           )}
@@ -1329,7 +1385,7 @@ export default function StudioWorkspace({
                     {asset && showArtwork ? (
                       <img
                         className={"ps-artwork-layer ps-artwork-layer--interactive" + (artworkSelected ? " is-selected" : "")}
-                        src={asset.url}
+                        src={artworkPreviewUrl}
                         alt="Selected artwork — use arrow keys to nudge the placement"
                         draggable={false}
                         tabIndex={0}
@@ -1356,7 +1412,8 @@ export default function StudioWorkspace({
                     {asset && showArtwork && artworkSelected && (
                       <div className="ps-selection-frame" aria-hidden="true" style={{
                         left: x + "%", top: y + "%", width: scale + "%",
-                        aspectRatio: dimensions ? dimensions.width + "/" + dimensions.height : "1",
+                        aspectRatio: dimensions
+                          ? (artworkCrop?.width ?? dimensions.width) + "/" + (artworkCrop?.height ?? dimensions.height) : "1",
                         transform: "translate(-50%, -50%) rotate(" + rotation + "deg)",
                       }}>
                         <span className="ps-selection-handle ps-selection-handle--tl" />
@@ -1393,7 +1450,7 @@ export default function StudioWorkspace({
                         : <ProductImage sources={[]} alt="No verified view available for this print location" />}
                     {!currentRenderUrl && asset && showArtwork && (
                       <div className="ps-mini-placement" style={placementFrameStyle}>
-                        <img src={asset.url} alt="" style={{ width: `${scale}%`, left: `${x}%`, top: `${y}%`, transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})` }} />
+                        <img src={artworkPreviewUrl} alt="" style={{ width: `${scale}%`, left: `${x}%`, top: `${y}%`, transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})` }} />
                       </div>
                     )}
                   </div>
@@ -1419,7 +1476,7 @@ export default function StudioWorkspace({
           )}
           <div className="ps-canvas-controls">
             <button type="button" onClick={() => setCanvasZoom(100)}>Fit · 100%</button>
-            <label>Canvas zoom <input type="range" min="75" max="160" step="5" value={canvasZoom} onChange={(event) => setCanvasZoom(Number(event.target.value))} /></label>
+            <label>Canvas zoom <input type="range" min="50" max="160" step="5" value={canvasZoom} onChange={(event) => setCanvasZoom(Number(event.target.value))} /></label>
             <span>{canvasZoom}%</span>
           </div>
           {(manufacturingPreflight?.status === "unsupported" ||
@@ -1430,6 +1487,7 @@ export default function StudioWorkspace({
                 : manufacturingPreflight?.issues[0]?.message || "Choose artwork compatible with this print area."}
             </p>
           )}
+          {cropError && <p className="ps-quality ps-quality--warning" role="alert">{cropError}</p>}
           {reply && (
             <details open className="ps-ai-reply">
               <summary>Creative direction</summary>

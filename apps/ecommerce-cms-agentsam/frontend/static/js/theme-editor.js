@@ -312,6 +312,11 @@
 
   let mobileSheetSize = 'half'; // Balanced default: storefront and inspector remain visible together.
   function isPhoneEditor() { return window.matchMedia('(max-width: 900px)').matches; }
+
+  // CSS 100dvh is the sole mobile editor-height authority.
+  // A secondary visualViewport.height minus layout top calculation shortens
+  // the editor on Safari and strands the tabs above a blank app-owned band.
+  // Keyboard focus/scroll handling must not resize the entire editor.
   function setMobileSheetSize(size) {
     if (!['compact','half','expanded'].includes(size)) return;
     mobileSheetSize = size;

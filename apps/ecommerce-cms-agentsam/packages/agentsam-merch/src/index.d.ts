@@ -184,4 +184,8 @@ export function providerPrintSizeIn(location: {
 export function effectiveArtworkDpi(input: {
   sourceWidthPx: number; sourceHeightPx: number; printWidthIn: number;
   printHeightIn: number; placementWidthPercent: number;
-}): { dpi: number; printedWidthIn: number; printedHeightIn: number; fitsPrintHeight: boolean } | null;
+  cropWidthPx?: number; cropHeightPx?: number; placementHeightPercent?: number;
+}): {
+  dpi: number; exactDpi: number; dpiX: number; dpiY: number;
+  printedWidthIn: number; printedHeightIn: number; fitsPrintHeight: boolean;
+} | null;
