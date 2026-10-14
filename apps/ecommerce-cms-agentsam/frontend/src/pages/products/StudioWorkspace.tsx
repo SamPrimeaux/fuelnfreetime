@@ -103,6 +103,7 @@ function removeConnectedFlatBackground(
 
 type StudioDraft = {
   id: string;
+  completeful_catalog_product_id: string;
   product_id: number;
   state: "draft" | "prepared" | "rendering" | "rendered" | "created" | "published" | "error";
   selected_variant_ids: string[];
