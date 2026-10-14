@@ -8,6 +8,8 @@ This repository is also the customer-1 proving ground for `@inneranimalmedia/eco
 **Canonical Worker:** `apps/ecommerce-cms-agentsam/backend/index.js`
 **Canonical admin/CMS app:** `apps/ecommerce-cms-agentsam`
 
+**Engineering release standard:** [Product Quality, Acceptance and Release Contract](docs/engineering/PRODUCT-QUALITY-ACCEPTANCE-AND-RELEASE-CONTRACT.md) · [AgentSam P0 tool recovery](docs/AGENTSAM-TOOL-INFRASTRUCTURE-RECOVERY-TODO-2026-10-14.md). **Green builds are not product acceptance.** Current gates require real UI, device, workflow and deployed-artifact evidence; CI automation of these rules is still pending.
+
 > **Status snapshot — October 2026:** this is no longer a small storefront plus a few admin pages. The repo now contains the storefront, product/variant/inventory/order systems, Product Studio, Content/Brand workspace, media derivatives, CMS/page editing, portable theme/section contracts, theme lifecycle work, growth/discounts/attribution, analytics, email, Completeful integration, Stripe checkout runtime, and an AgentSam platform with tools, workflows, skills, files, MCP and contextual workbenches.
 
 ---
