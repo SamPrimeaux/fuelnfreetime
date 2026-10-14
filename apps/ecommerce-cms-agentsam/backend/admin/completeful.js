@@ -60,7 +60,7 @@ function providerErrorResponse(error) {
  * family-inherited side mockups; Completeful resolves those on its live GET.
  * Keep legacy D1 shape for the existing Product Studio UI.
  */
-async function liveCatalogDetail(env, catalogId, mirrored) {
+export async function liveCatalogDetail(env, catalogId, mirrored) {
   const { data } = await completefulRequest(env, "GET",
     `/catalog/products/${encodeURIComponent(catalogId)}`, {
       query: { include: "variants,print_locations,images,mockups,shipping" },
