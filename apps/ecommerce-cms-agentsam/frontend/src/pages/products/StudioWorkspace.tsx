@@ -1055,13 +1055,6 @@ export default function StudioWorkspace({
   });
   const effectiveDpi = quality.result;
   const lowResolution = quality.lowResolution;
-  const resolutionFit = suggestPrintScale({ currentScale: scale,
-    effectivePpi: manufacturingPreflight?.effectivePpi,
-    targetPpi: manufacturingPreflight?.target.ppi });
-  const resolutionBlockers = manufacturingPreflight?.issues.filter((issue) =>
-    issue.status === "needs_variant" || issue.status === "unsupported") || [];
-  const autoFitAvailable = resolutionFit !== null && resolutionBlockers.length > 0 &&
-    resolutionBlockers.every((issue) => issue.code === "insufficient_resolution");
   const filteredMedia = media;
   const currentPlacementKey = placementKey(asset?.id, variantId, locationId, x, y, scale, rotation, flipX, flipY, trimTransparent, removeFlatBackground);
   const preparedIsCurrent = Boolean(preparedAsset && preparedFor === currentPlacementKey);
@@ -1081,6 +1074,13 @@ export default function StudioWorkspace({
             (artworkCrop?.height ?? dimensions.height) / Math.max(1, artworkCrop?.width ?? dimensions.width) },
       )
     : null;
+  const resolutionFit = suggestPrintScale({ currentScale: scale,
+    effectivePpi: manufacturingPreflight?.effectivePpi,
+    targetPpi: manufacturingPreflight?.target.ppi });
+  const resolutionBlockers = manufacturingPreflight?.issues.filter((issue) =>
+    issue.status === "needs_variant" || issue.status === "unsupported") || [];
+  const autoFitAvailable = resolutionFit !== null && resolutionBlockers.length > 0 &&
+    resolutionBlockers.every((issue) => issue.code === "insufficient_resolution");
   return (
     <div className="ps-workspace" data-agentsam-resource="product-design-workspace">
       <header className="ps-workspace-header">
