@@ -52,11 +52,10 @@ function setDirty(next) {
   }
   if (btn) btn.disabled = !dirty || saveInFlight;
   if (discard) discard.disabled = !dirty || saveInFlight;
-  const connect = document.getElementById("connect-fulfillment-btn");
-  if (connect) {
-    const design = designContext?.draft;
-    connect.disabled = dirty || saveInFlight ||
-      !(design?.original_media_asset_id || design?.prepared_media_asset_id) ||
+  const createProvider = document.getElementById("create-provider-product-btn");
+  if (createProvider) {
+    createProvider.disabled = dirty || saveInFlight ||
+      !designContext?.draft?.prepared_media_asset_id ||
       Number(document.getElementById("price")?.value || 0) <= 0;
   }
   syncDockEdit();
