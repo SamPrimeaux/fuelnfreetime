@@ -433,15 +433,27 @@ async function getDraft(request, env, url, id = null) {
 }
 
 async function createDesign(env, draft) {
+  // Provider designs must use the reviewed manufacturing derivative, never
+  // silently fall back to the original artwork or a browser placement preview.
+  if (!draft.prepared_media_asset_id) {
+    throw Object.assign(new Error("Prepare production artwork in Product Studio before creating a Completeful design"), {
+      status: 409, code: "production_artwork_not_prepared",
+    });
+  }
   const selection = await validateSelection(
     env,
     draft.completeful_catalog_product_id,
     draft.selected_variant_ids,
     draft.print_location_ids,
   );
-  const art = await mediaById(env, draft.prepared_media_asset_id || draft.original_media_asset_id);
+  const art = await mediaById(env, draft.prepared_media_asset_id);
+  if (!art || String(art.content_type || "").toLowerCase() !== "image/png") {
+    throw Object.assign(new Error("Prepared production artwork must be an uploaded PNG in the media library"), {
+      status: 409, code: "invalid_production_artwork",
+    });
+  }
   const artUrl = publicMediaUrl(env, art);
-  if (!artUrl) throw Object.assign(new Error("Add and prepare artwork before creating a Completeful design"), { status: 400 });
+  if (!artUrl) throw Object.assign(new Error("Prepared artwork has no public delivery URL"), { status: 409 });
   const shop = draft.completeful_shop_id ? { completeful_shop_id: draft.completeful_shop_id } : await primaryShop(env);
   if (!shop?.completeful_shop_id) throw Object.assign(new Error("Select a Completeful shop first"), { status: 409 });
 
@@ -770,15 +782,18 @@ async function createProductFromDraft(request, env, id) {
   if (Number(product.price_cents) <= 0) {
     return json({ ok: false, error: "Set the retail price in Product Details before creating the Completeful product" }, { status: 400 });
   }
+  if (!draft.prepared_media_asset_id) {
+    return json({
+      ok: false,
+      error: "Prepare production artwork in Product Studio before creating the Completeful product",
+      code: "production_artwork_not_prepared",
+    }, { status: 409 });
+  }
   // Snapshot the latest commercial values at provider-creation time.
   await env.DB.prepare(
     "UPDATE product_studio_drafts SET title = ?, description = ?, retail_price_cents = ?, updated_at = datetime('now') WHERE id = ?"
   ).bind(product.title, product.description || null, product.price_cents, id).run();
   draft = await loadDraft(env, id);
-  if (!draft.prepared_media_asset_id && !draft.original_media_asset_id) {
-    return json({ ok: false, error: "Add artwork before creating the product" }, { status: 400 });
-  }
-
   try {
     const design = await createDesign(env, draft);
     draft = await loadDraft(env, id);
