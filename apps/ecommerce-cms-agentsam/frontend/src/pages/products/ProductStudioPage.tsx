@@ -24,6 +24,10 @@ import "../../styles/product-studio.css";
 
 const StudioWorkspace = lazy(() => import("./StudioWorkspace"));
 
+type CatalogSyncHealth = { status: string; updated_at?: string | null;
+  completed_at?: string | null; last_error_code?: string | null;
+  last_error_message?: string | null; page_count?: number; product_count?: number };
+
 const collections = [
   { name: "Everything", query: "", caption: "Find your next idea" },
   { name: "Tees", query: "shirt", caption: "Made to be worn" },
@@ -47,6 +51,7 @@ export default function ProductStudioPage() {
   const [error, setError] = useState("");
   const [refresh, setRefresh] = useState(0);
   const [syncing, setSyncing] = useState(false);
+  const [syncHealth, setSyncHealth] = useState<CatalogSyncHealth | null>(null);
   const [notice, setNotice] = useState("");
   const [detail, setDetail] = useState<ProductDetail | null>(null);
   const [catalogWarning, setCatalogWarning] = useState("");
@@ -148,6 +153,14 @@ export default function ProductStudioPage() {
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
       });
+    return () => controller.abort();
+  }, [productId, refresh]);
+  useEffect(() => {
+    if (productId) return;
+    const controller = new AbortController();
+    adminFetch<{ sync?: CatalogSyncHealth }>("/api/admin/completeful/status", { signal: controller.signal })
+      .then((data) => { if (!controller.signal.aborted) setSyncHealth(data.sync || null); })
+      .catch(() => { if (!controller.signal.aborted) setSyncHealth(null); });
     return () => controller.abort();
   }, [productId, refresh]);
   const stopSync = useRef(false);
@@ -324,6 +337,19 @@ export default function ProductStudioPage() {
                   </button>
                 ))}
               </div>
+              {(syncHealth?.status === "error" || syncHealth?.status === "partial") && (
+                <div className="ps-catalog-sync-alert" role="alert">
+                  <strong>{syncHealth.status === "error" ? "Completeful catalog refresh failed" : "Completeful catalog refresh incomplete"}</strong>
+                  <span>Existing products remain available, but supplier images and options may be out of date.
+                    Last attempt: {syncHealth.updated_at || "unknown"} UTC.</span>
+                  {syncHealth.last_error_code && <details><summary>Technical details</summary>
+                    {syncHealth.last_error_code}: {syncHealth.last_error_message || "No error detail recorded"}
+                  </details>}
+                  <button className="ps-button" disabled={syncing} onClick={() => void syncCatalog()}>
+                    {syncing ? "Retrying…" : "Resume catalog refresh"}
+                  </button>
+                </div>
+              )}
               <div id="studio-catalog" className="ps-catalog-heading">
                 <div>
                   <span className="ps-eyebrow">THE POSSIBILITIES</span>
