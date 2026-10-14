@@ -115,3 +115,63 @@ body a { color: inherit; }
   .catalog-toolbar { align-items: stretch; flex-direction: column; }
   .fft-grid { grid-template-columns: 1fr; }
 }
+
+/* Editorial merchandising refinements. Content and images remain CMS/instance-owned. */
+.shop-hero { min-height: clamp(620px, 83svh, 880px); align-items: center; }
+.shop-hero__media::after {
+  background: linear-gradient(90deg, rgba(5,5,5,.95) 0%, rgba(5,5,5,.75) 31%, rgba(5,5,5,.20) 75%),
+    linear-gradient(0deg, rgba(5,5,5,.72), transparent 42%);
+}
+.shop-hero__content { max-width: 735px; padding-block: clamp(8rem, 16vh, 11rem) clamp(4rem, 9vh, 7rem); }
+.shop-hero .h-display { max-width: 10ch; font-size: clamp(4rem, 8.9vw, 9.6rem); line-height: .82; letter-spacing: -.015em; text-wrap: balance; }
+.shop-hero__copy { margin-top: clamp(1.6rem, 3vw, 2.7rem); font-size: clamp(.98rem, 1.15vw, 1.15rem); }
+.shop-hero__proof { gap: .6rem 1.3rem; letter-spacing: .12em; }
+.collection-lineup { padding-block: clamp(4rem, 7.5vw, 7.5rem); }
+.collection-lineup__grid { gap: clamp(.8rem, 1.8vw, 2rem); }
+.collection-lineup .shop-section-head { margin-bottom: clamp(2rem, 3.5vw, 3.5rem); }
+.collection-lineup .shop-section-head h2 { font-size: clamp(3.4rem, 6.5vw, 7rem); }
+.collection-card__media { aspect-ratio: .91; border-radius: 3px; }
+.collection-card__media::after { content: ""; position: absolute; inset: 65% 0 0; pointer-events: none; background: linear-gradient(transparent, rgba(0,0,0,.18)); }
+.collection-card h3 { font-family: var(--h-font-display); font-size: clamp(1.7rem, 2.3vw, 2.8rem); font-weight: 400; line-height: 1; letter-spacing: .035em; margin-top: 1rem; }
+.collection-card p { margin-top: .45rem; max-width: 34ch; font-size: .85rem; }
+.editorial-strip { padding-block: clamp(0rem, 3vw, 3.5rem); }
+.editorial-strip__grid { gap: 3px; background: #0c0c0c; }
+.editorial-tile { min-height: clamp(365px, 42vw, 530px); }
+.editorial-tile__copy { inset: auto clamp(1.2rem, 2.3vw, 2.5rem) clamp(1.3rem, 2.5vw, 3rem); }
+.editorial-tile__copy h3 { max-width: 16ch; font-size: clamp(2.4rem, 4vw, 4.8rem); }
+.catalog { padding-block: clamp(4rem, 8vw, 8rem); }
+.catalog .shop-section-head h2 { font-size: clamp(3.3rem, 5.4vw, 6rem); }
+.fft-grid { gap: clamp(1.2rem, 2.2vw, 2.8rem); }
+.fft-media { background: #e6e1d8; border-radius: 3px; }
+.fft-info { gap: .45rem .7rem; padding-top: 1rem; }
+.fft-title { font-size: clamp(.85rem, 1.2vw, 1.07rem); line-height: 1.35; }
+.fft-btn { border-radius: 3px; min-height: 42px; display: inline-grid; place-items: center; }
+.fft-btn.buy { background: #171715; }
+.brand-story { min-height: clamp(520px, 65svh, 760px); }
+.brand-story__content { max-width: 660px; }
+.brand-story__content .h-display { max-width: 10ch; font-size: clamp(4rem, 8vw, 8.5rem); line-height: .88; }
+.shop-qv__dialog { border-radius: 4px; }
+.shop-qv__media img { object-fit: contain; }
+.shop-qv__copy h2 { font-size: clamp(2.7rem, 4vw, 4.2rem); }
+@media (max-width: 900px) {
+  .shop-hero { min-height: 650px; }
+  .collection-card__media { aspect-ratio: 1; }
+  .editorial-tile { min-height: 400px; }
+}
+@media (max-width: 600px) {
+  .shop-hero { min-height: max(670px, 82svh); }
+  .shop-hero__content { padding: 14rem 0 3rem; }
+  .shop-hero .h-display { font-size: clamp(3.9rem, 17vw, 6.1rem); }
+  .shop-hero__media::after { background: linear-gradient(0deg, rgba(5,5,5,.95), rgba(5,5,5,.57) 64%, rgba(5,5,5,.36)); }
+  .collection-lineup__grid { scroll-padding-inline: 1rem; }
+  .collection-card { flex-basis: min(79vw, 400px); }
+  .editorial-strip__grid { grid-template-columns: 1fr; }
+  .editorial-tile { min-height: 370px; }
+  .brand-story { min-height: 520px; }
+  .brand-story__content .h-display { font-size: clamp(3.9rem, 16vw, 6rem); }
+  .catalog-toolbar { position: relative; top: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shop-hero__media img,.brand-story__media img { transform:none; filter:none; will-change:auto; }
+  .shop-hero *, .collection-lineup *, .editorial-strip *, .catalog *, .brand-story * { transition-duration:.01ms!important; }
+}

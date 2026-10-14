@@ -1,3 +1,5 @@
+import { buildProductOptions, resolveSelectedVariant, sizeHasVariant, variantIsLocallyAvailable, optionKey } from "./product-options.mjs";
+
 (function () {
   const root = document.getElementById("pdp-root");
   if (!root) return;
@@ -14,6 +16,10 @@
   let product = null;
   let variants = [];
   let selectedVariant = null;
+  let selectedColor = "";
+  let selectedSize = "";
+  const esc = (value) => String(value ?? "").replace(/[&<>'"]/g,
+    (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
 
   function money(cents) {
     return "$" + (Number(cents) / 100).toFixed(2);
@@ -69,13 +75,13 @@
     root.innerHTML = `
       <div class="pdp-error-wrap">
         <h1>Product not found</h1>
-        <p>${message || "This item may have moved or is not available yet."}</p>
+        <p>${esc(message || "This item may have moved or is not available yet.")}</p>
         <a class="pdp-btn primary" href="/shop">Back to shop</a>
       </div>`;
   }
 
   function purchaseReady() {
-    return variants.some((v) => v.inventory_qty > 0);
+    return variants.some(variantIsLocallyAvailable);
   }
 
   function displayPriceCents() {
@@ -93,7 +99,7 @@
     const thumbs = images
       .map(
         (img, i) =>
-          `<button type="button" class="pdp-thumb ${i === 0 ? "active" : ""}" data-url="${img.url}" aria-label="View image ${i + 1}"><img src="${img.url}" alt=""></button>`
+          `<button type="button" class="pdp-thumb ${i === 0 ? "active" : ""}" data-url="${esc(img.url)}" aria-label="View image ${i + 1}"><img src="${esc(img.url)}" alt=""></button>`
       )
       .join("");
 
@@ -102,17 +108,21 @@
 
     let sizeSection = "";
     if (variants.length) {
-      const sizeButtons = variants
-        .map((v) => {
-          const disabled = v.inventory_qty <= 0;
-          return `<button type="button" class="pdp-size ${disabled ? "disabled" : ""}" data-id="${v.id}" data-size="${v.size}" ${disabled ? "disabled" : ""}>${v.size || v.sku}</button>`;
-        })
-        .join("");
+      const options = buildProductOptions(variants);
+      if (!options.colors.some((color) => optionKey(color) === optionKey(selectedColor))) {
+        selectedColor = options.colors[0] || "";
+      }
+      const colorButtons = options.colors.map((color) =>
+        `<button type="button" class="pdp-color${optionKey(color) === optionKey(selectedColor) ? " active" : ""}" data-color="${esc(color)}" aria-pressed="${optionKey(color) === optionKey(selectedColor)}">${esc(color)}</button>`
+      ).join("");
+      const sizeButtons = options.sizes.map((size) => {
+        const exists = sizeHasVariant(variants, selectedColor, size);
+        return `<button type="button" class="pdp-size${optionKey(size) === optionKey(selectedSize) ? " active" : ""}" data-size="${esc(size)}" aria-pressed="${optionKey(size) === optionKey(selectedSize)}" ${exists ? "" : 'disabled title="Not offered in this color"'}>${esc(size)}</button>`;
+      }).join("");
       sizeSection = `
-        <div class="pdp-field">
-          <label>Size</label>
-          <div class="pdp-sizes" id="pdp-sizes">${sizeButtons}</div>
-        </div>`;
+        ${options.colors.length > 1 ? `<div class="pdp-field"><div class="pdp-field-heading"><span>Color</span><strong id="pdp-color-name">${esc(selectedColor)}</strong></div><div class="pdp-colors" id="pdp-colors">${colorButtons}</div></div>` : ""}
+        <div class="pdp-field"><div class="pdp-field-heading"><span>Size</span><strong id="pdp-size-name">${esc(selectedSize || "Choose a size")}</strong></div>
+          <div class="pdp-sizes" id="pdp-sizes">${sizeButtons}</div></div>`;
     } else {
       sizeSection = `
         <div class="pdp-unavailable">
@@ -121,29 +131,29 @@
     }
 
     root.innerHTML = `
-      <nav class="pdp-crumb" aria-label="Breadcrumb"><a href="/shop">Shop</a> / <span>${product.title}</span></nav>
+      <nav class="pdp-crumb" aria-label="Breadcrumb"><a href="/shop">Shop</a> <span aria-hidden="true">/</span> <span>${esc(product.title)}</span></nav>
       <div class="pdp-layout">
         <div class="pdp-gallery">
-          <div class="pdp-main"><img id="pdp-main-img" src="${mainImg}" alt="${product.title}"></div>
+          <div class="pdp-main"><img id="pdp-main-img" src="${esc(mainImg)}" alt="${esc(product.title)}"></div>
           ${images.length > 1 ? `<div class="pdp-thumbs">${thumbs}</div>` : ""}
         </div>
         <div class="pdp-buy">
-          <p class="pdp-drop-label">Small-batch release</p>
-          <p class="pdp-kicker">${product.collection || "Essentials"}</p>
-          <h1>${product.title}</h1>
+          <p class="pdp-drop-label">From the collection</p>
+          <p class="pdp-kicker">${esc(product.collection || "Shop")}</p>
+          <h1>${esc(product.title)}</h1>
           <p class="pdp-price ${price.tbd ? "is-tbd" : ""}">${price.label}</p>
-          ${product.description ? `<p class="pdp-desc">${product.description}</p>` : ""}
+          ${product.description ? `<p class="pdp-desc">${esc(product.description)}</p>` : ""}
           ${sizeSection}
           <div class="pdp-actions">
-            <button type="button" class="pdp-btn primary" id="pdp-add" ${canBuy ? "" : "disabled"}>${canBuy ? "Add to Cart" : "Unavailable"}</button>
+            <button type="button" class="pdp-btn primary" id="pdp-add" disabled>${canBuy ? "Choose a size" : "Checkout unavailable"}</button>
             ${cartIconButton()}
           </div>
-          <p class="pdp-note" id="pdp-stock"></p>
+          <p class="pdp-note" id="pdp-stock" aria-live="polite">${canBuy ? "Select options to check availability." : "Selected options are visible. Checkout is paused until inventory can be confirmed."}</p>
           ${canBuy ? `<p class="pdp-checkout-note">Secure checkout powered by Stripe.</p>` : ""}
-          <div class="pdp-assurances" aria-label="Purchase benefits">
-            <div><strong>Live availability</strong><span>Inventory is checked again at checkout.</span></div>
-            <div><strong>Secure payment</strong><span>Payment details stay with Stripe.</span></div>
-            <div><strong>Built for the long haul</strong><span>Premium blanks and durable decoration.</span></div>
+          <div class="pdp-assurances" aria-label="Product information">
+            <div><strong>Availability</strong><span>${canBuy ? "Stock is rechecked at checkout." : "Purchase options will open after stock is verified."}</span></div>
+            <div><strong>Checkout</strong><span>${canBuy ? "Secure Stripe payment at checkout." : "No payment or order is collected while unavailable."}</span></div>
+            <div><strong>Details</strong><span>Explore garment specifications and available options.</span></div>
           </div>
         </div>
       </div>
@@ -168,33 +178,62 @@
       });
     });
 
-    document.querySelectorAll(".pdp-size:not(.disabled)").forEach((btn) => {
+    const syncOptions = () => {
+      selectedVariant = resolveSelectedVariant(variants, { color: selectedColor, size: selectedSize });
+      const available = variantIsLocallyAvailable(selectedVariant);
+      for (const btn of document.querySelectorAll(".pdp-color")) {
+        const active = optionKey(btn.dataset.color) === optionKey(selectedColor);
+        btn.classList.toggle("active", active);
+        btn.setAttribute("aria-pressed", String(active));
+      }
+      for (const btn of document.querySelectorAll(".pdp-size")) {
+        const exists = sizeHasVariant(variants, selectedColor, btn.dataset.size);
+        const active = exists && optionKey(btn.dataset.size) === optionKey(selectedSize);
+        btn.disabled = !exists;
+        btn.classList.toggle("active", active);
+        btn.classList.toggle("disabled", !exists);
+        btn.setAttribute("aria-pressed", String(active));
+      }
+      const title = document.getElementById("pdp-color-name");
+      if (title) title.textContent = selectedColor;
+      const sizeName = document.getElementById("pdp-size-name");
+      if (sizeName) sizeName.textContent = selectedSize || "Choose a size";
+      const action = document.getElementById("pdp-add");
+      action.disabled = !available;
+      action.textContent = available ? "Add to bag" : !selectedVariant && purchaseReady()
+        ? "Choose a size" : "Checkout unavailable";
+      const priceEl = document.querySelector(".pdp-price");
+      if (priceEl) {
+        const price = formatPrice(selectedVariant?.price_cents || product.price_cents);
+        priceEl.textContent = price.label;
+        priceEl.classList.toggle("is-tbd", price.tbd);
+      }
+      const stock = document.getElementById("pdp-stock");
+      if (stock) stock.textContent = available
+        ? "In stock — availability rechecked at checkout."
+        : selectedVariant
+          ? "This combination is listed, but purchase availability is not yet confirmed."
+          : "Choose a size to view this combination.";
+    };
+
+    document.querySelectorAll(".pdp-color").forEach((btn) => {
       btn.addEventListener("click", () => {
-        document.querySelectorAll(".pdp-size").forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        selectedVariant = variants.find((v) => String(v.id) === btn.dataset.id);
-        document.getElementById("pdp-add").disabled = !selectedVariant;
-        const stock = document.getElementById("pdp-stock");
-        const priceEl = document.querySelector(".pdp-price");
-        if (selectedVariant && priceEl) {
-          const p = formatPrice(selectedVariant.price_cents || product.price_cents);
-          priceEl.textContent = p.label;
-          priceEl.classList.toggle("is-tbd", p.tbd);
-        }
-        if (selectedVariant && stock) {
-          stock.textContent =
-            selectedVariant.inventory_qty <= 5
-              ? `Only ${selectedVariant.inventory_qty} left in ${selectedVariant.size}`
-              : `${selectedVariant.inventory_qty} in stock`;
-        }
+        selectedColor = btn.dataset.color;
+        if (!sizeHasVariant(variants, selectedColor, selectedSize)) selectedSize = "";
+        syncOptions();
       });
     });
-
-    const available = variants.filter((v) => v.inventory_qty > 0);
-    if (available.length === 1) {
-      const btn = document.querySelector(`.pdp-size[data-id="${available[0].id}"]`);
-      btn?.click();
+    document.querySelectorAll(".pdp-size").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        selectedSize = btn.dataset.size;
+        syncOptions();
+      });
+    });
+    if (variants.length === 1 && variantIsLocallyAvailable(variants[0])) {
+      selectedColor = variants[0].color || "";
+      selectedSize = variants[0].size || variants[0].sku || "One size";
     }
+    syncOptions();
 
     document.getElementById("pdp-add")?.addEventListener("click", () => {
       if (!selectedVariant || !window.FNF_STORE) return;
@@ -204,6 +243,7 @@
         slug: product.slug,
         title: product.title,
         size: selectedVariant.size,
+        color: selectedVariant.color || "",
         price_cents: selectedVariant.price_cents || product.price_cents,
         image: product.primary_image || product.image_url,
         qty: 1,
@@ -232,9 +272,9 @@
           ${others
             .map(
               (p) => `
-            <a class="pdp-related-card" href="/products/${p.slug}">
-              <img src="${p.primary_image || p.image_url}" alt="${p.title}" loading="lazy">
-              <div><strong>${p.title}</strong><span>${money(p.price_cents)}</span></div>
+            <a class="pdp-related-card" href="/products/${encodeURIComponent(p.slug)}">
+              <img src="${esc(p.primary_image || p.image_url)}" alt="${esc(p.title)}" loading="lazy">
+              <div><strong>${esc(p.title)}</strong><span>${money(p.price_cents)}</span></div>
             </a>`
             )
             .join("")}

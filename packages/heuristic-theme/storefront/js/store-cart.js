@@ -7,6 +7,12 @@
   function money(cents) {
     return "$" + (Number(cents) / 100).toFixed(2);
   }
+  const esc = (value) => String(value ?? "").replace(/[&<>'"]/g,
+    (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
+  const optionLabel = (item) => [
+    item.color ? esc(item.color) : "",
+    item.size ? "Size " + esc(item.size) : "One size",
+  ].filter(Boolean).join(" · ");
 
   function getCart() {
     return window.FNF_STORE?.getCart() || JSON.parse(localStorage.getItem(CART_KEY) || "[]");
@@ -53,7 +59,7 @@
     lines.innerHTML = cart
       .map(
         (item) =>
-          `<div class="checkout-line"><span>${item.qty}× ${item.title}${item.size ? " · " + item.size : ""}</span><strong>${money((item.price_cents || 0) * item.qty)}</strong></div>`
+          `<div class="checkout-line"><span>${item.qty}× ${esc(item.title)} · ${optionLabel(item)}</span><strong>${money((item.price_cents || 0) * item.qty)}</strong></div>`
       )
       .join("");
   }
@@ -121,13 +127,13 @@
       .map((item, idx) => {
         const line = (item.price_cents || 0) * item.qty;
         total += line;
-        const productHref = item.slug ? `/products/${item.slug}` : "/shop";
+        const productHref = item.slug ? `/products/${encodeURIComponent(item.slug)}` : "/shop";
         return `
         <article class="cart-line" data-idx="${idx}" data-h-product="${item.slug || item.product_id || ""}">
-          <a href="${productHref}"><img src="${item.image || ""}" alt=""></a>
+          <a href="${productHref}"><img src="${esc(item.image || "")}" alt=""></a>
           <div class="cart-line-body">
-            <h2><a href="${productHref}">${item.title}</a></h2>
-            <p class="cart-line-meta">${item.size ? "Size " + item.size : "One size"} · ${money(item.price_cents)} each</p>
+            <h2><a href="${productHref}">${esc(item.title)}</a></h2>
+            <p class="cart-line-meta">${optionLabel(item)} · ${money(item.price_cents)} each</p>
             <div class="cart-qty">
               <button type="button" data-dec aria-label="Decrease quantity">−</button>
               <span>${item.qty}</span>
