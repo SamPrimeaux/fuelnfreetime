@@ -628,11 +628,13 @@ function variantNote(msg, kind) {
   el.style.display = msg ? "block" : "none";
 }
 
-function renderInventory(variants) {
+function renderInventory(variants, supplierDraft = false) {
   const body = document.getElementById("inventory-body");
   if (!body) return;
   if (!variants.length) {
-    body.innerHTML = '<tr><td colspan="4" class="pages-empty">No variants — inventory tracked when you add SKUs</td></tr>';
+    body.innerHTML = supplierDraft
+      ? '<tr><td colspan="4" class="pages-empty">Completeful catalog variants are available upstream. Local sale variants are created when the prepared design is successfully created and mapped with Completeful. No warehouse quantity should be invented.</td></tr>'
+      : '<tr><td colspan="4" class="pages-empty">No variants — inventory tracked when you add SKUs</td></tr>';
     return;
   }
   body.innerHTML = variants
@@ -648,7 +650,7 @@ function renderInventory(variants) {
     .join("");
 }
 
-function renderVariants(variants) {
+function renderVariants(variants, supplierDraft = false) {
   variantCount = variants.length;
   variantOriginals = new Map(variants.map((v) => [Number(v.id), {
     sku: v.sku || "", size: v.size || "", color: v.color || "",
@@ -664,7 +666,13 @@ function renderVariants(variants) {
     empty.style.display = "block";
     wrap.style.display = "none";
     form.style.display = "none";
-    renderInventory([]);
+    const hint = empty.querySelector("p");
+    const add = document.getElementById("show-variant-form");
+    if (hint) hint.textContent = supplierDraft
+      ? "The design is linked to the Completeful catalog. Prepare its artwork, save Product Details, then use Create with Completeful to import mapped selling variants. This is not local stock."
+      : "Add options like size or color for separate SKUs and inventory.";
+    if (add) add.hidden = supplierDraft;
+    renderInventory([], supplierDraft);
     return;
   }
 
@@ -779,6 +787,14 @@ function renderStudioDesign(draft, fulfillment, source = null) {
   }
 
 
+  if (!fulfillment?.completeful_store_product_id) {
+    const explanation = document.createElement("p");
+    explanation.className = "product-card-hint";
+    explanation.textContent = draft.prepared_media_asset_id
+      ? "Design saved. Supplier product and selling variants have not been created yet. An approved image is still required for the storefront."
+      : "Design saved as a draft. Prepare its print artwork in Product Studio before creating the supplier product. No verified mockup or selling variants exist yet.";
+    root.append(explanation);
+  }
   const actions = document.createElement("div");
   actions.className = "product-design-actions";
   const edit = document.createElement("a");
@@ -848,7 +864,7 @@ async function loadProduct() {
     updateHeaderTitle(p.title);
     syncStatusUi();
     updateSeoPreview();
-    renderVariants(d.variants);
+    renderVariants(d.variants, Boolean(d.design_draft?.completeful_catalog_product_id));
     selectedCollectionIds = new Set((d.collection_ids || []).map(Number));
     renderCollections();
     renderStudioDesign(d.design_draft, d.fulfillment, d.source);
