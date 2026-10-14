@@ -50,8 +50,21 @@ function setDirty(next) {
     hint.classList.toggle("is-error", saveFailed);
     hint.setAttribute("role", "status");
   }
-  if (btn) btn.disabled = !dirty || saveInFlight;
+  const canPublish = !isNew && document.getElementById("status-sidebar")?.value === "active" &&
+    Boolean(designContext?.draft && designContext.draft.state !== "published");
+  if (btn) {
+    btn.disabled = (!dirty && !canPublish) || saveInFlight;
+    btn.textContent = saveInFlight ? "Working…" : canPublish ? "Publish" : isNew ? "Create" : "Save";
+    btn.classList.toggle("primary", canPublish || isNew);
+    btn.classList.toggle("ghost", !canPublish && !isNew);
+  }
   if (discard) discard.disabled = !dirty || saveInFlight;
+  const publishButton = document.getElementById("publish-btn");
+  if (publishButton) {
+    publishButton.hidden = isNew || !designContext?.draft || designContext.draft.state === "published" ||
+      document.getElementById("status-sidebar")?.value === "active";
+    publishButton.disabled = saveInFlight;
+  }
   const createProvider = document.getElementById("create-provider-product-btn");
   if (createProvider) {
     createProvider.disabled = dirty || saveInFlight ||
@@ -71,7 +84,7 @@ function syncDockEdit() {
     hint: isNew && !dirty ? "New product" : hint ? hint.textContent : "",
     dirty,
     canSave: Boolean(btn) && !btn.disabled,
-    saveLabel: saveInFlight ? "Saving…" : isNew ? "Create" : "Save",
+    saveLabel: saveInFlight ? "Working…" : document.getElementById("save-btn")?.textContent || "Save",
     onSave: () => document.getElementById("save-btn")?.click(),
     discardHref: isNew ? "/admin/products" : location.pathname + location.search,
   };
@@ -87,11 +100,12 @@ function imgNote(msg, kind) {
 }
 
 function showNote(msg, kind) {
-  const el = document.getElementById("form-note");
+  const el = document.getElementById("editor-action-note");
   if (!el) return;
   el.textContent = msg || "";
-  el.className = "product-note" + (kind ? ` is-${kind}` : "");
-  el.style.display = msg ? "block" : "none";
+  el.className = "product-note product-editor-action-note" + (kind ? ` is-${kind}` : "");
+  el.hidden = !msg;
+  el.setAttribute("role", kind === "error" ? "alert" : "status");
   if (msg && kind === "error") {
     el.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
@@ -164,9 +178,9 @@ renderShell("/admin/products", `
         <div class="product-editor-save-actions">
           <span class="product-editor-bar-hint" id="save-hint" role="status">Loading…</span>
           <button type="button" class="btn ghost small" id="discard-btn" disabled>Discard</button>
-          <button type="button" class="btn primary small" id="save-btn" disabled>Save</button>
+          <button type="button" class="btn ghost small" id="save-btn" disabled>Save</button>
+          <button type="button" class="btn primary small" id="publish-btn" hidden>Publish</button>
         </div>
-        <button type="button" class="btn ghost small" id="duplicate-btn" ${isNew ? "disabled" : ""}>Duplicate</button>
         <a href="#" class="btn ghost small" id="view-btn" target="_blank" rel="noopener" style="${isNew ? "visibility:hidden" : ""}">View</a>
         <div class="product-editor-more">
           <button type="button" class="btn ghost small" id="more-btn">More actions</button>
@@ -177,6 +191,7 @@ renderShell("/admin/products", `
         </div>
       </div>
     </header>
+    <p id="editor-action-note" class="product-note product-editor-action-note" role="status" hidden></p>
 
     <div class="product-editor-grid">
       <div class="product-editor-main">
@@ -187,13 +202,6 @@ renderShell("/admin/products", `
 
         <div class="product-card">
           <label for="description">Description</label>
-          <div class="product-toolbar" aria-hidden="true">
-            <button type="button" disabled><strong>B</strong></button>
-            <button type="button" disabled><em>I</em></button>
-            <button type="button" disabled>U</button>
-            <button type="button" disabled>🔗</button>
-            <button type="button" disabled>≡</button>
-          </div>
           <textarea id="description" placeholder="Describe this product for the storefront…"></textarea>
         </div>
 
@@ -216,16 +224,15 @@ renderShell("/admin/products", `
 
         <div class="product-card" id="studio-design-card" hidden>
           <div class="product-card-head">
-            <label>Product source &amp; design</label>
-            <span class="product-card-hint">One product record for every fulfillment method</span>
+            <label>Product design</label>
           </div>
           <div id="studio-design-content"></div>
         </div>
 
         <div class="product-card">
-          <label for="collection">Category (legacy label)</label>
+          <label for="collection">Category</label>
           <input type="text" id="collection" placeholder="Optional internal category">
-          <p class="product-card-hint">Category labels are separate from multi-product collections below.</p>
+          <p class="product-card-hint">Optional internal category.</p>
         </div>
 
         <div class="product-card" id="product-collections-card">
@@ -360,7 +367,6 @@ renderShell("/admin/products", `
       </aside>
     </div>
 
-    <p class="product-note" id="form-note" style="display:none"></p>
   </div>
 
 
@@ -629,10 +635,14 @@ function variantNote(msg, kind) {
 
 function renderInventory(variants, supplierDraft = false) {
   const body = document.getElementById("inventory-body");
+  // Supplier stock is not locally authoritative, even once SKUs have been mapped.
+  // Hide the warehouse quantity table for supplier-backed products.
+  const card = document.getElementById("inventory-card");
+  if (card) card.hidden = Boolean(supplierDraft);
   if (!body) return;
   if (!variants.length) {
     body.innerHTML = supplierDraft
-      ? '<tr><td colspan="4" class="pages-empty">Completeful catalog variants are available upstream. Local sale variants are created when the prepared design is successfully created and mapped with Completeful. No warehouse quantity should be invented.</td></tr>'
+      ? '<tr><td colspan="4" class="pages-empty">Your selected sizes and colors are saved. Inventory is managed by the supplier after creation.</td></tr>'
       : '<tr><td colspan="4" class="pages-empty">No variants — inventory tracked when you add SKUs</td></tr>';
     return;
   }
@@ -670,10 +680,15 @@ function renderSupplierSelection(container, selection) {
     problem.textContent = selection.unavailable_count + " supplier combinations could not be resolved. Reopen Product Studio to reconcile them before creation.";
     container.append(problem);
   }
+  const details = document.createElement("details");
+  details.className = "product-supplier-selection-details";
+  const summaryLabel = document.createElement("summary");
+  summaryLabel.textContent = "View " + selection.variants.length + " size and color combinations";
+  details.append(summaryLabel);
   const tableWrap = document.createElement("div");
   tableWrap.className = "product-supplier-selection-table-wrap";
   const table = document.createElement("table");
-  table.className = "product-inventory-table product-supplier-selection-table";
+  table.className = "product-supplier-selection-table";
   const head = document.createElement("thead");
   const titleRow = document.createElement("tr");
   for (const label of ["Color", "Size", "Supplier SKU"]) {
@@ -684,41 +699,22 @@ function renderSupplierSelection(container, selection) {
   head.append(titleRow);
   table.append(head);
   const body = document.createElement("tbody");
-  const list = selection.variants;
-  function show(limit) {
-    body.replaceChildren();
-    for (const item of list.slice(0, limit)) {
-      const row = document.createElement("tr");
-      for (const value of [item.color || "—", item.size || "—", item.provider_sku || "Unavailable"]) {
-        const cell = document.createElement("td");
-        cell.textContent = value;
-        row.append(cell);
-      }
-      body.append(row);
+  for (const item of selection.variants) {
+    const row = document.createElement("tr");
+    for (const value of [item.color || "—", item.size || "—", item.provider_sku || "Unavailable"]) {
+      const cell = document.createElement("td");
+      cell.textContent = value;
+      row.append(cell);
     }
+    body.append(row);
   }
-  show(12);
   table.append(body);
   tableWrap.append(table);
-  container.append(tableWrap);
-  if (list.length > 12) {
-    const toggle = document.createElement("button");
-    toggle.type = "button";
-    toggle.className = "btn ghost small";
-    toggle.textContent = "Show all " + list.length + " selected variants";
-    let expanded = false;
-    toggle.addEventListener("click", () => {
-      expanded = !expanded;
-      show(expanded ? list.length : 12);
-      toggle.textContent = expanded ? "Show fewer variants" : "Show all " + list.length + " selected variants";
-      toggle.setAttribute("aria-expanded", String(expanded));
-    });
-    toggle.setAttribute("aria-expanded", "false");
-    container.append(toggle);
-  }
+  details.append(tableWrap);
+  container.append(details);
   const foot = document.createElement("p");
   foot.className = "product-card-hint";
-  foot.textContent = "These selections are saved. Supplier-managed variants will be created and linked automatically after you save Product Details and use Create with Completeful. Local stock quantities are not fabricated.";
+  foot.textContent = "No manual variant or SKU entry needed.";
   container.append(foot);
 }
 
@@ -735,6 +731,7 @@ function renderVariants(variants, supplierDraft = false, sellingSelection = null
   const body = document.getElementById("variants-body");
 
   if (!variants.length) {
+    empty.classList.toggle("has-supplier-selection", supplierDraft);
     empty.style.display = "block";
     wrap.style.display = "none";
     form.style.display = "none";
@@ -877,8 +874,8 @@ function renderStudioDesign(draft, fulfillment, source = null, sellingSelection 
     const explanation = document.createElement("p");
     explanation.className = "product-card-hint";
     explanation.textContent = draft.prepared_media_asset_id
-      ? "Design saved. Supplier product and selling variants have not been created yet. An approved image is still required for the storefront."
-      : "Design saved as a draft. Prepare its print artwork in Product Studio before creating the supplier product. No verified mockup or selling variants exist yet.";
+      ? "Artwork ready. Set your price, then Publish to create the supplier product and storefront listing."
+      : "Finish preparing your artwork in Product Studio, then return here to publish.";
     root.append(explanation);
   }
   const actions = document.createElement("div");
@@ -903,8 +900,8 @@ function renderStudioDesign(draft, fulfillment, source = null, sellingSelection 
     pending.textContent = !draft.prepared_media_asset_id
       ? "Return to Product Studio to prepare artwork."
       : Number(document.getElementById("price")?.value || 0) <= 0
-        ? "Set your retail price, keep status Draft, and save. Your selected variants are already retained."
-        : "Save any changes, then create all selected supplier variants with Completeful.";
+        ? "Enter a retail price to continue."
+        : "You can create the supplier listing now, or select Active and Publish in one step.";
     actions.append(pending);
     create.addEventListener("click", async () => {
       if (dirty || saveInFlight) {
@@ -1021,13 +1018,24 @@ function collectPayload() {
 
 async function saveProduct() {
   const payload = collectPayload();
+  const publishSupplier = !isNew && payload.status === "active" &&
+    Boolean(designContext?.draft && designContext.draft.state !== "published");
+  const supplierDraftId = designContext?.draft?.id;
+  // The local product details must be saved as a draft before provider creation.
+  // Publication is explicit (Active → Publish) and is completed only after
+  // supplier mapping and the server's storefront readiness checks both succeed.
+  if (publishSupplier) payload.status = "draft";
   if (!payload.title) {
     showNote("Title is required.", "error");
     return;
   }
 
-  if (payload.status === "active" && designContext?.draft && !designContext?.fulfillment?.completeful_store_product_id) {
-    showNote("Keep this product as Draft until Completeful creates and maps the selected supplier variants. Your selected options are already saved; no manual variants or SKUs are needed.", "error");
+  if (publishSupplier && payload.price_cents <= 0) {
+    showNote("Enter a retail price above $0 to publish.", "error");
+    return;
+  }
+  if (publishSupplier && !designContext?.draft?.prepared_media_asset_id) {
+    showNote("Finish preparing the artwork in Product Studio before publishing.", "error");
     return;
   }
   if (payload.status === "active" && !isNew) {
@@ -1046,6 +1054,7 @@ async function saveProduct() {
 
   // Keep changes made during an in-flight save unsaved until they persist.
   const saveSnapshot = JSON.stringify(payload);
+  let detailsSaved = false;
   saveFailed = false;
   saveInFlight = true;
   setDirty(dirty);
@@ -1096,6 +1105,37 @@ async function saveProduct() {
       String(stored.status) !== payload.status) {
       throw new Error("Save did not verify against the stored product. Check the fields and retry.");
     }
+    detailsSaved = true;
+    if (publishSupplier) {
+      showNote("Details saved. Checking your Completeful product…", "info");
+      if (!verified.fulfillment?.completeful_store_product_id) {
+        const result = await adminFetch(
+          "/api/admin/product-studio/drafts/" + encodeURIComponent(supplierDraftId) + "/create-product",
+          { method: "POST" }
+        );
+        const expected = Number(verified.selling_selection?.selected_count || 0);
+        if (!result.already_linked && Number(result.mapped_variants) !== expected) {
+          throw new Error("Completeful variant mapping is incomplete. Expected " + expected +
+            " variants, received " + Number(result.mapped_variants || 0) + ".");
+        }
+      }
+      const refreshed = await adminFetch("/api/admin/products/" + productId);
+      if (!refreshed.fulfillment?.completeful_store_product_id) {
+        throw new Error("Completeful did not return a linked supplier product.");
+      }
+      showNote("Supplier product ready. Checking the storefront listing…", "info");
+      await adminFetch(
+        "/api/admin/product-studio/drafts/" + encodeURIComponent(supplierDraftId) + "/publish",
+        { method: "POST" }
+      );
+      const live = await adminFetch("/api/admin/products/" + productId);
+      if (live.product?.status !== "active") {
+        throw new Error("Storefront publication did not persist.");
+      }
+      await loadProduct();
+      showNote("Published successfully with " + (live.variants?.length || 0) + " supplier variants.", "success");
+      return;
+    }
     productSlug = stored.slug;
     updateHeaderTitle(stored.title);
     updateSeoPreview();
@@ -1107,17 +1147,35 @@ async function saveProduct() {
     showNote(additionalEdits ? "Earlier changes saved; newer edits still need saving." :
       "Product saved and verified.", "success");
   } catch (err) {
-    saveFailed = true;
-    showNote(err.message, "error");
-    setDirty(true);
+    if (publishSupplier && detailsSaved) {
+      // The product details were persisted. Do not report them as unsaved merely
+      // because a later provider operation or storefront publication failed.
+      document.getElementById("status-sidebar").value = "draft";
+      syncStatusUi();
+      saveFailed = false;
+      setDirty(JSON.stringify(collectPayload()) !== saveSnapshot);
+      showNote("Saved as Draft. Publication couldn't finish: " + (err.message || "Unknown error") +
+        ". Your artwork, price and selected supplier variants are retained. Retry Publish once the issue is resolved.", "error");
+    } else {
+      saveFailed = true;
+      showNote(err.message, "error");
+      setDirty(true);
+    }
   } finally {
     saveInFlight = false;
-    document.getElementById("save-btn").textContent = isNew ? "Save product" : "Save";
     setDirty(dirty);
   }
 }
 
-document.getElementById("save-btn").addEventListener("click", saveProduct);
+document.getElementById("save-btn").addEventListener("click", () => saveProduct());
+document.getElementById("publish-btn")?.addEventListener("click", () => {
+  if (saveInFlight) return;
+  document.getElementById("status-sidebar").value = "active";
+  saveFailed = false;
+  setDirty(true);
+  syncStatusUi();
+  saveProduct();
+});
 document.getElementById("discard-btn")?.addEventListener("click", async () => {
   if (!dirty || saveInFlight) return;
   if (!confirm("Discard unsaved changes and restore the last saved product details?")) return;
@@ -1128,10 +1186,6 @@ document.getElementById("discard-btn")?.addEventListener("click", async () => {
   }
   await loadProduct();
   showNote("Restored last saved product details.", "success");
-});
-
-document.getElementById("duplicate-btn")?.addEventListener("click", () => {
-  alert("Duplicate product is coming soon.");
 });
 
 document.getElementById("more-btn")?.addEventListener("click", (e) => {

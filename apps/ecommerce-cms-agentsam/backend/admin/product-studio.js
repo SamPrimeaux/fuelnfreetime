@@ -781,13 +781,42 @@ async function createLocalMappings(env, draft, selection, providerProductId, des
 async function createProductFromDraft(request, env, id) {
   let draft = await loadDraft(env, id);
   if (!draft) return json({ ok: false, error: "Draft not found" }, { status: 404 });
-  // A saved provider association must be reused, never duplicated.
+  // A saved provider association must be reused, never duplicated. If a
+  // previous response succeeded upstream but a local mapping write failed,
+  // repair the mapping idempotently instead of submitting another product.
   const link = await env.DB.prepare(
-    "SELECT completeful_store_product_id FROM completeful_product_links WHERE product_id = ? AND completeful_store_product_id IS NOT NULL LIMIT 1"
+    "SELECT * FROM completeful_product_links WHERE product_id = ? AND completeful_store_product_id IS NOT NULL LIMIT 1"
   ).bind(draft.product_id).first();
   if (link?.completeful_store_product_id) {
-    return json({ ok: true, already_linked: true, product_id: draft.product_id,
-      completeful_store_product_id: link.completeful_store_product_id, draft });
+    const linkedSelection = parseJson(link.selection_json, {});
+    const linkedIds = normalizeIds(linkedSelection.variant_ids || []);
+    const requestedIds = normalizeIds(draft.selected_variant_ids);
+    if (linkedIds.length !== requestedIds.length ||
+        linkedIds.some((variantId) => !requestedIds.includes(variantId))) {
+      return json({ ok: false,
+        error: "The saved supplier selection changed after creation. Reconcile the existing Completeful product before publishing.",
+        code: "supplier_selection_changed" }, { status: 409 });
+    }
+    try {
+      const selection = await validateSelection(
+        env, draft.completeful_catalog_product_id, requestedIds, draft.print_location_ids
+      );
+      const mappings = await createLocalMappings(
+        env, draft, selection, link.completeful_store_product_id,
+        link.completeful_design_id || draft.completeful_design_id, link.last_request_id
+      );
+      if (mappings.mapped.length !== requestedIds.length) {
+        throw new Error("Supplier variant mapping is incomplete");
+      }
+      await env.DB.prepare(
+        "UPDATE product_studio_drafts SET state = 'created', last_error_code = NULL, last_error_message = NULL, updated_at = datetime('now') WHERE id = ? AND state != 'published'"
+      ).bind(id).run();
+      return json({ ok: true, already_linked: true, product_id: draft.product_id,
+        completeful_store_product_id: link.completeful_store_product_id,
+        mapped_variants: mappings.mapped.length, draft: await loadDraft(env, id) });
+    } catch (error) {
+      return providerErrorResponse(error);
+    }
   }
   const product = await env.DB.prepare("SELECT * FROM products WHERE id = ?")
     .bind(draft.product_id).first();
@@ -869,6 +898,9 @@ async function createProductFromDraft(request, env, id) {
     }
 
     const mappings = await createLocalMappings(env, draft, selection, providerProductId, design.designId, requestId);
+    if (mappings.mapped.length !== draft.selected_variant_ids.length) {
+      throw new Error("Supplier product created but not all selected variants were mapped");
+    }
     let image = null;
     if (draft.completeful_render_url && draft.completeful_render_status === "succeeded") {
       image = await persistProviderRender(env, draft);

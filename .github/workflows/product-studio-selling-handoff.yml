@@ -7,6 +7,7 @@ on:
       - 'apps/ecommerce-cms-agentsam/frontend/static/product-edit.html'
       - 'apps/ecommerce-cms-agentsam/frontend/static/css/product-edit.css'
       - 'tests/product-studio-selling-handoff.test.mjs'
+      - 'tests/product-details-publication-workflow.test.mjs'
       - 'tests/product-edit-inline-syntax.test.mjs'
       - 'tests/product-workflow-next-step.test.mjs'
       - '.github/workflows/product-studio-selling-handoff.yml'
@@ -21,6 +22,6 @@ jobs:
         with:
           node-version: '22'
       - name: Verify actual saved supplier variant handoff
-        run: node --test tests/product-studio-selling-handoff.test.mjs tests/product-edit-inline-syntax.test.mjs tests/product-workflow-next-step.test.mjs
+        run: node --test tests/product-studio-selling-handoff.test.mjs tests/product-details-publication-workflow.test.mjs tests/product-edit-inline-syntax.test.mjs tests/product-workflow-next-step.test.mjs
       - name: Parse production backend read model
-        run: node --check apps/ecommerce-cms-agentsam/backend/admin/api.js && node --check apps/ecommerce-cms-agentsam/backend/admin/product-selling-selection.js
+        run: node --check apps/ecommerce-cms-agentsam/backend/admin/api.js && node --check apps/ecommerce-cms-agentsam/backend/admin/product-selling-selection.js && node --check apps/ecommerce-cms-agentsam/backend/admin/product-studio.js

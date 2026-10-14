@@ -60,6 +60,9 @@ test("legacy Product Details uses persisted selection, not an empty local varian
   assert.match(html, /renderVariants\(d\.variants, Boolean\(d\.design_draft\?\.completeful_catalog_product_id\), d\.selling_selection\)/);
   assert.match(html, /renderSupplierSelection\(selectionRoot, sellingSelection\)/);
   assert.match(html, /No manual SKU entry required/);
-  assert.match(html, /Keep this product as Draft until Completeful creates and maps/);
+  assert.doesNotMatch(html, /Keep this product as Draft until Completeful creates and maps/);
+  assert.match(html, /const publishSupplier =/);
+  assert.match(html, /"\/publish"/);
+  assert.match(html, /product-supplier-selection-details/);
   assert.match(api, /selling_selection: sellingSelection/);
 });
