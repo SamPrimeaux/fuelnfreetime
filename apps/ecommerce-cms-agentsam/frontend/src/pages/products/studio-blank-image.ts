@@ -28,8 +28,11 @@ export function blankGarmentImageSources(
   product: CatalogProduct,
 ): string[] {
   if (!variant) return [];
+  // Do not silently downgrade a failed photo to a generic illustration.
+  if (isCleanSupplierBackground(variant.realistic_image_url)) {
+    return [variant.realistic_image_url];
+  }
   const candidates = [
-    isCleanSupplierBackground(variant.realistic_image_url) ? variant.realistic_image_url : null,
     variant.cover_image_url && variant.cover_image_url !== product.cover_image_url
       ? variant.cover_image_url : null,
     variant.main_icon_url && variant.main_icon_url !== product.main_icon_url
