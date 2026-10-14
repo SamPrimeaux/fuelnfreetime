@@ -173,7 +173,7 @@ export async function selectPrimaryCompletefulShop(env, shopId) {
   return true;
 }
 
-async function statementsForCatalogProduct(env, product, syncToken, requestId) {
+export async function statementsForCatalogProduct(env, product, syncToken, requestId) {
   const source = JSON.stringify(product);
   const sourceHash = await sha256Hex(source);
   const sourceKey = `completeful/catalog-source/${product.id}/${sourceHash}.json`;
