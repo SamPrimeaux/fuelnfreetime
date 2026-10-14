@@ -1637,15 +1637,17 @@ export default function StudioWorkspace({
               </div>
               {miniMapOpen && (
                 <>
-                  <button type="button" className="ps-mini-image ps-mini-expand" aria-label="Enlarge product preview" title="Enlarge product preview" onClick={() => setFullPreviewOpen(true)}>
+                  <div className="ps-mini-image">
                     {currentRenderUrl || designImage
                       ? <ProductImage key={`${variantId}:${locationId}`} sources={currentRenderUrl ? [currentRenderUrl] : designImageSources} alt={`${location?.name || "Selected"} garment variant: ${variant?.variant_title || variant?.name || detail.product.name}`} />
                       : <div className="ps-mini-unverified">No verified {location?.name || "side"} mockup</div>}
                     {!currentRenderUrl && asset && showArtwork && (
                       <div className="ps-mini-placement" style={placementFrameStyle}>
                         <img src={artworkPreviewUrl} alt="" style={{ width: `${scale}%`, left: `${x}%`, top: `${y}%`, transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})` }} />
-                      </button>
+                      </div>
                     )}
+                    <button type="button" className="ps-mini-expand-hitarea" aria-label="Enlarge product preview" title="Enlarge product preview"
+                      onClick={() => setFullPreviewOpen(true)} />
                   </div>
                   <small>{currentRenderUrl ? "Completeful render" : designImage
                     ? hasDistinctProviderSideArtboard ? `${location?.name || "Selected"} · supplier print-area reference` : location?.name || "Selected view"
