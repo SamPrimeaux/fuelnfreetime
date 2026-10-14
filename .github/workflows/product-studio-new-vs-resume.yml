@@ -1,0 +1,23 @@
+name: Product Studio new vs resume
+on:
+  pull_request:
+    paths:
+      - apps/ecommerce-cms-agentsam/backend/admin/product-studio.js
+      - apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx
+      - apps/ecommerce-cms-agentsam/frontend/src/pages/products/ProductStudioPage.tsx
+      - tests/product-studio-new-vs-resume.test.mjs
+      - .github/workflows/product-studio-new-vs-resume.yml
+permissions:
+  contents: read
+jobs:
+  intent-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify start/new versus edit/resume semantics
+        run: node --test tests/product-studio-new-vs-resume.test.mjs tests/product-studio-trust-restoration.test.mjs
+      - name: Verify backend syntax
+        run: node --check apps/ecommerce-cms-agentsam/backend/admin/product-studio.js
