@@ -9,7 +9,9 @@ const productEdit = read("apps/ecommerce-cms-agentsam/frontend/static/product-ed
 const productCss = read("apps/ecommerce-cms-agentsam/frontend/static/css/product-edit.css");
 
 test("Next Step awaits durable Studio save and navigates using the returned local product id", () => {
-  assert.match(studio, /async function continueToProductDetails\(\)\s*\{\s*const saved = await saveDraft\(\)/);
+  assert.match(studio, /const needsPreparation = !preparedAsset \|\| preparedFor !== currentPlacementKey/);
+  assert.match(studio, /needsPreparation \? await prepareArtwork\(\) : await saveDraft\(\)/);
+  assert.match(studio, /const saved = await saveDraft\(uploaded, preview \|\| null\)/);
   assert.match(studio, /Number\.isSafeInteger\(productId\)/);
   assert.match(studio, /window\.location\.assign\("\/admin\/product-edit\?id="/);
   assert.match(studio, /Save design/);
