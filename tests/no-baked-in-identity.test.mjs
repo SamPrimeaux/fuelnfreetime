@@ -65,3 +65,15 @@ test("backend source contains no email addresses (people and mailboxes are insta
   }
   assert.deepEqual(hits, []);
 });
+
+test("browser admin code carries no baked-in instance domain or sender address", () => {
+  const dir = path.join(root, "apps/ecommerce-cms-agentsam/frontend/static/js");
+  const hits = [];
+  for (const file of walk(dir)) {
+    if (!/\.js$/.test(file)) continue;
+    fs.readFileSync(file, "utf8").split("\n").forEach((line, i) => {
+      if (/fuelnfreetime\.com/i.test(line)) hits.push(path.relative(root, file) + ":" + (i + 1));
+    });
+  }
+  assert.deepEqual(hits, []);
+});
