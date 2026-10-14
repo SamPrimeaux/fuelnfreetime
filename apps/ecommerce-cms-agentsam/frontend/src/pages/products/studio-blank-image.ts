@@ -1,20 +1,39 @@
 import type { CatalogProduct, Variant } from "./studio-model";
 
 /**
- * Select blank catalog garment references for the merchant's editing canvas.
- * Completeful realistic_image_url, gallery images and provider mockups may
- * already contain someone else's demonstration artwork. Those belong in the
- * catalog browsing gallery, never beneath a merchant's editable print layer.
+ * Supplier image references are NOT interchangeable:
+ * - variant.realistic_image_url /mockups/<product>/<render>/background.png is
+ *   the supplier's unprinted garment background for that selected color.
+ * - variant.cover_image_url may be a generic product-level marketing photo
+ *   (verified for Gildan 2400 Ash Grey / S, whose cover shows a BLACK shirt).
+ * - the separate product mockup gallery and print-location artboards may
+ *   contain demonstration artwork, so never use them as blank garment bases.
  *
- * Never use the default product image for a different color when a specific
- * catalog variant is selected. That would falsely preview the merchandise.
+ * A background image is a photo/reference, NOT a Completeful-produced mockup
+ * and NOT verification of Front/Back side. Those require a provider render.
  */
+function isCleanSupplierBackground(url: string | undefined): url is string {
+  if (!url) return false;
+  try {
+    const path = new URL(url).pathname;
+    return /\/mockups\/[^/]+\/[^/]+\/background\.(?:png|jpe?g|webp)$/i.test(path);
+  } catch {
+    return false;
+  }
+}
+
+/** Preserve exact variant color; never borrow a product-level generic image. */
 export function blankGarmentImageSources(
   variant: Variant | null | undefined,
   product: CatalogProduct,
 ): string[] {
-  const sources = variant
-    ? [variant.cover_image_url, variant.main_icon_url]
-    : [product.cover_image_url, product.main_icon_url];
-  return [...new Set(sources.filter((url): url is string => Boolean(url)))];
+  if (!variant) return [];
+  const candidates = [
+    isCleanSupplierBackground(variant.realistic_image_url) ? variant.realistic_image_url : null,
+    variant.cover_image_url && variant.cover_image_url !== product.cover_image_url
+      ? variant.cover_image_url : null,
+    variant.main_icon_url && variant.main_icon_url !== product.main_icon_url
+      ? variant.main_icon_url : null,
+  ];
+  return [...new Set(candidates.filter((url): url is string => Boolean(url)))];
 }
