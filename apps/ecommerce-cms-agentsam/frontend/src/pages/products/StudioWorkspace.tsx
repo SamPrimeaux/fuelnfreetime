@@ -292,9 +292,16 @@ export default function StudioWorkspace({
       ?.preview_url;
   const enabledLocations = detail.print_locations.filter((candidate) => candidate.enabled);
   const isFrontLocation = /(?:^|[_\s-])front(?:$|[_\s-])/i.test(location?.name || locationId);
+  const hasDistinctProviderSideArtboard = Boolean(
+    !isFrontLocation && location?.artboard_image_url &&
+    enabledLocations.some((candidate) => candidate.print_location_id !== locationId) &&
+    enabledLocations.every((candidate) => candidate.print_location_id === locationId ||
+      (candidate.artboard_image_url && candidate.artboard_image_url !== location.artboard_image_url)),
+  );
   const designImage = selectStudioSideImage(
     detail.mockups, locationId, variantId, location?.artboard_image_url,
     variantImage(variant) || baseImage, isFrontLocation, selectedAttributes,
+    hasDistinctProviderSideArtboard,
   );
   // Never use a generic silhouette to impersonate a provider garment photo.
   // Unverified side/color combinations keep their print geometry, but no garment claim.
@@ -725,7 +732,16 @@ export default function StudioWorkspace({
   }
 
   async function continueToProductDetails() {
-    const saved = await saveDraft();
+    // "Next step" must not silently strand the merchant at an original-only
+    // draft. Prepare the exact selected print file before handing off.
+    if (!asset || !showArtwork) {
+      setError("Select artwork before moving to Product Details.");
+      setTab("upload");
+      setPanelOpen(true);
+      return;
+    }
+    const needsPreparation = !preparedAsset || preparedFor !== currentPlacementKey;
+    const saved = needsPreparation ? await prepareArtwork() : await saveDraft();
     if (!saved) return;
     const productId = Number(saved.product_id);
     if (!Number.isSafeInteger(productId) || productId <= 0) {
@@ -846,8 +862,9 @@ export default function StudioWorkspace({
       setProviderRenderUrl(null);
       const preview = await persistPlacementPreview(uploaded);
       if (preview) setPreviewAsset(preview);
-      await saveDraft(uploaded, preview || null);
-      return uploaded;
+      const saved = await saveDraft(uploaded, preview || null);
+      if (!saved) throw new Error("Prepared artwork was uploaded, but the design draft could not be saved");
+      return saved;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Artwork preparation failed");
       return null;
@@ -1354,7 +1371,7 @@ export default function StudioWorkspace({
                 <div className="ps-design-guide" style={{ aspectRatio: artboardAspectRatio }}
                   aria-label={`${location?.name || "Selected"} garment design view`}>
                   {designImage ? (
-                    <img className={"ps-design-product-image" + (hasProviderPlacementFrame ? " is-geometry-mapped" : "")} src={designImage} alt={`${location?.name || "Selected"} garment view`} />
+                    <img className={"ps-design-product-image" + (hasProviderPlacementFrame ? " is-geometry-mapped" : "")} src={designImage} alt={`${location?.name || "Selected"} provider catalog reference`} />
                   ) : (
                     <div className="ps-unverified-garment" role="status">
                       <strong>No verified {location?.name || "side"} mockup</strong>
@@ -1452,7 +1469,7 @@ export default function StudioWorkspace({
                     )}
                   </div>
                   <small>{currentRenderUrl ? "Completeful render" : designImage
-                    ? location?.name || "Selected view"
+                    ? hasDistinctProviderSideArtboard ? `${location?.name || "Selected"} · supplier print-area reference` : location?.name || "Selected view"
                     : `${location?.name || "Selected"} · preview unavailable`}
                     {" · "}{variant?.variant_title || variant?.name || "Selected color"}</small>
                 </>
