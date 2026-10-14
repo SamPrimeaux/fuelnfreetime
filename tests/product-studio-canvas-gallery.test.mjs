@@ -35,12 +35,12 @@ test("canvas uses viewport height and provider artboard ratio without shading em
   assert.doesNotMatch(workspace, /<strong>Print area<\/strong>/);
 });
 
-test("when no color-scoped Back image exists, original garment variant source is preserved for fabric sampling", async () => {
+test("unverified Back views never impersonate a real garment through a generic silhouette", async () => {
   const workspace = await read("../apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx");
   const resolver = await read("../apps/ecommerce-cms-agentsam/frontend/src/pages/products/studio-side-image.ts");
-  assert.match(workspace, /fabricColorFromImagePixels\(imageData\.data, 48, 48\)/);
-  assert.match(workspace, /fabricSample\?\.variantId === variantId/);
-  assert.match(workspace, /NeutralGarmentSilhouette isFront=\{isFrontLocation\} fabricColor=\{selectedFabricColor\}/);
+  assert.match(workspace, /No verified \{location\?\.name \|\| "side"\} mockup/);
+  assert.match(workspace, /ps-mini-unverified/);
+  assert.doesNotMatch(workspace, /NeutralGarmentSilhouette/);
   assert.match(resolver, /if \(isFront\) return frontVariantImage \|\| artboardImage \|\| null;/);
   assert.match(resolver, /return null;\s*\}/);
 });

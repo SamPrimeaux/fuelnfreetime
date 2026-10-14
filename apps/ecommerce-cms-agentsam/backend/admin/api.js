@@ -439,7 +439,7 @@ export async function updateProduct(request, env, id) {
           "SELECT COUNT(*) AS count FROM product_variants WHERE product_id = ?"
         ).bind(id).first();
         const issues = [];
-        if (!link) issues.push("Connect Completeful fulfillment first");
+        if (!link) issues.push("Create and map this product with Completeful before publishing");
         if (Number(count?.count || 0) < 1) issues.push("Product needs at least one mapped variant");
         if (!(previous.image_url || body.image_url)) issues.push("Attach an approved product image");
         if (priceCents <= 0) issues.push("Retail price must be above zero");

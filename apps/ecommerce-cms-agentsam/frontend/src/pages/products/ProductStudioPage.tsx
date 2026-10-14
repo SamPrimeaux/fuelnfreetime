@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { adminFetch } from "../../lib/api";
 import StudioIcon from "./StudioIcon";
 import ProductImage from "./ProductImage";
@@ -34,6 +34,8 @@ const collections = [
 export default function ProductStudioPage() {
   const navigate = useNavigate();
   const { productId } = useParams();
+  const location = useLocation();
+  const resumeDraftId = new URLSearchParams(location.search).get("resume");
   const surface = useRef<HTMLElement>(null);
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
@@ -47,7 +49,10 @@ export default function ProductStudioPage() {
   const [syncing, setSyncing] = useState(false);
   const [notice, setNotice] = useState("");
   const [detail, setDetail] = useState<ProductDetail | null>(null);
-  const [designing, setDesigning] = useState(false);
+  const [designing, setDesigning] = useState(Boolean(resumeDraftId));
+  useEffect(() => {
+    if (productId && resumeDraftId) setDesigning(true);
+  }, [productId, resumeDraftId]);
   const [gallery, setGallery] = useState("");
   const [selectedVariantId, setSelectedVariantId] = useState("");
   useEffect(() => {
@@ -229,6 +234,7 @@ export default function ProductStudioPage() {
           <StudioWorkspace
             detail={detail}
             initialVariantId={selectedVariantId}
+            resumeDraftId={resumeDraftId}
             onBack={() => setDesigning(false)}
           />
         </Suspense>

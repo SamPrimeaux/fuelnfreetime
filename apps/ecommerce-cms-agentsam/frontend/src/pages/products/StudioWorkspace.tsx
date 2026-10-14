@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { createMiniAgentSam } from "../../../../packages/agentsam-workbench/src/mini-agentsam.js";
 import { selectStudioSideImage } from "./studio-side-image";
-import { fabricColorFromImagePixels, validProviderFabricHex } from "./studio-fabric-color";
 import { adminFetch, adminFormFetch } from "../../lib/api";
 import { evaluateManufacturingCompatibility } from "../../../../packages/agentsam-merch/src/index.js";
 import { studioArtworkQuality, type ArtworkCrop } from "./studio-artwork-quality";
@@ -23,18 +22,6 @@ import {
   type ProductDetail,
 } from "./studio-model";
 
-
-function NeutralGarmentSilhouette({ isFront, mini = false, fabricColor }: { isFront: boolean; mini?: boolean; fabricColor?: string | null }) {
-  return (
-    <svg className={mini ? "ps-mini-silhouette" : "ps-design-garment-guide"}
-      viewBox="0 0 500 560" role="img" aria-label={isFront ? "Front garment outline" : "Back garment outline"}
-      preserveAspectRatio="xMidYMid meet">
-      <path d="M170 66 L210 45 Q250 92 290 45 L330 66 L451 142 L407 236 L345 203 L345 502 Q250 527 155 502 L155 203 L93 236 L49 142 Z" fill={fabricColor || "#b7bbb9"} stroke="#81878a" strokeWidth="2" />
-      <path d={isFront ? "M210 45 Q250 126 290 45" : "M210 45 Q250 70 290 45"} fill="none" stroke="#aab5a4" strokeWidth="2" />
-      <path d="M155 203 L170 66 M345 203 L330 66" fill="none" stroke="#b7c0b1" strokeWidth="1.4" />
-    </svg>
-  );
-}
 
 function removeConnectedFlatBackground(
   pixels: Uint8ClampedArray,
@@ -153,10 +140,12 @@ const tabs = [
 export default function StudioWorkspace({
   detail,
   initialVariantId = "",
+  resumeDraftId = null,
   onBack,
 }: {
   detail: ProductDetail;
   initialVariantId?: string;
+  resumeDraftId?: string | null;
   onBack: () => void;
 }) {
   const [tab, setTab] = useState("options");
@@ -168,12 +157,12 @@ export default function StudioWorkspace({
   const [albumId, setAlbumId] = useState(0);
   const [mediaPage, setMediaPage] = useState(1);
   const [mediaHasMore, setMediaHasMore] = useState(false);
-  const [fabricSample, setFabricSample] = useState<{ variantId: string; color: string | null } | null>(null);
   const [asset, setAsset] = useState<MediaAsset | null>(null);
   const [preparedAsset, setPreparedAsset] = useState<MediaAsset | null>(null);
   const [preparedFor, setPreparedFor] = useState<string | null>(null);
   const [previewAsset, setPreviewAsset] = useState<MediaAsset | null>(null);
   const [draft, setDraft] = useState<StudioDraft | null>(null);
+  const [restoringDraft, setRestoringDraft] = useState(true);
   const [title, setTitle] = useState(detail.product.default_title || detail.product.name);
   const [providerRenderUrl, setProviderRenderUrl] = useState<string | null>(null);
   const [trimTransparent, setTrimTransparent] = useState(false);
@@ -217,7 +206,7 @@ export default function StudioWorkspace({
   const miniRef = useRef<ReturnType<typeof createMiniAgentSam> | null>(null);
   const miniSendRef = useRef<(message: string, signal: AbortSignal, resource: unknown) => Promise<{ reply: string }>>(async () => ({ reply: "" }));
   const miniTriggerRef = useRef<HTMLButtonElement>(null);
-  const dragRef = useRef<{ mode: "move" | "resize"; startX: number; startY: number; x: number; y: number; scale: number } | null>(null);
+  const dragRef = useRef<{ mode: "move" | "resize"; corner: "tl" | "tr" | "bl" | "br"; startX: number; startY: number; x: number; y: number; scale: number } | null>(null);
   const [reply, setReply] = useState("");
   const [conversationId, setConversationId] = useState<string>();
   const [notes, setNotes] = useState("");
@@ -252,11 +241,11 @@ export default function StudioWorkspace({
     setAgentVisible(true);
   }
 
-  function startDrag(event: PointerEvent<HTMLDivElement>, mode: "move" | "resize") {
+  function startDrag(event: PointerEvent<HTMLDivElement>, mode: "move" | "resize", corner: "tl" | "tr" | "bl" | "br" = "br") {
     if (!asset || !showArtwork) return;
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
-    dragRef.current = { mode, startX: event.clientX, startY: event.clientY, x, y, scale };
+    dragRef.current = { mode, corner, startX: event.clientX, startY: event.clientY, x, y, scale };
     setArtworkSelected(true);
   }
   function updateDrag(event: PointerEvent<HTMLDivElement>) {
@@ -265,7 +254,12 @@ export default function StudioWorkspace({
     const rect = event.currentTarget.getBoundingClientRect();
     const dx = ((event.clientX - from.startX) / Math.max(1, rect.width)) * 100;
     const dy = ((event.clientY - from.startY) / Math.max(1, rect.height)) * 100;
-    if (from.mode === "resize") setScale(Math.max(5, Math.min(150, Math.round(from.scale + dx * 2))));
+    if (from.mode === "resize") {
+      // Each corner must grow when dragged AWAY from the artwork center.
+      const horizontal = from.corner.endsWith("r") ? dx : -dx;
+      const vertical = from.corner.startsWith("b") ? dy : -dy;
+      setScale(Math.max(5, Math.min(150, Math.round(from.scale + horizontal + vertical))));
+    }
     else {
       const snap = (value: number) => {
         const rounded = Math.max(0, Math.min(100, Math.round(value)));
@@ -289,9 +283,6 @@ export default function StudioWorkspace({
     detail.variants.find((v) => catalogVariantId(v) === variantId) ||
     detail.variants[0];
   const selectedAttributes = variantAttributes(variant);
-  const directFabricHex = Object.values(selectedAttributes).map(validProviderFabricHex).find(Boolean) || null;
-  const selectedFabricColor = directFabricHex || (fabricSample?.variantId === variantId ? fabricSample.color : null);
-  const selectedVariantPhoto = variantImage(variant);
   const optionAxes = variantAxes(detail.variants);
   const baseImage =
     variantImage(variant) ||
@@ -305,32 +296,8 @@ export default function StudioWorkspace({
     detail.mockups, locationId, variantId, location?.artboard_image_url,
     variantImage(variant) || baseImage, isFrontLocation, selectedAttributes,
   );
-  // Provider print-location images are often color-agnostic placeholders.
-  // Sample only the SELECTED variant photo; if CORS prevents inspection, show
-  // a neutral back outline, never a falsely black or color-mismatched preview.
-  useEffect(() => {
-    if (!selectedVariantPhoto) return;
-    let active = true;
-    const photo = new Image();
-    photo.crossOrigin = "anonymous";
-    photo.onload = () => {
-      try {
-        const canvas = document.createElement("canvas");
-        canvas.width = 48; canvas.height = 48;
-        const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        if (!ctx) return;
-        ctx.drawImage(photo, 0, 0, 48, 48);
-        const imageData = ctx.getImageData(0, 0, 48, 48);
-        const color = fabricColorFromImagePixels(imageData.data, 48, 48);
-        if (active) setFabricSample({ variantId, color });
-      } catch {
-        if (active) setFabricSample({ variantId, color: null });
-      }
-    };
-    photo.onerror = () => { if (active) setFabricSample({ variantId, color: null }); };
-    photo.src = selectedVariantPhoto;
-    return () => { active = false; };
-  }, [selectedVariantPhoto, variantId]);
+  // Never use a generic silhouette to impersonate a provider garment photo.
+  // Unverified side/color combinations keep their print geometry, but no garment claim.
   const artboardAspectRatio = location?.artboard_width && location?.artboard_height
     ? Number(location.artboard_width) / Number(location.artboard_height)
     : 4 / 5;
@@ -386,13 +353,18 @@ export default function StudioWorkspace({
     : { aspectRatio: ratio };
   useEffect(() => {
     const controller = new AbortController();
-    queueMicrotask(() => { if (!controller.signal.aborted) setBusy("restore"); });
+    queueMicrotask(() => { if (!controller.signal.aborted) { setBusy("restore"); setRestoringDraft(true); } });
     adminFetch<{ draft: StudioDraft | null }>(
       `/api/admin/product-studio/drafts?catalog_product_id=${encodeURIComponent(catalogId)}`,
       { signal: controller.signal },
     )
       .then(async ({ draft: saved }) => {
-        if (!saved || controller.signal.aborted) return;
+        if (controller.signal.aborted) return;
+        if (resumeDraftId && saved?.id !== resumeDraftId) {
+          setError("Saved design could not be matched to this product. The design was not reset.");
+          return;
+        }
+        if (!saved) return;
         setDraft(saved);
         setTitle(saved.title || detail.product.default_title || detail.product.name);
         if (saved.selected_variant_ids?.[0]) setVariantId(saved.selected_variant_ids[0]);
@@ -418,16 +390,18 @@ export default function StudioWorkspace({
             Boolean(saved.placement?.trimTransparent), Boolean(saved.placement?.removeFlatBackground)));
         }
         if (saved.original_media_asset_id || saved.prepared_media_asset_id || saved.preview_media_asset_id) {
-          const library = await adminFetch<{ assets: MediaAsset[] }>("/api/admin/media?view=all", {
-            signal: controller.signal,
-          });
+          // Never search a paginated gallery to restore durable media references.
+          // Fetch the exact saved IDs; the artwork may be well beyond page one.
+          const ids = [saved.original_media_asset_id, saved.prepared_media_asset_id, saved.preview_media_asset_id];
+          const assets = await Promise.all(ids.map(async (id) => {
+            if (!id) return null;
+            const result = await adminFetch<{ asset: MediaAsset }>(`/api/admin/media/${id}`, { signal: controller.signal });
+            return result.asset;
+          }));
           if (controller.signal.aborted) return;
-          const original = library.assets.find((item) => item.id === saved.original_media_asset_id) || null;
-          const prepared = library.assets.find((item) => item.id === saved.prepared_media_asset_id) || null;
-          const preview = library.assets.find((item) => item.id === saved.preview_media_asset_id) || null;
-          if (original) setAsset(original);
-          if (prepared) setPreparedAsset(prepared);
-          if (preview) setPreviewAsset(preview);
+          if (assets[0]) setAsset(assets[0]);
+          if (assets[1]) setPreparedAsset(assets[1]);
+          if (assets[2]) setPreviewAsset(assets[2]);
         }
         // Restoring an existing draft is normal; no standing success notice.
       })
@@ -435,10 +409,10 @@ export default function StudioWorkspace({
         if (!controller.signal.aborted) setError(e.message);
       })
       .finally(() => {
-        if (!controller.signal.aborted) setBusy("");
+        if (!controller.signal.aborted) { setBusy(""); setRestoringDraft(false); }
       });
     return () => controller.abort();
-  }, [catalogId, detail.product.default_title, detail.product.name]);
+  }, [catalogId, detail.product.default_title, detail.product.name, resumeDraftId]);
   useEffect(() => {
     const timer = setTimeout(() => {
       setMediaQuery(mediaSearch.trim());
@@ -808,7 +782,10 @@ export default function StudioWorkspace({
   }
 
   async function persistPlacementPreview(prepared: MediaAsset) {
-    const backgroundUrl = location?.artboard_image_url || baseImage;
+    // A provider print-area URL can point at the FRONT even for the Back.
+    // Only produce a draft composite when the exact side/variant photo is verified.
+    // Otherwise leave preview_media_asset_id empty rather than persist a false mockup.
+    const backgroundUrl = designImage;
     if (!backgroundUrl || !location) return null;
     try {
       const background = new Image();
@@ -1012,7 +989,35 @@ export default function StudioWorkspace({
             {busy === "save" ? "Saving design…" : "Next step · Product details →"}
           </button>
         </div>
+        <div className="ps-header-artwork-tools">
+            {asset && !currentRenderUrl && artworkSelected && (
+              <div className="ps-artwork-toolbar" role="toolbar" aria-label="Selected artwork tools">
+                <button type="button" title="Edit artwork placement" aria-label="Edit artwork placement"
+                  onClick={() => { setTab("layers"); setPanelOpen(true); }}><StudioIcon name="pen" size={17} /></button>
+                <button type="button" title="Background cutout" aria-label="Background cutout"
+                  onClick={() => { setTab("tools"); setPanelOpen(true); setRemoveFlatBackground(true); }}><StudioIcon name="image" size={17} /></button>
+                <span className="ps-artwork-toolbar__divider" aria-hidden="true" />
+                <button type="button" title="Reduce artwork size" aria-label="Reduce artwork size"
+                  onClick={() => setScale((value) => Math.max(5, value - 5))}>−</button>
+                <output aria-label="Artwork size" className="ps-artwork-scale">{scale}%</output>
+                <button type="button" title="Increase artwork size" aria-label="Increase artwork size"
+                  onClick={() => setScale((value) => Math.min(150, value + 5))}>+</button>
+                <button type="button" title="Center artwork" aria-label="Center artwork"
+                  onClick={() => { setX(50); setY(50); }}><StudioIcon name="center" size={17} /></button>
+                <button type="button" title="Rotate 90 degrees" aria-label="Rotate artwork 90 degrees"
+                  onClick={() => setRotation((value) => ((value + 270) % 360) - 180)}><StudioIcon name="rotate" size={17} /></button>
+                <button type="button" title="Flip horizontally" aria-label="Flip artwork horizontally"
+                  aria-pressed={flipX} onClick={() => setFlipX((value) => !value)}><StudioIcon name="flip" size={17} /></button>
+                <span className="ps-artwork-toolbar__divider" aria-hidden="true" />
+                <output className={"ps-dpi-badge" + (lowResolution ? " is-low" : "")}
+                  aria-label={quality.aria} title={quality.detail}>
+                  {quality.badge}
+                </output>
+              </div>
+            )}
+        </div>
       </header>
+      {restoringDraft && <p className="ps-restore-notice" role="status">Restoring saved design and artwork…</p>}
       <div className={`ps-workspace-body ${panelOpen ? "" : "is-panel-collapsed"}`}>
         <nav className="ps-toolrail" aria-label="Design tools">
           {tabs.map((t) => (
@@ -1340,31 +1345,6 @@ export default function StudioWorkspace({
               <strong>Product design</strong>
             </div>
           </div>
-          {asset && !currentRenderUrl && artworkSelected && (
-            <div className="ps-artwork-toolbar" role="toolbar" aria-label="Selected artwork tools">
-              <button type="button" title="Edit artwork placement" aria-label="Edit artwork placement"
-                onClick={() => { setTab("layers"); setPanelOpen(true); }}><StudioIcon name="pen" size={17} /></button>
-              <button type="button" title="Background cutout" aria-label="Background cutout"
-                onClick={() => { setTab("tools"); setPanelOpen(true); setRemoveFlatBackground(true); }}><StudioIcon name="image" size={17} /></button>
-              <span className="ps-artwork-toolbar__divider" aria-hidden="true" />
-              <button type="button" title="Reduce artwork size" aria-label="Reduce artwork size"
-                onClick={() => setScale((value) => Math.max(5, value - 5))}>−</button>
-              <output aria-label="Artwork size" className="ps-artwork-scale">{scale}%</output>
-              <button type="button" title="Increase artwork size" aria-label="Increase artwork size"
-                onClick={() => setScale((value) => Math.min(150, value + 5))}>+</button>
-              <button type="button" title="Center artwork" aria-label="Center artwork"
-                onClick={() => { setX(50); setY(50); }}><StudioIcon name="center" size={17} /></button>
-              <button type="button" title="Rotate 90 degrees" aria-label="Rotate artwork 90 degrees"
-                onClick={() => setRotation((value) => ((value + 270) % 360) - 180)}><StudioIcon name="rotate" size={17} /></button>
-              <button type="button" title="Flip horizontally" aria-label="Flip artwork horizontally"
-                aria-pressed={flipX} onClick={() => setFlipX((value) => !value)}><StudioIcon name="flip" size={17} /></button>
-              <span className="ps-artwork-toolbar__divider" aria-hidden="true" />
-              <output className={"ps-dpi-badge" + (lowResolution ? " is-low" : "")}
-                aria-label={quality.aria} title={quality.detail}>
-                {quality.badge}
-              </output>
-            </div>
-          )}
           <div className="ps-stage" data-agentsam-resource="product-design-stage">
             <div className="ps-product-design-preview" style={{
               transform: `scale(${canvasZoom / 100})`,
@@ -1375,13 +1355,22 @@ export default function StudioWorkspace({
                   aria-label={`${location?.name || "Selected"} garment design view`}>
                   {designImage ? (
                     <img className={"ps-design-product-image" + (hasProviderPlacementFrame ? " is-geometry-mapped" : "")} src={designImage} alt={`${location?.name || "Selected"} garment view`} />
-                  ) : /shirt|tee|hoodie|sweatshirt|tank|jersey/i.test(detail.product.name) && (
-                    <NeutralGarmentSilhouette isFront={isFrontLocation} fabricColor={selectedFabricColor} />
+                  ) : (
+                    <div className="ps-unverified-garment" role="status">
+                      <strong>No verified {location?.name || "side"} mockup</strong>
+                      <span>This supplier catalog has no matching {variant?.variant_title || "variant"} garment photo. Place artwork using the print-area guide; this is not a product mockup.</span>
+                    </div>
                   )}
                   <div className={"ps-design-print-area" + (guides ? " is-gridded" : "")} style={{ ...placementFrameStyle, aspectRatio: ratio }}
                     onPointerDown={(event) => {
                       const target = event.target as HTMLElement;
-                      if (target.closest(".ps-selection-handle")) startDrag(event, "resize");
+                      const cornerHandle = target.closest(".ps-selection-handle");
+                      if (cornerHandle) {
+                        const corner = cornerHandle.classList.contains("ps-selection-handle--tl") ? "tl"
+                          : cornerHandle.classList.contains("ps-selection-handle--tr") ? "tr"
+                          : cornerHandle.classList.contains("ps-selection-handle--bl") ? "bl" : "br";
+                        startDrag(event, "resize", corner);
+                      }
                       else if (target.closest(".ps-artwork-layer")) startDrag(event, "move");
                       else setArtworkSelected(false);
                     }}
@@ -1434,7 +1423,6 @@ export default function StudioWorkspace({
                       </div>
                     )}
                   </div>
-                  <span className="ps-design-dimensions">{printSizeLabel(location)} · {printPixels ? `${printPixels.width} × ${printPixels.height} px` : "Provider dimensions unavailable"}</span>
                 </div>
               </div>
               <div className="ps-product-design-caption">
@@ -1456,9 +1444,7 @@ export default function StudioWorkspace({
                   <div className="ps-mini-image" aria-label="Live placement approximation for the selected variant">
                     {currentRenderUrl || designImage
                       ? <ProductImage key={`${variantId}:${locationId}`} sources={[currentRenderUrl || designImage || undefined]} alt={`${location?.name || "Selected"} garment variant: ${variant?.variant_title || variant?.name || detail.product.name}`} />
-                      : /shirt|tee|hoodie|sweatshirt|tank|jersey/i.test(detail.product.name)
-                        ? <NeutralGarmentSilhouette isFront={isFrontLocation} mini fabricColor={selectedFabricColor} />
-                        : <ProductImage sources={[]} alt="No verified view available for this print location" />}
+                      : <div className="ps-mini-unverified">No verified {location?.name || "side"} mockup</div>}
                     {!currentRenderUrl && asset && showArtwork && (
                       <div className="ps-mini-placement" style={placementFrameStyle}>
                         <img src={artworkPreviewUrl} alt="" style={{ width: `${scale}%`, left: `${x}%`, top: `${y}%`, transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})` }} />
@@ -1467,7 +1453,7 @@ export default function StudioWorkspace({
                   </div>
                   <small>{currentRenderUrl ? "Completeful render" : designImage
                     ? location?.name || "Selected view"
-                    : selectedFabricColor ? `${location?.name || "Selected"} · color guide` : `${location?.name || "Selected"} · neutral guide`}
+                    : `${location?.name || "Selected"} · preview unavailable`}
                     {" · "}{variant?.variant_title || variant?.name || "Selected color"}</small>
                 </>
               )}

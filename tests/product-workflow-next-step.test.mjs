@@ -42,12 +42,12 @@ test("Product Editor has top-right persistence actions, verified saves, design h
   assert.match(productEdit, /Save did not verify against the stored product/);
   assert.match(productEdit, /const additionalEdits = JSON\.stringify\(collectPayload\(\)\) !== saveSnapshot/);
   assert.match(productEdit, /renderStudioDesign\(d\.design_draft, d\.fulfillment, d\.source\)/);
-  assert.match(productEdit, /Source: Store-managed/);
+  assert.match(productEdit, /Create with Completeful/);
   assert.match(productEdit, /\/admin\/products\/create\//);
-  assert.match(productEdit, /connect-fulfillment-btn/);
+  assert.match(productEdit, /create-provider-product-btn/);
   assert.match(productCss, /\.product-editor-save-actions/);
   assert.match(productApi, /design_draft: designDraft \|\| null/);
-  assert.match(productApi, /Connect Completeful fulfillment first/);
+  assert.match(productApi, /Create and map this product with Completeful before publishing/);
   assert.match(productApi, /COALESCE\(\?, image_url\)/);
   assert.match(productApi, /Array\.isArray\(body\.variants\)/);
   assert.match(productApi, /UPDATE product_variants SET/);
