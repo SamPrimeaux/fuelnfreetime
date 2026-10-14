@@ -1053,7 +1053,6 @@ export default function StudioWorkspace({
     location, source: dimensions, crop: artworkCrop, cropPending, scalePercent: scale,
     fileName: asset?.filename,
   });
-  const effectiveDpi = quality.result;
   const lowResolution = quality.lowResolution;
   const filteredMedia = media;
   const currentPlacementKey = placementKey(asset?.id, variantId, locationId, x, y, scale, rotation, flipX, flipY, trimTransparent, removeFlatBackground);
