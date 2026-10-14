@@ -782,7 +782,10 @@ export default function StudioWorkspace({
   }
 
   async function persistPlacementPreview(prepared: MediaAsset) {
-    const backgroundUrl = location?.artboard_image_url || baseImage;
+    // A provider print-area URL can point at the FRONT even for the Back.
+    // Only produce a draft composite when the exact side/variant photo is verified.
+    // Otherwise leave preview_media_asset_id empty rather than persist a false mockup.
+    const backgroundUrl = designImage;
     if (!backgroundUrl || !location) return null;
     try {
       const background = new Image();
