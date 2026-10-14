@@ -247,6 +247,7 @@ export default function ProductStudioPage() {
       {designing && detail ? (
         <Suspense fallback={<div className="ps-workspace-loading" role="status">Loading studio…</div>}>
           <StudioWorkspace
+            key={`${catalogProductId(detail.product)}:${resumeDraftId || 'new'}`}
             detail={detail}
             initialVariantId={selectedVariantId}
             resumeDraftId={resumeDraftId}

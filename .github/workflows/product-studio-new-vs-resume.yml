@@ -6,6 +6,8 @@ on:
       - apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx
       - apps/ecommerce-cms-agentsam/frontend/src/pages/products/ProductStudioPage.tsx
       - tests/product-studio-new-vs-resume.test.mjs
+      - tests/product-studio-selling-variants.test.mjs
+      - apps/ecommerce-cms-agentsam/frontend/src/pages/products/studio-selling-variants.ts
       - .github/workflows/product-studio-new-vs-resume.yml
 permissions:
   contents: read
@@ -18,6 +20,6 @@ jobs:
         with:
           node-version: '22'
       - name: Verify start/new versus edit/resume semantics
-        run: node --test tests/product-studio-new-vs-resume.test.mjs tests/product-studio-trust-restoration.test.mjs
+        run: node --test tests/product-studio-new-vs-resume.test.mjs tests/product-studio-trust-restoration.test.mjs && node --experimental-strip-types --test tests/product-studio-selling-variants.test.mjs
       - name: Verify backend syntax
         run: node --check apps/ecommerce-cms-agentsam/backend/admin/product-studio.js

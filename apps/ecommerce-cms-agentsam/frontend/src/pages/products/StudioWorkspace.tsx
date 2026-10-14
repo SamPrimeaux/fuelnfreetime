@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { createMiniAgentSam } from "../../../../packages/agentsam-workbench/src/mini-agentsam.js";
 import { selectStudioSideImage } from "./studio-side-image";
 import { blankGarmentImageSources } from "./studio-blank-image";
+import { updateSellingVariants, toggleSellingGroup } from "./studio-selling-variants";
 import { adminFetch, adminFormFetch } from "../../lib/api";
 import { evaluateManufacturingCompatibility } from "../../../../packages/agentsam-merch/src/index.js";
 import { studioArtworkQuality, type ArtworkCrop } from "./studio-artwork-quality";
@@ -152,6 +153,7 @@ export default function StudioWorkspace({
   onBack: () => void;
 }) {
   const [tab, setTab] = useState("options");
+  const [manageVariants, setManageVariants] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [miniMapOpen, setMiniMapOpen] = useState(true);
   const [canvasZoom, setCanvasZoom] = useState(100);
@@ -189,6 +191,11 @@ export default function StudioWorkspace({
   const [variantId, setVariantId] = useState(
     catalogVariantId(initialVariant) || "",
   );
+  // The sellable assortment is not the one garment currently used for editing.
+  // Use only catalog variant IDs; do not synthesize color/size combinations.
+  const [selectedVariantIds, setSelectedVariantIds] = useState<string[]>(() =>
+    detail.variants.map(catalogVariantId).filter(Boolean),
+  );
   const [scale, setScale] = useState(80);
   const [x, setX] = useState(50);
   const [y, setY] = useState(50);
@@ -209,6 +216,7 @@ export default function StudioWorkspace({
   const miniRef = useRef<ReturnType<typeof createMiniAgentSam> | null>(null);
   const miniSendRef = useRef<(message: string, signal: AbortSignal, resource: unknown) => Promise<{ reply: string }>>(async () => ({ reply: "" }));
   const miniTriggerRef = useRef<HTMLButtonElement>(null);
+  const variantDialogRef = useRef<HTMLElement>(null);
   const dragRef = useRef<{ mode: "move" | "resize"; corner: "tl" | "tr" | "bl" | "br"; startX: number; startY: number; x: number; y: number; scale: number } | null>(null);
   const [reply, setReply] = useState("");
   const [conversationId, setConversationId] = useState<string>();
@@ -275,6 +283,7 @@ export default function StudioWorkspace({
   }
 
   function openTab(next: string) {
+    setManageVariants(false);
     setPanelOpen((current) => next === tab ? !current : true);
     setTab(next);
     // On small screens the tools remain in a compact bottom pane; keep the canvas visible.
@@ -346,6 +355,51 @@ export default function StudioWorkspace({
       setPreviewAsset(null);
     }
   }
+  const selectedVariantSet = new Set(selectedVariantIds);
+  const catalogVariantIds = detail.variants.map(catalogVariantId).filter(Boolean);
+  function updateSelectedVariants(ids: string[], include: boolean) {
+    setSelectedVariantIds((current) => updateSellingVariants(catalogVariantIds, current, ids, include));
+  }
+  function toggleSellingAxis(axis: string, value: string) {
+    const ids = detail.variants.filter((candidate) =>
+      variantAttributes(candidate)[axis] === value).map(catalogVariantId).filter(Boolean);
+    setSelectedVariantIds((current) => toggleSellingGroup(catalogVariantIds, current, ids));
+  }
+  function toggleSellingVariant(id: string, included: boolean) {
+    updateSelectedVariants([id], included);
+  }
+  useEffect(() => {
+    if (!manageVariants) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const dialog = variantDialogRef.current;
+    const focusable = () => Array.from(dialog?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex="0"]',
+    ) || []);
+    focusable()[0]?.focus();
+    const onKeydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setManageVariants(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener("keydown", onKeydown);
+    return () => {
+      window.removeEventListener("keydown", onKeydown);
+      previousFocus?.focus();
+    };
+  }, [manageVariants]);
   const printPixels = printPixelSize(location);
   const ratio =
     location?.file_width && location.file_height
@@ -388,6 +442,8 @@ export default function StudioWorkspace({
         if (!saved) return;
         setDraft(saved);
         setTitle(saved.title || detail.product.default_title || detail.product.name);
+        // Resume the entire assortment. An editing preview remains a single example.
+        setSelectedVariantIds(saved.selected_variant_ids || []);
         if (saved.selected_variant_ids?.[0]) setVariantId(saved.selected_variant_ids[0]);
         if (saved.print_location_ids?.[0]) setLocationId(saved.print_location_ids[0]);
         if (saved.placement) {
@@ -709,8 +765,10 @@ export default function StudioWorkspace({
   });
   async function saveDraft(nextPrepared: MediaAsset | null = preparedFor === currentPlacementKey ? preparedAsset : null,
     nextPreview: MediaAsset | null = preparedFor === currentPlacementKey ? previewAsset : null) {
-    if (!variantId || !locationId) {
-      setError("Choose a product option and print area before saving.");
+    if (!variantId || !locationId || !selectedVariantIds.length) {
+      setError("Choose at least one selling variant and a print area before saving.");
+      setTab("options");
+      setPanelOpen(true);
       return null;
     }
     setBusy("save");
@@ -723,7 +781,7 @@ export default function StudioWorkspace({
           product_id: draft?.product_id,
           force_new: !draft && !resumeDraftId,
           catalog_product_id: catalogId,
-          selected_variant_ids: [variantId],
+          selected_variant_ids: selectedVariantIds,
           print_location_ids: [locationId],
           original_media_asset_id: asset?.id || null,
           prepared_media_asset_id: nextPrepared?.id || null,
@@ -1075,82 +1133,132 @@ export default function StudioWorkspace({
             <button type="button" className="ps-panel-dismiss" onClick={() => setPanelOpen(false)} aria-label="Collapse tool panel">×</button>
           </div>
           {tab === "options" && (
-            <>
-              <div className="ps-field">
-                <strong>Product option</strong>
-                {optionAxes.length ? (
-                  <div className="ps-option-groups ps-workspace-options">
-                    {optionAxes.map((axis) => (
-                      <div className="ps-option-group" key={axis}>
-                        <span>{axis}</span>
-                        <div className="ps-option-choices">
-                          {variantAxisValues(detail.variants, axis).map((value) => {
-                            const previewVariant = detail.variants.find(
-                              (candidate) =>
-                                variantAttributes(candidate)[axis] === value,
-                            );
-                            const showPreview =
-                              /color|finish|material|style|tone/i.test(axis);
-                            return (
-                              <button
-                                type="button"
-                                key={value}
-                                className={
-                                  selectedAttributes[axis] === value
-                                    ? "is-active"
-                                    : ""
-                                }
-                                onClick={() => chooseVariantOption(axis, value)}
-                                aria-pressed={selectedAttributes[axis] === value}
-                              >
-                                {showPreview && variantImage(previewVariant) && (
-                                  <ProductImage
-                                    sources={[variantImage(previewVariant)]}
-                                    alt=""
-                                  />
-                                )}
-                                <span>{value}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
+            <div className="ps-selling-editor" aria-label="Product options">
+              <section className="ps-selling-section" aria-labelledby="ps-selling-heading">
+                <div className="ps-selling-heading">
+                  <strong id="ps-selling-heading">Selling options</strong>
+                  <output aria-live="polite">{selectedVariantIds.length} of {catalogVariantIds.length} selected</output>
+                </div>
+                <p className="ps-selling-help">Choose which actual supplier variants customers can buy.</p>
+                <div className="ps-selling-actions">
+                  <button type="button" onClick={() => setSelectedVariantIds(catalogVariantIds)}>Select all</button>
+                  <button type="button" onClick={() => setSelectedVariantIds([])}>Clear</button>
+                  <button type="button" className="ps-variant-manage" onClick={() => setManageVariants(true)}>Manage variants</button>
+                </div>
+                {optionAxes.map((axis) => (
+                  <div className="ps-selling-axis" key={axis}>
+                    <strong>{/size/i.test(axis) ? "Sizes offered" : /color|colour/i.test(axis) ? "Colors offered" : axis + " offered"}</strong>
+                    <div className="ps-selling-values" role="group" aria-label={`Selling ${axis}`}>
+                      {variantAxisValues(detail.variants, axis).map((value) => {
+                        const matching = detail.variants.filter((candidate) =>
+                          variantAttributes(candidate)[axis] === value);
+                        const includedCount = matching.filter((candidate) =>
+                          selectedVariantSet.has(catalogVariantId(candidate))).length;
+                        const allIncluded = matching.length > 0 && includedCount === matching.length;
+                        const sample = matching[0];
+                        return (
+                          <button type="button" key={value}
+                            className={allIncluded ? "is-selected" : includedCount ? "is-partial" : ""}
+                            aria-pressed={allIncluded}
+                            aria-label={`${value}, ${includedCount} of ${matching.length} variants selected for sale`}
+                            title={`${includedCount} of ${matching.length} supplier variants included`}
+                            onClick={() => toggleSellingAxis(axis, value)}>
+                            {/color|colour|finish|material/i.test(axis) && variantImage(sample) && (
+                              <ProductImage sources={[variantImage(sample)]} alt="" />
+                            )}
+                            <span>{value}</span>
+                            <span className="ps-selling-tick" aria-hidden="true">{allIncluded ? "✓" : includedCount ? "−" : "+"}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                ) : (
-                  <select
-                    value={variantId}
-                    onChange={(e) => setVariantId(e.target.value)}
-                    aria-label="Product option"
-                  >
-                    {detail.variants.map((candidate) => (
-                      <option
-                        key={catalogVariantId(candidate)}
-                        value={catalogVariantId(candidate)}
-                      >
-                        {candidate.variant_title || candidate.name || "Default"}
-                      </option>
-                    ))}
-                  </select>
+                ))}
+                {!selectedVariantIds.length && (
+                  <p className="ps-selling-warning" role="status">Choose at least one variant before saving.</p>
                 )}
-              </div>
-              {detail.variants.length > 0 && (
-                <p className="ps-selected-option">
-                  <strong>{variant?.variant_title || variant?.name || "Default option"}</strong>
-                  {variant?.sku ? ` · ${variant.sku}` : ""}
+              </section>
+              <section className="ps-editing-section" aria-labelledby="ps-editing-heading">
+                <strong id="ps-editing-heading">Editing preview</strong>
+                <p className="ps-selling-help">Change the garment shown on the canvas without changing the selling selection.</p>
+                <div className="ps-preview-fields">
+                  {optionAxes.map((axis) => (
+                    <label key={axis}>
+                      <span>{/size/i.test(axis) ? "Preview size" : /color|colour/i.test(axis) ? "Preview color" : "Preview " + axis}</span>
+                      <select value={selectedAttributes[axis] || ""}
+                        onChange={(event) => chooseVariantOption(axis, event.target.value)}>
+                        {variantAxisValues(detail.variants, axis).map((value) => (
+                          <option key={value} value={value}>{value}</option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
+                  {!optionAxes.length && (
+                    <label>
+                      <span>Preview variant</span>
+                      <select value={variantId} onChange={(event) => setVariantId(event.target.value)}>
+                        {detail.variants.map((candidate) => (
+                          <option key={catalogVariantId(candidate)} value={catalogVariantId(candidate)}>
+                            {candidate.variant_title || candidate.name || "Default"}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </div>
+                <p className="ps-editing-summary">
+                  <strong>Editing: {variant?.variant_title || variant?.name || Object.values(selectedAttributes).join(" / ") || "Default"}</strong>
+                  <span>{selectedVariantSet.has(variantId) ? "Included for sale" : "Preview only · not included for sale"}</span>
                 </p>
-              )}
+              </section>
               <div className="ps-print-details" title="Provider print area dimensions">
                 <span>{printSizeLabel(location)}</span>
-                <span>{location?.dpi ? `${location.dpi} DPI` : "DPI not specified"}</span>
+                <span>{location?.dpi ? `Supplier target: ${location.dpi} DPI` : "Supplier target DPI: unavailable"}</span>
               </div>
-              <button
-                className="ps-button ps-wide"
-                onClick={() => setTab("upload")}
-              >
+              <button type="button" className="ps-button ps-wide" onClick={() => { setTab("upload"); setPanelOpen(true); }}>
                 <StudioIcon name="upload" /> Add your artwork
               </button>
-            </>
+              {manageVariants && (
+                <div className="ps-variant-overlay" onMouseDown={(event) => {
+                  if (event.currentTarget === event.target) setManageVariants(false);
+                }}>
+                  <section className="ps-variant-dialog" ref={variantDialogRef} role="dialog" aria-modal="true"
+                    aria-labelledby="ps-variant-dialog-title">
+                    <header className="ps-variant-dialog-heading">
+                      <div>
+                        <h3 id="ps-variant-dialog-title">Manage all variants</h3>
+                        <p>{selectedVariantIds.length} of {catalogVariantIds.length} valid combinations included</p>
+                      </div>
+                      <button type="button" aria-label="Close variant manager" onClick={() => setManageVariants(false)}>×</button>
+                    </header>
+                    <div className="ps-variant-dialog-actions">
+                      <button type="button" onClick={() => setSelectedVariantIds(catalogVariantIds)}>Select all</button>
+                      <button type="button" onClick={() => setSelectedVariantIds([])}>Clear</button>
+                    </div>
+                    <div className="ps-variant-dialog-list">
+                      {detail.variants.map((candidate) => {
+                        const id = catalogVariantId(candidate);
+                        return (
+                          <label key={id} className="ps-variant-row">
+                            <input type="checkbox" checked={selectedVariantSet.has(id)}
+                              onChange={(event) => toggleSellingVariant(id, event.target.checked)} />
+                            <span>
+                              <strong>{candidate.variant_title || candidate.name || Object.values(variantAttributes(candidate)).join(" / ") || "Default variant"}</strong>
+                              {candidate.sku && <small>{candidate.sku}</small>}
+                            </span>
+                            {id === variantId && <em>Previewing</em>}
+                          </label>
+                        );
+                      })}
+                    </div>
+                    <footer className="ps-variant-dialog-footer">
+                      <span>{selectedVariantIds.length} selected</span>
+                      <button type="button" className="ps-button ps-primary" onClick={() => setManageVariants(false)}>Done</button>
+                    </footer>
+                  </section>
+                </div>
+              )}
+            </div>
           )}
           {tab === "upload" && (
             <div className="ps-asset-rail">
