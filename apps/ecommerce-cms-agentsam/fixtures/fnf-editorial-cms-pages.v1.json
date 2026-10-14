@@ -1,0 +1,143 @@
+{
+  "version": 1,
+  "status": "draft",
+  "pages": [
+    {
+      "slug": "fnf-editorial-home",
+      "title": "FNF · Editorial Home",
+      "sections": [
+        {
+          "key": "hours-hero",
+          "preset": "fnf/field-notes-hero",
+          "content": {
+            "eyebrow": "FUEL N FREE TIME / EARNED HOURS",
+            "headline": "MADE IN THE HOURS BETWEEN",
+            "subheadline": "Work worth doing. Time worth living.",
+            "body": "Built for the garage, the road and the hours we make our own.",
+            "imageUrl": "/assets/presets/fuel-free-time/earned-hours-hero.webp",
+            "ctaPrimary": {
+              "label": "Shop the collection",
+              "href": "/shop"
+            }
+          }
+        },
+        {
+          "key": "hours-panel",
+          "preset": "fnf/earned-hours-panel",
+          "content": {
+            "eyebrow": "THE EARNED HOURS SERIES",
+            "headline": "TIME IS THE REAL HORSEPOWER.",
+            "body": "For early starts, late finishes and the hours you look forward to.",
+            "imageUrl": "/media/products/shirts/fft-tee-frontside.webp",
+            "ctaPrimary": {
+              "label": "Explore the gear",
+              "href": "/shop"
+            }
+          }
+        },
+        {
+          "key": "merch-panel",
+          "preset": "fnf/product-story-panel",
+          "content": {
+            "eyebrow": "F&FT / THE SIGNATURE",
+            "headline": "THE FRONT IS THE MARK. THE BACK TELLS THE STORY.",
+            "body": "Every day needs a good uniform. Every graphic has its own story.",
+            "imageUrl": "/assets/presets/fuel-free-time/essentials.webp",
+            "ctaPrimary": {
+              "label": "Shop essentials",
+              "href": "/shop/collections/essentials"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "slug": "fnf-field-notes",
+      "title": "FNF · Field Notes",
+      "sections": [
+        {
+          "key": "field-hero",
+          "preset": "fnf/field-notes-hero",
+          "content": {
+            "eyebrow": "FIELD NOTES / VOL. 01",
+            "headline": "MADE IN THE HOURS BETWEEN",
+            "subheadline": "Projects, people, and the work behind the work.",
+            "body": "Stories from the garage, the trail, and everywhere in between.",
+            "imageUrl": "/assets/presets/fuel-free-time/earned-hours-hero.webp",
+            "ctaPrimary": {
+              "label": "Shop the collection",
+              "href": "/shop"
+            }
+          }
+        },
+        {
+          "key": "field-grid",
+          "preset": "fnf/field-notes-grid",
+          "content": {
+            "eyebrow": "PEOPLE / PLACES / PROJECTS",
+            "title": "THE FIELD NOTES",
+            "body": "The moments and people worth making time for.",
+            "card1": {
+              "name": "The Build",
+              "subtitle": "IDEAS INTO REALITY",
+              "description": "Sketch it. Build it. Make it your own.",
+              "imageUrl": "/assets/presets/fuel-free-time/masters.webp",
+              "href": "",
+              "linkLabel": "Read the story"
+            },
+            "card2": {
+              "name": "The Route",
+              "subtitle": "PLACES THAT PULL US FORWARD",
+              "description": "Sometimes the long way is the best part.",
+              "imageUrl": "/assets/presets/fuel-free-time/earned-hours-hero.webp",
+              "href": "",
+              "linkLabel": "Read the story"
+            },
+            "card3": {
+              "name": "The Makers",
+              "subtitle": "PEOPLE BEHIND THE WORK",
+              "description": "Good work starts with the people who show up.",
+              "imageUrl": "/assets/presets/fuel-free-time/essentials.webp",
+              "href": "",
+              "linkLabel": "Read the story"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "slug": "fnf-product-story",
+      "title": "FNF · Product Story",
+      "sections": [
+        {
+          "key": "product-feature",
+          "preset": "fnf/earned-hours-panel",
+          "content": {
+            "eyebrow": "THE SIGNATURE SERIES",
+            "headline": "MADE FOR THE HOURS THAT MATTER.",
+            "body": "The pieces you reach for when the time becomes yours.",
+            "imageUrl": "/media/products/shirts/fft-tee-frontside.webp",
+            "ctaPrimary": {
+              "label": "Explore essentials",
+              "href": "/shop/collections/essentials"
+            }
+          }
+        },
+        {
+          "key": "artwork-story",
+          "preset": "fnf/product-story-panel",
+          "content": {
+            "eyebrow": "THE F&FT BADGE",
+            "headline": "ONE MARK. MANY STORIES.",
+            "body": "The same signature, wherever the weekend takes you.",
+            "imageUrl": "/assets/presets/fuel-free-time/masters.webp",
+            "ctaPrimary": {
+              "label": "Shop all gear",
+              "href": "/shop"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
