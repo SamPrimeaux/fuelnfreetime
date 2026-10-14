@@ -784,7 +784,8 @@ function renderStudioDesign(draft, fulfillment, source = null) {
   const edit = document.createElement("a");
   edit.className = "btn ghost small";
   edit.textContent = "Edit design";
-  edit.href = "/admin/products/create/" + encodeURIComponent(draft.completeful_catalog_product_id);
+  edit.href = "/admin/products/create/" + encodeURIComponent(draft.completeful_catalog_product_id) +
+    "?resume=" + encodeURIComponent(draft.id);
   actions.append(edit);
 
   const linkId = fulfillment?.completeful_store_product_id;
