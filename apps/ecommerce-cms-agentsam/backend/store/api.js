@@ -8,7 +8,7 @@ import {
   validateDiscountForCheckout,
 } from "../lib/discounts.js";
 import { checkoutUrls, createCheckoutSession, createCoupon } from "./stripe.js";
-import { availableQty, holdInventory, releaseReservations } from "./inventory.js";
+import { availableQty, getVariantAvailability, listProductVariantAvailability, holdInventory, releaseReservations } from "./inventory.js";
 import { handleStripeWebhook } from "./stripe-webhook.js";
 import { getStoreCollection, listStoreCollections } from "./collections.js";
 
@@ -76,12 +76,7 @@ export async function getStoreProduct(env, slug) {
 
   if (!product) return json({ error: "Product not found" }, { status: 404 });
 
-  const { results: variants } = await env.DB.prepare(
-    `SELECT id, sku, size, color, price_cents, inventory_qty
-     FROM product_variants WHERE product_id = ? ORDER BY id`
-  )
-    .bind(product.id)
-    .all();
+  const variants = await listProductVariantAvailability(env, product.id);
 
   const { results: images } = await env.DB.prepare(
     `SELECT m.id, m.url, m.filename, m.alt_text, pi.position, pi.is_primary
@@ -144,13 +139,15 @@ export async function createStoreCheckout(request, env) {
     }
 
     const qty = Math.max(1, Math.min(10, Math.round(Number(item.qty || 1))));
-    if (variant.inventory_qty < qty) {
-      return json({ error: `Only ${variant.inventory_qty} left for ${variant.size}` }, { status: 400 });
+    const availability = await getVariantAvailability(env, variant.id);
+    if (!availability.available ||
+        (availability.fulfillment === "stock" && availability.available_qty < qty)) {
+      return json({ error: `Variant ${variant.id} unavailable` }, { status: 400 });
     }
 
     const unitCents = variant.price_cents ?? (await env.DB.prepare(`SELECT price_cents FROM products WHERE id = ?`).bind(variant.product_id).first())?.price_cents ?? 0;
     totalCents += unitCents * qty;
-    lineItems.push({ variant, qty, unitCents });
+    lineItems.push({ variant, qty, unitCents, fulfillment: availability.fulfillment });
   }
 
   const subtotalCents = totalCents;
@@ -205,7 +202,7 @@ export async function createStoreCheckout(request, env) {
     await attachAttributionToOrder(env, orderId, attribution);
   }
 
-  for (const { variant, qty, unitCents } of lineItems) {
+  for (const { variant, qty, unitCents, fulfillment } of lineItems) {
     await env.DB.prepare(
       `INSERT INTO order_items (order_id, variant_id, title, qty, price_cents)
        VALUES (?, ?, ?, ?, ?)`
@@ -213,11 +210,13 @@ export async function createStoreCheckout(request, env) {
       .bind(orderId, variant.id, `${variant.title} — ${variant.size || variant.sku}`, qty, unitCents)
       .run();
 
-    await env.DB.prepare(
-      `UPDATE product_variants SET inventory_qty = inventory_qty - ?, updated_at = datetime('now') WHERE id = ?`
-    )
-      .bind(qty, variant.id)
-      .run();
+    if (fulfillment === "stock") {
+      await env.DB.prepare(
+        `UPDATE product_variants SET inventory_qty = inventory_qty - ?, updated_at = datetime('now') WHERE id = ?`
+      )
+        .bind(qty, variant.id)
+        .run();
+    }
   }
 
   if (discountId) {
