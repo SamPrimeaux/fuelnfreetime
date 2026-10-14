@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { createMiniAgentSam } from "../../../../packages/agentsam-workbench/src/mini-agentsam.js";
 import { selectStudioSideImage } from "./studio-side-image";
+import { blankGarmentImageSources } from "./studio-blank-image";
 import { adminFetch, adminFormFetch } from "../../lib/api";
 import { evaluateManufacturingCompatibility } from "../../../../packages/agentsam-merch/src/index.js";
 import { studioArtworkQuality, type ArtworkCrop } from "./studio-artwork-quality";
@@ -289,11 +290,7 @@ export default function StudioWorkspace({
   // "realistic_image_url" and the generic mockup gallery can already contain
   // another customer's artwork. Never position merchant artwork over those.
   // Choose images scoped to the selected variant, never another color.
-  const blankVariantSources = [
-    variant?.cover_image_url,
-    variant?.main_icon_url,
-    ...(!variant ? [detail.product.cover_image_url, detail.product.main_icon_url] : []),
-  ].filter((url): url is string => Boolean(url));
+  const blankVariantSources = blankGarmentImageSources(variant, detail.product);
   const enabledLocations = detail.print_locations.filter((candidate) => candidate.enabled);
   const isFrontLocation = /(?:^|[_\s-])front(?:$|[_\s-])/i.test(location?.name || locationId);
   const hasDistinctProviderSideArtboard = Boolean(
