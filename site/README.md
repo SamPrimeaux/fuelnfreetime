@@ -4,6 +4,7 @@ Everything specific to a customer's storefront lives here, not in a published pa
 
     site/<customer>/site.json     assets, navigation, newsletter wiring, real logo and model URLs
     site/<customer>/migration/    one-time migration evidence (old-site link audits, notes)
+    site/<customer>/seed/         idempotent SQL for that customer's own settings (mail sender, integrations)
 
 Published packages (`packages/*`, `@inneranimalmedia/*`) ship the engine and stock demo content only.
 `npm run check:publish` fails if a package tarball contains a customer name, domain or asset ID
