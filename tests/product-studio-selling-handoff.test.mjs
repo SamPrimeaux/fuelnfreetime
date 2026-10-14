@@ -11,7 +11,7 @@ const catalog = colors.flatMap(color => sizes.map(size => ({
   provider_sku: "HOOD." + color + "." + size,
   variant_attributes_json: JSON.stringify({ Color: color, Size: size }),
   attributes_json: null,
-}));
+})));
 
 test("Product Details projects all 90 saved supplier variants without creating local variants", async () => {
   const calls = [];
