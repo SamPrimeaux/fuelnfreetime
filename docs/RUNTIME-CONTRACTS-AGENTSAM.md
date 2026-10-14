@@ -6,6 +6,14 @@ See `docs/PIPELINE-OWNERSHIP.md` for the complete authority map. Build assets ar
 
 This document is the source-of-truth contract for the Fuel & Free Time AgentSam surface and runtime.
 
+## Tool execution and quality authority (2026-10-14 addendum)
+
+All AgentSam tool registration, discovery, execution and completion claims are subject to [Product Quality, Acceptance and Release Contract](engineering/PRODUCT-QUALITY-ACCEPTANCE-AND-RELEASE-CONTRACT.md) and [P0 tool recovery](AGENTSAM-TOOL-INFRASTRUCTURE-RECOVERY-TODO-2026-10-14.md). These are **release requirements**, not a claim that current code enforces them automatically.
+
+Distinguish **agent reasoning** (no synthetic tool needed), **workflow metadata** (not callable merely because a `handler_key` is populated), **internal application/provider operations** (not automatically model tools) and **curated model-callable operations**. Expose the last only after confirming genuine merchant purpose, executable handler, typed input/output, capability/policy, tenant-scoped authorization, side-effect approvals, traceable success and failure, and live integration evidence. `is_active=1` or an existing D1 row is not proof of executability. High-risk order/payment/manufacturing activity must be handled by its actual authorized backend owner, never treated as a generic tool or smoke-test shortcut.
+
+When an agent changes the UI, preserve existing authored components and the mobile dock, check **rendered** composition and full user interactions at mobile/tablet/desktop, and do not claim DONE while a merchant-reported visible regression remains. A CI pass or a generated screenshot does not substitute for inspecting the actual result.
+
 ## Source authority
 
 All dashboard browser source lives in `apps/ecommerce-cms-agentsam/frontend/`. The React SPA is under `src/`, static dashboard pages and scripts under `static/`, and shell/annotation adapters at the frontend root. AgentSam backend implementation lives in `apps/ecommerce-cms-agentsam/backend/agentsam/` and `backend/admin/agentsam.js`. Shared auth is `backend/lib/auth.js`.
