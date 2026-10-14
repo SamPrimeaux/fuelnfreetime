@@ -8,6 +8,7 @@
  *   node scripts/embed-fnf-content.mjs --source cms|product|repo|all
  */
 
+import { cloudflareAccountId } from "./lib/account-id.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -17,7 +18,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
 
-const ACCOUNT_ID = "ede6590ac0d2fb7daf155b35653457b2";
+const ACCOUNT_ID = cloudflareAccountId();
 const VECTORIZE_INDEX = "fnf-agentsam-bge-m3-1024";
 const EMBED_MODEL = "@cf/baai/bge-m3";
 const EMBED_DIMS = 1024;
@@ -79,10 +80,7 @@ function loadCfEnv() {
     process.env.CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_BREAK_GLASS_ADMIN_TOKEN;
   }
   const token = process.env.CLOUDFLARE_API_TOKEN;
-  const accountId =
-    process.env.CLOUDFLARE_ACCOUNT_ID ||
-    process.env.CLOUDFLARE_ACCOUNT_ID_INNERANIMALS ||
-    "ede6590ac0d2fb7daf155b35653457b2";
+  const accountId = cloudflareAccountId();
   if (!token) {
     console.error("Missing Cloudflare API token (~/inneranimalmedia/.env.cloudflare)");
     process.exit(1);

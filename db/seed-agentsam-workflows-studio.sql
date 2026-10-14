@@ -5,7 +5,7 @@
 
 -- ── Content Studio ────────────────────────────────────────────────────────────
 
-INSERT INTO agentsam_workflows (id, account_id, workflow_key, display_name, description, workflow_type, trigger_type, default_mode, default_task_type, risk_level, requires_approval, max_concurrent_nodes, timeout_ms, quality_gate_json, metadata_json, is_active, is_platform_global, created_at_unix, created_at, updated_at) VALUES('wf_fnf_content_studio', 'ede6590ac0d2fb7daf155b35653457b2', 'fnf_content_studio', 'Fuel n Freetime Content Studio', 'Generates and refines product copy, collection descriptions, homepage copy, email campaigns, SEO text, and content publishing suggestions for Fuel n Freetime.', 'agentic', 'manual', 'agent', 'content_generation', 'low', 0, 3, 600000, json_object(
+INSERT INTO agentsam_workflows (id, account_id, workflow_key, display_name, description, workflow_type, trigger_type, default_mode, default_task_type, risk_level, requires_approval, max_concurrent_nodes, timeout_ms, quality_gate_json, metadata_json, is_active, is_platform_global, created_at_unix, created_at, updated_at) VALUES('wf_fnf_content_studio', (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1), 'fnf_content_studio', 'Fuel n Freetime Content Studio', 'Generates and refines product copy, collection descriptions, homepage copy, email campaigns, SEO text, and content publishing suggestions for Fuel n Freetime.', 'agentic', 'manual', 'agent', 'content_generation', 'low', 0, 3, 600000, json_object(
     'version', '1.0.0',
     'definition_of_done', json_array(
       'Copy matches Fuel n Freetime brand voice',
@@ -75,7 +75,7 @@ ON CONFLICT(workflow_key) DO UPDATE SET
 
 -- ── Creative Studio ───────────────────────────────────────────────────────────
 
-INSERT INTO agentsam_workflows (id, account_id, workflow_key, display_name, description, workflow_type, trigger_type, default_mode, default_task_type, risk_level, requires_approval, max_concurrent_nodes, timeout_ms, quality_gate_json, metadata_json, is_active, is_platform_global, created_at_unix, created_at, updated_at) VALUES('wf_fnf_creative_studio', 'ede6590ac0d2fb7daf155b35653457b2', 'fnf_creative_studio', 'Fuel n Freetime Creative Studio', 'Generates visual creative assets for Fuel n Freetime including product imagery, collection banners, promo graphics, social creative, and image redesign direction.', 'agentic', 'manual', 'agent', 'image_generation', 'medium', 0, 2, 900000, json_object(
+INSERT INTO agentsam_workflows (id, account_id, workflow_key, display_name, description, workflow_type, trigger_type, default_mode, default_task_type, risk_level, requires_approval, max_concurrent_nodes, timeout_ms, quality_gate_json, metadata_json, is_active, is_platform_global, created_at_unix, created_at, updated_at) VALUES('wf_fnf_creative_studio', (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1), 'fnf_creative_studio', 'Fuel n Freetime Creative Studio', 'Generates visual creative assets for Fuel n Freetime including product imagery, collection banners, promo graphics, social creative, and image redesign direction.', 'agentic', 'manual', 'agent', 'image_generation', 'medium', 0, 2, 900000, json_object(
     'version', '1.0.0',
     'definition_of_done', json_array(
       'Creative matches Fuel n Freetime visual identity',
@@ -146,7 +146,7 @@ ON CONFLICT(workflow_key) DO UPDATE SET
 
 -- ── Brand Refresh ─────────────────────────────────────────────────────────────
 
-INSERT INTO agentsam_workflows (id, account_id, workflow_key, display_name, description, workflow_type, trigger_type, default_mode, default_task_type, risk_level, requires_approval, max_concurrent_nodes, timeout_ms, quality_gate_json, metadata_json, is_active, is_platform_global, created_at_unix, created_at, updated_at) VALUES('wf_fnf_brand_refresh', 'ede6590ac0d2fb7daf155b35653457b2', 'fnf_brand_refresh', 'Fuel n Freetime Brand Refresh', 'Handles logo refinement, logo redesign direction, brand system cleanup, visual identity exploration, and rollout suggestions for Fuel n Freetime.', 'agentic', 'manual', 'plan', 'brand_design', 'high', 1, 2, 1200000, json_object(
+INSERT INTO agentsam_workflows (id, account_id, workflow_key, display_name, description, workflow_type, trigger_type, default_mode, default_task_type, risk_level, requires_approval, max_concurrent_nodes, timeout_ms, quality_gate_json, metadata_json, is_active, is_platform_global, created_at_unix, created_at, updated_at) VALUES('wf_fnf_brand_refresh', (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1), 'fnf_brand_refresh', 'Fuel n Freetime Brand Refresh', 'Handles logo refinement, logo redesign direction, brand system cleanup, visual identity exploration, and rollout suggestions for Fuel n Freetime.', 'agentic', 'manual', 'plan', 'brand_design', 'high', 1, 2, 1200000, json_object(
     'version', '1.0.0',
     'definition_of_done', json_array(
       'Brand direction is clearly explained',

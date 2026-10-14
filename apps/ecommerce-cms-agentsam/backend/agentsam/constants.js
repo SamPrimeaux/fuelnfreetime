@@ -2,8 +2,6 @@
  * Fuel & Free Time — account / Cloudflare resource identity (not brand SSOT).
  * Branding → D1 company. Integrations → D1 agentsam_plugins.
  */
-export const FNF_ACCOUNT_ID = "ede6590ac0d2fb7daf155b35653457b2";
-export const FNF_CLOUDFLARE_ACCOUNT_ID = FNF_ACCOUNT_ID;
 export const FNF_SYSTEM_USER_ID = "au_fnf_system";
 
 export const FNF_WORKER_NAME = "fuelnfreetime";
@@ -20,8 +18,6 @@ export const FNF_GITHUB_REPO = "SamPrimeaux/fuelnfreetime";
 export const FNF_APP_DOMAIN = "fuelnfreetime.com";
 
 export const FNF_PLATFORM_SCOPE = {
-  account_id: FNF_ACCOUNT_ID,
-  cloudflare_account_id: FNF_CLOUDFLARE_ACCOUNT_ID,
   worker: FNF_WORKER_NAME,
   d1_binding: FNF_D1_BINDING,
   d1_database: FNF_D1_DATABASE,

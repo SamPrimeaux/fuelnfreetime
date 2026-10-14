@@ -2,11 +2,8 @@
  * AgentSam tools registry — D1-backed catalog (IAM parity, FNF scoped).
  */
 
-import {
-  FNF_PLATFORM_SCOPE,
-  FNF_ACCOUNT_ID,
-  FNF_TOOL_SCOPE_NOTE,
-} from "./constants.js";
+import { requireApplicationAccountId } from "../lib/account-context.js";
+import { FNF_PLATFORM_SCOPE, FNF_TOOL_SCOPE_NOTE } from "./constants.js";
 import { isToolKeyAllowed } from "./feature-gates.js";
 import { sanitizeAnalyticsText } from "./analytics.js";
 
@@ -94,7 +91,7 @@ function matchesFnfPlatformScope(tool) {
     if (!ok) return false;
   }
 
-  if (scope.account_id && scope.account_id !== FNF_ACCOUNT_ID) return false;
+  if (scope.account_id && scope.account_id !== requireApplicationAccountId()) return false;
 
   return true;
 }
@@ -180,7 +177,7 @@ export async function listAgentSamTools(env, options = {}) {
 
   const includeInactive = options.includeInactive === true;
   const clauses = ["account_id = ?", "(account_id IS NULL OR account_id = ?)"];
-  const binds = [options.account_id || FNF_ACCOUNT_ID, options.account_id || FNF_ACCOUNT_ID];
+  const binds = [options.account_id || requireApplicationAccountId(), options.account_id || requireApplicationAccountId()];
 
   if (!includeInactive) clauses.push("is_active = 1");
   if (options.includeDegraded !== true) clauses.push("is_degraded = 0");
@@ -225,7 +222,7 @@ export async function getAgentSamTool(env, toolKey) {
        WHERE account_id = ? AND tool_key = ? AND is_active = 1
        LIMIT 1`
     )
-      .bind(FNF_ACCOUNT_ID, toolKey)
+      .bind(requireApplicationAccountId(), toolKey)
       .first();
     return mapToolRow(row);
   } catch {
@@ -248,7 +245,7 @@ export async function listAgentSamMcpServers(env) {
          AND (plugin_kind = 'mcp' OR plugin_key LIKE '%mcp%')
        ORDER BY display_name ASC`,
     )
-      .bind(FNF_ACCOUNT_ID)
+      .bind(requireApplicationAccountId())
       .all();
 
     if (plugins?.length) {
@@ -277,7 +274,7 @@ export async function listAgentSamMcpServers(env) {
        WHERE account_id = ? AND is_active = 1
        ORDER BY display_name ASC`,
     )
-      .bind(FNF_ACCOUNT_ID)
+      .bind(requireApplicationAccountId())
       .all();
     return (results || []).map((row) => mapServerRow({ ...row, source: "agentsam_mcp_servers" }));
   } catch (err) {
@@ -295,7 +292,7 @@ export async function listToolPolicyKeys(env, policyKind) {
        WHERE account_id = ? AND policy_kind = ? AND is_active = 1
        ORDER BY sort_order ASC`
     )
-      .bind(FNF_ACCOUNT_ID, policyKind)
+      .bind(requireApplicationAccountId(), policyKind)
       .all();
     return results || [];
   } catch {
@@ -335,21 +332,21 @@ export async function getToolsRegistryStatus(env) {
       const t = await env.DB.prepare(
         `SELECT COUNT(*) AS n FROM agentsam_tools WHERE account_id = ? AND is_active = 1`
       )
-        .bind(FNF_ACCOUNT_ID)
+        .bind(requireApplicationAccountId())
         .first();
       toolsCount = t?.n ?? 0;
 
       const s = await env.DB.prepare(
         `SELECT COUNT(*) AS n FROM agentsam_mcp_servers WHERE account_id = ? AND is_active = 1`
       )
-        .bind(FNF_ACCOUNT_ID)
+        .bind(requireApplicationAccountId())
         .first();
       mcpServersCount = s?.n ?? 0;
 
       const p = await env.DB.prepare(
         `SELECT COUNT(*) AS n FROM agentsam_tool_policy_keys WHERE account_id = ? AND is_active = 1`
       )
-        .bind(FNF_ACCOUNT_ID)
+        .bind(requireApplicationAccountId())
         .first();
       policyKeysCount = p?.n ?? 0;
     }
@@ -395,7 +392,7 @@ export async function logToolCall(env, event, options = {}) {
     )
       .bind(
         id,
-        FNF_ACCOUNT_ID,
+        requireApplicationAccountId(),
         options.session_id ?? null,
         options.conversation_id ?? null,
         options.message_id ?? null,

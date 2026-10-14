@@ -5,11 +5,12 @@
  * Uses CLOUDFLARE_BREAK_GLASS_ADMIN_TOKEN via with-cf-admin-env.sh
  */
 
+import { cloudflareAccountId, cloudflareZoneId } from "./lib/account-id.mjs";
 import { execSync } from "node:child_process";
 
 const DOMAIN = "fuelnfreetime.com";
-const ZONE_ID = "816a5d2284103e4481987ceeb16c2ca9";
-const ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID || "ede6590ac0d2fb7daf155b35653457b2";
+const ZONE_ID = cloudflareZoneId();
+const ACCOUNT_ID = cloudflareAccountId();
 const TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 
 if (!TOKEN) {

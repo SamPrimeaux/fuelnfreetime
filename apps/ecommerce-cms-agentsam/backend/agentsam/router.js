@@ -3,8 +3,9 @@
  * Prompt/context assembly is handled by prompt-registry + context-cache after routing.
  */
 
+import { requireApplicationAccountId } from "../lib/account-context.js";
 import { resolveAIRouting } from "./ai-registry.js";
-import { FNF_ACCOUNT_ID, DRAWER_WORKFLOW_KEYS } from "./constants.js";
+import { DRAWER_WORKFLOW_KEYS } from "./constants.js";
 import { detectBlockedFeatureRequest } from "./feature-gates.js";
 import { formatMcpForPrompt, selectMcpServers } from "./mcp-servers.js";
 import { formatSkillsForPrompt, resolveSkillsForChat } from "./skills.js";
@@ -90,7 +91,7 @@ async function loadWorkflow(env, workflowKey) {
        WHERE workflow_key = ? AND account_id = ? AND is_active = 1
        LIMIT 1`
     )
-      .bind(workflowKey, FNF_ACCOUNT_ID)
+      .bind(workflowKey, requireApplicationAccountId())
       .first();
   } catch {
     return null;
@@ -144,7 +145,7 @@ export async function routeAgentsamRequest(env, message, context = {}) {
         message,
         context
       ),
-      account_id: FNF_ACCOUNT_ID,
+      account_id: requireApplicationAccountId(),
     };
   }
 
@@ -231,7 +232,7 @@ export async function routeAgentsamRequest(env, message, context = {}) {
     })),
     system_blocks: systemBlocks,
     ai_routing,
-    account_id: FNF_ACCOUNT_ID,
+    account_id: requireApplicationAccountId(),
   };
 }
 
@@ -251,7 +252,7 @@ export async function listDrawerWorkflows(env) {
          WHEN 'fnf_brand_refresh' THEN 3
          ELSE 99 END`
     )
-      .bind(FNF_ACCOUNT_ID, ...DRAWER_WORKFLOW_KEYS)
+      .bind(requireApplicationAccountId(), ...DRAWER_WORKFLOW_KEYS)
       .all();
 
     return (results || []).map((row) => mapWorkflowRow(row));
@@ -285,7 +286,7 @@ export async function listStudioWorkflows(env) {
          AND workflow_key IN ('fnf_content_studio','fnf_creative_studio','fnf_brand_refresh','fnf_agentsam_chat')
        ORDER BY display_name ASC`
     )
-      .bind(FNF_ACCOUNT_ID)
+      .bind(requireApplicationAccountId())
       .all();
 
     return (results || []).map((row) => mapWorkflowRow(row));

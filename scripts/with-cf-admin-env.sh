@@ -58,6 +58,10 @@ else
   exit 1
 fi
 
-export CLOUDFLARE_ACCOUNT_ID="${CLOUDFLARE_ACCOUNT_ID:-ede6590ac0d2fb7daf155b35653457b2}"
+if [[ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
+  CLOUDFLARE_ACCOUNT_ID="$(sed -n 's/^CLOUDFLARE_ACCOUNT_ID *= *"\([^"]*\)".*/\1/p' "${0:A:h}/../wrangler.toml" 2>/dev/null | head -1)"
+fi
+[[ -n "$CLOUDFLARE_ACCOUNT_ID" ]] || { print -u2 "CLOUDFLARE_ACCOUNT_ID is not set (export it, or add it to [vars] in wrangler.toml)"; exit 1; }
+export CLOUDFLARE_ACCOUNT_ID
 
 exec "$@"

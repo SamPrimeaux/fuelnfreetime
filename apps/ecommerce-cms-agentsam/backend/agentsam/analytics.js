@@ -1,9 +1,9 @@
+import { requireApplicationAccountId } from "../lib/account-context.js";
 /**
  * AgentSam analytics — lightweight D1 event ledger.
  * Never throws; never stores secrets or full prompts by default.
  */
 
-import { FNF_ACCOUNT_ID } from "./constants.js";
 
 const PREVIEW_MAX = 240;
 const ERROR_MAX = 500;
@@ -225,7 +225,7 @@ async function buildRow(env, event, options = {}) {
   const totalTokens = merged.total_tokens ?? inputTokens + outputTokens;
 
   return {
-    account_id: merged.account_id || FNF_ACCOUNT_ID,
+    account_id: merged.account_id || requireApplicationAccountId(),
     event_type: merged.event_type,
     event_name: merged.event_name,
     status: merged.status || "success",
@@ -332,7 +332,7 @@ function rangeSeconds(range = "24h") {
 }
 
 export async function summarizeAgentSamAnalytics(env, options = {}) {
-  const accountId = options.account_id || FNF_ACCOUNT_ID;
+  const accountId = options.account_id || requireApplicationAccountId();
   const since = Math.floor(Date.now() / 1000) - rangeSeconds(options.range || "24h");
 
   if (!env?.DB) {
@@ -489,7 +489,7 @@ export async function getAgentSamAnalyticsStatus(env) {
        WHERE account_id = ?
          AND date_key = ?`
     )
-      .bind(FNF_ACCOUNT_ID, today)
+      .bind(requireApplicationAccountId(), today)
       .first();
 
     const topModel = await env.DB.prepare(
@@ -500,7 +500,7 @@ export async function getAgentSamAnalyticsStatus(env) {
        ORDER BY n DESC
        LIMIT 1`
     )
-      .bind(FNF_ACCOUNT_ID, today)
+      .bind(requireApplicationAccountId(), today)
       .first();
 
     const topWorkflow = await env.DB.prepare(
@@ -511,7 +511,7 @@ export async function getAgentSamAnalyticsStatus(env) {
        ORDER BY n DESC
        LIMIT 1`
     )
-      .bind(FNF_ACCOUNT_ID, today)
+      .bind(requireApplicationAccountId(), today)
       .first();
 
     const chats = totals?.chats ?? 0;

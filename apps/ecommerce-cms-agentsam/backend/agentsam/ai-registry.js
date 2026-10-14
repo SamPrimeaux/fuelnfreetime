@@ -1,8 +1,8 @@
+import { requireApplicationAccountId } from "../lib/account-context.js";
 /**
  * AgentSam Workers AI model registry — D1-backed selection and fallback chains.
  */
 
-import { FNF_ACCOUNT_ID } from "./constants.js";
 
 const ACTIVE_STATUSES = ["active", "experimental"];
 const CHAT_TASK_TYPES = new Set([
@@ -212,7 +212,7 @@ export function normalizeChatRouting(routing) {
 }
 
 export async function getAIModels(env, options = {}) {
-  const accountId = options.account_id || FNF_ACCOUNT_ID;
+  const accountId = options.account_id || requireApplicationAccountId();
   const includeDisabled = options.includeDisabled === true;
 
   if (!env.DB) return [];
@@ -295,7 +295,7 @@ export async function getDefaultModelId(env, taskType, lane) {
        ORDER BY priority ASC
        LIMIT 1`
     )
-      .bind(FNF_ACCOUNT_ID, taskType, lane)
+      .bind(requireApplicationAccountId(), taskType, lane)
       .first();
     return row?.model_id || null;
   } catch {
@@ -315,18 +315,18 @@ export async function getAIRegistryStatus(env) {
       const total = await env.DB.prepare(
         `SELECT COUNT(*) AS n FROM agentsam_ai WHERE account_id = ? AND status IN ('active','experimental')`
       )
-        .bind(FNF_ACCOUNT_ID)
+        .bind(requireApplicationAccountId())
         .first();
       aiRegistryCount = total?.n ?? 0;
       const openAiModels = await env.DB.prepare(
         `SELECT COUNT(*) AS n FROM agentsam_ai WHERE account_id = ? AND provider = 'openai' AND status IN ('active','experimental')`
-      ).bind(FNF_ACCOUNT_ID).first();
+      ).bind(requireApplicationAccountId()).first();
       openAiRegisteredCount = openAiModels?.n ?? 0;
 
       const disabled = await env.DB.prepare(
         `SELECT COUNT(*) AS n FROM agentsam_ai WHERE account_id = ? AND status = 'disabled'`
       )
-        .bind(FNF_ACCOUNT_ID)
+        .bind(requireApplicationAccountId())
         .first();
       disabledModelCount = disabled?.n ?? 0;
     }

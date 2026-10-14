@@ -9,6 +9,7 @@
  *   node scripts/sync-agentsam-skills.mjs --dry-run
  */
 
+import { cloudflareAccountId } from "./lib/account-id.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -23,7 +24,7 @@ const SKILL_SOURCES = [
 ];
 const R2_PREFIX = "agentsam/skills";
 const BUCKET = "fuelnfreetime";
-const ACCOUNT_ID = "ede6590ac0d2fb7daf155b35653457b2";
+const ACCOUNT_ID = cloudflareAccountId();
 const SYSTEM_USER_ID = "au_fnf_system";
 const DRY_RUN = process.argv.includes("--dry-run");
 

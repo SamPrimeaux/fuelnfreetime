@@ -1,3 +1,5 @@
+import { __setApplicationAccountId } from "../apps/ecommerce-cms-agentsam/backend/lib/account-context.js";
+__setApplicationAccountId("acct_test");
 import test from "node:test";
 import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";

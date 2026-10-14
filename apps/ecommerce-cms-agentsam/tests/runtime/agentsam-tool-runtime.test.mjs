@@ -1,3 +1,5 @@
+import { __setApplicationAccountId } from "../../backend/lib/account-context.js";
+__setApplicationAccountId("acct_test");
 import assert from "node:assert/strict";
 import test from "node:test";
 

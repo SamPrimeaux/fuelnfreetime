@@ -1,7 +1,7 @@
 -- Dev session close — 2026-06-21 (Sam)
 -- Run: ./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/seed-dev-session-2026-06-21.sql
 
-INSERT INTO agentsam_dev_sessions (id, account_id, project_key, session_date, author, session_type, shipped, decisions, blockers, open_items, tables_touched, files_touched, commits, notes) VALUES('ds_fnf_sam_20260621', 'ede6590ac0d2fb7daf155b35653457b2', 'fuelnfreetime', '2026-06-21', 'sam', 'docs', '- Wrote docs/FNF-RUNTIME-OPS-2026-06-21.md: Resend routes/secrets, agentsam_hook vs agentsam_webhooks vs agentsam_webhook_events, mail_messages vs mail_webhook_events, per-user mailbox model, CMS deploy hook + warm flow, debug checklist.
+INSERT INTO agentsam_dev_sessions (id, account_id, project_key, session_date, author, session_type, shipped, decisions, blockers, open_items, tables_touched, files_touched, commits, notes) VALUES('ds_fnf_sam_20260621', (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1), 'fuelnfreetime', '2026-06-21', 'sam', 'docs', '- Wrote docs/FNF-RUNTIME-OPS-2026-06-21.md: Resend routes/secrets, agentsam_hook vs agentsam_webhooks vs agentsam_webhook_events, mail_messages vs mail_webhook_events, per-user mailbox model, CMS deploy hook + warm flow, debug checklist.
 - Added docs/cms-deploy-hooks.md + FNF-RUNTIME-OPS to REPO_DOC_PATHS in scripts/embed-fnf-content.mjs.
 - Vector re-embed (--source=repo): 8 new chunks → fnf-agentsam-bge-m3-1024 (AgentSam can now recall mail/webhook/CMS ops architecture).', '- HOW docs belong in REPO_DOC_PATHS — code alone cannot answer why-is-X-broken questions for AgentSam semantic search.
 - Kept mail_webhook_events alongside agentsam_webhook_events: mail table for backfill scripts, AgentSam table for cross-system webhook audit.

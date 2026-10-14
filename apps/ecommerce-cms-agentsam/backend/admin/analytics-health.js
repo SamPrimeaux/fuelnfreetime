@@ -4,7 +4,7 @@
  * Reusable contracts/query orchestration belong to agentsam-analytics and the
  * Cloudflare connector; this file supplies tenant/resource configuration.
  */
-import { FNF_ACCOUNT_ID } from "../agentsam/constants.js";
+import { requireApplicationAccountId } from "../lib/account-context.js";
 import { trackAgentSamEvent } from "../agentsam/analytics.js";
 
 const ranges = { "24h":86400, "7d":604800, "30d":2592000, "90d":7776000 };
@@ -27,32 +27,32 @@ async function ledger(env, since) {
         SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) AS successes,
         COALESCE(SUM(estimated_cost_usd),0) AS cost_usd,
         ROUND(AVG(CASE WHEN duration_ms > 0 THEN duration_ms END),2) AS avg_duration_ms
-        FROM agentsam_analytics WHERE account_id = ? AND created_at_unix >= ?`).bind(FNF_ACCOUNT_ID,since).first(),
+        FROM agentsam_analytics WHERE account_id = ? AND created_at_unix >= ?`).bind(requireApplicationAccountId(),since).first(),
       env.DB.prepare(`SELECT date_key AS bucket, COUNT(*) AS events,
         SUM(CASE WHEN status='failed' OR event_type='error' THEN 1 ELSE 0 END) AS failures
         FROM agentsam_analytics WHERE account_id=? AND created_at_unix>=?
-        GROUP BY date_key ORDER BY date_key ASC LIMIT 100`).bind(FNF_ACCOUNT_ID,since).all(),
+        GROUP BY date_key ORDER BY date_key ASC LIMIT 100`).bind(requireApplicationAccountId(),since).all(),
       env.DB.prepare(`SELECT COALESCE(operation,event_name) AS operation, event_type AS domain, COUNT(*) AS samples,
         SUM(CASE WHEN status='failed' OR event_type='error' THEN 1 ELSE 0 END) AS failures,
         AVG(duration_ms) AS duration_ms
         FROM agentsam_analytics WHERE account_id=? AND created_at_unix>=?
-        GROUP BY event_type, COALESCE(operation,event_name) ORDER BY samples DESC LIMIT 12`).bind(FNF_ACCOUNT_ID,since).all(),
+        GROUP BY event_type, COALESCE(operation,event_name) ORDER BY samples DESC LIMIT 12`).bind(requireApplicationAccountId(),since).all(),
       env.DB.prepare(`SELECT event_type AS domain, COALESCE(operation,event_name) AS operation,
         error_code, status, created_at_unix AS occurred_at
         FROM agentsam_analytics WHERE account_id=? AND created_at_unix>=?
           AND (status='failed' OR event_type='error')
-        ORDER BY created_at_unix DESC LIMIT 15`).bind(FNF_ACCOUNT_ID,since).all(),
+        ORDER BY created_at_unix DESC LIMIT 15`).bind(requireApplicationAccountId(),since).all(),
       env.DB.prepare(`SELECT COALESCE(operation,event_name) AS operation, error_code, status,
         created_at_unix AS occurred_at
         FROM agentsam_analytics WHERE account_id=? AND created_at_unix>=?
           AND (event_type='github' OR event_type='deployment' OR error_code LIKE '%drift%'
           OR error_code LIKE '%schema%' OR error_code LIKE '%contract%')
-        ORDER BY created_at_unix DESC LIMIT 20`).bind(FNF_ACCOUNT_ID,since).all(),
+        ORDER BY created_at_unix DESC LIMIT 20`).bind(requireApplicationAccountId(),since).all(),
       env.DB.prepare(`SELECT COUNT(*) AS samples,
         SUM(CASE WHEN status='success' THEN 1 ELSE 0 END) AS passed,
         MAX(created_at_unix) AS last_seen
         FROM agentsam_analytics WHERE account_id=? AND created_at_unix>=?
-        AND event_name='health.probe'`).bind(FNF_ACCOUNT_ID,since).first(),
+        AND event_name='health.probe'`).bind(requireApplicationAccountId(),since).first(),
     ]);
     return {
       available:true,reason:null,source:"D1 agentsam_analytics",
@@ -100,7 +100,7 @@ async function basin(env) {
   const adapter=env.BASIN_OVERVIEW_ADAPTER;
   if(typeof adapter?.inspect === "function"){
     try{
-      const found=await adapter.inspect({accountId:FNF_ACCOUNT_ID});
+      const found=await adapter.inspect({accountId:requireApplicationAccountId()});
       if(found?.authorized === true) {
         return {enabled:true,status:"connected",source:"Cloudflare Basin provider discovery",
           warehouses:Array.isArray(found.warehouses)?found.warehouses:[],
@@ -120,7 +120,7 @@ async function basin(env) {
     try {
       const plugin=await env.DB.prepare(
         "SELECT plugin_key, setup_status FROM agentsam_plugins WHERE account_id=? AND is_enabled=1 AND (plugin_key LIKE '%basin%' OR provider_key LIKE '%basin%') LIMIT 1"
-      ).bind(FNF_ACCOUNT_ID).first();
+      ).bind(requireApplicationAccountId()).first();
       if (plugin) return {enabled:true,status:"permission_required",source:"AgentSam integration installation",
         warehouses:[],pipelines:[],catalogTables:[],checkedAt:null};
     } catch { /* plugin registry not deployed; absence is not connectivity */ }

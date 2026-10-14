@@ -4,6 +4,7 @@
  * Usage: node scripts/create-admin.mjs <email> <password> [role] [display_name]
  * Or:    ADMIN_EMAIL=... ADMIN_PASSWORD=... AUTH_DISPLAY_NAME=... node scripts/create-admin.mjs
  */
+import { cloudflareAccountId } from "./lib/account-id.mjs";
 import { webcrypto as crypto } from "node:crypto";
 import { execSync } from "node:child_process";
 import { writeFileSync, unlinkSync } from "node:fs";
@@ -11,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const ITERATIONS = 100000;
-const ACCOUNT_ID = "ede6590ac0d2fb7daf155b35653457b2";
+const ACCOUNT_ID = cloudflareAccountId();
 
 function toHex(buf) {
   return Array.from(new Uint8Array(buf))

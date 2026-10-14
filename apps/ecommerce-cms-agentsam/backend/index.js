@@ -9,6 +9,7 @@
  *   ASSETS         Static files served from /public (marketing pages + /admin dashboard)
  */
 
+import { ensureApplicationAccount } from "./lib/account-context.js";
 import { handleAdminApi } from "./admin/api.js";
 import { recordScheduledHealthProbe } from "./admin/analytics-health.js";
 import { serveCatalogImage } from "./completeful/images.js";
@@ -195,6 +196,7 @@ async function gateAdminPage(request, env, pathname) {
 
 export default {
   async fetch(request, env, ctx) {
+    await ensureApplicationAccount(env);
     const wwwRedirect = redirectWww(request);
     if (wwwRedirect) return wwwRedirect;
 
@@ -513,6 +515,7 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
+    await ensureApplicationAccount(env);
     await ensureAssetStorage(env).catch(() => null);
     // Explicit cron routing: do not let health probes trigger compaction.
     if (event.cron === "*/30 * * * *") {
@@ -546,6 +549,7 @@ export default {
   },
 
   async queue(batch, env) {
+    await ensureApplicationAccount(env);
     await ensureAssetStorage(env).catch(() => null);
     for (const message of batch.messages) {
       const jobId = message.body?.job_id;

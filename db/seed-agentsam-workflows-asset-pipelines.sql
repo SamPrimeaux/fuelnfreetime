@@ -4,8 +4,8 @@
 -- R2: bucket fuelnfreetime · binding WEBSITE_ASSETS · WNAM
 --     custom domain assets.fuelnfreetime.com (Active)
 --     worker path /media/{key} (verified)
---     S3 API …/ede6590ac0d2fb7daf155b35653457b2.r2.cloudflarestorage.com/fuelnfreetime
--- Account: ede6590ac0d2fb7daf155b35653457b2
+--     S3 API …/<account-id>.r2.cloudflarestorage.com/<bucket>
+-- Account: the install's own row in accounts (resolved in SQL)
 -- Run: npm run db:seed:agentsam-workflows-asset-pipelines
 -- Rule: optimize/stage = no approval · live asset replace = approval required
 
@@ -18,7 +18,7 @@ INSERT INTO agentsam_workflows (
   created_at_unix, created_at, updated_at
 ) VALUES (
   'wf_fnf_asset_ops',
-  'ede6590ac0d2fb7daf155b35653457b2',
+  (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1),
   'fnf_asset_ops',
   'Fuel n Freetime Asset Ops',
   'Umbrella brand/content asset pipeline: audit, manage library, optimize images/icons/videos/GLBs, link to CMS/products, and publish to /media with approval.',
@@ -54,7 +54,6 @@ INSERT INTO agentsam_workflows (
     'r2_location', 'WNAM',
     'public_base_url', 'https://assets.fuelnfreetime.com',
     'worker_media_prefix', '/media/',
-    's3_api', 'https://ede6590ac0d2fb7daf155b35653457b2.r2.cloudflarestorage.com/fuelnfreetime',
     'cors_origins', json_array(
       'https://fuelnfreetime.com',
       'https://www.fuelnfreetime.com',
@@ -120,7 +119,7 @@ INSERT INTO agentsam_workflows (
   created_at_unix, created_at, updated_at
 ) VALUES (
   'wf_fnf_image_pipeline',
-  'ede6590ac0d2fb7daf155b35653457b2',
+  (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1),
   'fnf_image_pipeline',
   'Fuel n Freetime Image Pipeline',
   'Build, optimize, and manage storefront/CMS images: variants, WebP/AVIF, responsive plans, and staged publish to /media.',
@@ -171,7 +170,7 @@ INSERT INTO agentsam_workflows (
   created_at_unix, created_at, updated_at
 ) VALUES (
   'wf_fnf_icon_pipeline',
-  'ede6590ac0d2fb7daf155b35653457b2',
+  (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1),
   'fnf_icon_pipeline',
   'Fuel n Freetime Icon Pipeline',
   'Generate and optimize favicon/PWA/nav icons from brand marks; stage PNG densities + SVG; publish only with approval.',
@@ -220,7 +219,7 @@ INSERT INTO agentsam_workflows (
   created_at_unix, created_at, updated_at
 ) VALUES (
   'wf_fnf_video_pipeline',
-  'ede6590ac0d2fb7daf155b35653457b2',
+  (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1),
   'fnf_video_pipeline',
   'Fuel n Freetime Video Pipeline',
   'Optimize storefront/about videos: compress, poster frames, register in media_assets, stage before replacing live /media video paths.',
@@ -269,7 +268,7 @@ INSERT INTO agentsam_workflows (
   created_at_unix, created_at, updated_at
 ) VALUES (
   'wf_fnf_glb_pipeline',
-  'ede6590ac0d2fb7daf155b35653457b2',
+  (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1),
   'fnf_glb_pipeline',
   'Fuel n Freetime GLB Pipeline',
   'Inspect, optimize, and manage 3D models (GLB/USDZ) for hero/product viewers. Live 3d-models/* replace requires approval.',

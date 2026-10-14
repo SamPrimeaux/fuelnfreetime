@@ -1,9 +1,11 @@
+import { __setApplicationAccountId } from "../backend/lib/account-context.js";
+__setApplicationAccountId("acct_test");
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {getFallbackChain} from '../backend/agentsam/ai-registry.js';
 import {executeOpenAiChat,runAgentSamAi} from '../backend/agentsam/ai-run.js';
 
-const account='ede6590ac0d2fb7daf155b35653457b2';
+const account='acct_test';
 const row=(overrides={})=>({id:'test-'+Math.random().toString(16).slice(2), account_id:account,
   provider:'workers_ai',model_id:'@cf/test/general',display_name:'Test model',task_type:'text_generation',
   lane:'general',status:'active',priority:1,is_default:1,is_fallback:0,supports_tools:0,

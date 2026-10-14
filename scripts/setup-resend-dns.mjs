@@ -8,8 +8,10 @@
  *   node scripts/setup-resend-dns.mjs --enable-receiving   # adds root MX (inbound)
  */
 
+import { cloudflareZoneId } from "./lib/account-id.mjs";
+
 const DOMAIN = "fuelnfreetime.com";
-const ZONE_ID = "816a5d2284103e4481987ceeb16c2ca9";
+const ZONE_ID = cloudflareZoneId();
 
 const RESEND_DKIM =
   "p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDr1/Q4LltKqpzxwiIj9oBZIiILthLWD7I3ABuchqhsbn2x5t/OYDktvfYHK6qap3cZKgHYriuA/coHM+50R85nUx7QbsQ8J7yEvCQI1o01A3Rps77eH4OvYWYjtp/JJYA5pWdM2hJ2tEZ4ERuYz0gHEHgNL4cDDHJxqfG06ISjYQIDAQAB";

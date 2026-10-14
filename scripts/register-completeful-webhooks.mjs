@@ -1,5 +1,8 @@
 // scripts/register-completeful-webhooks.mjs
 // Run: source ~/.agentsam/load-agent-env.sh completeful && node scripts/register-completeful-webhooks.mjs
+import { cloudflareAccountId } from "./lib/account-id.mjs";
+
+const ACCOUNT_ID = cloudflareAccountId();
 import { execFileSync } from "node:child_process";
 
 const API_BASE = "https://vxapi.completeful.com/v1";
@@ -60,7 +63,7 @@ async function main() {
       created_at_unix, updated_at_unix
     ) VALUES (
       '${sqlEscape(registryId)}',
-      'ede6590ac0d2fb7daf155b35653457b2',
+      '${sqlEscape(ACCOUNT_ID)}',
       'au_fnf_system',
       'completeful',
       '${sqlEscape(wh.id)}',

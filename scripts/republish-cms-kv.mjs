@@ -4,8 +4,9 @@
  * Run: npm run cms:republish
  */
 import { execSync } from "node:child_process";
+import { kvNamespaceId } from "./lib/account-id.mjs";
 
-const NS = "bc3b4e3f272e4b46b3c92df6dff85bff";
+const NS = kvNamespaceId("CMS_CACHE");
 const SLUGS = ["site", "home", "shop", "about", "community"];
 const env = { ...process.env };
 

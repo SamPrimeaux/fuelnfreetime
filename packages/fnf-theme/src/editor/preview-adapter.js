@@ -1,3 +1,6 @@
+/** Neutral placeholder (1x1 transparent GIF) used when a section has no image yet. */
+const PLACEHOLDER_IMAGE = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+
 (function () {
   const THEMES = [
     {
@@ -15,7 +18,7 @@
     {
       id: "fnf",
       name: "FNF",
-      description: "Industrial Fuel & Free Time system",
+      description: "Storefront theme",
       source: "@inneranimalmedia/fnf-theme",
     },
   ];
@@ -88,7 +91,7 @@
       '<div class="tp-global" data-cms-section="header">',
       announce,
       '<header class="tp-header">',
-      '<a class="tp-logo" href="/" data-cms="logoUrl"><img src="' + esc(data.logoUrl || "/media/archive/shopify-import/logos/fandft-clear-background.png") + '" alt="Fuel & Free Time"></a>',
+      '<a class="tp-logo" href="/" data-cms="logoUrl"><img src="' + esc(data.logoUrl || "") + '" alt=""></a>',
       '<nav>' + nav + '</nav>',
       '<span class="tp-bag">Bag 0</span>',
       '</header></div>',
@@ -100,12 +103,12 @@
     const footer = footerEntry && footerEntry.content || {};
     const brandEntry = section(site, "brand");
     const brand = brandEntry && brandEntry.content || {};
-    const logo = footer.logoUrl || brand.logoUrl || "/media/archive/shopify-import/logos/fandft-clear-background.png";
+    const logo = footer.logoUrl || brand.logoUrl || "";
     const tagline = footer.tagline || brand.tagline || "Time is the real flex.";
     const description = footer.description || brand.footerDescription || "For those who've earned their freedom through hard work, service, and dedication.";
     return [
       '<footer class="tp-footer" data-cms-section="footer">',
-      '<div><img data-cms="logoUrl" src="' + esc(logo) + '" alt="Fuel & Free Time"><strong data-cms="tagline">' + esc(tagline) + '</strong><p data-cms="description">' + esc(description) + '</p></div>',
+      '<div><img data-cms="logoUrl" src="' + esc(logo) + '" alt=""><strong data-cms="tagline">' + esc(tagline) + '</strong><p data-cms="description">' + esc(description) + '</p></div>',
       '<div><strong>Explore</strong><a href="/shop">Shop</a><a href="/community">Community</a><a href="/collaborate">Collaborate</a><a href="/policies">Policies</a><a href="/terms">Terms</a></div>',
       '<div><strong data-cms="newsletterTitle">' + esc(footer.newsletterTitle || "Get Updates") + '</strong><div class="tp-email">Email address <b>→</b></div></div>',
       '</footer>',
@@ -137,7 +140,7 @@
         if (item.imageUrl) media.push(item.imageUrl);
       });
     });
-    if (!media.length) media.push("/assets/presets/fuel-free-time/earned-hours-hero.webp");
+    if (!media.length) media.push(PLACEHOLDER_IMAGE);
     return media;
   }
 
@@ -146,7 +149,7 @@
     return [
       '<section class="iam-layout-full" data-section="media-hero" data-theme="revise" data-variant="revise/sticky-curtain" data-cms-section="' + esc(entry.key) + '">',
       '<div class="iam-media-hero">',
-      '<figure class="iam-media-hero__media"><img data-cms="imageUrl" src="' + esc(data.imageUrl || "/assets/presets/fuel-free-time/earned-hours-hero.webp") + '" alt=""></figure>',
+      '<figure class="iam-media-hero__media"><img data-cms="imageUrl" src="' + esc(data.imageUrl || PLACEHOLDER_IMAGE) + '" alt=""></figure>',
       '<div class="iam-media-hero__scrim"></div>',
       '<div class="iam-media-hero__copy">',
       '<p class="iam-media-hero__eyebrow" data-cms="eyebrow">' + esc(data.eyebrow || "The Earned Hours Collection") + '</p>',
@@ -163,7 +166,7 @@
     const cards = items.map(function (item, index) {
       return [
         '<a class="tp-revise-card" data-cms-block="' + esc(item.id || "card" + index) + '" href="' + esc(item.href || "/shop") + '">',
-        '<img src="' + esc(item.imageUrl || "/assets/presets/fuel-free-time/earned-hours-hero.webp") + '" alt="">',
+        '<img src="' + esc(item.imageUrl || PLACEHOLDER_IMAGE) + '" alt="">',
         '<strong>' + esc(item.name || item.title || "Collection") + '</strong>',
         '</a>',
       ].join("");
@@ -176,9 +179,9 @@
     const preset = data.__editor && data.__editor.themePreset || "";
     const isNewsletter = entry.key === "newsletter" || /newsletter/.test(preset);
     if (isNewsletter) {
-      return '<section class="tp-revise-newsletter" data-theme="revise" data-cms-section="' + esc(entry.key) + '"><p class="tp-kicker">Fuel & Free Time</p><h2>' + esc(data.title || "Stay fueled up") + '</h2><p>' + esc(data.body || "Get first access to drops, event invites, and the stories that matter.") + '</p><div class="tp-email">Email address <b>' + esc(data.buttonLabel || "Join") + ' →</b></div></section>';
+      return '<section class="tp-revise-newsletter" data-theme="revise" data-cms-section="' + esc(entry.key) + '"><p class="tp-kicker">' + esc(data.eyebrow || "") + '</p><h2>' + esc(data.title || "Stay in the loop") + '</h2><p>' + esc(data.body || "Get first access to new arrivals and news.") + '</p><div class="tp-email">Email address <b>' + esc(data.buttonLabel || "Join") + ' →</b></div></section>';
     }
-    return '<section class="tp-revise-section tp-revise-statement" data-theme="revise" data-cms-section="' + esc(entry.key) + '"><p class="tp-kicker">Fuel & Free Time</p><h2>' + esc(data.title || data.headline || "Some chase horsepower. We chase hours.") + '</h2><p>' + esc(data.body || data.subheadline || "") + '</p></section>';
+    return '<section class="tp-revise-section tp-revise-statement" data-theme="revise" data-cms-section="' + esc(entry.key) + '"><p class="tp-kicker">' + esc(data.eyebrow || "") + '</p><h2>' + esc(data.title || data.headline || "Headline") + '</h2><p>' + esc(data.body || data.subheadline || "") + '</p></section>';
   }
 
   function renderRevise(page, site) {
@@ -215,23 +218,23 @@
       return [
         '<section class="fnf-preview-hero" data-section="scene-hero" data-cms-section="' + esc(entry.key) + '">',
         '<div class="scene-hero__inner"><div class="scene-hero__copy">',
-        '<p class="scene-hero__eyebrow" data-cms="eyebrow">' + esc(data.eyebrow || "Fuel & Free Time") + '</p>',
+        '<p class="scene-hero__eyebrow" data-cms="eyebrow">' + esc(data.eyebrow || "") + '</p>',
         '<h1 class="scene-hero__title" data-cms="headline">' + esc(data.headline || data.titleLine1 || "Time is the real horsepower") + '</h1>',
         '<p data-cms="subheadline">' + esc(data.subheadline || data.body || "") + '</p>',
         '<a class="fnf-preview-cta" href="' + esc(data.ctaPrimary && data.ctaPrimary.href || data.ctaHref || "/shop") + '">' + esc(data.ctaPrimary && data.ctaPrimary.label || data.ctaLabel || "Explore") + '</a>',
-        '</div><div class="fnf-preview-hero-media"><img src="' + esc(data.imageUrl || "/assets/presets/fuel-free-time/earned-hours-hero.webp") + '" alt=""></div></div></section>',
+        '</div><div class="fnf-preview-hero-media"><img src="' + esc(data.imageUrl || PLACEHOLDER_IMAGE) + '" alt=""></div></div></section>',
       ].join("");
     }
     if (templateKey === "collections") {
       const cards = blocks(entry).map(function (item) {
-        return '<a class="fnf-preview-card" data-cms-block="' + esc(item.id) + '" href="' + esc(item.href || "/shop") + '"><img src="' + esc(item.imageUrl || "/assets/presets/fuel-free-time/earned-hours-hero.webp") + '" alt=""><strong>' + esc(item.name || item.title || "Collection") + '</strong></a>';
+        return '<a class="fnf-preview-card" data-cms-block="' + esc(item.id) + '" href="' + esc(item.href || "/shop") + '"><img src="' + esc(item.imageUrl || PLACEHOLDER_IMAGE) + '" alt=""><strong>' + esc(item.name || item.title || "Collection") + '</strong></a>';
       }).join("");
       return '<section class="fnf-preview-section" data-cms-section="' + esc(entry.key) + '"><p class="fnf-preview-kicker">Limited drops</p><h2>' + esc(data.title || "Fuel your style") + '</h2><div class="fnf-preview-grid">' + cards + '</div></section>';
     }
     if (templateKey === "newsletter") {
-      return '<section class="fnf-preview-newsletter" data-cms-section="' + esc(entry.key) + '"><p class="fnf-preview-kicker">Stay connected</p><h2>' + esc(data.title || "Stay fueled up") + '</h2><p>' + esc(data.body || "") + '</p><div class="tp-email">Enter your email <b>' + esc(data.buttonLabel || "Join") + ' →</b></div></section>';
+      return '<section class="fnf-preview-newsletter" data-cms-section="' + esc(entry.key) + '"><p class="fnf-preview-kicker">Stay connected</p><h2>' + esc(data.title || "Stay in the loop") + '</h2><p>' + esc(data.body || "") + '</p><div class="tp-email">Enter your email <b>' + esc(data.buttonLabel || "Join") + ' →</b></div></section>';
     }
-    return '<section class="fnf-preview-split" data-cms-section="' + esc(entry.key) + '"><div><p class="fnf-preview-kicker">The earned hours</p><h2>' + esc(data.title || data.headline || "Some chase horsepower. We chase hours.") + '</h2><p>' + esc(data.body || data.subheadline || "") + '</p></div><img src="' + esc(data.imageUrl || "/assets/presets/fuel-free-time/masters.webp") + '" alt=""></section>';
+    return '<section class="fnf-preview-split" data-cms-section="' + esc(entry.key) + '"><div><p class="fnf-preview-kicker">' + esc(data.eyebrow || "") + '</p><h2>' + esc(data.title || data.headline || "Headline") + '</h2><p>' + esc(data.body || data.subheadline || "") + '</p></div><img src="' + esc(data.imageUrl || PLACEHOLDER_IMAGE) + '" alt=""></section>';
   }
 
   function renderFnf(page, site) {

@@ -1,41 +1,5 @@
-const DEFAULT_MAILBOXES = [
-  {
-    id: "mb_sam",
-    address: "sam@fuelnfreetime.com",
-    label: "Sam",
-    kind: "personal",
-    owner_name: "Sam Primeaux",
-    owner_auth_email: "info@inneranimals.com",
-    owner_user_id: null,
-    resend_from_name: "Sam Primeaux",
-    access_json: "{}",
-    sort_order: 10,
-  },
-  {
-    id: "mb_connor",
-    address: "connor@fuelnfreetime.com",
-    label: "Connor",
-    kind: "personal",
-    owner_name: "Connor McNeely",
-    owner_auth_email: "connordmcneely@leadershiplegacydigital.com",
-    owner_user_id: null,
-    resend_from_name: "Connor McNeely",
-    access_json: "{}",
-    sort_order: 20,
-  },
-  {
-    id: "mb_payments",
-    address: "payments@fuelnfreetime.com",
-    label: "Payments",
-    kind: "payments",
-    owner_name: "Fuel & Free Time",
-    owner_auth_email: null,
-    owner_user_id: null,
-    resend_from_name: "Fuel & Free Time Payments",
-    access_json: '{"roles":["owner"],"emails":["info@inneranimals.com"]}',
-    sort_order: 30,
-  },
-];
+/** Mailboxes are install data (the mail_mailboxes table), never source code. */
+const DEFAULT_MAILBOXES = [];
 
 function parseAccess(box) {
   try {

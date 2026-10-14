@@ -3,5 +3,5 @@ UPDATE agentsam_prompt_cache
 SET status = 'invalidated',
     invalidation_reason = 'skills_sync',
     updated_at = datetime('now')
-WHERE account_id = 'ede6590ac0d2fb7daf155b35653457b2'
+WHERE account_id = (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1)
   AND status = 'active';

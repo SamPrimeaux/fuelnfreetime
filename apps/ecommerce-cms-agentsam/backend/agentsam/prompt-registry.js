@@ -2,7 +2,7 @@
  * AgentSam prompt registry — templates, fragments, and prompt pack assembly.
  */
 
-import { FNF_ACCOUNT_ID } from "./constants.js";
+import { requireApplicationAccountId } from "../lib/account-context.js";
 import { estimateTokens } from "./analytics.js";
 
 const PREVIEW_MAX = 480;
@@ -83,7 +83,7 @@ export async function loadPromptTemplate(env, options = {}) {
        WHERE account_id = ? AND prompt_key = ? AND status = 'active'
        ORDER BY version DESC LIMIT 1`
     )
-      .bind(FNF_ACCOUNT_ID, prompt_key)
+      .bind(requireApplicationAccountId(), prompt_key)
       .first();
   }
 
@@ -102,7 +102,7 @@ export async function loadPromptTemplate(env, options = {}) {
        version DESC`
   )
     .bind(
-      FNF_ACCOUNT_ID,
+      requireApplicationAccountId(),
       workflow_key || "",
       route_lane || "",
       task_type || "",
@@ -120,7 +120,7 @@ export async function loadPromptTemplate(env, options = {}) {
        WHERE account_id = ? AND prompt_key = 'fnf_agentsam_base_system' AND status = 'active'
        ORDER BY version DESC LIMIT 1`
     )
-      .bind(FNF_ACCOUNT_ID)
+      .bind(requireApplicationAccountId())
       .first();
   }
 
@@ -141,7 +141,7 @@ export async function loadPromptFragments(env, options = {}) {
      WHERE account_id = ? AND status = 'active'
      ORDER BY priority ASC, fragment_key ASC`
   )
-    .bind(FNF_ACCOUNT_ID)
+    .bind(requireApplicationAccountId())
     .all();
 
   const seen = new Set();
@@ -239,7 +239,7 @@ export async function listPromptTemplates(env) {
     `SELECT prompt_key, prompt_type, workflow_key, route_lane, task_type, status, version, priority, estimated_tokens
      FROM agentsam_prompts WHERE account_id = ? ORDER BY prompt_type, priority`
   )
-    .bind(FNF_ACCOUNT_ID)
+    .bind(requireApplicationAccountId())
     .all();
   return results || [];
 }
@@ -250,7 +250,7 @@ export async function listPromptFragments(env) {
     `SELECT fragment_key, fragment_type, priority, status, estimated_tokens, version
      FROM agentsam_prompt_fragments WHERE account_id = ? ORDER BY priority`
   )
-    .bind(FNF_ACCOUNT_ID)
+    .bind(requireApplicationAccountId())
     .all();
   return results || [];
 }
@@ -262,6 +262,6 @@ export async function invalidatePromptRegistryCaches(env, reason = "registry_cha
     `UPDATE agentsam_prompt_cache SET status = 'invalidated', invalidation_reason = ?, updated_at = datetime('now')
      WHERE account_id = ? AND status = 'active'`
   )
-    .bind(reason, FNF_ACCOUNT_ID)
+    .bind(reason, requireApplicationAccountId())
     .run();
 }

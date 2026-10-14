@@ -9,13 +9,13 @@ INSERT INTO agentsam_ai (
   cost_tier, workflow_keys_json, routing_keywords_json, capabilities_json,
   request_defaults_json, notes
 ) VALUES
-  ('fnf_openai_luna_chat','ede6590ac0d2fb7daf155b35653457b2','openai',
+  ('fnf_openai_luna_chat',(SELECT id FROM accounts ORDER BY created_at, id LIMIT 1),'openai',
    'gpt-6-luna','OpenAI GPT-6 Luna (FNF fallback)',
    'FNF-owned OPENAI_API_KEY via Responses API, following Workers AI.',
    'text_generation','general','active',40,0,1,
    1,0,0,0,'low','[]','[]','[]','{"max_output_tokens":1024}',
    'FNF project-configured alternative; no shared provider key.'),
-  ('fnf_openai_luna_code','ede6590ac0d2fb7daf155b35653457b2','openai',
+  ('fnf_openai_luna_code',(SELECT id FROM accounts ORDER BY created_at, id LIMIT 1),'openai',
    'gpt-6-luna','OpenAI GPT-6 Luna (code review fallback)',
    'FNF-owned OPENAI_API_KEY via Responses API, for code/section guidance.',
    'code_generation','code','active',40,0,1,

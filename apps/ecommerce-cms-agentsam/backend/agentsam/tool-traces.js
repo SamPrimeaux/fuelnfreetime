@@ -2,7 +2,7 @@
  * Tool call traces for AgentSam chat UI (safe previews only).
  */
 
-import { FNF_ACCOUNT_ID } from "./constants.js";
+import { requireApplicationAccountId } from "../lib/account-context.js";
 import { IAM_LOGO } from "./quick-actions.js";
 
 const PREVIEW_MAX = 400;
@@ -113,7 +113,7 @@ export async function getToolCallById(env, id) {
   const row = await env.DB.prepare(
     `SELECT * FROM agentsam_tool_call_log WHERE id = ? AND account_id = ? LIMIT 1`
   )
-    .bind(id, FNF_ACCOUNT_ID)
+    .bind(id, requireApplicationAccountId())
     .first();
   if (!row) return null;
 

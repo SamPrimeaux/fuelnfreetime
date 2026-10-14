@@ -3,9 +3,9 @@
 
 -- ── MCP servers ───────────────────────────────────────────────────────────────
 
-INSERT INTO agentsam_mcp_servers (id, account_id, server_key, display_name, description, url, auth_type, token_secret, transport, tool_lanes_json, repos_json, is_active, health_status, metadata_json, created_at, updated_at) VALUES('mcps_fnf_iam', 'ede6590ac0d2fb7daf155b35653457b2', 'inneranimalmedia-mcp-server', 'Inner Animal MCP', 'Platform bridge for D1, Workers, GitHub catalog, and cross-project dispatch.', 'https://mcp.inneranimalmedia.com/mcp', 'bridge', 'AGENTSAM_BRIDGE_KEY', 'remote_jsonrpc', '["database","terminal","repo","memory","github","deploy"]', '[]', 1, 'unknown', '{"connect_path":"/api/admin/agentsam/mcp/status"}', unixepoch(), unixepoch()),
-('mcps_fnf_github', 'ede6590ac0d2fb7daf155b35653457b2', 'github', 'GitHub', 'Repo context for SamPrimeaux/fuelnfreetime via IAM MCP bridge or direct token.', 'https://mcp.inneranimalmedia.com/mcp', 'oauth_via_iam', 'AGENTSAM_BRIDGE_KEY', 'iam_mcp_catalog', '["repo","code"]', '["SamPrimeaux/fuelnfreetime"]', 1, 'unknown', '{"repo":"SamPrimeaux/fuelnfreetime","oauth_path":"/api/admin/agentsam/github/start"}', unixepoch(), unixepoch()),
-('mcps_fnf_cf_docs', 'ede6590ac0d2fb7daf155b35653457b2', 'cloudflare-docs', 'Cloudflare Docs MCP', 'Search current Cloudflare product documentation via remote MCP.', 'https://docs.mcp.cloudflare.com/mcp', 'none', NULL, 'remote_jsonrpc', '["docs","research"]', '[]', 0, 'unknown', '{"status":"planned"}', unixepoch(), unixepoch())
+INSERT INTO agentsam_mcp_servers (id, account_id, server_key, display_name, description, url, auth_type, token_secret, transport, tool_lanes_json, repos_json, is_active, health_status, metadata_json, created_at, updated_at) VALUES('mcps_fnf_iam', (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1), 'inneranimalmedia-mcp-server', 'Inner Animal MCP', 'Platform bridge for D1, Workers, GitHub catalog, and cross-project dispatch.', 'https://mcp.inneranimalmedia.com/mcp', 'bridge', 'AGENTSAM_BRIDGE_KEY', 'remote_jsonrpc', '["database","terminal","repo","memory","github","deploy"]', '[]', 1, 'unknown', '{"connect_path":"/api/admin/agentsam/mcp/status"}', unixepoch(), unixepoch()),
+('mcps_fnf_github', (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1), 'github', 'GitHub', 'Repo context for SamPrimeaux/fuelnfreetime via IAM MCP bridge or direct token.', 'https://mcp.inneranimalmedia.com/mcp', 'oauth_via_iam', 'AGENTSAM_BRIDGE_KEY', 'iam_mcp_catalog', '["repo","code"]', '["SamPrimeaux/fuelnfreetime"]', 1, 'unknown', '{"repo":"SamPrimeaux/fuelnfreetime","oauth_path":"/api/admin/agentsam/github/start"}', unixepoch(), unixepoch()),
+('mcps_fnf_cf_docs', (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1), 'cloudflare-docs', 'Cloudflare Docs MCP', 'Search current Cloudflare product documentation via remote MCP.', 'https://docs.mcp.cloudflare.com/mcp', 'none', NULL, 'remote_jsonrpc', '["docs","research"]', '[]', 0, 'unknown', '{"status":"planned"}', unixepoch(), unixepoch())
 ON CONFLICT(server_key) DO UPDATE SET
   display_name = excluded.display_name,
   description = excluded.description,
@@ -32,7 +32,7 @@ INSERT INTO agentsam_tools (
 -- GitHub / repo (bridge)
 (
   'ast_fnf_github_repo_list',
-  'ede6590ac0d2fb7daf155b35653457b2',
+  (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1),
   'agentsam_github_repo_list', 'agentsam_github_repo_list', 'GitHub Repo List',
   'github.repo', 'mcp',
   'List GitHub repos accessible to the authenticated user. Scoped to SamPrimeaux/fuelnfreetime for AgentSam.',
@@ -48,7 +48,7 @@ INSERT INTO agentsam_tools (
 -- Store / commerce
 (
   'ast_fnf_orders_list',
-  'ede6590ac0d2fb7daf155b35653457b2',
+  (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1),
   'fnf_store_orders_list', 'fnf_store_orders_list', 'List Store Orders',
   'commerce.orders', 'd1',
   'Read recent Fuel n Freetime orders from D1. Read-only; no secrets returned.',
@@ -62,7 +62,7 @@ INSERT INTO agentsam_tools (
 ),
 (
   'ast_fnf_products_list',
-  'ede6590ac0d2fb7daf155b35653457b2',
+  (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1),
   'fnf_store_products_list', 'fnf_store_products_list', 'List Products',
   'commerce.products', 'd1',
   'List active products and variant inventory from D1.',
@@ -78,7 +78,7 @@ INSERT INTO agentsam_tools (
 -- CMS
 (
   'ast_fnf_cms_pages',
-  'ede6590ac0d2fb7daf155b35653457b2',
+  (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1),
   'fnf_cms_pages_list', 'fnf_cms_pages_list', 'List CMS Pages',
   'cms.pages', 'd1',
   'List CMS pages and publish status from D1.',
@@ -94,7 +94,7 @@ INSERT INTO agentsam_tools (
 -- Platform / Cloudflare
 (
   'ast_fnf_d1_query',
-  'ede6590ac0d2fb7daf155b35653457b2',
+  (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1),
   'agentsam_d1_query', 'agentsam_d1_query', 'D1 Read Query',
   'database.d1', 'd1',
   'Read-only SELECT against the app database. One statement, row-capped; any write or admin SQL is rejected.',
@@ -108,7 +108,7 @@ INSERT INTO agentsam_tools (
 ),
 (
   'ast_agentsam_d1_write',
-  'ede6590ac0d2fb7daf155b35653457b2',
+  (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1),
   'agentsam_d1_write', 'agentsam_d1_write', 'D1 Write',
   'database.d1', 'd1',
   'Insert, update or replace rows in the app database. Two steps: the first call returns a preview and a confirm code and changes nothing. Show the preview to the owner and, only after they agree, call again with the same sql and params plus confirm. One statement; UPDATE needs a WHERE clause; credential, account, provider and agent-config tables are protected.',
@@ -122,7 +122,7 @@ INSERT INTO agentsam_tools (
 ),
 (
   'ast_agentsam_d1_delete',
-  'ede6590ac0d2fb7daf155b35653457b2',
+  (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1),
   'agentsam_d1_delete', 'agentsam_d1_delete', 'D1 Delete',
   'database.d1', 'd1',
   'Delete rows from the app database. Two steps: the first call returns a preview with the exact row count and a confirm code and changes nothing. Show the preview to the owner and, only after they agree, call again with the same sql and params plus confirm. One DELETE statement with a WHERE clause; credential, account, provider and agent-config tables are protected.',
@@ -136,7 +136,7 @@ INSERT INTO agentsam_tools (
 ),
 (
   'ast_fnf_r2_list',
-  'ede6590ac0d2fb7daf155b35653457b2',
+  (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1),
   'fnf_r2_media_list', 'fnf_r2_media_list', 'R2 Media List',
   'storage.r2', 'cf',
   'List media assets registered in D1 media library (R2-backed).',
@@ -150,7 +150,7 @@ INSERT INTO agentsam_tools (
 ),
 (
   'ast_fnf_worker_deploy',
-  'ede6590ac0d2fb7daf155b35653457b2',
+  (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1),
   'fnf_worker_deploy', 'fnf_worker_deploy', 'Deploy Worker',
   'deployment.worker.deploy', 'deploy',
   'Deploy fuelnfreetime Worker via configured deploy command. Requires approval.',
@@ -166,7 +166,7 @@ INSERT INTO agentsam_tools (
 -- AgentSam introspection
 (
   'ast_fnf_ai_models',
-  'ede6590ac0d2fb7daf155b35653457b2',
+  (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1),
   'fnf_agentsam_ai_models', 'fnf_agentsam_ai_models', 'AI Model Registry',
   'agentsam.models', 'd1',
   'List curated Workers AI models from agentsam_ai registry.',
@@ -180,7 +180,7 @@ INSERT INTO agentsam_tools (
 ),
 (
   'ast_fnf_analytics_summary',
-  'ede6590ac0d2fb7daf155b35653457b2',
+  (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1),
   'fnf_analytics_summary', 'fnf_analytics_summary', 'AgentSam Analytics Summary',
   'agentsam.analytics', 'http',
   'Summarize AgentSam usage, fallbacks, and cost from agentsam_analytics.',
@@ -194,7 +194,7 @@ INSERT INTO agentsam_tools (
 ),
 (
   'ast_fnf_mcp_status',
-  'ede6590ac0d2fb7daf155b35653457b2',
+  (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1),
   'agentsam_ping', 'agentsam_ping', 'Ping',
   'platform.health', 'd1',
   'Liveness check: confirms the app is running, its database is bound, and the bridge secret is configured. No side effects.',
@@ -210,7 +210,7 @@ INSERT INTO agentsam_tools (
 -- Cloudflare docs (planned remote MCP)
 (
   'ast_fnf_cf_docs_search',
-  'ede6590ac0d2fb7daf155b35653457b2',
+  (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1),
   'search_cloudflare_documentation', 'search_cloudflare_documentation', 'Search Cloudflare Docs',
   'cloudflare.docs', 'mcp',
   'Search current Cloudflare documentation via docs MCP server.',
@@ -258,20 +258,20 @@ UPDATE agentsam_capabilities SET description = 'Read-only SELECT against the app
 -- ── Policy keys ───────────────────────────────────────────────────────────────
 
 INSERT INTO agentsam_tool_policy_keys (id, account_id, policy_kind, tool_key, sort_order, notes)
-VALUES('atpk_fnf_chat_github', 'ede6590ac0d2fb7daf155b35653457b2', 'agent_chat_essential', 'agentsam_github_repo_list', 10, 'Repo context'),
-  ('atpk_fnf_chat_orders', 'ede6590ac0d2fb7daf155b35653457b2', 'agent_chat_essential', 'fnf_store_orders_list', 20, 'Store ops'),
-  ('atpk_fnf_chat_products', 'ede6590ac0d2fb7daf155b35653457b2', 'agent_chat_essential', 'fnf_store_products_list', 21, 'Inventory'),
-  ('atpk_fnf_chat_cms', 'ede6590ac0d2fb7daf155b35653457b2', 'agent_chat_essential', 'fnf_cms_pages_list', 30, 'CMS'),
-  ('atpk_fnf_chat_d1', 'ede6590ac0d2fb7daf155b35653457b2', 'agent_chat_essential', 'agentsam_d1_query', 15, 'Read-only SQL'),
-  ('atpk_fnf_chat_models', 'ede6590ac0d2fb7daf155b35653457b2', 'agent_chat_essential', 'fnf_agentsam_ai_models', 12, 'Model registry'),
-  ('atpk_fnf_safe_analytics', 'ede6590ac0d2fb7daf155b35653457b2', 'builtin_safe_allowlist', 'fnf_analytics_summary', 10, 'Usage summary'),
-  ('atpk_fnf_safe_mcp', 'ede6590ac0d2fb7daf155b35653457b2', 'builtin_safe_allowlist', 'agentsam_ping', 11, 'Liveness probe'),
-  ('atpk_fnf_nc_deploy', 'ede6590ac0d2fb7daf155b35653457b2', 'non_cacheable', 'fnf_worker_deploy', 10, 'Deploy'),
-  ('atpk_fnf_nc_d1', 'ede6590ac0d2fb7daf155b35653457b2', 'non_cacheable', 'agentsam_d1_query', 20, 'Fresh SQL reads'),
-  ('atpk_agentsam_d1_write_chat', 'ede6590ac0d2fb7daf155b35653457b2', 'agent_chat_essential', 'agentsam_d1_write', 16, 'Confirmed writes'),
-  ('atpk_agentsam_d1_delete_chat', 'ede6590ac0d2fb7daf155b35653457b2', 'agent_chat_essential', 'agentsam_d1_delete', 17, 'Confirmed deletes'),
-  ('atpk_agentsam_d1_write_nc', 'ede6590ac0d2fb7daf155b35653457b2', 'non_cacheable', 'agentsam_d1_write', 21, 'Confirmed writes'),
-  ('atpk_agentsam_d1_delete_nc', 'ede6590ac0d2fb7daf155b35653457b2', 'non_cacheable', 'agentsam_d1_delete', 22, 'Confirmed deletes')
+VALUES('atpk_fnf_chat_github', (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1), 'agent_chat_essential', 'agentsam_github_repo_list', 10, 'Repo context'),
+  ('atpk_fnf_chat_orders', (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1), 'agent_chat_essential', 'fnf_store_orders_list', 20, 'Store ops'),
+  ('atpk_fnf_chat_products', (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1), 'agent_chat_essential', 'fnf_store_products_list', 21, 'Inventory'),
+  ('atpk_fnf_chat_cms', (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1), 'agent_chat_essential', 'fnf_cms_pages_list', 30, 'CMS'),
+  ('atpk_fnf_chat_d1', (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1), 'agent_chat_essential', 'agentsam_d1_query', 15, 'Read-only SQL'),
+  ('atpk_fnf_chat_models', (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1), 'agent_chat_essential', 'fnf_agentsam_ai_models', 12, 'Model registry'),
+  ('atpk_fnf_safe_analytics', (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1), 'builtin_safe_allowlist', 'fnf_analytics_summary', 10, 'Usage summary'),
+  ('atpk_fnf_safe_mcp', (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1), 'builtin_safe_allowlist', 'agentsam_ping', 11, 'Liveness probe'),
+  ('atpk_fnf_nc_deploy', (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1), 'non_cacheable', 'fnf_worker_deploy', 10, 'Deploy'),
+  ('atpk_fnf_nc_d1', (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1), 'non_cacheable', 'agentsam_d1_query', 20, 'Fresh SQL reads'),
+  ('atpk_agentsam_d1_write_chat', (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1), 'agent_chat_essential', 'agentsam_d1_write', 16, 'Confirmed writes'),
+  ('atpk_agentsam_d1_delete_chat', (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1), 'agent_chat_essential', 'agentsam_d1_delete', 17, 'Confirmed deletes'),
+  ('atpk_agentsam_d1_write_nc', (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1), 'non_cacheable', 'agentsam_d1_write', 21, 'Confirmed writes'),
+  ('atpk_agentsam_d1_delete_nc', (SELECT id FROM accounts ORDER BY created_at, id LIMIT 1), 'non_cacheable', 'agentsam_d1_delete', 22, 'Confirmed deletes')
 ON CONFLICT(account_id, policy_kind, tool_key) DO UPDATE SET
   sort_order = excluded.sort_order,
   notes = excluded.notes,
