@@ -83,24 +83,33 @@ export async function holdInventory(
   lineItems,
   ttlMinutes = DEFAULT_TTL_MINUTES,
 ) {
+  // Aggregate duplicate cart lines before checking stock.
+  const totals = new Map();
   for (const item of lineItems) {
-    const available = await availableQty(env, item.variant_id);
-    if (available < item.qty) {
-      throw new Error(
-        `Insufficient inventory for variant ${item.variant_id}: requested ${item.qty}, available ${available}`,
-      );
+    const qty = Number(item.qty);
+    if (!Number.isInteger(qty) || qty < 1) throw new Error("Invalid reservation quantity");
+    totals.set(item.variant_id, (totals.get(item.variant_id) || 0) + qty);
+  }
+  const stockItems = [];
+  for (const [variantId, qty] of totals) {
+    const availability = await getVariantAvailability(env, variantId);
+    if (!availability.available ||
+        (availability.fulfillment === "stock" && availability.available_qty < qty)) {
+      throw new Error(`Insufficient inventory for variant ${variantId}: requested ${qty}`);
     }
+    // Supplier-fulfilled lines are not local stock and must not be reserved.
+    if (availability.fulfillment === "stock") stockItems.push({ variant_id: variantId, qty });
   }
 
-  // All items pass — insert one held row per item in a single atomic batch.
-  const statements = lineItems.map((item) =>
+  // Hold only stock-managed items. An all-supplier order needs no D1 stock rows.
+  const statements = stockItems.map((item) =>
     env.DB.prepare(
       `INSERT INTO inventory_reservations (order_id, variant_id, qty, status, expires_at)
        VALUES (?, ?, ?, 'held', datetime('now', '+' || ? || ' minutes'))`,
     ).bind(orderId, item.variant_id, item.qty, ttlMinutes),
   );
 
-  await env.DB.batch(statements);
+  if (statements.length) await env.DB.batch(statements);
 }
 
 // (3) Commit an order's held reservations: decrement stock (guarded) and flip
