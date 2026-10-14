@@ -2015,40 +2015,6 @@ export const PAGE_REGISTRY = {
   },
 };
 
-// These brand-specific examples become ordinary draft CMS pages (not a second
-// page database). They use the exact renderer, editor fields and R2 section
-// persistence shared by authored sections. Their titles and copy can be edited.
-for (const page of fnfEditorialPages.pages) {
-  if (PAGE_REGISTRY[page.slug]) throw new Error("Duplicate editorial page: " + page.slug);
-  const portable = globalThis.ThemePortableSections;
-  PAGE_REGISTRY[page.slug] = {
-    title: page.title,
-    defaultStatus: "draft",
-    sections: Object.fromEntries(page.sections.map((section, index) => {
-      const definition = portable.get(section.preset);
-      const schema = portable.schema(section.preset);
-      const defaults = portable.defaults(section.preset);
-      if (!definition || !schema || !defaults)
-        throw new Error("Missing editorial preset: " + section.preset);
-      const content = {
-        ...structuredClone(defaults),
-        ...structuredClone(section.content),
-        __editor: structuredClone(defaults.__editor),
-      };
-      const check = portable.validate(section.preset, content);
-      if (!check.ok) throw new Error("Invalid editorial seed " + section.key + ": " + check.error);
-      return [section.key, {
-        label: definition.label,
-        sortOrder: index * 10,
-        fields: schema.fields,
-        blocks: schema.blocks,
-        capabilities: schema.capabilities,
-        defaultContent: content,
-      }];
-    })),
-  };
-}
-
 // Revise pages are native CMS documents, not generated HTML or a parallel store.
 // Use the same portable preset schemas the renderer and editor already share.
 // Do not override legacy Home/Shop or promote any draft to published.
