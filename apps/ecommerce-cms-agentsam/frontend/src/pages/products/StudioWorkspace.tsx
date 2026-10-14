@@ -103,6 +103,7 @@ function removeConnectedFlatBackground(
 
 type StudioDraft = {
   id: string;
+  completeful_catalog_product_id: string;
   product_id: number;
   state: "draft" | "prepared" | "rendering" | "rendered" | "created" | "published" | "error";
   selected_variant_ids: string[];
@@ -164,7 +165,7 @@ export default function StudioWorkspace({
   const [preparedFor, setPreparedFor] = useState<string | null>(null);
   const [previewAsset, setPreviewAsset] = useState<MediaAsset | null>(null);
   const [draft, setDraft] = useState<StudioDraft | null>(null);
-  const [restoringDraft, setRestoringDraft] = useState(true);
+  const [restoringDraft, setRestoringDraft] = useState(Boolean(resumeDraftId));
   const [title, setTitle] = useState(detail.product.default_title || detail.product.name);
   const [providerRenderUrl, setProviderRenderUrl] = useState<string | null>(null);
   const [trimTransparent, setTrimTransparent] = useState(false);
@@ -368,15 +369,19 @@ export default function StudioWorkspace({
       }
     : { aspectRatio: ratio };
   useEffect(() => {
+    // Starting from the supplier catalog is a NEW design, not a request to
+    // overwrite the most recently saved draft for this garment. Only the
+    // explicit Edit design deep link is permitted to restore persisted art.
+    if (!resumeDraftId) { setRestoringDraft(false); return; }
     const controller = new AbortController();
     queueMicrotask(() => { if (!controller.signal.aborted) { setBusy("restore"); setRestoringDraft(true); } });
     adminFetch<{ draft: StudioDraft | null }>(
-      `/api/admin/product-studio/drafts?catalog_product_id=${encodeURIComponent(catalogId)}`,
+      `/api/admin/product-studio/drafts/${encodeURIComponent(resumeDraftId)}`,
       { signal: controller.signal },
     )
       .then(async ({ draft: saved }) => {
         if (controller.signal.aborted) return;
-        if (resumeDraftId && saved?.id !== resumeDraftId) {
+        if (saved?.id !== resumeDraftId || saved?.completeful_catalog_product_id !== catalogId) {
           setError("Saved design could not be matched to this product. The design was not reset.");
           return;
         }
@@ -716,6 +721,7 @@ export default function StudioWorkspace({
         body: JSON.stringify({
           id: draft?.id,
           product_id: draft?.product_id,
+          force_new: !draft && !resumeDraftId,
           catalog_product_id: catalogId,
           selected_variant_ids: [variantId],
           print_location_ids: [locationId],

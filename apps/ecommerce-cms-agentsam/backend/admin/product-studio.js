@@ -287,10 +287,23 @@ async function saveDraft(request, env) {
     return json({ ok: false, error: error.message }, { status: error.status || 400 });
   }
 
-  let draft = body.id ? await loadDraft(env, String(body.id)) : await loadResumeDraft(env, selection.resolvedProductId);
+  // "Start designing" creates an independent design; "Edit design" updates
+  // the explicit draft ID only. Never silently reuse another color's draft.
+  if (body.force_new && (body.id || body.product_id)) {
+    return json({ ok: false, error: "A new design cannot reuse an existing draft or product ID" }, { status: 400 });
+  }
+  let draft = body.force_new ? null
+    : body.id ? await loadDraft(env, String(body.id))
+    : await loadResumeDraft(env, selection.resolvedProductId);
+  if (body.id && !draft) {
+    return json({ ok: false, error: "The requested design draft was not found" }, { status: 404 });
+  }
+  if (draft && draft.completeful_catalog_product_id !== selection.resolvedProductId) {
+    return json({ ok: false, error: "This design belongs to a different catalog garment" }, { status: 409 });
+  }
   const product = draft
     ? await env.DB.prepare(`SELECT * FROM products WHERE id = ?`).bind(draft.product_id).first()
-    : await ensureDraftProduct(env, body, selection.product);
+    : await ensureDraftProduct(env, body.force_new ? { ...body, product_id: null } : body, selection.product);
   if (!product) return json({ ok: false, error: "Draft product could not be resolved" }, { status: 500 });
 
   // Explicit null clears a stale placement/derivative; omitted fields retain the draft.
