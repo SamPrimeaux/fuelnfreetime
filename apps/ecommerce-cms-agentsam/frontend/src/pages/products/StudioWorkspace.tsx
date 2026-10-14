@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { createMiniAgentSam } from "../../../../packages/agentsam-workbench/src/mini-agentsam.js";
 import { selectStudioSideImage } from "./studio-side-image";
 import { blankGarmentImageSources } from "./studio-blank-image";
+import { updateSellingVariants, toggleSellingGroup } from "./studio-selling-variants";
 import { adminFetch, adminFormFetch } from "../../lib/api";
 import { evaluateManufacturingCompatibility } from "../../../../packages/agentsam-merch/src/index.js";
 import { studioArtworkQuality, type ArtworkCrop } from "./studio-artwork-quality";
@@ -215,6 +216,7 @@ export default function StudioWorkspace({
   const miniRef = useRef<ReturnType<typeof createMiniAgentSam> | null>(null);
   const miniSendRef = useRef<(message: string, signal: AbortSignal, resource: unknown) => Promise<{ reply: string }>>(async () => ({ reply: "" }));
   const miniTriggerRef = useRef<HTMLButtonElement>(null);
+  const variantDialogRef = useRef<HTMLElement>(null);
   const dragRef = useRef<{ mode: "move" | "resize"; corner: "tl" | "tr" | "bl" | "br"; startX: number; startY: number; x: number; y: number; scale: number } | null>(null);
   const [reply, setReply] = useState("");
   const [conversationId, setConversationId] = useState<string>();
@@ -356,32 +358,47 @@ export default function StudioWorkspace({
   const selectedVariantSet = new Set(selectedVariantIds);
   const catalogVariantIds = detail.variants.map(catalogVariantId).filter(Boolean);
   function updateSelectedVariants(ids: string[], include: boolean) {
-    setSelectedVariantIds((current) => {
-      const next = new Set(current);
-      for (const id of ids) {
-        if (include) next.add(id);
-        else next.delete(id);
-      }
-      // Deterministic supplier ordering; reject unknown IDs from UI state.
-      return catalogVariantIds.filter((id) => next.has(id));
-    });
+    setSelectedVariantIds((current) => updateSellingVariants(catalogVariantIds, current, ids, include));
   }
   function toggleSellingAxis(axis: string, value: string) {
     const ids = detail.variants.filter((candidate) =>
       variantAttributes(candidate)[axis] === value).map(catalogVariantId).filter(Boolean);
-    const include = !ids.every((id) => selectedVariantSet.has(id));
-    updateSelectedVariants(ids, include);
+    setSelectedVariantIds((current) => toggleSellingGroup(catalogVariantIds, current, ids));
   }
   function toggleSellingVariant(id: string, included: boolean) {
     updateSelectedVariants([id], included);
   }
   useEffect(() => {
     if (!manageVariants) return;
-    const onEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setManageVariants(false);
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const dialog = variantDialogRef.current;
+    const focusable = () => Array.from(dialog?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex="0"]',
+    ) || []);
+    focusable()[0]?.focus();
+    const onKeydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setManageVariants(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
-    window.addEventListener("keydown", onEscape);
-    return () => window.removeEventListener("keydown", onEscape);
+    window.addEventListener("keydown", onKeydown);
+    return () => {
+      window.removeEventListener("keydown", onKeydown);
+      previousFocus?.focus();
+    };
   }, [manageVariants]);
   const printPixels = printPixelSize(location);
   const ratio =
@@ -1205,7 +1222,7 @@ export default function StudioWorkspace({
                 <div className="ps-variant-overlay" onMouseDown={(event) => {
                   if (event.currentTarget === event.target) setManageVariants(false);
                 }}>
-                  <section className="ps-variant-dialog" role="dialog" aria-modal="true"
+                  <section className="ps-variant-dialog" ref={variantDialogRef} role="dialog" aria-modal="true"
                     aria-labelledby="ps-variant-dialog-title">
                     <header className="ps-variant-dialog-heading">
                       <div>
