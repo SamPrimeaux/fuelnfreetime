@@ -2044,3 +2044,41 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
     width: 36px; height: 36px; min-width: 36px; flex-basis: 36px;
   }
 }
+
+/* Trustworthy garment previews: never impersonate an absent provider back image. */
+.product-studio-shell .ps-unverified-garment {
+  position: absolute; inset: 0; display: grid; align-content: start; gap: 8px;
+  padding: clamp(12px, 4%, 30px); background: #f7f5fa;
+  color: var(--ps-ink); text-align: left; pointer-events: none;
+}
+.product-studio-shell .ps-unverified-garment strong { font-size: 13px; }
+.product-studio-shell .ps-unverified-garment span {
+  max-width: 34ch; font-size: 11px; line-height: 1.5; color: var(--ps-muted);
+}
+.product-studio-shell .ps-mini-unverified {
+  display: grid; place-items: center; width: 100%; height: 100%;
+  padding: 12px; color: var(--ps-muted); font-size: 11px; line-height: 1.45;
+  text-align: center; background: #f7f5fa;
+}
+.product-studio-shell .ps-restore-notice {
+  margin: 0; padding: 9px 28px; background: #f6f1ff; color: var(--ps-ink);
+  font-size: 12px; border-bottom: 1px solid var(--ps-line);
+}
+.product-studio-shell .ps-workspace-header { flex-wrap: wrap; row-gap: 6px; }
+.product-studio-shell .ps-header-artwork-tools {
+  display: flex; flex: 1 0 100%; justify-content: flex-end; min-width: 0;
+}
+.product-studio-shell .ps-header-artwork-tools .ps-artwork-toolbar {
+  margin: 0; box-shadow: none; padding: 3px 4px; gap: 3px;
+}
+.product-studio-shell .ps-header-artwork-tools:empty { display: none; }
+.product-studio-shell .ps-header-artwork-tools .ps-artwork-toolbar button { min-height: 30px; }
+.product-studio-shell .ps-selection-handle--tr,
+.product-studio-shell .ps-selection-handle--bl { cursor: nesw-resize; }
+@media (max-width: 760px) {
+  .product-studio-shell .ps-header-artwork-tools { justify-content: flex-start; }
+  .product-studio-shell .ps-header-artwork-tools .ps-artwork-toolbar {
+    margin: 0; flex-wrap: nowrap; max-width: 100%; overflow-x: auto;
+  }
+  .product-studio-shell .ps-restore-notice { padding: 8px 12px; }
+}
