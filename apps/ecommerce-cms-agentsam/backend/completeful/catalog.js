@@ -590,21 +590,6 @@ export async function syncCompletefulCatalog(env, options = {}) {
   }
 }
 
-export async function syncCompletefulCatalogOnSchedule(env) {
-  if (!env.CAPP_KEY || !env.WEBSITE_ASSETS) return { ok: true, skipped: "not_configured" };
-  const state = await getCompletefulSyncState(env);
-  const status = state?.status || "never";
-  const date = state?.updated_at ? Date.parse(state.updated_at.replace(" ", "T") + "Z") : 0;
-  const ageMs = Date.now() - date;
-  if (status === "complete" && ageMs < 24 * 3600000) return { ok: true, skipped: "fresh" };
-  if (status === "running" && ageMs < 10 * 60000) return { ok: true, skipped: "running" };
-  if (status === "error" && ageMs < 4 * 3600000) return { ok: true, skipped: "backoff" };
-  const reset = status === "complete" || status === "never";
-  const result = await syncCompletefulCatalog(env, { reset, limit: 3, max_pages: 1 });
-  if (!result.ok) console.error("[completeful/catalog]", result.code || result.status, result.detail || "");
-  return result;
-}
-
 export async function listCompletefulCatalogMirror(env, url) {
   const limit = clampInt(url.searchParams.get("limit"), 50, 1, 200);
   const offset = clampInt(url.searchParams.get("offset"), 0, 0, 1000000);
