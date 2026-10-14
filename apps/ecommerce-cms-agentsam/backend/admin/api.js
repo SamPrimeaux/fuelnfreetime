@@ -98,6 +98,7 @@ import { handleGrowthApi } from "./growth.js";
 import { handleDiscountsApi } from "./discounts.js";
 import { handleCompletefulAdminApi } from "./completeful.js";
 import { handleProductStudioAdminApi } from "./product-studio.js";
+import { readProductSupplierSelection } from "./product-selling-selection.js";
 import { getBrandWorkspace, patchBrandWorkspace, searchBrandAssets } from "./brand.js";
 import { getStoreSearchDiscovery } from "./search-discovery.js";
 import { handleGenerateBlockRequest } from "./generate-block-stream.js";
@@ -291,8 +292,9 @@ export async function getProduct(request, env, id) {
     .all();
 
   const designDraft = await env.DB.prepare(
-    "SELECT id, product_id, completeful_catalog_product_id, state, version, original_media_asset_id, prepared_media_asset_id, preview_media_asset_id, completeful_design_id, completeful_render_status FROM product_studio_drafts WHERE product_id = ?"
+    "SELECT id, product_id, completeful_catalog_product_id, state, version, selected_variant_ids_json, original_media_asset_id, prepared_media_asset_id, preview_media_asset_id, completeful_design_id, completeful_render_status FROM product_studio_drafts WHERE product_id = ?"
   ).bind(id).first();
+  const sellingSelection = designDraft ? await readProductSupplierSelection(env, designDraft) : null;
   let fulfillment = null;
   try {
     fulfillment = await env.DB.prepare(
@@ -305,7 +307,7 @@ export async function getProduct(request, env, id) {
     "SELECT collection_id FROM store_collection_products WHERE product_id = ? ORDER BY sort_order, collection_id"
   ).bind(id).all();
   return json({ ok: true, product, variants, design_draft: designDraft || null,
-    fulfillment: fulfillment || null,
+    selling_selection: sellingSelection, fulfillment: fulfillment || null,
     source: resolveProductSource(product, fulfillment || (designDraft?.completeful_catalog_product_id
       ? { completeful_catalog_product_id: designDraft.completeful_catalog_product_id, sync_status: "not_connected" }
       : null)),
