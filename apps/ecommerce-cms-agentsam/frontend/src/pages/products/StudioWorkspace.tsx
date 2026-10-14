@@ -6,6 +6,7 @@ import { updateSellingVariants, toggleSellingGroup } from "./studio-selling-vari
 import { adminFetch, adminFormFetch } from "../../lib/api";
 import { evaluateManufacturingCompatibility } from "../../../../packages/agentsam-merch/src/index.js";
 import { studioArtworkQuality, type ArtworkCrop } from "./studio-artwork-quality";
+import { suggestPrintScale } from "./studio-print-fit";
 import { alphaBounds } from "./studio-alpha-bounds";
 import StudioIcon from "./StudioIcon";
 import ProductImage from "./ProductImage";
@@ -156,6 +157,16 @@ export default function StudioWorkspace({
   const [manageVariants, setManageVariants] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [miniMapOpen, setMiniMapOpen] = useState(true);
+  const [fullPreviewOpen, setFullPreviewOpen] = useState(false);
+  useEffect(() => {
+    if (!fullPreviewOpen) return;
+    fullPreviewCloseRef.current?.focus();
+    const onKeydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFullPreviewOpen(false);
+    };
+    window.addEventListener("keydown", onKeydown);
+    return () => window.removeEventListener("keydown", onKeydown);
+  }, [fullPreviewOpen]);
   const [canvasZoom, setCanvasZoom] = useState(100);
   const [media, setMedia] = useState<MediaAsset[]>([]);
   const [albums, setAlbums] = useState<Array<{ id: number; name: string; asset_count?: number }>>([]);
@@ -217,6 +228,7 @@ export default function StudioWorkspace({
   const miniSendRef = useRef<(message: string, signal: AbortSignal, resource: unknown) => Promise<{ reply: string }>>(async () => ({ reply: "" }));
   const miniTriggerRef = useRef<HTMLButtonElement>(null);
   const variantDialogRef = useRef<HTMLElement>(null);
+  const fullPreviewCloseRef = useRef<HTMLButtonElement>(null);
   const dragRef = useRef<{ mode: "move" | "resize"; corner: "tl" | "tr" | "bl" | "br"; startX: number; startY: number; x: number; y: number; scale: number } | null>(null);
   const [reply, setReply] = useState("");
   const [conversationId, setConversationId] = useState<string>();
@@ -764,7 +776,8 @@ export default function StudioWorkspace({
     };
   });
   async function saveDraft(nextPrepared: MediaAsset | null = preparedFor === currentPlacementKey ? preparedAsset : null,
-    nextPreview: MediaAsset | null = preparedFor === currentPlacementKey ? previewAsset : null) {
+    nextPreview: MediaAsset | null = preparedFor === currentPlacementKey ? previewAsset : null,
+    placementScale: number = scale) {
     if (!variantId || !locationId || !selectedVariantIds.length) {
       setError("Choose at least one selling variant and a print area before saving.");
       setTab("options");
@@ -786,7 +799,7 @@ export default function StudioWorkspace({
           original_media_asset_id: asset?.id || null,
           prepared_media_asset_id: nextPrepared?.id || null,
           preview_media_asset_id: nextPreview?.id || null,
-          placement: { x, y, scale, rotation, flipX, flipY, trimTransparent, removeFlatBackground },
+          placement: { x, y, scale: placementScale, rotation, flipX, flipY, trimTransparent, removeFlatBackground },
           notes,
           title: title.trim() || detail.product.name,
         }),
@@ -825,7 +838,7 @@ export default function StudioWorkspace({
     window.location.assign("/admin/product-edit?id=" + encodeURIComponent(String(productId)));
   }
 
-  async function buildPreparedArtworkBlob() {
+  async function buildPreparedArtworkBlob(placementScale: number = scale) {
     if (!asset || !showArtwork || !printPixels) {
       throw new Error("Add artwork and select a print area with known pixel dimensions first.");
     }
@@ -856,7 +869,7 @@ export default function StudioWorkspace({
     canvas.height = height;
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Canvas preparation is unavailable");
-    const w = (width * scale) / 100;
+    const w = (width * placementScale) / 100;
     const h = (crop.height / crop.width) * w;
     ctx.translate((width * x) / 100, (height * y) / 100);
     ctx.rotate((rotation * Math.PI) / 180);
@@ -917,12 +930,24 @@ export default function StudioWorkspace({
     setBusy("prepare");
     setError("");
     try {
-      // Deterministic source-pixel preflight (not a provider acceptance claim).
-      if (manufacturingPreflight && ["unsupported", "needs_variant"].includes(manufacturingPreflight.status)) {
-        throw new Error(manufacturingPreflight.issues[0]?.message ||
-          "Original artwork requires a different source version for this print area.");
+      // The SDK manufacturing contract supplies the physical print PPI. For
+      // small deficits, preserve the original pixels and reduce placement
+      // width instead of upscaling or blocking the merchant.
+      const blockingIssues = manufacturingPreflight?.issues.filter((issue) =>
+        issue.status === "needs_variant" || issue.status === "unsupported") || [];
+      const fittedScale = suggestPrintScale({
+        currentScale: scale,
+        effectivePpi: manufacturingPreflight?.effectivePpi,
+        targetPpi: manufacturingPreflight?.target.ppi,
+      });
+      const canAutoFit = blockingIssues.length > 0 && fittedScale !== null &&
+        blockingIssues.every((issue) => issue.code === "insufficient_resolution");
+      if (manufacturingPreflight && ["unsupported", "needs_variant"].includes(manufacturingPreflight.status) && !canAutoFit) {
+        throw new Error(blockingIssues[0]?.message || manufacturingPreflight.issues[0]?.message ||
+          "Use a higher-resolution original or a smaller print placement.");
       }
-      const blob = await buildPreparedArtworkBlob();
+      const finalScale = canAutoFit && fittedScale !== null ? fittedScale : scale;
+      const blob = await buildPreparedArtworkBlob(finalScale);
       const filename = `prepared-${catalogId.slice(0, 8)}-${locationId.slice(0, 8)}-${crypto.randomUUID().slice(0, 12)}.png`;
       const uploaded = await uploadMediaFile(
         new File([blob], filename, { type: "image/png" }), "studio/prepared",
@@ -930,13 +955,17 @@ export default function StudioWorkspace({
       );
       if (!uploaded) throw new Error("Prepared artwork was not saved");
       setPreparedAsset(uploaded);
-      setPreparedFor(currentPlacementKey);
+      setPreparedFor(placementKey(asset?.id, variantId, locationId, x, y, finalScale, rotation, flipX, flipY, trimTransparent, removeFlatBackground));
       setPreviewAsset(null);
       setProviderRenderUrl(null);
       const preview = await persistPlacementPreview(uploaded);
       if (preview) setPreviewAsset(preview);
-      const saved = await saveDraft(uploaded, preview || null);
+      const saved = await saveDraft(uploaded, preview || null, finalScale);
       if (!saved) throw new Error("Prepared artwork was uploaded, but the design draft could not be saved");
+      if (canAutoFit) {
+        setScale(finalScale);
+        setNotice(`Artwork fitted automatically to ${finalScale}% of the print area width using the original image pixels.`);
+      }
       return saved;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Artwork preparation failed");
@@ -1045,6 +1074,13 @@ export default function StudioWorkspace({
             (artworkCrop?.height ?? dimensions.height) / Math.max(1, artworkCrop?.width ?? dimensions.width) },
       )
     : null;
+  const resolutionFit = suggestPrintScale({ currentScale: scale,
+    effectivePpi: manufacturingPreflight?.effectivePpi,
+    targetPpi: manufacturingPreflight?.target.ppi });
+  const resolutionBlockers = manufacturingPreflight?.issues.filter((issue) =>
+    issue.status === "needs_variant" || issue.status === "unsupported") || [];
+  const autoFitAvailable = resolutionFit !== null && resolutionBlockers.length > 0 &&
+    resolutionBlockers.every((issue) => issue.code === "insufficient_resolution");
   return (
     <div className="ps-workspace" data-agentsam-resource="product-design-workspace">
       <header className="ps-workspace-header">
@@ -1078,6 +1114,19 @@ export default function StudioWorkspace({
           <button className="ps-button ps-primary" disabled={Boolean(busy)} onClick={() => void continueToProductDetails()}>
             {busy === "prepare" ? "Preparing print artwork…" : busy === "save" ? "Saving design…" : "Next step · Product details →"}
           </button>
+          {error && <p className="ps-step-feedback ps-step-feedback--error" role="alert">{error}</p>}
+          {cropError && <p className="ps-step-feedback ps-step-feedback--error" role="alert">{cropError}</p>}
+          {!error && !cropError && autoFitAvailable && (
+            <p className="ps-step-feedback" role="status">
+              Artwork quality: we'll automatically fit the original image to the {Math.round(manufacturingPreflight?.target.ppi || 300)} PPI print target when you continue.
+            </p>
+          )}
+          {!error && !cropError && !autoFitAvailable && resolutionBlockers.some((issue) => issue.code === "insufficient_resolution") && (
+            <p className="ps-step-feedback ps-step-feedback--error" role="status">
+              This original is too small for the current print size. Choose a higher-resolution source or reduce the artwork placement.
+            </p>
+          )}
+          {!error && notice && <p className="ps-step-feedback" role="status">{notice}</p>}
         </div>
         <div className="ps-header-artwork-tools">
             {asset && !currentRenderUrl && artworkSelected && (
@@ -1588,7 +1637,7 @@ export default function StudioWorkspace({
               </div>
               {miniMapOpen && (
                 <>
-                  <div className="ps-mini-image" aria-label="Live placement approximation for the selected variant">
+                  <div className="ps-mini-image">
                     {currentRenderUrl || designImage
                       ? <ProductImage key={`${variantId}:${locationId}`} sources={currentRenderUrl ? [currentRenderUrl] : designImageSources} alt={`${location?.name || "Selected"} garment variant: ${variant?.variant_title || variant?.name || detail.product.name}`} />
                       : <div className="ps-mini-unverified">No verified {location?.name || "side"} mockup</div>}
@@ -1597,6 +1646,8 @@ export default function StudioWorkspace({
                         <img src={artworkPreviewUrl} alt="" style={{ width: `${scale}%`, left: `${x}%`, top: `${y}%`, transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})` }} />
                       </div>
                     )}
+                    <button type="button" className="ps-mini-expand-hitarea" aria-label="Enlarge product preview" title="Enlarge product preview"
+                      onClick={() => setFullPreviewOpen(true)} />
                   </div>
                   <small>{currentRenderUrl ? "Completeful render" : designImage
                     ? hasDistinctProviderSideArtboard ? `${location?.name || "Selected"} · supplier print-area reference` : location?.name || "Selected view"
@@ -1606,6 +1657,35 @@ export default function StudioWorkspace({
               )}
             </div>
           </div>
+          {fullPreviewOpen && (
+            <div className="ps-preview-overlay" onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setFullPreviewOpen(false);
+            }}>
+              <section className="ps-preview-dialog" role="dialog" aria-modal="true" aria-label="Enlarged product preview">
+                <header>
+                  <div>
+                    <strong>Product preview · {location?.name || "Selected side"}</strong>
+                    <small>{variant?.variant_title || variant?.name || detail.product.name}</small>
+                  </div>
+                  <button ref={fullPreviewCloseRef} type="button" aria-label="Close enlarged product preview"
+                    onClick={() => setFullPreviewOpen(false)}>Close ×</button>
+                </header>
+                <div className="ps-preview-enlarged-image">
+                  {currentRenderUrl || designImage
+                    ? <ProductImage key={`expanded:${variantId}:${locationId}`} sources={currentRenderUrl ? [currentRenderUrl] : designImageSources}
+                        alt={`${variant?.variant_title || variant?.name || detail.product.name}, ${location?.name || "selected view"}`} lazy={false} />
+                    : <div className="ps-mini-unverified">No verified photo is available for this side or variant.</div>}
+                  {!currentRenderUrl && designImage && asset && showArtwork && (
+                    <div className="ps-mini-placement" style={placementFrameStyle}>
+                      <img src={artworkPreviewUrl} alt="" style={{ width: `${scale}%`, left: `${x}%`, top: `${y}%`,
+                        transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})` }} />
+                    </div>
+                  )}
+                </div>
+                <footer>{currentRenderUrl ? "Completeful provider render" : designImage ? "Supplier garment reference with local artwork placement — not a final render" : "Preview unavailable"}</footer>
+              </section>
+            </div>
+          )}
           {enabledLocations.length > 1 && (
             <div className="ps-print-side-toggle" role="group" aria-label="Print location">
               {enabledLocations.map((candidate) => (
@@ -1631,23 +1711,13 @@ export default function StudioWorkspace({
                 : manufacturingPreflight?.issues[0]?.message || "Choose artwork compatible with this print area."}
             </p>
           )}
-          {cropError && <p className="ps-quality ps-quality--warning" role="alert">{cropError}</p>}
           {reply && (
             <details open className="ps-ai-reply">
               <summary>Creative direction</summary>
               <p>{reply}</p>
             </details>
           )}
-          {error && (
-            <div className="ps-feedback" role="alert">
-              {error}
-            </div>
-          )}
-          {notice && (
-            <p className="ps-notice" role="status">
-              {notice}
-            </p>
-          )}
+
         </div>
       </div>
     </div>

@@ -30,7 +30,7 @@ type CatalogSyncHealth = { status: string; updated_at?: string | null;
 
 const collections = [
   { name: "Everything", query: "", caption: "Find your next idea" },
-  { name: "Tees", query: "shirt", caption: "Made to be worn" },
+  { name: "Apparel", query: "", category: "apparel", caption: "Shirts, layers & more" },
   { name: "Tumblers", query: "tumbler", caption: "Everyday essentials" },
   { name: "Framed decor", query: "frame", caption: "Make a space their own" },
   { name: "Hats", query: "hat", caption: "Small things. Big personality." },
@@ -42,6 +42,7 @@ export default function ProductStudioPage() {
   const resumeDraftId = new URLSearchParams(location.search).get("resume");
   const surface = useRef<HTMLElement>(null);
   const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("");
   const [search, setSearch] = useState("");
   const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
   const [total, setTotal] = useState(0);
@@ -85,6 +86,7 @@ export default function ProductStudioPage() {
       offset: String(offset),
       search,
     });
+    if (category) params.set("category", category);
     adminFetch<CatalogResponse>(`/api/admin/completeful/catalog?${params}`, {
       signal: controller.signal,
     })
@@ -105,7 +107,7 @@ export default function ProductStudioPage() {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [search, offset, refresh, productId]);
+  }, [search, offset, refresh, productId, category]);
   useEffect(() => {
     if (!productId) return;
     const controller = new AbortController();
@@ -328,9 +330,9 @@ export default function ProductStudioPage() {
                 {collections.map((c, i) => (
                   <button
                     key={c.name}
-                    className={query === c.query ? "is-active" : ""}
-                    onClick={() => setQuery(c.query)}
-                    aria-pressed={query === c.query}
+                    className={query === c.query && category === (c.category || "") ? "is-active" : ""}
+                    onClick={() => { setCategory(c.category || ""); setQuery(c.query); setOffset(0); }}
+                    aria-pressed={query === c.query && category === (c.category || "")}
                   >
                     <span className="ps-collection-number">0{i + 1}</span>
                     <strong>{c.name}</strong>

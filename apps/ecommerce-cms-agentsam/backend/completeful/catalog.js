@@ -595,6 +595,7 @@ export async function listCompletefulCatalogMirror(env, url) {
   const offset = clampInt(url.searchParams.get("offset"), 0, 0, 1000000);
   const search = (url.searchParams.get("search") || "").trim();
   const favorite = url.searchParams.get("favorite");
+  const category = url.searchParams.get("category");
 
   const where = [];
   const params = [];
@@ -606,6 +607,22 @@ export async function listCompletefulCatalogMirror(env, url) {
     )`);
     const q = `%${search}%`;
     params.push(q, q, q, q, q);
+  }
+
+  if (category === "apparel") {
+    // Explicit catalog category, not a text search for "shirt" that hides
+    // hoodies, sweaters, trousers and outerwear.
+    where.push(`(
+      lower(coalesce(p.product_type, '')) LIKE '%apparel%' OR
+      lower(coalesce(p.product_type, '')) LIKE '%clothing%' OR
+      lower(p.name) LIKE '%shirt%' OR lower(p.name) LIKE '%hood%' OR
+      lower(p.name) LIKE '%sweat%' OR lower(p.name) LIKE '%jacket%' OR
+      lower(p.name) LIKE '%polo%' OR lower(p.name) LIKE '%tank%' OR
+      lower(p.name) LIKE '%jersey%' OR lower(p.name) LIKE '%legging%' OR
+      lower(p.name) LIKE '%jogger%' OR lower(p.name) LIKE '%shorts%' OR
+      lower(p.name) LIKE '%pants%' OR lower(p.name) LIKE '%raglan%' OR
+      lower(p.name) LIKE '%vest%'
+    )`);
   }
 
   if (favorite === "1" || favorite === "true") {
