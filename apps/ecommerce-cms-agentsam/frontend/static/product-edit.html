@@ -635,6 +635,10 @@ function variantNote(msg, kind) {
 
 function renderInventory(variants, supplierDraft = false) {
   const body = document.getElementById("inventory-body");
+  // Supplier stock is not locally authoritative, even once SKUs have been mapped.
+  // Hide the warehouse quantity table for supplier-backed products.
+  const card = document.getElementById("inventory-card");
+  if (card) card.hidden = Boolean(supplierDraft);
   if (!body) return;
   if (!variants.length) {
     body.innerHTML = supplierDraft
@@ -684,7 +688,7 @@ function renderSupplierSelection(container, selection) {
   const tableWrap = document.createElement("div");
   tableWrap.className = "product-supplier-selection-table-wrap";
   const table = document.createElement("table");
-  table.className = "product-inventory-table product-supplier-selection-table";
+  table.className = "product-supplier-selection-table";
   const head = document.createElement("thead");
   const titleRow = document.createElement("tr");
   for (const label of ["Color", "Size", "Supplier SKU"]) {
@@ -1014,7 +1018,8 @@ function collectPayload() {
 
 async function saveProduct() {
   const payload = collectPayload();
-  const publishSupplier = !isNew && payload.status === "active" && Boolean(designContext?.draft);
+  const publishSupplier = !isNew && payload.status === "active" &&
+    Boolean(designContext?.draft && designContext.draft.state !== "published");
   const supplierDraftId = designContext?.draft?.id;
   // The local product details must be saved as a draft before provider creation.
   // Publication is explicit (Active → Publish) and is completed only after
