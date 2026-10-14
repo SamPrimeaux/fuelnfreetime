@@ -777,3 +777,5 @@
   .product-supplier-selection-table th,
   .product-supplier-selection-table td { padding: 9px 8px; font-size: 11px; }
 }
+
+#publish-btn[hidden], #editor-action-note[hidden] { display: none !important; }
