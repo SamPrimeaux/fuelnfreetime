@@ -57,6 +57,11 @@ function setDirty(next) {
     btn.textContent = saveInFlight ? "Working…" : canPublish ? "Publish" : isNew ? "Create" : "Save";
   }
   if (discard) discard.disabled = !dirty || saveInFlight;
+  const publishButton = document.getElementById("publish-btn");
+  if (publishButton) {
+    publishButton.hidden = isNew || !designContext?.draft || designContext.draft.state === "published";
+    publishButton.disabled = saveInFlight;
+  }
   const createProvider = document.getElementById("create-provider-product-btn");
   if (createProvider) {
     createProvider.disabled = dirty || saveInFlight ||
@@ -170,9 +175,9 @@ renderShell("/admin/products", `
         <div class="product-editor-save-actions">
           <span class="product-editor-bar-hint" id="save-hint" role="status">Loading…</span>
           <button type="button" class="btn ghost small" id="discard-btn" disabled>Discard</button>
-          <button type="button" class="btn primary small" id="save-btn" disabled>Save</button>
+          <button type="button" class="btn ghost small" id="save-btn" disabled>Save</button>
+          <button type="button" class="btn primary small" id="publish-btn" hidden>Publish</button>
         </div>
-        <button type="button" class="btn ghost small" id="duplicate-btn" ${isNew ? "disabled" : ""}>Duplicate</button>
         <a href="#" class="btn ghost small" id="view-btn" target="_blank" rel="noopener" style="${isNew ? "visibility:hidden" : ""}">View</a>
         <div class="product-editor-more">
           <button type="button" class="btn ghost small" id="more-btn">More actions</button>
@@ -194,13 +199,6 @@ renderShell("/admin/products", `
 
         <div class="product-card">
           <label for="description">Description</label>
-          <div class="product-toolbar" aria-hidden="true">
-            <button type="button" disabled><strong>B</strong></button>
-            <button type="button" disabled><em>I</em></button>
-            <button type="button" disabled>U</button>
-            <button type="button" disabled>🔗</button>
-            <button type="button" disabled>≡</button>
-          </div>
           <textarea id="description" placeholder="Describe this product for the storefront…"></textarea>
         </div>
 
@@ -223,16 +221,15 @@ renderShell("/admin/products", `
 
         <div class="product-card" id="studio-design-card" hidden>
           <div class="product-card-head">
-            <label>Product source &amp; design</label>
-            <span class="product-card-hint">One product record for every fulfillment method</span>
+            <label>Product design</label>
           </div>
           <div id="studio-design-content"></div>
         </div>
 
         <div class="product-card">
-          <label for="collection">Category (legacy label)</label>
+          <label for="collection">Category</label>
           <input type="text" id="collection" placeholder="Optional internal category">
-          <p class="product-card-hint">Category labels are separate from multi-product collections below.</p>
+          <p class="product-card-hint">Optional internal category.</p>
         </div>
 
         <div class="product-card" id="product-collections-card">
@@ -1168,6 +1165,14 @@ async function saveProduct() {
 }
 
 document.getElementById("save-btn").addEventListener("click", () => saveProduct());
+document.getElementById("publish-btn")?.addEventListener("click", () => {
+  if (saveInFlight) return;
+  document.getElementById("status-sidebar").value = "active";
+  saveFailed = false;
+  setDirty(true);
+  syncStatusUi();
+  saveProduct();
+});
 document.getElementById("discard-btn")?.addEventListener("click", async () => {
   if (!dirty || saveInFlight) return;
   if (!confirm("Discard unsaved changes and restore the last saved product details?")) return;
@@ -1178,10 +1183,6 @@ document.getElementById("discard-btn")?.addEventListener("click", async () => {
   }
   await loadProduct();
   showNote("Restored last saved product details.", "success");
-});
-
-document.getElementById("duplicate-btn")?.addEventListener("click", () => {
-  alert("Duplicate product is coming soon.");
 });
 
 document.getElementById("more-btn")?.addEventListener("click", (e) => {
