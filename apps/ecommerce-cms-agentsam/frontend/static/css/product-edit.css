@@ -668,3 +668,20 @@
 .product-collection-create label { width: 100%; font-weight: 600; font-size: 12px; }
 .product-collection-create input { flex: 1 1 170px; min-width: 0; border: 1px solid #ddd; border-radius: 7px; padding: 10px; }
 .product-collection-create select { min-height: 39px; border: 1px solid #ddd; border-radius: 7px; padding: 7px; }
+
+/* Saved Completeful selections in Product Details: a truthful draft assortment,
+   not editable local stock or placeholder inventory. */
+.product-supplier-selection { margin-top: 14px; display: grid; gap: 10px; max-width: 100%; }
+.product-supplier-selection-heading { display: block; font-size: 14px; font-weight: 700; color: var(--text, #24242c); }
+.product-supplier-selection .product-card-hint { margin: 0; line-height: 1.5; }
+.product-supplier-selection-table-wrap { overflow-x: auto; max-height: min(400px, 50dvh); border: 1px solid #dde0df; border-radius: 8px; background: #fff; }
+.product-supplier-selection-table { width: 100%; border-collapse: collapse; table-layout: auto; margin: 0; }
+.product-supplier-selection-table th, .product-supplier-selection-table td { padding: 10px 12px; text-align: left; font-size: 12px; white-space: normal; overflow-wrap: anywhere; }
+.product-supplier-selection-table th { background: #f7f8f6; color: #555; font-weight: 650; }
+.product-supplier-selection-table tbody tr + tr { border-top: 1px solid #eef0eb; }
+.product-design-selection-summary { margin: 10px 0; font-size: 12px; font-weight: 700; color: #3c533b; }
+.product-design-next-action { flex-basis: 100%; max-width: 460px; }
+@media (max-width: 760px) {
+  .product-supplier-selection-table th, .product-supplier-selection-table td { padding: 9px 7px; font-size: 11px; }
+  .product-supplier-selection-table-wrap { max-height: min(330px, 48dvh); }
+}
