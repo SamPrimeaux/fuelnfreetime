@@ -5,6 +5,8 @@
 import { M } from "./media-paths.js";
 import reviseSite from "../../fixtures/fnf-revise-site.json" with { type: "json" };
 import reviseMediaMap from "../../fixtures/fnf-revise-media-map.json" with { type: "json" };
+import fnfEditorialPages from "../../fixtures/fnf-editorial-cms-pages.v1.json" with { type: "json" };
+import "../../packages/theme-contract/runtime/portable-sections.js";
 import { reviseAtlas } from "../../packages/theme-contract/runtime/revise-atlas-source.js";
 
 
