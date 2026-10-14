@@ -649,7 +649,80 @@ function renderInventory(variants, supplierDraft = false) {
     .join("");
 }
 
-function renderVariants(variants, supplierDraft = false) {
+// Supplier options are already selected in Studio. Before a provider product is
+// created they are a read-only assortment preview, NOT local warehouse stock.
+function renderSupplierSelection(container, selection) {
+  if (!selection || !Array.isArray(selection.variants)) return;
+  const heading = document.createElement("strong");
+  heading.className = "product-supplier-selection-heading";
+  heading.textContent = selection.selected_count + " variants selected in Product Studio";
+  container.append(heading);
+  const summary = document.createElement("p");
+  summary.className = "product-card-hint";
+  summary.textContent = [
+    selection.sizes?.length ? selection.sizes.length + " sizes" : "",
+    selection.colors?.length ? selection.colors.length + " colors" : ""
+  ].filter(Boolean).join(" · ") + " · No manual SKU entry required.";
+  container.append(summary);
+  if (selection.unavailable_count) {
+    const problem = document.createElement("p");
+    problem.className = "product-note is-error";
+    problem.textContent = selection.unavailable_count + " supplier combinations could not be resolved. Reopen Product Studio to reconcile them before creation.";
+    container.append(problem);
+  }
+  const tableWrap = document.createElement("div");
+  tableWrap.className = "product-supplier-selection-table-wrap";
+  const table = document.createElement("table");
+  table.className = "product-inventory-table product-supplier-selection-table";
+  const head = document.createElement("thead");
+  const titleRow = document.createElement("tr");
+  for (const label of ["Color", "Size", "Supplier SKU"]) {
+    const th = document.createElement("th");
+    th.textContent = label;
+    titleRow.append(th);
+  }
+  head.append(titleRow);
+  table.append(head);
+  const body = document.createElement("tbody");
+  const list = selection.variants;
+  function show(limit) {
+    body.replaceChildren();
+    for (const item of list.slice(0, limit)) {
+      const row = document.createElement("tr");
+      for (const value of [item.color || "—", item.size || "—", item.provider_sku || "Unavailable"]) {
+        const cell = document.createElement("td");
+        cell.textContent = value;
+        row.append(cell);
+      }
+      body.append(row);
+    }
+  }
+  show(12);
+  table.append(body);
+  tableWrap.append(table);
+  container.append(tableWrap);
+  if (list.length > 12) {
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "btn ghost small";
+    toggle.textContent = "Show all " + list.length + " selected variants";
+    let expanded = false;
+    toggle.addEventListener("click", () => {
+      expanded = !expanded;
+      show(expanded ? list.length : 12);
+      toggle.textContent = expanded ? "Show fewer variants" : "Show all " + list.length + " selected variants";
+      toggle.setAttribute("aria-expanded", String(expanded));
+    });
+    toggle.setAttribute("aria-expanded", "false");
+    container.append(toggle);
+  }
+  const foot = document.createElement("p");
+  foot.className = "product-card-hint";
+  foot.textContent = "These selections are saved. Supplier-managed variants will be created and linked automatically after you save Product Details and use Create with Completeful. Local stock quantities are not fabricated.";
+  container.append(foot);
+}
+
+function renderVariants(variants, supplierDraft = false, sellingSelection = null) {
   variantCount = variants.length;
   variantOriginals = new Map(variants.map((v) => [Number(v.id), {
     sku: v.sku || "", size: v.size || "", color: v.color || "",
@@ -668,9 +741,16 @@ function renderVariants(variants, supplierDraft = false) {
     const hint = empty.querySelector("p");
     const add = document.getElementById("show-variant-form");
     if (hint) hint.textContent = supplierDraft
-      ? "The design is linked to the Completeful catalog. Prepare its artwork, save Product Details, then use Create with Completeful to import mapped selling variants. This is not local stock."
+      ? "Your selected supplier options are carried forward from Product Studio."
       : "Add options like size or color for separate SKUs and inventory.";
     if (add) add.hidden = supplierDraft;
+    empty.querySelector(".product-supplier-selection")?.remove();
+    if (supplierDraft) {
+      const selectionRoot = document.createElement("div");
+      selectionRoot.className = "product-supplier-selection";
+      empty.append(selectionRoot);
+      renderSupplierSelection(selectionRoot, sellingSelection);
+    }
     renderInventory([], supplierDraft);
     return;
   }
@@ -762,7 +842,7 @@ async function loadCollections() {
   }
 }
 
-function renderStudioDesign(draft, fulfillment, source = null) {
+function renderStudioDesign(draft, fulfillment, source = null, sellingSelection = null) {
   const card = document.getElementById("studio-design-card");
   const root = document.getElementById("studio-design-content");
   if (!card || !root) return;
@@ -787,6 +867,13 @@ function renderStudioDesign(draft, fulfillment, source = null) {
 
 
   if (!fulfillment?.completeful_store_product_id) {
+    const selectionStatus = document.createElement("p");
+    selectionStatus.className = "product-design-selection-summary";
+    selectionStatus.textContent = sellingSelection
+      ? sellingSelection.selected_count + " selected supplier variants saved · " +
+        sellingSelection.resolved_count + " catalog options verified"
+      : "Loading selected supplier options";
+    root.append(selectionStatus);
     const explanation = document.createElement("p");
     explanation.className = "product-card-hint";
     explanation.textContent = draft.prepared_media_asset_id
@@ -810,7 +897,15 @@ function renderStudioDesign(draft, fulfillment, source = null) {
     create.className = "btn ghost small";
     create.id = "create-provider-product-btn";
     create.textContent = "Create with Completeful";
-    create.title = "Creates this product and selected variants in your existing Completeful account; does not publish.";
+    create.title = "Creates this product and your saved Studio variant selection in Completeful; does not publish.";
+    const pending = document.createElement("p");
+    pending.className = "product-card-hint product-design-next-action";
+    pending.textContent = !draft.prepared_media_asset_id
+      ? "Return to Product Studio to prepare artwork."
+      : Number(document.getElementById("price")?.value || 0) <= 0
+        ? "Set your retail price, keep status Draft, and save. Your selected variants are already retained."
+        : "Save any changes, then create all selected supplier variants with Completeful.";
+    actions.append(pending);
     create.addEventListener("click", async () => {
       if (dirty || saveInFlight) {
         showNote("Save product details before creating the supplier product.", "error");
@@ -863,10 +958,10 @@ async function loadProduct() {
     updateHeaderTitle(p.title);
     syncStatusUi();
     updateSeoPreview();
-    renderVariants(d.variants, Boolean(d.design_draft?.completeful_catalog_product_id));
+    renderVariants(d.variants, Boolean(d.design_draft?.completeful_catalog_product_id), d.selling_selection);
     selectedCollectionIds = new Set((d.collection_ids || []).map(Number));
     renderCollections();
-    renderStudioDesign(d.design_draft, d.fulfillment, d.source);
+    renderStudioDesign(d.design_draft, d.fulfillment, d.source, d.selling_selection);
     loadImages();
     saveFailed = false;
     setDirty(false);
@@ -931,6 +1026,10 @@ async function saveProduct() {
     return;
   }
 
+  if (payload.status === "active" && designContext?.draft && !designContext?.fulfillment?.completeful_store_product_id) {
+    showNote("Keep this product as Draft until Completeful creates and maps the selected supplier variants. Your selected options are already saved; no manual variants or SKUs are needed.", "error");
+    return;
+  }
   if (payload.status === "active" && !isNew) {
     const issues = [];
     if (variantCount === 0) issues.push("Add at least one size variant so customers can purchase");
@@ -1000,7 +1099,7 @@ async function saveProduct() {
     productSlug = stored.slug;
     updateHeaderTitle(stored.title);
     updateSeoPreview();
-    renderStudioDesign(verified.design_draft, verified.fulfillment, verified.source);
+    renderStudioDesign(verified.design_draft, verified.fulfillment, verified.source, verified.selling_selection);
     const additionalEdits = JSON.stringify(collectPayload()) !== saveSnapshot;
     updateVariantOriginals(payload.variants);
     setDirty(additionalEdits);
