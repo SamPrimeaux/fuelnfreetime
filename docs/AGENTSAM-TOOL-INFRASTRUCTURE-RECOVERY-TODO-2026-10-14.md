@@ -49,10 +49,24 @@ Related branch and read-only audit: `feat/neutral-tool-ids-20261013` and `docs/a
 - [ ] **T17 — CI drift gate.** Fail releases for duplicate operation/wire IDs, missing handlers, policy keys with no registration, unresolvable workflow handlers, stale seeds, cross-tenant access, unauthorized operator permissions and mismatches between SDK contracts, code and D1.
 - [ ] **T18 — Production smoke and rollback proof.** Check deployed Worker identity and current D1 state, run representative authorized calls in the real dashboard, verify result receipts and rollback rehearsal. Passing unit tests alone is insufficient.
 
+## Cross-cutting product-quality gate (required for every task above)
+
+Follow the [Product Quality, Acceptance and Release Contract](engineering/PRODUCT-QUALITY-ACCEPTANCE-AND-RELEASE-CONTRACT.md). **A renamed registration or passing unit test is not accepted runtime behavior.** Each repaired tool must have a real invocation trace and expected/error-path proof. For UI-affecting repairs, require screenshot inspection at mobile/tablet/desktop, authentic save/reload or provider behavior, and verification against the originally reported defect.
+
+**Completeful classification uncovered 2026-10-14:** 9 active provider-named registrations, 4 catalog operations with adapter cases, and 5 active-but-degraded operations whose AgentSam adapter rejects execution: `completeful_design_create`, `completeful_order_create`, `completeful_order_quote`, `completeful_product_publish`, `completeful_product_sync`. `completeful_order_create` has an unrestricted input schema and empty output schema and must not be described as ready. Internal commerce/provider fulfillment submission is **not automatically an AI tool**. Classify purpose/callers and preserve backend workflows before changing model discovery or D1.
+
 ## Phase 5 — Git/worktree closeout (mandatory, not optional)
 
 - [ ] **T19 — Reconcile unfinished branches.** Compare current GitHub `main` to local branches/worktrees. Preserve unique commits and all uncommitted files; decide explicitly which changes to ship or archive. Do not delete a tree based on branch names or stale local refs.
 - [ ] **T20 — Commit, push, merge and prune.** For each complete change: stage reviewed scope, run tests, commit, push, open/merge reviewed PR, verify commit on GitHub `main`, verify deployment when applicable, and remove only clean fully-landed worktrees. Report all unresolved branches with owners, blockers and next actions.
+
+## Phase 6 — Human-visible product acceptance (mandatory alongside tool repairs)
+
+- [ ] **T21 — Audit tool placement, not just naming.** For all 35 rows, classify model-callable merchant action vs internal backend/provider API vs declarative workflow. Justify each callable tool with a real user task; hide non-executable/degraded tools from model discovery without breaking authorized callers.
+- [ ] **T22 — Replace permissive high-risk contracts.** Starting with `completeful_order_create`, document precise typed inputs/outputs, approval, tenant scope, side effects and idempotency. Keep actual paid-order/manufacturing submission behind backend fulfillment authorization and a staging-safe test lane.
+- [ ] **T23 — Establish a defect evidence ledger.** Tie current mobile Theme Editor bottom gap, sizing/selection problems, Product Studio garment/mockup regressions, miniAgentSam visibility/load bugs and provider asset gaps to reproduction steps, agreed references and required before/after screen evidence. Do not close from DOM/unit checks.
+- [ ] **T24 — Implement release evidence gates.** Automate available browser/authenticated journeys, responsive layout invariants, tool-handler drift checks and release-receipt verification; require actual visual judgment and real target-device validation for high-impact UI changes.
+- [ ] **T25 — Verify deployed acceptance and close cleanly.** Every affected route/tool needs a gate-by-gate [quality acceptance receipt](engineering/PRODUCT-QUALITY-ACCEPTANCE-AND-RELEASE-CONTRACT.md#8-mandatory-change-receipt-write-for-each-substantial-change) including served build identity, actual mobile states, known blockers, and branch/worktree reconciliation. A green pipeline never overrides a merchant-visible failure.
 
 ## Completion receipt required before saying DONE
 
