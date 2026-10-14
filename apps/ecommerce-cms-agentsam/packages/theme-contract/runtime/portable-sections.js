@@ -30,6 +30,16 @@
     fields: [f("name", "Heading"), f("description", "Description", "textarea")],
     defaultContent: { name: "New item", description: "Edit this description." },
   };
+  const fieldCard = {
+    key: "field-note", label: "Field note", repeatable: true, min: 0, max: 6,
+    fields: [
+      f("name", "Title"), f("subtitle", "Category"),
+      f("description", "Description", "textarea"),
+      f("imageUrl", "Image", "media"), f("href", "Story link", "link"),
+      f("linkLabel", "Link text"),
+    ],
+    defaultContent: { name: "New field note", subtitle: "", description: "", imageUrl: "", href: "", linkLabel: "Read the story" },
+  };
   const faqCard = {
     key: "faq-item", label: "Question", repeatable: true, min: 0, max: 16,
     fields: [f("question", "Question"), f("answer", "Answer", "textarea")],
@@ -58,6 +68,25 @@
       f("title", "Heading"), f("body", "Body", "textarea"), f("imageUrl", "Image", "media"),
     ]),
     spec("fnf/newsletter", "Newsletter CTA", "newsletter", cards.concat(f("buttonLabel", "Button text"))),
+    spec("fnf/field-notes-hero", "Field notes · Editorial hero", "fieldHero", [
+      f("eyebrow", "Series label"), f("headline", "Headline"),
+      f("subheadline", "Editorial subtitle"), f("body", "Description", "textarea"),
+      f("imageUrl", "Feature image", "media"),
+      f("ctaPrimary.label", "Button text"), f("ctaPrimary.href", "Button link", "link"),
+    ]),
+    spec("fnf/field-notes-grid", "Field notes · Story cards", "fieldGrid", [
+      f("eyebrow", "Section label"), f("title", "Heading"), f("body", "Intro", "textarea"),
+    ], fieldCard),
+    spec("fnf/earned-hours-panel", "Earned hours · Split feature", "earnedFeature", [
+      f("eyebrow", "Series label"), f("headline", "Headline"), f("body", "Description", "textarea"),
+      f("imageUrl", "Feature image", "media"),
+      f("ctaPrimary.label", "Button text"), f("ctaPrimary.href", "Button link", "link"),
+    ]),
+    spec("fnf/product-story-panel", "Product · Artwork story", "productStory", [
+      f("eyebrow", "Series label"), f("headline", "Headline"), f("body", "Description", "textarea"),
+      f("imageUrl", "Product image", "media"),
+      f("ctaPrimary.label", "Button text"), f("ctaPrimary.href", "Button link", "link"),
+    ]),
   ]);
   const byId = new Map(definitions.map((item) => [item.id, item]));
   const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
@@ -140,10 +169,67 @@
       + '" name="email" autocomplete="email" required placeholder="Email address">'
       + '<button type="submit" data-cms="buttonLabel">' + esc(c.buttonLabel || "Join") + '</button></div></form></div>';
   }
+
+  // These are real CMS sections, not screenshot placeholders. Every visible
+  // copy slot and media/link has a matching inspector field.
+  function editorialAction(content, fallback) {
+    const cta = content.ctaPrimary || {};
+    return cta.label && cta.href
+      ? '<a class="ps-article-link" data-cms="ctaPrimary.href" data-cms-attr="href" href="' + href(cta.href, fallback)
+        + '"><span data-cms="ctaPrimary.label">' + esc(cta.label) + '</span><span aria-hidden="true">→</span></a>'
+      : "";
+  }
+  function editorialPicture(value, cssClass) {
+    const src = image(value);
+    return '<div class="' + cssClass + '">' + (src
+      ? '<img data-cms="imageUrl" src="' + src + '" alt="" loading="lazy">'
+      : '<div class="ps-image-empty" aria-hidden="true"></div>') + '</div>';
+  }
+  function renderFieldHero(entry) {
+    const c = entry.content || {};
+    return '<div class="ps-field-copy"><p class="ps-field-kicker" data-cms="eyebrow">' + esc(c.eyebrow || "") + '</p>'
+      + '<h2 class="ps-field-display" data-cms="headline">' + esc(c.headline || "") + '</h2>'
+      + '<p class="ps-field-subhead" data-cms="subheadline">' + esc(c.subheadline || "") + '</p>'
+      + '<p class="ps-field-body" data-cms="body">' + esc(c.body || "") + '</p>'
+      + editorialAction(c, "/stories") + '</div>'
+      + editorialPicture(c.imageUrl, "ps-field-image");
+  }
+  function renderFieldGrid(entry) {
+    const c = entry.content || {};
+    const cards = sectionBlocks(entry);
+    return '<div class="ps-field-grid-wrap"><header class="ps-field-grid-heading">'
+      + '<p class="ps-field-kicker" data-cms="eyebrow">' + esc(c.eyebrow || "") + '</p>'
+      + '<h2 class="ps-field-display" data-cms="title">' + esc(c.title || "") + '</h2>'
+      + '<p class="ps-field-body" data-cms="body">' + esc(c.body || "") + '</p></header>'
+      + '<div class="ps-field-grid">' + cards.map((card, index) => {
+        const id = esc(card.id);
+        const photo = image(card.imageUrl);
+        const action = card.href && isSafeUrl(card.href, { allowEmpty: false });
+        const inner = (photo ? '<img data-cms="' + id + '.imageUrl" src="' + photo + '" alt="" loading="lazy">' : '<span class="ps-image-empty" aria-hidden="true"></span>')
+          + '<span class="ps-field-number">' + String(index + 1).padStart(2, "0") + ' /</span>'
+          + '<h3 data-cms="' + id + '.name">' + esc(card.name || "") + '</h3>'
+          + '<p class="ps-field-card-kicker" data-cms="' + id + '.subtitle">' + esc(card.subtitle || "") + '</p>'
+          + '<p class="ps-field-card-summary" data-cms="' + id + '.description">' + esc(card.description || "") + '</p>'
+          + (action ? '<span class="ps-article-link" data-cms="' + id + '.linkLabel">' + esc(card.linkLabel || "Read the story") + ' <span aria-hidden="true">→</span></span>' : "");
+        return '<article class="ps-field-card" data-cms-block="' + id + '">'
+          + (action ? '<a href="' + href(card.href) + '" data-cms="' + id + '.href" data-cms-attr="href">' + inner + '</a>' : '<div class="ps-field-card-content">' + inner + '</div>')
+          + '</article>';
+      }).join("") + '</div></div>';
+  }
+  function renderEditorialPanel(entry) {
+    const c = entry.content || {};
+    return '<div class="ps-editorial-panel-copy"><p class="ps-field-kicker" data-cms="eyebrow">' + esc(c.eyebrow || "") + '</p>'
+      + '<h2 class="ps-field-display" data-cms="headline">' + esc(c.headline || "") + '</h2>'
+      + '<p class="ps-field-body" data-cms="body">' + esc(c.body || "") + '</p>'
+      + editorialAction(c, "/shop") + '</div>'
+      + editorialPicture(c.imageUrl, "ps-editorial-panel-media");
+  }
   const renders = {
     hero: renderHero, collections: renderCollections, story: renderStory,
     faq: renderFaq, testimonials: renderDetails, trust: renderDetails,
     features: renderDetails, newsletter: renderNewsletter,
+    fieldHero: renderFieldHero, fieldGrid: renderFieldGrid,
+    earnedFeature: renderEditorialPanel, productStory: renderEditorialPanel,
   };
   const genericDefaults = {
     hero: { eyebrow: "New collection", headline: "Your headline", subheadline: "Describe your story.", imageUrl: "", ctaPrimary: { label: "Explore", href: "/shop" } },
@@ -154,6 +240,23 @@
     trust: { title: "Why shop with us", card1: { name: "Your promise", description: "Explain a benefit." } },
     features: { title: "Designed for the details", card1: { name: "Feature one", description: "Explain a feature." } },
     newsletter: { title: "Stay in the loop", text: "Get updates on new releases.", buttonLabel: "Join" },
+    fieldHero: { eyebrow: "FIELD NOTES / VOL. 01", headline: "MADE IN THE HOURS BETWEEN",
+      subheadline: "Projects, people, and the work behind the work.",
+      body: "Stories from the garage, the trail, and everywhere in between.",
+      imageUrl: "", ctaPrimary: { label: "Explore field notes", href: "/stories" } },
+    fieldGrid: { eyebrow: "THE FIELD NOTES", title: "PEOPLE. PLACES. PROJECTS.",
+      body: "The people, places and projects that make the hours count.",
+      card1: { name: "The Build", subtitle: "IDEAS INTO REALITY", description: "Inside the work, from first sketches to the final details.", imageUrl: "", href: "", linkLabel: "Read the story" },
+      card2: { name: "The Route", subtitle: "PLACES THAT PULL US FORWARD", description: "Long roads, familiar spots and everything in between.", imageUrl: "", href: "", linkLabel: "Read the story" },
+      card3: { name: "The Makers", subtitle: "PEOPLE BEHIND THE PRODUCTS", description: "The hands and ideas behind what we make.", imageUrl: "", href: "", linkLabel: "Read the story" } },
+    earnedFeature: { eyebrow: "THE EARNED HOURS SERIES",
+      headline: "ORIGINAL ARTWORK. MADE FOR THE HOURS THAT MATTER.",
+      body: "For early starts, long builds and everything after the clock.",
+      imageUrl: "", ctaPrimary: { label: "Explore the collection", href: "/shop" } },
+    productStory: { eyebrow: "THE SIGNATURE SERIES",
+      headline: "THE FRONT IS THE MARK. THE BACK TELLS THE STORY.",
+      body: "A familiar badge on the front. A different story every time you turn around.",
+      imageUrl: "", ctaPrimary: { label: "Shop the collection", href: "/shop" } },
   };
   function defaults(id) {
     if (!byId.has(id) && scope.ThemeReviseAtlas?.get(id)) return scope.ThemeReviseAtlas.defaults(id);
