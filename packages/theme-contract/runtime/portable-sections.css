@@ -103,4 +103,68 @@
   .ps-section.ps-hero .ps-display { font-size: clamp(2.5rem,11vw,5rem); }
   .ps-section .ps-cta { min-height: 44px; }
 }
+
+/* FNF FIELD / earned-hours family: scoped to the registered CMS presets. */
+.ps-section[data-portable-preset="fnf/field-notes-hero"],
+.ps-section[data-portable-preset="fnf/field-notes-grid"],
+.ps-section[data-portable-preset="fnf/earned-hours-panel"],
+.ps-section[data-portable-preset="fnf/product-story-panel"] {
+  --ps-paper: #f1ede4; --ps-ink: #151412; --ps-accent: #e34b16;
+  --ps-display-font: "Bebas Neue", Impact, "Arial Narrow", sans-serif;
+  --ps-reading-font: Georgia, "Times New Roman", serif;
+  color: var(--ps-ink); background: var(--ps-paper);
+  overflow: clip;
+}
+.ps-section .ps-field-kicker, .ps-section .ps-field-card-kicker {
+  font: 750 11px/1.3 Inter, system-ui, sans-serif; letter-spacing: .23em; text-transform: uppercase;
+}
+.ps-section .ps-field-kicker:before { content: ""; display: inline-block; width: 32px; height: 2px; background: #e34b16; vertical-align: middle; margin-right: 15px; }
+.ps-section .ps-field-display { font: 900 clamp(3.15rem, 7.1vw, 7.5rem)/.9 var(--ps-display-font); text-transform: uppercase; letter-spacing: -.018em; overflow-wrap: normal; }
+.ps-section .ps-field-subhead { font: 400 clamp(1.15rem, 1.9vw, 1.65rem)/1.25 var(--ps-reading-font); margin-top: 20px; }
+.ps-section .ps-field-body { font: 400 clamp(1rem, 1.3vw, 1.17rem)/1.55 var(--ps-reading-font); max-width: 48ch; color: #544f48; margin-top: 22px; }
+.ps-section .ps-article-link { display: inline-flex; gap: 15px; align-items: center; width: max-content; max-width: 100%; margin-top: 28px; padding-bottom: 7px; border-bottom: 1px solid currentColor; font: 800 .75rem/1.25 Inter, system-ui, sans-serif; letter-spacing: .15em; text-transform: uppercase; }
+.ps-section .ps-article-link span[aria-hidden] { color: #e34b16; font-size: 1.3rem; }
+.ps-section .ps-image-empty { display: block; width: 100%; height: 100%; min-height: 230px; background: #b4aba0; }
+.ps-section[data-portable-preset="fnf/field-notes-hero"] { display: grid; grid-template-columns: 44% 56%; min-height: min(76svh, 760px); }
+.ps-section .ps-field-copy { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: clamp(45px, 7vw, 110px) clamp(22px, 5vw, 82px); min-width: 0; }
+.ps-section .ps-field-image, .ps-section .ps-editorial-panel-media { position: relative; overflow: hidden; min-height: 320px; background: #302c27; }
+.ps-section .ps-field-image img, .ps-section .ps-editorial-panel-media img { width: 100%; height: 100%; position: absolute; inset: 0; object-fit: cover; object-position: center; }
+.ps-section .ps-field-image::before { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(90deg, #f1ede4 0%, transparent 15%); pointer-events:none; }
+.ps-section[data-portable-preset="fnf/field-notes-grid"] .ps-field-grid-wrap { padding: clamp(45px,5vw,85px) clamp(22px,5vw,82px); margin: auto; max-width: 1600px; }
+.ps-section .ps-field-grid-heading { display: grid; gap: 18px; padding-bottom: 34px; }
+.ps-section .ps-field-grid-heading .ps-field-display { font-size: clamp(2.4rem,5vw,5.7rem); }
+.ps-section .ps-field-grid-heading .ps-field-body { margin-top: 0; }
+.ps-section .ps-field-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: clamp(16px,2.2vw,32px); }
+.ps-section .ps-field-card { min-width:0; padding-bottom:25px; border-bottom:1px solid #c9c3b8; }
+.ps-section .ps-field-card a, .ps-section .ps-field-card-content { display:block; }
+.ps-section .ps-field-card img, .ps-section .ps-field-card .ps-image-empty { display:block; width:100%; height:auto; aspect-ratio: 1.65; min-height:0; object-fit:cover; background:#302b26; }
+.ps-section .ps-field-number { font: 750 12px/1.1 Inter, system-ui, sans-serif; letter-spacing:.15em; display: block; margin-top: 18px; }
+.ps-section .ps-field-card h3 { margin: 6px 0 8px; font: 800 clamp(1.6rem,3vw,3rem)/1 var(--ps-display-font); text-transform: uppercase; }
+.ps-section .ps-field-card-kicker { color: #333; font-size: 10px; margin-bottom: 12px; }
+.ps-section .ps-field-card-summary { font: 400 clamp(.95rem,1.25vw,1.08rem)/1.5 var(--ps-reading-font); color:#514d47; max-width: 45ch; }
+.ps-section .ps-field-card .ps-article-link { margin-top: 15px; font-size:.66rem; }
+.ps-section[data-portable-preset="fnf/earned-hours-panel"],
+.ps-section[data-portable-preset="fnf/product-story-panel"] { display:grid; grid-template-columns: 42% 58%; min-height: clamp(420px,42vw,660px); }
+.ps-section[data-portable-preset="fnf/earned-hours-panel"],
+.ps-section[data-portable-preset="fnf/product-story-panel"] { --ps-paper:#181818; --ps-ink:#f4f0e7; color:var(--ps-ink); background:var(--ps-paper); }
+.ps-section .ps-editorial-panel-copy { display:flex; flex-direction:column; justify-content:center; align-items:flex-start; min-width:0; padding: clamp(45px,5.4vw,85px) clamp(22px,5vw,82px); }
+.ps-section .ps-editorial-panel-copy .ps-field-display { font-size:clamp(2.9rem,5.4vw,6rem); }
+.ps-section .ps-editorial-panel-copy .ps-field-body { color:#d6d0c6; }
+.ps-section[data-portable-preset="fnf/product-story-panel"] { grid-template-columns: 55% 45%; }
+.ps-section[data-portable-preset="fnf/product-story-panel"] .ps-editorial-panel-copy { order:2; }
+.ps-section[data-portable-preset="fnf/product-story-panel"] .ps-editorial-panel-media { order:1; }
+@media(max-width:760px) {
+  .ps-section[data-portable-preset="fnf/field-notes-hero"],
+  .ps-section[data-portable-preset="fnf/earned-hours-panel"],
+  .ps-section[data-portable-preset="fnf/product-story-panel"] { display:flex; flex-direction:column; min-height:0; }
+  .ps-section .ps-field-copy, .ps-section .ps-editorial-panel-copy { padding: 55px 22px 45px; }
+  .ps-section .ps-field-display { font-size: clamp(2.75rem, 11.8vw, 5rem); }
+  .ps-section .ps-field-image, .ps-section .ps-editorial-panel-media { width:100%; height:clamp(250px,70vw,460px); min-height:250px; }
+  .ps-section .ps-field-image::before { display:none; }
+  .ps-section .ps-field-grid { grid-template-columns:1fr; gap:32px; }
+  .ps-section .ps-field-card img, .ps-section .ps-field-card .ps-image-empty { aspect-ratio:1.7; }
+  .ps-section[data-portable-preset="fnf/product-story-panel"] .ps-editorial-panel-copy { order:0; }
+  .ps-section[data-portable-preset="fnf/product-story-panel"] .ps-editorial-panel-media { order:1; }
+}
+
 @media (prefers-reduced-motion: reduce) { .ps-section .ps-cards { scroll-behavior:auto; } }

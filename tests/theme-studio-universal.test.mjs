@@ -34,7 +34,7 @@ test("theme catalog contains real renderer-backed presets, not 24 aliases", () =
   const runtime = sandbox.window.ThemeStudioPreview;
   assert.deepEqual(Array.from(runtime.themes, item => item.id), ["heuristic","revise","fnf"]);
   assert.equal(runtime.catalog.revise.length, 7);
-  assert.equal(runtime.catalog.fnf.length, 5);
+  assert.equal(runtime.catalog.fnf.length, 9);
   for (const theme of ["revise","fnf"]) for (const item of runtime.catalog[theme]) {
     const entry = { key: "user-hero", content: sandbox.window.ThemePortableSections.defaults(item.id) };
     const actual = sandbox.window.ThemePortableSections.render(entry);

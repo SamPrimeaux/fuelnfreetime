@@ -13,7 +13,7 @@ const stylesheet = fs.readFileSync(
 const text = (name) => fs.readFileSync(path.join(root, name), "utf8");
 
 test("the merchant catalog exposes only real portable section renderers", () => {
-  assert.equal(runtime.definitions.length, 12);
+  assert.equal(runtime.definitions.length, 16);
   for (const def of runtime.definitions) {
     assert.equal(runtime.catalog().some(entry => entry.id === def.id), true);
     assert.ok(runtime.schema(def.id)?.fields?.length > 0);
