@@ -1,5 +1,16 @@
 # Completeful integration runtime contract
 
+## Order-create architecture and AgentSam tool status (2026-10-14 audit)
+
+**Do not conflate local customer order creation, provider fulfillment submission, and AI tool invocation.** The storefront/commerce backend remains authority for customer orders, paid status and order items; Completeful is an external production/fulfillment provider. A protected provider order submission, if/when implemented, must derive from an authorized, paid and validated local order, use durable idempotency and explicit shop/variant/artwork/ship-to mapping, save provider IDs/status back to existing `completeful_order_links`, and handle retry/webhook/failure states. Manual recovery must follow defined permissions and approvals. Provider production calls must **never** be the side effect of an unguarded AI request or smoke test.
+
+Live D1 includes `completeful_order_create` with `handler_config.operation="order.create"`, high risk, approval+confirmation required, **arbitrary-object input**, empty output schema, `is_active=1` and `is_degraded=1`. The current AgentSam `completeful-tools.js` adapter does **not** implement that operation and the `tool-handlers.js` executor gate excludes it. **This is a planned/degraded registration, not a functioning AI capability and not proof that live fulfillment submission works.** It should be classified as an **internal fulfillment adapter operation** by default; do not expose as a general model-callable tool merely because an API endpoint exists. Preserve existing callers and historical data before changing the registration.
+
+Of nine active `completeful_*` AgentSam registrations, four catalog operations have corresponding adapter cases, while five (`design.create`, `order.create`, `order.quote`, `product.publish`, `product.sync`) are degraded/not executable through that adapter. Implementation of other admin/provider paths does not make these AgentSam operations executable. Verify provider connection and actual behavior independently from DB catalog status.
+
+The [Product Quality, Acceptance and Release Contract](engineering/PRODUCT-QUALITY-ACCEPTANCE-AND-RELEASE-CONTRACT.md) sets the acceptance standard. Provider tests use controlled test mode/fixtures, never live manufacturing orders; credentials must never appear in receipts.
+
+
 ## Product studio presentation (September 2026)
 
 `apps/ecommerce-cms-agentsam/frontend/src/pages/products/` owns the catalog, independent product detail, and artwork workspace at `/admin/products/create` and `/admin/products/create/:productId`. The app-owned `shell.js` owns navigation; the product studio owns only its content surface. Detail URLs use the same session-gated Worker SPA fallback as the catalog.
