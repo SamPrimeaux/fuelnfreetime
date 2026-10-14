@@ -55,6 +55,8 @@ function setDirty(next) {
   if (btn) {
     btn.disabled = (!dirty && !canPublish) || saveInFlight;
     btn.textContent = saveInFlight ? "Working…" : canPublish ? "Publish" : isNew ? "Create" : "Save";
+    btn.classList.toggle("primary", canPublish || isNew);
+    btn.classList.toggle("ghost", !canPublish && !isNew);
   }
   if (discard) discard.disabled = !dirty || saveInFlight;
   const publishButton = document.getElementById("publish-btn");
