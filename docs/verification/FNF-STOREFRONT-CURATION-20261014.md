@@ -42,3 +42,15 @@
 - Replace fixtures with actual D1/R2 merchant content after visual approval, refine actual Completeful mockup/color gallery, migrate affected JS to typed source in concert with the concurrent TypeScript work.
 - Server-authoritative provider availability, checkout reservation semantics, discounts/payment and fulfillment must be solved and end-to-end verified separately before enabling buy.
 - Genuine authored CMS controls, mobile physical iPhone acceptance, browser accessibility and served Worker asset identity still require proof.
+
+## Second pass — original FNF merch concepts, owner-review drafts
+
+- Responding to merchant feedback: **removed** generic three-column assurance/disclaimer copy, payment-status filler, and unrelated brand-story slab from the PDP renderer. Only concise availability state remains when a specific option cannot be ordered. No live deploy of this renderer.
+- Authored a coherent three-piece `Field Series 01` mini-capsule from the canonical brand dossier (earned time, early water, workshop/build culture), each with dedicated front and back SVGs, illustrated cover, product narrative, SEO title and meta description.
+- Original sources, reproducible SVG builder, metadata and creative review page: `site/fuelnfreetime/concepts/field-series-01/`. All creative direction is **proposed**, not founder-confirmed.
+- Created actual merchant D1 commerce products: `13` Off Clock; `14` First Light; `15` Shop Notes. All have `status='draft'`, `price_cents=0`, one zero-stock default variant, and one primary gallery image. Existing account-scoped production connection used; no new table or API authority was added.
+- Uploaded 9 original concept cover/front/back SVG objects into tenant's `fuelnfreetime` R2 bucket, `drafts/field-series-01/`, and registered 9 existing `media_assets` rows. Verified covers return HTTP 200 with `image/svg+xml` from `https://fuelnfreetime.com/media/drafts/field-series-01/...`. Direct R2-served media URLs **are public to anyone with the link**, even though these products do not appear in the active storefront.
+- Read-back from production D1: 3 draft products, **0 active**, 9 media rows, one local placeholder variant and one primary `product_images` row per product.
+- Existing admin edits: `/admin/product-edit?id=13`, `id=14`, `id=15` after authorized login. Authenticated GUI navigation, save/reload, supplier mapping and actual manufacturing are **not yet end-to-end verified**.
+- Local creative review: `http://127.0.0.1:4338/` (Mac only). Chrome device-emulation checks at 390×844 and 1440×960: three concept chapters, image loads and no horizontal document overflow; screenshots inspected locally. No physical iPhone acceptance.
+- Prepublication release gate: Justin selects/edits concept and grants approval; replace illustrative mockups with real provider geometry, outline SVG fonts, preflight print art, attach verified blank and color/size combinations, enter and verify actual price/margins, test save and checkout. **Do not activate zero-price placeholder variants.**

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Field Series 01 — FNF Creative Review</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap');
+:root{--cream:#efeae0;--black:#101211;--orange:#fd4b17;--ink:#191a19;--muted:#807a70;--line:#d0c9bf;--display:"Barlow Condensed",Impact,sans-serif;--body:"DM Sans",system-ui,sans-serif}
+*,*:before,*:after{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--cream);font-family:var(--body);color:var(--ink)}a{color:inherit;text-decoration:none}button{font:inherit}img{display:block;max-width:100%}
+.header{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1.1rem clamp(1rem,4.3vw,4.5rem);background:#121514;color:white;border-bottom:1px solid #333}
+.wordmark{font:900 clamp(1.8rem,3vw,3rem)/.8 var(--display);letter-spacing:-.055em}.wordmark span{color:var(--orange)}.header small{font-size:.63rem;letter-spacing:.22em;text-transform:uppercase;color:#aaa}.review{border:1px solid #76716a;padding:.55rem .8rem;font-size:.66rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase}
+.hero{background:var(--black);color:#f2ede4;padding:clamp(5rem,10vw,9rem) clamp(1rem,6vw,7rem) clamp(4rem,8vw,8rem);position:relative;overflow:hidden}
+.hero:after{content:"";position:absolute;width:min(52vw,730px);height:min(52vw,730px);border:100px solid #212420;border-radius:50%;top:-36%;right:-14%;pointer-events:none}
+.kicker,.small-tag{font-weight:800;font-size:.73rem;letter-spacing:.24em;text-transform:uppercase}.kicker{color:var(--orange)}.hero h1{max-width:1100px;margin:1.3rem 0;font:900 clamp(5rem,13vw,14rem)/.73 var(--display);letter-spacing:-.045em;position:relative;z-index:1}.hero h1 em{font-style:normal;color:var(--orange)}
+.hero .intro{max-width:45ch;font-size:clamp(1rem,1.5vw,1.25rem);line-height:1.65;color:#c1beb5;margin-top:2.3rem;position:relative;z-index:1}
+.rule{display:flex;gap:1.5rem;align-items:center;border-top:1px solid #4a4c47;margin-top:4rem;padding-top:1rem;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:#aaa;position:relative;z-index:1;flex-wrap:wrap}
+.collection-intro{display:grid;grid-template-columns:1.25fr 1fr;gap:3rem;padding:clamp(3rem,7vw,7rem) clamp(1rem,6vw,7rem);border-bottom:1px solid var(--line)}
+.collection-intro h2{font:900 clamp(3.7rem,7vw,8rem)/.84 var(--display);letter-spacing:-.03em;margin:.7rem 0}
+.collection-intro .side{max-width:54ch;align-self:end;line-height:1.8;color:#605b55;font-size:1rem}.small-tag{color:var(--orange)}
+.chapter{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);min-height:700px;border-bottom:1px solid #b7b0a5}
+.chapter:nth-of-type(2n){direction:rtl}.chapter:nth-of-type(2n)>*{direction:ltr}
+.visual{padding:clamp(1rem,2vw,2rem);background:#d8d2c8;display:grid;place-items:center;min-width:0}.visual img{width:100%;height:auto;max-width:700px;filter:drop-shadow(0 24px 24px #0002)}
+.chapter:nth-of-type(2n) .visual{background:#d3d5d1}
+.copy{padding:clamp(2rem,5.5vw,6rem);display:flex;flex-direction:column;justify-content:center}
+.chapter-num{display:flex;gap:.8rem;align-items:center;color:var(--orange);font-weight:800;font-size:.78rem;letter-spacing:.23em;text-transform:uppercase}.chapter-num:before{content:"";height:2px;width:35px;background:var(--orange)}
+.copy h3{font:900 clamp(3.8rem,7vw,7.2rem)/.85 var(--display);margin:1.5rem 0;letter-spacing:-.025em}
+.copy .standfirst{font-size:clamp(1.1rem,1.8vw,1.5rem);line-height:1.45;font-weight:700;margin:0 0 1.4rem;max-width:33ch}
+.copy .description{line-height:1.8;color:#68635d;max-width:58ch;font-size:.92rem}
+.copy .attrs{display:grid;grid-template-columns:1fr 1fr;gap:1rem;border-top:1px solid var(--line);padding-top:1.6rem;margin-top:2rem}
+.copy dt{font-size:.61rem;letter-spacing:.15em;text-transform:uppercase;font-weight:800;color:#a0472f}.copy dd{margin:.4rem 0 0;font-size:.82rem;font-weight:700}
+.artlinks{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:2rem}.artlinks a{font-size:.7rem;text-transform:uppercase;letter-spacing:.12em;font-weight:800;padding:.85rem 1rem;border:1px solid var(--ink)}
+.artlinks a:hover{background:var(--ink);color:white}
+.artwork{padding:clamp(3rem,6vw,7rem) clamp(1rem,6vw,7rem);background:#151717;color:#efebe1}
+.artwork .head{display:flex;justify-content:space-between;align-items:end;gap:2rem;flex-wrap:wrap}.artwork h2{font:900 clamp(3rem,6vw,6rem)/.9 var(--display);margin:.6rem 0 0}.artwork p{max-width:46ch;color:#b3b0a7;line-height:1.65;font-size:.85rem}
+.asset-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.2rem;margin-top:2.5rem}
+.asset-grid article{border:1px solid #474945;min-width:0;padding:1.3rem}
+.asset-grid .art{aspect-ratio:4/4.5;display:grid;place-items:center;background:#2d3030;margin-bottom:1.3rem;overflow:hidden}
+.asset-grid img{max-width:90%;max-height:90%;height:auto;object-fit:contain}
+.asset-grid h3{font:800 2.2rem/.95 var(--display);margin:.4rem 0}.asset-grid p{font-size:.75rem;line-height:1.5;margin:.5rem 0}
+.footer{background:#101211;color:#b2b0a8;padding:3rem clamp(1rem,6vw,7rem);display:flex;justify-content:space-between;gap:2rem;flex-wrap:wrap}
+.footer strong{color:white;font:900 2.4rem var(--display)}.footer small{font-size:.7rem;line-height:1.7;max-width:55ch}
+@media(max-width:850px){.collection-intro,.chapter{grid-template-columns:1fr}.chapter:nth-of-type(2n){direction:ltr}.visual{min-height:440px}.visual img{max-height:600px}.copy{padding:3rem 1.5rem 4rem}.asset-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.header small{display:none}.hero h1{font-size:clamp(5rem,21vw,7.5rem)}.hero{padding-top:5.5rem}.review{font-size:.58rem}.collection-intro{gap:.5rem}.visual{min-height:300px}.asset-grid{grid-template-columns:1fr}.copy h3{font-size:4.3rem}.copy .attrs{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="header"><a class="wordmark" href="#top">F<span>NF</span><small> / FUEL &amp; FREE TIME</small></a><span class="review">Creative approval / Private draft</span></header>
+<main id="top">
+<section class="hero">
+ <div class="kicker">FUEL &amp; FREE TIME / FIELD SERIES 01</div>
+ <h1>THE HOURS<br>ARE <em>YOURS.</em></h1>
+ <p class="intro">Three ways to spend the time that belongs to you. One collection built around the people, places, and machines that make the hours count.</p>
+ <div class="rule"><span>01 / OFF CLOCK</span><span>02 / FIRST LIGHT</span><span>03 / SHOP NOTES</span><span>FNF DESIGN STUDIES — OCT 2026</span></div>
+</section>
+<section class="collection-intro">
+ <div><span class="small-tag">The drop / Volume 01</span><h2>NOT ANOTHER<br>LOGO TEE.</h2></div>
+ <p class="side">An honest first capsule with a small mark up front and something worth looking at on the back. Three stories connected by a simple idea: work buys the hours, but how you spend them is what gives those hours meaning.</p>
+</section>
+<section class="chapter" id="off-clock">
+ <div class="visual"><img src="01-off-clock-cover.svg" alt="Washed black graphic T-shirt study with large off-clock dial print"></div>
+ <div class="copy"><div class="chapter-num">01 / Everyday essentials</div><h3>OFF<br>CLOCK.</h3><p class="standfirst">The minute hand moves differently when the day belongs to you.</p>
+ <p class="description">A tachometer reinterpreted as a timepiece. The artwork says it without shouting: the real horsepower isn't under the hood. It's in the hours you get to use.</p>
+ <dl class="attrs"><div><dt>Art direction</dt><dd>Instrument dial / bone + orange</dd></div><div><dt>Working silhouette</dt><dd>Washed-black everyday tee</dd></div></dl><div class="artlinks"><a href="01-off-clock-back.svg" target="_blank">View back artwork ↗</a><a href="01-off-clock-front.svg" target="_blank">Front crest ↗</a></div></div>
+</section>
+<section class="chapter" id="first-light">
+ <div class="visual"><img src="02-first-light-cover.svg" alt="Deep navy graphic T-shirt study with first-light sunrise and water print"></div>
+ <div class="copy"><div class="chapter-num">02 / Water &amp; wild</div><h3>FIRST<br>LIGHT.</h3><p class="standfirst">Some mornings are worth getting up for.</p>
+ <p class="description">The moment before the first cast or first turn of the key. A rising sun, long horizon and clean water lines give the story its own graphic language without borrowing somebody else's fishing-company aesthetic.</p>
+ <dl class="attrs"><div><dt>Art direction</dt><dd>Waterline / dawn / horizon</dd></div><div><dt>Working silhouette</dt><dd>Deep navy everyday tee</dd></div></dl><div class="artlinks"><a href="02-first-light-back.svg" target="_blank">View back artwork ↗</a><a href="02-first-light-front.svg" target="_blank">Front crest ↗</a></div></div>
+</section>
+<section class="chapter" id="shop-notes">
+ <div class="visual"><img src="03-shop-notes-cover.svg" alt="Iron charcoal graphic T-shirt study with mechanical shop-notes artwork"></div>
+ <div class="copy"><div class="chapter-num">03 / Garage culture</div><h3>SHOP<br>NOTES.</h3><p class="standfirst">Some projects are never really finished.</p>
+ <p class="description">A graphic study built from old inspection plates, workshop typography and mechanical geometry. For the garage lights still burning, the friends who stop by and the build that somehow always needs one more night.</p>
+ <dl class="attrs"><div><dt>Art direction</dt><dd>Mechanical stamp / service record</dd></div><div><dt>Working silhouette</dt><dd>Iron charcoal everyday tee</dd></div></dl><div class="artlinks"><a href="03-shop-notes-back.svg" target="_blank">View back artwork ↗</a><a href="03-shop-notes-front.svg" target="_blank">Front crest ↗</a></div></div>
+</section>
+<section class="artwork">
+ <div class="head"><div><span class="small-tag">Authored, not stocked</span><h2>THE GRAPHIC SYSTEM.</h2></div><p>Front and back graphics are separate editable SVG sources. Design studies are not manufacturing proofs: outlined text, final blank, colorways, print dimensions, DPI and provider sample validation still come before activation.</p></div>
+ <div class="asset-grid">
+ <article><div class="art"><img src="01-off-clock-back.svg" alt="Off Clock back graphic"></div><h3>01 / OFF CLOCK</h3><p>Timepiece language, crisp ring geometry, signal-orange needle.</p></article>
+ <article><div class="art"><img src="02-first-light-back.svg" alt="First Light back graphic"></div><h3>02 / FIRST LIGHT</h3><p>Low horizon, warm solar arc, layered wake contours.</p></article>
+ <article><div class="art"><img src="03-shop-notes-back.svg" alt="Shop Notes back graphic"></div><h3>03 / SHOP NOTES</h3><p>Industrial rotor illustration, service-record typography, steel-stamp composition.</p></article>
+ </div>
+</section>
+</main>
+<footer class="footer"><div><strong>FNF / FIELD SERIES</strong><small>Time is the real horsepower.</small></div><small>Concepts pending review by Justin. This is a private creative work surface, not a public merchandise offer or live product inventory.</small></footer>
+</body></html>

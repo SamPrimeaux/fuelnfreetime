@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "tenant": "fuelnfreetime",
+  "campaign": "FIELD SERIES / VOL 01",
+  "campaignStatus": "draft",
+  "strategy": "One earned-time idea, three lived-in environments: off the clock, on the water, in the shop. Each has a front mark and original back composition. No unverified product claims or fabricated inventory.",
+  "ownerApprovalRequired": true,
+  "products": [
+    {
+      "slug": "fnf-field-01-off-clock-tee",
+      "name": "Off Clock — Dial Study Tee",
+      "series": "FIELD SERIES / 01",
+      "collection": "Everyday Essentials",
+      "tag": "OWN THE HOURS",
+      "line": "The hours are yours.",
+      "description": "The minute hand moves differently once the work is done. Off Clock reimagines a tachometer as a timepiece: a reminder that what you do with your hours matters more than how fast you burn through them. A small dial at the chest; the full statement across the back. Made to represent the part of the day that belongs to you.",
+      "seo_title": "Off Clock Dial Study Tee | Fuel & Free Time",
+      "seo_description": "A bold FNF graphic tee concept built around the real horsepower: your time. Explore the Off Clock dial artwork, front emblem, and back design.",
+      "artwork": {
+        "front": "01-off-clock-front.svg",
+        "back": "01-off-clock-back.svg",
+        "cover": "01-off-clock-cover.svg"
+      },
+      "palette": [
+        "Washed Black",
+        "Bone",
+        "Signal Orange"
+      ],
+      "productType": "Graphic T-shirt",
+      "status": "draft",
+      "approval": "pending-owner-review"
+    },
+    {
+      "slug": "fnf-field-01-first-light-tee",
+      "name": "First Light — Launch Tee",
+      "series": "FIELD SERIES / 02",
+      "collection": "Water & Wild",
+      "tag": "EARLY WATER / OPEN ROAD",
+      "line": "Some mornings are worth getting up for.",
+      "description": "Long before the first meeting or the first traffic light, there is a quiet stretch of water and the possibility of a day that goes exactly nowhere on a calendar. First Light is our graphic tribute to the launch ramp, the sunrise, the cooler by the door and the people who never need convincing to leave early.",
+      "seo_title": "First Light Launch Tee | Fuel & Free Time",
+      "seo_description": "A sunrise-and-water graphic tee concept for first launches, early starts and days worth remembering. Discover the FNF First Light field design.",
+      "artwork": {
+        "front": "02-first-light-front.svg",
+        "back": "02-first-light-back.svg",
+        "cover": "02-first-light-cover.svg"
+      },
+      "palette": [
+        "Deep Navy",
+        "Bone",
+        "Sunrise Orange"
+      ],
+      "productType": "Graphic T-shirt",
+      "status": "draft",
+      "approval": "pending-owner-review"
+    },
+    {
+      "slug": "fnf-field-01-shop-notes-tee",
+      "name": "Shop Notes — Still Building Tee",
+      "series": "FIELD SERIES / 03",
+      "collection": "Garage / High Octane",
+      "tag": "SHOP NOTES / VOLUME 001",
+      "line": "Some projects are never really finished.",
+      "description": "The garage light stays on because the last ten percent of a build is usually where the story starts. Shop Notes borrows from service manuals, steel stamps and an old mechanical inspection plate. A small workshop mark up front; a full gear-and-check illustration behind. For the fixers, fabricators and friends who keep showing up.",
+      "seo_title": "Shop Notes Still Building Tee | Fuel & Free Time",
+      "seo_description": "A garage-inspired FNF graphic tee concept with original mechanical artwork, workshop-style chest badge and bold Still Building back design.",
+      "artwork": {
+        "front": "03-shop-notes-front.svg",
+        "back": "03-shop-notes-back.svg",
+        "cover": "03-shop-notes-cover.svg"
+      },
+      "palette": [
+        "Iron Charcoal",
+        "Bone",
+        "Signal Orange"
+      ],
+      "productType": "Graphic T-shirt",
+      "status": "draft",
+      "approval": "pending-owner-review"
+    }
+  ]
+}

@@ -145,23 +145,12 @@ import { buildProductOptions, resolveSelectedVariant, sizeHasVariant, variantIsL
           ${product.description ? `<p class="pdp-desc">${esc(product.description)}</p>` : ""}
           ${sizeSection}
           <div class="pdp-actions">
-            <button type="button" class="pdp-btn primary" id="pdp-add" disabled>${canBuy ? "Choose a size" : "Checkout unavailable"}</button>
+            <button type="button" class="pdp-btn primary" id="pdp-add" disabled>${canBuy ? "Choose a size" : "Not available"}</button>
             ${cartIconButton()}
           </div>
-          <p class="pdp-note" id="pdp-stock" aria-live="polite">${canBuy ? "Select options to check availability." : "Selected options are visible. Checkout is paused until inventory can be confirmed."}</p>
-          ${canBuy ? `<p class="pdp-checkout-note">Secure checkout powered by Stripe.</p>` : ""}
-          <div class="pdp-assurances" aria-label="Product information">
-            <div><strong>Availability</strong><span>${canBuy ? "Stock is rechecked at checkout." : "Purchase options will open after stock is verified."}</span></div>
-            <div><strong>Checkout</strong><span>${canBuy ? "Secure Stripe payment at checkout." : "No payment or order is collected while unavailable."}</span></div>
-            <div><strong>Details</strong><span>Explore garment specifications and available options.</span></div>
-          </div>
+          <p class="pdp-note" id="pdp-stock" aria-live="polite"></p>
         </div>
       </div>
-      <section class="pdp-story">
-        <p class="pdp-kicker">The piece, in context</p>
-        <h2>Made for the hours after the work is done.</h2>
-        <p>Every Fuel & Free Time piece starts with the same idea: what you wear off the clock should feel as considered as the work that bought you that freedom.</p>
-      </section>
       <section class="pdp-related" id="pdp-related" hidden></section>`;
 
     bind();
@@ -201,7 +190,7 @@ import { buildProductOptions, resolveSelectedVariant, sizeHasVariant, variantIsL
       const action = document.getElementById("pdp-add");
       action.disabled = !available;
       action.textContent = available ? "Add to bag" : !selectedVariant && purchaseReady()
-        ? "Choose a size" : "Checkout unavailable";
+        ? "Choose a size" : "Not available";
       const priceEl = document.querySelector(".pdp-price");
       if (priceEl) {
         const price = formatPrice(selectedVariant?.price_cents || product.price_cents);
@@ -209,11 +198,7 @@ import { buildProductOptions, resolveSelectedVariant, sizeHasVariant, variantIsL
         priceEl.classList.toggle("is-tbd", price.tbd);
       }
       const stock = document.getElementById("pdp-stock");
-      if (stock) stock.textContent = available
-        ? "In stock — availability rechecked at checkout."
-        : selectedVariant
-          ? "This combination is listed, but purchase availability is not yet confirmed."
-          : "Choose a size to view this combination.";
+      if (stock) stock.textContent = !available && selectedVariant ? "Not available in this combination." : "";
     };
 
     document.querySelectorAll(".pdp-color").forEach((btn) => {

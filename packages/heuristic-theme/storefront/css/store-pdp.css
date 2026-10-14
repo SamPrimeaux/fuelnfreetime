@@ -551,3 +551,6 @@ body:has(.pdp-page) { background: var(--h-color-paper, #f3efe6); }
 @media (prefers-reduced-motion: reduce) {
   .pdp-page * { scroll-behavior: auto; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* No placeholder stock sentence or feature-grid dead space on the buying panel. */
+.pdp-page .pdp-note:empty { display: none; }
