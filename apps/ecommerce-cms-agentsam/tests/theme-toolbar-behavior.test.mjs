@@ -139,6 +139,54 @@ test("Theme Studio media picker previews R2 delivery_url assets and stages the c
   }
 });
 
+test("mobile media picker keeps full library searchable without collapsing or remounting hundreds of thumbnails", async () => {
+  const mediaAssets = Array.from({ length: 257 }, (_, index) => ({
+    filename: "Image " + String(index).padStart(3, "0") + ".png",
+    delivery_url: "https://media.example/asset-" + index + ".png",
+    content_type: "image/png",
+    folder: "brand"
+  }));
+  const { dom, w, doc } = await editorFixture({ mobile: true, mediaAssets });
+  try {
+    doc.querySelector('[data-select-section="hero"]').click();
+    doc.querySelector('[data-pick-media]').click();
+    await tick();
+    await tick();
+
+    const grid = doc.getElementById("te-media-grid");
+    assert.equal(grid.querySelectorAll(".te-media-card").length, 40, "only the first batch mounts");
+    assert.match(doc.getElementById("te-media-count").textContent, /40 of 257 assets/);
+    assert.equal(grid.querySelectorAll("img[loading='eager']").length, 8, "above-the-fold previews do not wait for Safari lazy loading");
+    const originalImage = grid.querySelector(".te-media-card__thumb img");
+    grid.querySelector(".te-media-card").click();
+    assert.strictEqual(grid.querySelector(".te-media-card__thumb img"), originalImage, "selection does not reload thumbnails");
+    assert.equal(doc.getElementById("te-media-confirm").disabled, false);
+
+    grid.querySelector("[data-media-load-more]").click();
+    assert.equal(grid.querySelectorAll(".te-media-card").length, 80, "more cards load on demand");
+
+    const search = doc.getElementById("te-media-search");
+    search.value = "Image 256";
+    search.dispatchEvent(new w.Event("input", { bubbles: true }));
+    assert.equal(grid.querySelectorAll(".te-media-card").length, 1, "all 257 assets remain searchable");
+    assert.match(doc.getElementById("te-media-count").textContent, /1 of 1 assets/);
+    assert.match(grid.querySelector(".te-media-card").title, /Image 256/);
+    grid.querySelector(".te-media-card").click();
+    doc.getElementById("te-media-confirm").click();
+    assert.equal(doc.getElementById("te-media-modal").hidden, true);
+  } finally {
+    dom.window.close();
+  }
+});
+
+test("mobile image cards retain non-collapsing image dimensions and native picker scrolling", () => {
+  const css = readFileSync(new URL("../frontend/static/css/theme-editor.css", import.meta.url), "utf8");
+  assert.match(css, /grid-auto-rows:\s*max-content/, "large galleries cannot compress grid rows into stripes");
+  assert.match(css, /\.te-media-card__thumb\s*\{[^}]*aspect-ratio:\s*4\s*\/\s*3;[^}]*min-height:\s*96px/s);
+  assert.match(css, /\.te-media-card__thumb img\s*\{[^}]*object-fit:\s*contain/s, "source images are never stretched or cropped");
+  assert.match(css, /\.te-media-grid\s*\{[^}]*overflow-y:\s*auto;[^}]*-webkit-overflow-scrolling:\s*touch/s);
+});
+
 test("undo/redo alter real CMS draft fields; Save writes draft but never publishes", async () => {
   const { dom, w, doc, writes } = await editorFixture();
   try {

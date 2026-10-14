@@ -62,6 +62,8 @@
   let patchTimer = null;
   let refreshTimer = null;
   let mediaLibrary = [];
+  const MEDIA_PICKER_BATCH_SIZE = 40;
+  let mediaVisibleLimit = MEDIA_PICKER_BATCH_SIZE;
   let mediaTarget = null;
   let selectedMediaAsset = null;
   const mediaUndo = new Map();
@@ -3018,7 +3020,8 @@
     return asset?.delivery_url || asset?.url || '';
   }
 
-  function renderMediaGrid(query) {
+  function renderMediaGrid(query, resetLimit) {
+    if (resetLimit) mediaVisibleLimit = MEDIA_PICKER_BATCH_SIZE;
     const needle = String(query || '').trim().toLowerCase();
     const filter = byId('te-media-filter').value;
     const assets = mediaLibrary.filter(function(asset) {
@@ -3037,22 +3040,26 @@
       const date = asset => Date.parse(asset.created_at || asset.uploaded_at || '') || (Number(asset.created_at_unix || 0) * 1000);
       return sort === 'oldest' ? date(a) - date(b) : date(b) - date(a);
     });
+    const visible = assets.slice(0, mediaVisibleLimit);
     const count = byId('te-media-count');
-    if (count) count.textContent = assets.length + ' of ' + mediaLibrary.length + ' assets';
+    if (count) count.textContent = 'Showing ' + visible.length + ' of ' + assets.length + ' assets';
 
-    byId('te-media-grid').innerHTML = assets.length ? assets.map(function(asset) {
+    byId('te-media-grid').innerHTML = visible.length ? visible.map(function(asset, index) {
       const url = mediaAssetUrl(asset);
+      const thumbnail = asset.thumbnail_url || asset.preview_url || url;
       const isImage = String(asset.content_type || '').startsWith('image/') || /\.(png|jpe?g|webp|gif|avif|svg)(\?|$)/i.test(asset.r2_key || asset.filename || url);
       const selected = selectedMediaAsset && mediaAssetUrl(selectedMediaAsset) === url;
       const name = asset.filename || asset.r2_key || 'Asset';
       return '<button type="button" class="te-media-card' + (selected ? ' is-selected' : '') +
         '" data-media-url="' + cmsEscapeAttr(url) + '" aria-pressed="' + Boolean(selected) + '" title="' + cmsEscapeAttr(name) + '"' +
         (url ? '' : ' disabled') + '><span class="te-media-card__thumb">' +
-        (isImage && url ? '<img loading="lazy" src="' + cmsEscapeAttr(url) + '" alt="">' :
+        (isImage && thumbnail ? '<img loading="' + (index < 8 ? 'eager' : 'lazy') + '" decoding="async" src="' + cmsEscapeAttr(thumbnail) + '" alt="">' :
           '<span>' + cmsEscapeHtml((asset.content_type || 'file').split('/').pop()) + '</span>') +
         '</span><span class="te-media-card__copy"><strong>' + cmsEscapeHtml(name) + '</strong><span>' +
         cmsEscapeHtml(asset.folder || 'media') + '</span></span></button>';
-    }).join('') : '<div class="te-empty" style="grid-column:1/-1">No matching media. Try another search or upload a file.</div>';
+    }).join('') + (visible.length < assets.length ?
+      '<button type="button" class="te-media-load-more" data-media-load-more>Show more (' + (assets.length - visible.length) + ' remaining)</button>' : '') :
+      '<div class="te-empty" style="grid-column:1/-1">No matching media. Try another search or upload a file.</div>';
 
     byId('te-media-grid').querySelectorAll('.te-media-card__thumb img').forEach(function(img) {
       img.addEventListener('error', function() {
@@ -3064,8 +3071,17 @@
         selectedMediaAsset = mediaLibrary.find(function(asset) { return mediaAssetUrl(asset) === card.dataset.mediaUrl; }) || null;
         byId('te-media-selected-name').textContent = selectedMediaAsset?.filename || 'Select an asset to preview';
         byId('te-media-confirm').disabled = !mediaAssetUrl(selectedMediaAsset);
-        renderMediaGrid(byId('te-media-search').value);
+        // Keep the existing thumbnails and scroll position when selecting media.
+        byId('te-media-grid').querySelectorAll('[data-media-url]').forEach(function(candidate) {
+          const active = Boolean(selectedMediaAsset && candidate.dataset.mediaUrl === mediaAssetUrl(selectedMediaAsset));
+          candidate.classList.toggle('is-selected', active);
+          candidate.setAttribute('aria-pressed', String(active));
+        });
       });
+    });
+    byId('te-media-grid').querySelector('[data-media-load-more]')?.addEventListener('click', function() {
+      mediaVisibleLimit += MEDIA_PICKER_BATCH_SIZE;
+      renderMediaGrid(byId('te-media-search').value);
     });
   }
 
@@ -3074,6 +3090,7 @@
     closeMiniAgentSam();
     mediaTarget = fieldKey;
     selectedMediaAsset = null;
+    mediaVisibleLimit = MEDIA_PICKER_BATCH_SIZE;
     byId('te-media-modal').hidden = false;
     byId('te-media-confirm').disabled = true;
     byId('te-media-selected-name').textContent = 'Select an asset to preview';
@@ -3366,9 +3383,9 @@
     }
   });
   byId('te-media-close').addEventListener('click', closeMediaPicker);
-  byId('te-media-search').addEventListener('input', function(event) { renderMediaGrid(event.target.value); });
-  byId('te-media-filter').addEventListener('change', function() { renderMediaGrid(byId('te-media-search').value); });
-  byId('te-media-sort').addEventListener('change', function() { renderMediaGrid(byId('te-media-search').value); });
+  byId('te-media-search').addEventListener('input', function(event) { renderMediaGrid(event.target.value, true); });
+  byId('te-media-filter').addEventListener('change', function() { renderMediaGrid(byId('te-media-search').value, true); });
+  byId('te-media-sort').addEventListener('change', function() { renderMediaGrid(byId('te-media-search').value, true); });
   byId('te-media-cancel').addEventListener('click', closeMediaPicker);
   byId('te-media-confirm').addEventListener('click', function() {
     if (!mediaTarget || !mediaAssetUrl(selectedMediaAsset)) return;
