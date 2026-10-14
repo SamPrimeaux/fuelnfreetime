@@ -59,7 +59,8 @@ function setDirty(next) {
   if (discard) discard.disabled = !dirty || saveInFlight;
   const publishButton = document.getElementById("publish-btn");
   if (publishButton) {
-    publishButton.hidden = isNew || !designContext?.draft || designContext.draft.state === "published";
+    publishButton.hidden = isNew || !designContext?.draft || designContext.draft.state === "published" ||
+      document.getElementById("status-sidebar")?.value === "active";
     publishButton.disabled = saveInFlight;
   }
   const createProvider = document.getElementById("create-provider-product-btn");
