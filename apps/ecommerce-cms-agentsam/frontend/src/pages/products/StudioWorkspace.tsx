@@ -964,7 +964,7 @@ export default function StudioWorkspace({
       if (!saved) throw new Error("Prepared artwork was uploaded, but the design draft could not be saved");
       if (canAutoFit) {
         setScale(finalScale);
-        setNotice(`Artwork fitted automatically to ${finalScale}% of the print area width using the original image pixels.`);
+        setNotice("Artwork placement was adjusted automatically for print quality. The original image was preserved.");
       }
       return saved;
     } catch (e) {
@@ -1053,7 +1053,6 @@ export default function StudioWorkspace({
     location, source: dimensions, crop: artworkCrop, cropPending, scalePercent: scale,
     fileName: asset?.filename,
   });
-  const effectiveDpi = quality.result;
   const lowResolution = quality.lowResolution;
   const filteredMedia = media;
   const currentPlacementKey = placementKey(asset?.id, variantId, locationId, x, y, scale, rotation, flipX, flipY, trimTransparent, removeFlatBackground);
@@ -1118,12 +1117,12 @@ export default function StudioWorkspace({
           {cropError && <p className="ps-step-feedback ps-step-feedback--error" role="alert">{cropError}</p>}
           {!error && !cropError && autoFitAvailable && (
             <p className="ps-step-feedback" role="status">
-              Artwork quality: we'll automatically fit the original image to the {Math.round(manufacturingPreflight?.target.ppi || 300)} PPI print target when you continue.
+              We’ll automatically adjust this artwork to print clearly when you continue. The original file stays unchanged.
             </p>
           )}
           {!error && !cropError && !autoFitAvailable && resolutionBlockers.some((issue) => issue.code === "insufficient_resolution") && (
             <p className="ps-step-feedback ps-step-feedback--error" role="status">
-              This original is too small for the current print size. Choose a higher-resolution source or reduce the artwork placement.
+              This image needs a larger original or a smaller design placement for a clear print.
             </p>
           )}
           {!error && notice && <p className="ps-step-feedback" role="status">{notice}</p>}
@@ -1703,14 +1702,6 @@ export default function StudioWorkspace({
             <label>Canvas zoom <input type="range" min="50" max="160" step="5" value={canvasZoom} onChange={(event) => setCanvasZoom(Number(event.target.value))} /></label>
             <span>{canvasZoom}%</span>
           </div>
-          {(manufacturingPreflight?.status === "unsupported" ||
-            manufacturingPreflight?.status === "needs_variant" || lowResolution) && (
-            <p className="ps-quality ps-quality--warning" role="status">
-              {lowResolution && effectiveDpi
-                ? `${effectiveDpi.dpi} DPI at this size. Reduce artwork to reach ${location?.dpi} DPI.`
-                : manufacturingPreflight?.issues[0]?.message || "Choose artwork compatible with this print area."}
-            </p>
-          )}
           {reply && (
             <details open className="ps-ai-reply">
               <summary>Creative direction</summary>
