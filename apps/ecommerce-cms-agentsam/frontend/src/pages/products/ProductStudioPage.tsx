@@ -49,6 +49,7 @@ export default function ProductStudioPage() {
   const [syncing, setSyncing] = useState(false);
   const [notice, setNotice] = useState("");
   const [detail, setDetail] = useState<ProductDetail | null>(null);
+  const [catalogWarning, setCatalogWarning] = useState("");
   const [designing, setDesigning] = useState(Boolean(resumeDraftId));
   useEffect(() => {
     if (productId && resumeDraftId) setDesigning(true);
@@ -109,8 +110,8 @@ export default function ProductStudioPage() {
         setError("");
       }
     });
-    adminFetch<ProductDetail>(
-      `/api/admin/completeful/catalog/${encodeURIComponent(productId)}`,
+    adminFetch<ProductDetail & { catalog_warning?: string }>(
+      `/api/admin/completeful/catalog/${encodeURIComponent(productId)}?live=1`,
       { signal: controller.signal },
     )
       .then((d) => {
@@ -136,6 +137,7 @@ export default function ProductStudioPage() {
               ?.preview_url ||
             "";
           setDetail(normalized);
+          setCatalogWarning(d.catalog_warning || "");
           setSelectedVariantId(catalogVariantId(initialVariant));
           setGallery(initialImage);
         }
@@ -235,6 +237,7 @@ export default function ProductStudioPage() {
             detail={detail}
             initialVariantId={selectedVariantId}
             resumeDraftId={resumeDraftId}
+            catalogWarning={catalogWarning}
             onBack={() => setDesigning(false)}
           />
         </Suspense>

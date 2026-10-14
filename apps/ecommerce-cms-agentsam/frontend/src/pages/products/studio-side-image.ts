@@ -49,6 +49,7 @@ export function selectStudioSideImage(
   frontVariantImage: string | null | undefined,
   isFront: boolean,
   variantAttributes: Record<string, string> = {},
+  distinctProviderSideArtboard = false,
 ): string | null {
   const sideMockups = mockups.filter((mockup) =>
     mockup.active !== 0 &&
@@ -60,6 +61,11 @@ export function selectStudioSideImage(
     scopeMatchesVariant(mockup.variant_scope_json, variantId, variantAttributes)
   );
   if (exactVariant?.preview_url) return exactVariant.preview_url;
+  // Catalog print-area artboards are real provider assets. Some products
+  // (for example sunglasses Left/Right) have distinct side images even when
+  // mockups are not variant-scoped. Do not discard those assets.
+  // Never accept a mirrored Front URL as proof of a Back view.
+  if (!isFront && distinctProviderSideArtboard && artboardImage) return artboardImage;
   // Generic artboard photos and unscoped mockups often depict only the
   // default (black) garment, regardless of the selected color. A preview of
   // an unverified color is worse than a truthful side-correct silhouette.
