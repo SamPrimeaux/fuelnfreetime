@@ -24,9 +24,8 @@ export const operatorTools = [
 
 /** Developer/operator tools stay out of merchant discovery and grants. */
 export const operatorOnlyLegacyKeys = Object.freeze([
-  "fnf_d1_query",
+  "agentsam_d1_query",
   "fnf_worker_deploy",
-  "fnf_mcp_bridge_status",
   "agentsam_github_repo_list",
   "search_cloudflare_documentation",
 ] as const);

@@ -95,15 +95,43 @@ INSERT INTO agentsam_tools (
 (
   'ast_fnf_d1_query',
   'ede6590ac0d2fb7daf155b35653457b2',
-  'fnf_d1_query', 'fnf_d1_query', 'D1 Read Query',
-  'database.d1', 'cf',
-  'Read-only SELECT against fuelnfreetime D1. Never runs writes from chat.',
+  'agentsam_d1_query', 'agentsam_d1_query', 'D1 Read Query',
+  'database.d1', 'd1',
+  'Read-only SELECT against the app database. One statement, row-capped; any write or admin SQL is rejected.',
   '{"type":"object","properties":{"sql":{"type":"string"},"params":{"type":"array"}},"required":["sql"]}',
-  '{"binding":"DB","operation":"readonly_sql","database":"fuelnfreetime"}',
+  '{"binding":"DB","operation":"readonly_sql"}',
   '["d1","sql","database","query","migration","schema"]',
   NULL, NULL, 'internal',
   'medium', 0, 1, 0,
   'code', NULL, 'repo_work', 'cloudflare', 'database.query', 15,
+  unixepoch(), unixepoch()
+),
+(
+  'ast_agentsam_d1_write',
+  'ede6590ac0d2fb7daf155b35653457b2',
+  'agentsam_d1_write', 'agentsam_d1_write', 'D1 Write',
+  'database.d1', 'd1',
+  'Insert, update or replace rows in the app database. Two steps: the first call returns a preview and a confirm code and changes nothing. Show the preview to the owner and, only after they agree, call again with the same sql and params plus confirm. One statement; UPDATE needs a WHERE clause; credential, account, provider and agent-config tables are protected.',
+  '{"type":"object","properties":{"sql":{"type":"string","description":"One INSERT, UPDATE or REPLACE statement. Use ? placeholders."},"params":{"type":"array","description":"Positional bind values."},"confirm":{"type":"string","description":"Confirm code from the preview. Leave out on the first call."},"max_rows":{"type":"integer","description":"Raise only when the owner agreed to a bulk change."}},"required":["sql"]}',
+  '{"binding":"DB","operation":"write"}',
+  '["d1","sql","database","insert","update","write","edit","change","add"]',
+  NULL, NULL, 'internal',
+  'high', 0, 1, 0,
+  'code', NULL, 'repo_work', 'cloudflare', 'database.write', 16,
+  unixepoch(), unixepoch()
+),
+(
+  'ast_agentsam_d1_delete',
+  'ede6590ac0d2fb7daf155b35653457b2',
+  'agentsam_d1_delete', 'agentsam_d1_delete', 'D1 Delete',
+  'database.d1', 'd1',
+  'Delete rows from the app database. Two steps: the first call returns a preview with the exact row count and a confirm code and changes nothing. Show the preview to the owner and, only after they agree, call again with the same sql and params plus confirm. One DELETE statement with a WHERE clause; credential, account, provider and agent-config tables are protected.',
+  '{"type":"object","properties":{"sql":{"type":"string","description":"One DELETE statement with a WHERE clause. Use ? placeholders."},"params":{"type":"array","description":"Positional bind values."},"confirm":{"type":"string","description":"Confirm code from the preview. Leave out on the first call."},"max_rows":{"type":"integer","description":"Raise only when the owner agreed to a bulk change."}},"required":["sql"]}',
+  '{"binding":"DB","operation":"delete"}',
+  '["d1","sql","database","delete","remove"]',
+  NULL, NULL, 'internal',
+  'high', 0, 1, 0,
+  'code', NULL, 'repo_work', 'cloudflare', 'database.delete', 17,
   unixepoch(), unixepoch()
 ),
 (
@@ -167,13 +195,13 @@ INSERT INTO agentsam_tools (
 (
   'ast_fnf_mcp_status',
   'ede6590ac0d2fb7daf155b35653457b2',
-  'fnf_mcp_bridge_status', 'fnf_mcp_bridge_status', 'MCP Bridge Status',
-  'mcp.status', 'mcp',
-  'Probe Inner Animal MCP bridge readiness and GitHub connection.',
+  'agentsam_ping', 'agentsam_ping', 'Ping',
+  'platform.health', 'd1',
+  'Liveness check: confirms the app is running, its database is bound, and the bridge secret is configured. No side effects.',
   '{"type":"object","properties":{}}',
-  '{"path":"/api/admin/agentsam/mcp/status","method":"GET","internal":true}',
-  '["mcp","bridge","github","connection","status"]',
-  'inneranimalmedia-mcp-server', 'https://mcp.inneranimalmedia.com/mcp', 'internal',
+  '{"binding":"DB","operation":"ping"}',
+  '["ping","health","status","liveness"]',
+  NULL, NULL, 'internal',
   'low', 0, 1, 0,
   'code', NULL, 'repo_work', 'platform', 'integration.mcp.status', 11,
   unixepoch(), unixepoch()
@@ -217,6 +245,16 @@ ON CONFLICT(tool_key) DO UPDATE SET
   sort_priority = excluded.sort_priority,
   updated_at = unixepoch();
 
+-- ── Mutating D1 tools are write-class; their capabilities are registered as mutating ──────────
+
+UPDATE agentsam_tools SET connector_access_class = 'write' WHERE tool_key IN ('agentsam_d1_write', 'agentsam_d1_delete');
+
+INSERT OR IGNORE INTO agentsam_capabilities (capability_key, domain, verb, description, is_mutating) VALUES
+  ('database.query', 'cloudflare', 'query', 'Read-only SELECT against the app database. One statement, row-capped.', 0),
+  ('database.write', 'cloudflare', 'write', 'Insert, update or replace rows in the app database. Confirmed by the owner before it runs.', 1),
+  ('database.delete', 'cloudflare', 'delete', 'Delete rows from the app database. Confirmed by the owner before it runs.', 1);
+UPDATE agentsam_capabilities SET description = 'Read-only SELECT against the app database. One statement, row-capped.', updated_at = unixepoch() WHERE capability_key = 'database.query';
+
 -- ── Policy keys ───────────────────────────────────────────────────────────────
 
 INSERT INTO agentsam_tool_policy_keys (id, account_id, policy_kind, tool_key, sort_order, notes)
@@ -224,12 +262,16 @@ VALUES('atpk_fnf_chat_github', 'ede6590ac0d2fb7daf155b35653457b2', 'agent_chat_e
   ('atpk_fnf_chat_orders', 'ede6590ac0d2fb7daf155b35653457b2', 'agent_chat_essential', 'fnf_store_orders_list', 20, 'Store ops'),
   ('atpk_fnf_chat_products', 'ede6590ac0d2fb7daf155b35653457b2', 'agent_chat_essential', 'fnf_store_products_list', 21, 'Inventory'),
   ('atpk_fnf_chat_cms', 'ede6590ac0d2fb7daf155b35653457b2', 'agent_chat_essential', 'fnf_cms_pages_list', 30, 'CMS'),
-  ('atpk_fnf_chat_d1', 'ede6590ac0d2fb7daf155b35653457b2', 'agent_chat_essential', 'fnf_d1_query', 15, 'Read-only SQL'),
+  ('atpk_fnf_chat_d1', 'ede6590ac0d2fb7daf155b35653457b2', 'agent_chat_essential', 'agentsam_d1_query', 15, 'Read-only SQL'),
   ('atpk_fnf_chat_models', 'ede6590ac0d2fb7daf155b35653457b2', 'agent_chat_essential', 'fnf_agentsam_ai_models', 12, 'Model registry'),
   ('atpk_fnf_safe_analytics', 'ede6590ac0d2fb7daf155b35653457b2', 'builtin_safe_allowlist', 'fnf_analytics_summary', 10, 'Usage summary'),
-  ('atpk_fnf_safe_mcp', 'ede6590ac0d2fb7daf155b35653457b2', 'builtin_safe_allowlist', 'fnf_mcp_bridge_status', 11, 'Bridge probe'),
+  ('atpk_fnf_safe_mcp', 'ede6590ac0d2fb7daf155b35653457b2', 'builtin_safe_allowlist', 'agentsam_ping', 11, 'Liveness probe'),
   ('atpk_fnf_nc_deploy', 'ede6590ac0d2fb7daf155b35653457b2', 'non_cacheable', 'fnf_worker_deploy', 10, 'Deploy'),
-  ('atpk_fnf_nc_d1', 'ede6590ac0d2fb7daf155b35653457b2', 'non_cacheable', 'fnf_d1_query', 20, 'Fresh SQL reads')
+  ('atpk_fnf_nc_d1', 'ede6590ac0d2fb7daf155b35653457b2', 'non_cacheable', 'agentsam_d1_query', 20, 'Fresh SQL reads'),
+  ('atpk_agentsam_d1_write_chat', 'ede6590ac0d2fb7daf155b35653457b2', 'agent_chat_essential', 'agentsam_d1_write', 16, 'Confirmed writes'),
+  ('atpk_agentsam_d1_delete_chat', 'ede6590ac0d2fb7daf155b35653457b2', 'agent_chat_essential', 'agentsam_d1_delete', 17, 'Confirmed deletes'),
+  ('atpk_agentsam_d1_write_nc', 'ede6590ac0d2fb7daf155b35653457b2', 'non_cacheable', 'agentsam_d1_write', 21, 'Confirmed writes'),
+  ('atpk_agentsam_d1_delete_nc', 'ede6590ac0d2fb7daf155b35653457b2', 'non_cacheable', 'agentsam_d1_delete', 22, 'Confirmed deletes')
 ON CONFLICT(account_id, policy_kind, tool_key) DO UPDATE SET
   sort_order = excluded.sort_order,
   notes = excluded.notes,

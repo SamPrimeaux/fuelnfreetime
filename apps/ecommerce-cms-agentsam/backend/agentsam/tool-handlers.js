@@ -11,7 +11,7 @@ import { executeFnfSemanticSearch } from "./fnf-vectorize.js";
 import { getAgentSamTool } from "./tools-registry.js";
 import { executeCompletefulTool } from "./completeful-tools.js";
 import { executeAdminAppTool } from "./admin-app-tools.js";
-import { CORE_EXECUTABLE_TOOL_KEYS, executeCoreTool } from "./core-tools.js";
+import { CORE_EXECUTABLE_TOOL_KEYS, SELF_CONFIRMING_TOOL_KEYS, executeCoreTool } from "./core-tools.js";
 
 const COMPLETEFUL_EXECUTABLE_OPERATIONS = new Set([
   "status",
@@ -41,6 +41,7 @@ export function isAgentSamToolExecutable(tool) {
 }
 
 function writeGate(tool, options = {}) {
+  if (SELF_CONFIRMING_TOOL_KEYS.has(tool?.tool_key)) return null;
   if (tool?.requires_approval && options.approved !== true) {
     return {
       ok: false,
@@ -95,7 +96,7 @@ export async function executeAgentSamTool(env, toolKey, params = {}, options = {
   }
 
   if (CORE_EXECUTABLE_TOOL_KEYS.has(toolKey)) {
-    return executeCoreTool(env, tool, params);
+    return executeCoreTool(env, tool, params, options);
   }
 
   if (tool.handler_type === "admin_api") {

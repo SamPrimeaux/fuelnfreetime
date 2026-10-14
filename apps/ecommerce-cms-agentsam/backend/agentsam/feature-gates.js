@@ -68,7 +68,7 @@ export function detectBlockedFeatureRequest(message, attachments = []) {
 const TOOL_KEY_ALLOWLIST = new Set([
   "agentsam_github_repo_list",
   "search_cloudflare_documentation",
-  "fnf_d1_query",
+  "agentsam_d1_query",
   "fnf_r2_list",
   "fnf_cms_read",
 ]);

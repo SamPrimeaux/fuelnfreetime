@@ -1,3 +1,8 @@
+import { readOnlySql } from "./d1-sql.ts";
+import { runD1Mutation } from "./d1-mutation.ts";
+
+const D1_QUERY_MAX_ROWS = 200;
+
 function boundedLimit(value, fallback = 20, max = 100) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
@@ -16,9 +21,16 @@ export const CORE_EXECUTABLE_TOOL_KEYS = new Set([
   "fnf_media_library_list",
   "fnf_r2_media_list",
   "fnf_agentsam_ai_models",
+  "agentsam_ping",
+  "agentsam_d1_query",
+  "agentsam_d1_write",
+  "agentsam_d1_delete",
 ]);
 
-export async function executeCoreTool(env, tool, params = {}) {
+/** These run their own preview-and-confirm step, so the generic write gate must not pre-empt it. */
+export const SELF_CONFIRMING_TOOL_KEYS = new Set(["agentsam_d1_write", "agentsam_d1_delete"]);
+
+export async function executeCoreTool(env, tool, params = {}, options = {}) {
   switch (tool?.tool_key) {
     case "fnf_store_orders_list": {
       const limit = boundedLimit(params.limit, 20, 100);
@@ -132,6 +144,51 @@ export async function executeCoreTool(env, tool, params = {}) {
       ).all();
       return { ok: true, models: results || [] };
     }
+
+    case "agentsam_ping": {
+      let db = "unbound";
+      if (env.DB?.prepare) {
+        try {
+          await env.DB.prepare("SELECT 1").first();
+          db = "ok";
+        } catch {
+          db = "error";
+        }
+      }
+      const bridge = String(env.AGENTSAM_BRIDGE_KEY || "").trim() ? "configured" : "not_configured";
+      return { ok: db === "ok", db, bridge };
+    }
+
+    case "agentsam_d1_query": {
+      if (!env.DB?.prepare) return { ok: false, error: "DB_not_bound" };
+      const checked = readOnlySql(params.sql);
+      if (!checked.ok) return { ok: false, error: checked.error, ...(checked.detail ? { message: checked.detail } : {}) };
+      const binds = Array.isArray(params.params) ? params.params : [];
+      if (binds.length > 32 || binds.some((v) => v !== null && !["string", "number", "boolean"].includes(typeof v))) {
+        return { ok: false, error: "invalid_params" };
+      }
+      const limit = boundedLimit(params.limit, 50, D1_QUERY_MAX_ROWS);
+      try {
+        const { results } = await env.DB.prepare("SELECT * FROM (\n" + checked.sql + "\n) LIMIT " + (limit + 1))
+          .bind(...binds.map((v) => (typeof v === "boolean" ? Number(v) : v)))
+          .all();
+        const rows = results || [];
+        return {
+          ok: true,
+          rows: rows.slice(0, limit),
+          row_count: Math.min(rows.length, limit),
+          truncated: rows.length > limit,
+        };
+      } catch (error) {
+        return { ok: false, error: "sql_error", message: String(error?.message || error).slice(0, 300) };
+      }
+    }
+
+    case "agentsam_d1_write":
+      return runD1Mutation(env, "write", params, options);
+
+    case "agentsam_d1_delete":
+      return runD1Mutation(env, "delete", params, options);
 
     default:
       return { ok: false, error: "core_tool_not_implemented", tool_key: tool?.tool_key };
