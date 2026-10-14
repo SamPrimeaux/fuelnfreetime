@@ -1,34 +1,38 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getRegistryPage, listRegistryPages } from "../apps/ecommerce-cms-agentsam/backend/cms/registry.js";
+import { PAGE_REGISTRY } from "../apps/ecommerce-cms-agentsam/backend/cms/registry.js";
+import layouts from "../apps/ecommerce-cms-agentsam/fixtures/fnf-editorial-cms-pages.v1.json" with { type: "json" };
 import "../packages/theme-contract/runtime/portable-sections.js";
 
-const slugs=["fnf-editorial-home","fnf-field-notes","fnf-product-story"];
 const portable=globalThis.ThemePortableSections;
+function instance(section) {
+ const defaults=portable.defaults(section.preset);
+ return {key:section.key,content:{
+  ...structuredClone(defaults),...structuredClone(section.content),
+  __editor:structuredClone(defaults.__editor),
+ }};
+}
 
-test("editorial concept pages are draft CMS pages with installed section renderers",()=>{
-  const listed=listRegistryPages();
-  for(const slug of slugs) {
-    assert.ok(listed.some(page=>page.slug===slug&&page.status==="draft"));
-    const page=getRegistryPage(slug);
-    assert.equal(page.source,"registry");
-    assert.equal(page.status,"draft");
-    assert.ok(page.sections.length>=2);
-    for(const section of page.sections) {
-      const preset=section.content.__editor.themePreset;
-      assert.equal(section.status,"draft");
-      assert.ok(portable.get(preset),"Missing actual preset renderer: "+preset);
-      assert.deepEqual(portable.validate(preset,section.content),{ok:true});
-      const html=portable.render(section);
-      assert.match(html,/data-cms-section/);
-      assert.ok(html.length>250);
-      assert.doesNotMatch(html,/Product truth before publishing|fabricated|mock prices|to verify/i);
-    }
+test("editorial page arrangements are preview recipes, not auto-published CMS routes",()=>{
+ assert.equal(layouts.status,"draft");
+ assert.deepEqual(layouts.pages.map(p=>p.slug),
+  ["fnf-editorial-home","fnf-field-notes","fnf-product-story"]);
+ for(const page of layouts.pages) {
+  assert.equal(PAGE_REGISTRY[page.slug],undefined);
+  assert.ok(page.sections.length>=2);
+  for(const fixture of page.sections) {
+   const entry=instance(fixture);
+   assert.deepEqual(portable.validate(fixture.preset,entry.content),{ok:true});
+   const html=portable.render(entry);
+   assert.match(html,/data-cms-section/);
+   assert.ok(html.length>250);
+   assert.doesNotMatch(html,/Product truth before publishing|fabricated|mock prices|to verify/i);
   }
+ }
 });
-
-test("story cards do not present unpublished article links as clickable",()=>{
- const grid=getRegistryPage("fnf-field-notes").sections.find(section=>section.key==="field-grid");
+test("unlinked field note cards don't become fake clickable articles",()=>{
+ const page=layouts.pages.find(p=>p.slug==="fnf-field-notes");
+ const grid=instance(page.sections.find(s=>s.key==="field-grid"));
  const html=portable.render(grid);
  assert.match(html,/The Build/);
  assert.match(html,/The Route/);
