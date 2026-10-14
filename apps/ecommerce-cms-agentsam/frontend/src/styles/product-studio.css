@@ -2080,3 +2080,19 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
   }
   .product-studio-shell .ps-restore-notice { padding: 8px 12px; }
 }
+
+/* Supplier sync health is visible in the merchant catalog, not console-only. */
+.product-studio-shell .ps-catalog-sync-alert {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  margin: 16px auto; max-width: 100%; padding: 12px 16px;
+  border: 1px solid #ddac56; border-radius: 12px;
+  background: #fff8e7; color: #55401b; font-size: 12px;
+}
+.product-studio-shell .ps-catalog-sync-alert strong { font-weight: 700; }
+.product-studio-shell .ps-catalog-sync-alert span { flex: 1 1 330px; }
+.product-studio-shell .ps-catalog-sync-alert details { flex-basis: 100%; overflow-wrap: anywhere; }
+.product-studio-shell .ps-catalog-sync-alert .ps-button { margin-left: auto; }
+@media (max-width: 760px) {
+  .product-studio-shell .ps-catalog-sync-alert { margin: 12px; }
+  .product-studio-shell .ps-catalog-sync-alert .ps-button { margin-left: 0; width: 100%; }
+}
