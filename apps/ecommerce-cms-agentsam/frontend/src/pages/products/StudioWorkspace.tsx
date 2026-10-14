@@ -12,7 +12,6 @@ import {
   catalogVariantId,
   printPixelSize,
   printSizeLabel,
-  productImage,
   selectVariantForAxis,
   variantAttributes,
   variantAxes,
@@ -286,12 +285,15 @@ export default function StudioWorkspace({
     detail.variants[0];
   const selectedAttributes = variantAttributes(variant);
   const optionAxes = variantAxes(detail.variants);
-  const baseImage =
-    variantImage(variant) ||
-    productImage(detail.product) ||
-    detail.images[0]?.url ||
-    detail.mockups.find((mockup) => mockup.active && mockup.preview_url)
-      ?.preview_url;
+  // Blank garment source is NOT the supplier's decorated demonstration mockup.
+  // "realistic_image_url" and the generic mockup gallery can already contain
+  // another customer's artwork. Never position merchant artwork over those.
+  // Choose images scoped to the selected variant, never another color.
+  const blankVariantSources = [
+    variant?.cover_image_url,
+    variant?.main_icon_url,
+    ...(!variant ? [detail.product.cover_image_url, detail.product.main_icon_url] : []),
+  ].filter((url): url is string => Boolean(url));
   const enabledLocations = detail.print_locations.filter((candidate) => candidate.enabled);
   const isFrontLocation = /(?:^|[_\s-])front(?:$|[_\s-])/i.test(location?.name || locationId);
   const hasDistinctProviderSideArtboard = Boolean(
@@ -301,17 +303,17 @@ export default function StudioWorkspace({
       (candidate.artboard_image_url && candidate.artboard_image_url !== location.artboard_image_url)),
   );
   const designImage = selectStudioSideImage(
-    detail.mockups, locationId, variantId, location?.artboard_image_url,
-    variantImage(variant) || baseImage, isFrontLocation, selectedAttributes,
+    // Supplier mockups and their "realistic" pictures may embed stock artwork.
+    // Do not treat those as blank manufacturer base images.
+    [], locationId, variantId, location?.artboard_image_url,
+    blankVariantSources[0], isFrontLocation, selectedAttributes,
     hasDistinctProviderSideArtboard,
   );
-  // The catalog uses ProductImage, which proxies Completeful-hosted images and
-  // falls back on failed loads. The canvas MUST use that same renderer. Only
-  // Front may try a selected-variant's other garment references; never fall
-  // back from Back/Left/Right to a front-facing catalog photograph.
   const designImageSources = designImage
-    ? (isFrontLocation ? [designImage, variant?.cover_image_url, variant?.main_icon_url,
-        productImage(detail.product)] : [designImage])
+    ? (isFrontLocation
+      ? [...new Set([...blankVariantSources, location?.artboard_image_url].filter(
+          (url): url is string => Boolean(url)))]
+      : [designImage])
     : [];
   // Never use a generic silhouette to impersonate a provider garment photo.
   // Unverified side/color combinations keep their print geometry, but no garment claim.
