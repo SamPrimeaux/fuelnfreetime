@@ -1681,13 +1681,11 @@
 .ps-print-side-toggle button.is-active { background: var(--ps-accent-soft); color: var(--ps-accent); }
 @media (max-width: 760px) { .ps-product-design-image,.ps-design-guide { min-height: 0; } .ps-mini-map { position: relative; width: min(100%, 210px); margin: 12px auto 0; } .ps-print-side-toggle { flex-wrap: wrap; } }
 
-/* Full-bleed, focused Product Studio: editor owns the canvas, not admin navigation. */
-body.product-studio-focused.console-theme { --c-nav-w: 0px; }
-body.product-studio-focused .console-sidenav.admin-sidebar,
-body.product-studio-focused .console-topbar-spacer { display: none !important; }
+/* Preserve the shell navigation on Product Studio catalog and editor routes.
+   The shared hamburger/mobile drawer must remain usable at every breakpoint. */
 body.product-studio-focused .console-main.admin-main,
 body.product-studio-focused .console-main.admin-main:not(.console-main--bleed) {
-  max-width: none; width: 100%; padding: 0; min-width: 0; overflow: clip;
+  max-width: none; padding: 0; min-width: 0; overflow: clip;
 }
 body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc(100dvh - 52px); }
 .product-studio-shell .ps-workspace-header { background: var(--ps-paper); }
