@@ -1,0 +1,21 @@
+name: Product Studio clean garment source
+on:
+  pull_request:
+    paths:
+      - apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx
+      - apps/ecommerce-cms-agentsam/frontend/src/pages/products/studio-blank-image.ts
+      - apps/ecommerce-cms-agentsam/frontend/src/pages/products/studio-side-image.ts
+      - tests/product-studio-blank-garment-sources.test.mjs
+      - .github/workflows/product-studio-blank-garment.yml
+permissions:
+  contents: read
+jobs:
+  blank-garment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Reject provider artwork-bearing mockups from merchant design canvas
+        run: node --test tests/product-studio-blank-garment-sources.test.mjs
