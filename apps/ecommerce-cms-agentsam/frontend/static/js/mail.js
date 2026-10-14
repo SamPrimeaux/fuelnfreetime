@@ -20,7 +20,7 @@ let activeMailbox = "";
 let selectedContextId = null;
 let toastTimer;
 let adminEmail = "";
-let composeSettings = { resendFrom: "hello@fuelnfreetime.com" };
+let composeSettings = { resendFrom: "" };
 let primaryMailbox = "";
 let composeMailboxes = [];
 
@@ -199,7 +199,7 @@ function updateComposeFromOptions() {
     options.push(`<option value="resend">${settings.resendFrom} via Resend</option>`);
   }
   if (!options.length) {
-    options.push(`<option value="resend">hello@fuelnfreetime.com via Resend</option>`);
+    options.push('<option value="" disabled>No sender configured (set one in Account settings)</option>');
   }
   select.innerHTML = options.join("");
 }
@@ -336,7 +336,7 @@ function renderRows() {
     </article>`
       )
       .join("") ||
-    `<div class="empty-state"><div class="empty-card"><h2>No messages yet</h2><p>${activeFolder === "sent" ? "Sent mail from Resend will appear here." : "Inbound mail arrives via Resend on your @fuelnfreetime.com address."}</p><div class="empty-actions"><button class="small-pill primary" type="button" id="emptyCompose">Compose</button></div></div></div>`;
+    `<div class="empty-state"><div class="empty-card"><h2>No messages yet</h2><p>${activeFolder === "sent" ? "Sent mail from Resend will appear here." : "Inbound mail arrives via Resend on your configured mailbox addresses."}</p><div class="empty-actions"><button class="small-pill primary" type="button" id="emptyCompose">Compose</button></div></div></div>`;
 
   $("emptyCompose")?.addEventListener("click", () => openCompose("New message"));
 }
@@ -345,7 +345,7 @@ async function renderReader() {
   const readerBody = $("readerBody");
   if (!readerBody) return;
   let message = messages.find((item) => item.id === selectedId);
-  const inboxTo = message?.to_email || adminEmail || "admin@fuelnfreetime.com";
+  const inboxTo = message?.to_email || adminEmail || primaryMailbox || "";
 
   if (!message) {
     readerBody.innerHTML = `<div class="empty-state"><div class="empty-card"><h2>Select a message</h2><p>Choose an email from the list, or compose a new message.</p><div class="empty-actions"><button class="small-pill primary" type="button" id="openComposeEmpty">Compose</button></div></div></div>`;
