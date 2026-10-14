@@ -111,7 +111,7 @@ test("A Studio draft cannot publish before fulfillment; published handles mainta
   const { sql, put, base } = fixture();
   const blocked = await put({ ...base, status: "active" });
   assert.equal(blocked.status, 409);
-  assert.match(blocked.body.error, /Connect Completeful fulfillment first/);
+  assert.match(blocked.body.error, /Create and map this product with Completeful before publishing/);
   assert.equal(sql.prepare("SELECT status FROM products WHERE id=42").get().status, "draft");
   sql.prepare("INSERT INTO completeful_product_links(product_id,completeful_store_product_id,sync_status) VALUES(42,'provider-product','linked')").run();
   const good = await put({ ...base, status: "active" });
