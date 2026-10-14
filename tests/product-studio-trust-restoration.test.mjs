@@ -61,7 +61,8 @@ test("resize corners have direction-aware pointer math and the correct diagonal 
 test("supplier catalog drafts never pretend missing variants are warehouse stock", async () => {
   const productEdit = await read("../apps/ecommerce-cms-agentsam/frontend/static/product-edit.html");
   assert.match(productEdit, /supplierDraft\s*=\s*false/);
-  assert.match(productEdit, /Completeful catalog variants are available upstream/);
+  assert.match(productEdit, /Your selected sizes and colors are saved/);
+  assert.match(productEdit, /card.hidden = Boolean\(supplierDraft\)/);
   assert.match(productEdit, /add\.hidden = supplierDraft/);
   assert.match(productEdit, /Boolean\(d\.design_draft\?\.completeful_catalog_product_id\)/);
 });
