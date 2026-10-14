@@ -141,11 +141,13 @@ export default function StudioWorkspace({
   detail,
   initialVariantId = "",
   resumeDraftId = null,
+  catalogWarning = "",
   onBack,
 }: {
   detail: ProductDetail;
   initialVariantId?: string;
   resumeDraftId?: string | null;
+  catalogWarning?: string;
   onBack: () => void;
 }) {
   const [tab, setTab] = useState("options");
@@ -1003,7 +1005,7 @@ export default function StudioWorkspace({
             {busy === "save" ? "Saving…" : "Save design"}
           </button>
           <button className="ps-button ps-primary" disabled={Boolean(busy)} onClick={() => void continueToProductDetails()}>
-            {busy === "save" ? "Saving design…" : "Next step · Product details →"}
+            {busy === "prepare" ? "Preparing print artwork…" : busy === "save" ? "Saving design…" : "Next step · Product details →"}
           </button>
         </div>
         <div className="ps-header-artwork-tools">
@@ -1034,6 +1036,7 @@ export default function StudioWorkspace({
             )}
         </div>
       </header>
+      {catalogWarning && <p className="ps-restore-notice" role="alert">{catalogWarning}</p>}
       {restoringDraft && <p className="ps-restore-notice" role="status">Restoring saved design and artwork…</p>}
       <div className={`ps-workspace-body ${panelOpen ? "" : "is-panel-collapsed"}`}>
         <nav className="ps-toolrail" aria-label="Design tools">
