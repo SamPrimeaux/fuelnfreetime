@@ -2171,12 +2171,13 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
   border-color: #d79d89; color: #8e392b; background: #fff0e9;
 }
 /* The minimap is an inspectable control, not a decorative div. */
-.product-studio-shell .ps-mini-expand {
-  display: block; width: 100%; padding: 0; border: 0; color: inherit;
-  cursor: zoom-in; text-align: left; position: relative; border-radius: 0;
+.product-studio-shell .ps-mini-expand-hitarea {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  display: block; padding: 0; border: 0; background: transparent;
+  cursor: zoom-in; z-index: 2;
 }
-.product-studio-shell .ps-mini-expand:focus-visible { outline: 3px solid var(--ps-accent); outline-offset: -3px; }
-.product-studio-shell .ps-mini-expand::after {
+.product-studio-shell .ps-mini-expand-hitarea:focus-visible { outline: 3px solid var(--ps-accent); outline-offset: -3px; }
+.product-studio-shell .ps-mini-expand-hitarea::after {
   content: "Expand preview"; position: absolute; right: 5px; bottom: 5px;
   background: #fffdf4ee; border-radius: 5px; padding: 4px 6px;
   color: #23212b; font-size: 9px; box-shadow: 0 1px 8px #0002;
