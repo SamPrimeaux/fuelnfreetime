@@ -305,6 +305,14 @@ export default function StudioWorkspace({
     variantImage(variant) || baseImage, isFrontLocation, selectedAttributes,
     hasDistinctProviderSideArtboard,
   );
+  // The catalog uses ProductImage, which proxies Completeful-hosted images and
+  // falls back on failed loads. The canvas MUST use that same renderer. Only
+  // Front may try a selected-variant's other garment references; never fall
+  // back from Back/Left/Right to a front-facing catalog photograph.
+  const designImageSources = designImage
+    ? (isFrontLocation ? [designImage, variant?.cover_image_url, variant?.main_icon_url,
+        productImage(detail.product)] : [designImage])
+    : [];
   // Never use a generic silhouette to impersonate a provider garment photo.
   // Unverified side/color combinations keep their print geometry, but no garment claim.
   const artboardAspectRatio = location?.artboard_width && location?.artboard_height
@@ -1374,7 +1382,13 @@ export default function StudioWorkspace({
                 <div className="ps-design-guide" style={{ aspectRatio: artboardAspectRatio }}
                   aria-label={`${location?.name || "Selected"} garment design view`}>
                   {designImage ? (
-                    <img className={"ps-design-product-image" + (hasProviderPlacementFrame ? " is-geometry-mapped" : "")} src={designImage} alt={`${location?.name || "Selected"} provider catalog reference`} />
+                    <ProductImage
+                      key={`${variantId}:${locationId}:${designImage}`}
+                      className={"ps-design-product-image" + (hasProviderPlacementFrame ? " is-geometry-mapped" : "")}
+                      sources={designImageSources}
+                      lazy={false}
+                      alt={`${location?.name || "Selected"} provider catalog reference`}
+                    />
                   ) : (
                     <div className="ps-unverified-garment" role="status">
                       <strong>No verified {location?.name || "side"} mockup</strong>
@@ -1463,7 +1477,7 @@ export default function StudioWorkspace({
                 <>
                   <div className="ps-mini-image" aria-label="Live placement approximation for the selected variant">
                     {currentRenderUrl || designImage
-                      ? <ProductImage key={`${variantId}:${locationId}`} sources={[currentRenderUrl || designImage || undefined]} alt={`${location?.name || "Selected"} garment variant: ${variant?.variant_title || variant?.name || detail.product.name}`} />
+                      ? <ProductImage key={`${variantId}:${locationId}`} sources={currentRenderUrl ? [currentRenderUrl] : designImageSources} alt={`${location?.name || "Selected"} garment variant: ${variant?.variant_title || variant?.name || detail.product.name}`} />
                       : <div className="ps-mini-unverified">No verified {location?.name || "side"} mockup</div>}
                     {!currentRenderUrl && asset && showArtwork && (
                       <div className="ps-mini-placement" style={placementFrameStyle}>
