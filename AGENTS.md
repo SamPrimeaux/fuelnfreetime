@@ -1,5 +1,13 @@
 # Canonical package and production-infrastructure law
 
+## Mandatory product-quality law — read before changing code
+
+Read **[Product Quality, Acceptance and Release Contract](docs/engineering/PRODUCT-QUALITY-ACCEPTANCE-AND-RELEASE-CONTRACT.md)** and the **[AgentSam Tool Infrastructure Recovery TODO](docs/AGENTSAM-TOOL-INFRASTRUCTURE-RECOVERY-TODO-2026-10-14.md)** for any UI, editor, commerce, media, agent-tool or provider change. These are binding review/closeout requirements; CI enforcement of the new gates is still an explicit implementation task.
+
+**A passing build, typecheck, unit test or screenshot existence never establishes that the merchant-facing product is correct.** Reproduce the user's reported defect on the actual view, check real task completion and persistence, inspect rendered before/after visuals at phone/tablet/desktop sizes, and verify the served deployment. Mobile editor, dock, preview geometry, overlays, and component selection cannot regress. If any applicable acceptance proof is missing or a reported defect remains, mark **IMPLEMENTED / UNVERIFIED** or **BLOCKED / FAILED**, never DONE.
+
+**AgentSam rule:** an internal backend/provider function, declarative workflow node, and model-callable tool are three different things. Do not register AI tools because an API endpoint exists. Prove real handler + typed schema + tenant authorization + reason for agent invocation + actual result before advertising tool availability. Never submit paid or manufacturing orders for a smoke test. Preserve source-owned designs and originals; never replace a poor visual result with a green scripted test.
+
 **Fuel & Free Time is customer #1 and the reference implementation of the reusable AgentSam ecommerce application, not a donor or FNF-only architecture.** Production infrastructure (R2 asset queue/optimization, Vectorize BGE-M3, CMS/D1/R2 generation, CLIs, commerce/provider integrations) already exists. Consolidate and reuse it before inventing replacements.
 
 Read **[docs/ARCHITECTURE-AUTHORITY.md](docs/ARCHITECTURE-AUTHORITY.md)** and the [machine-derived package inventory](docs/generated/package-authority.md) before changing generic tooling, data models, plugins, UI engines, media, knowledge or bins. SDK/package-first is the default: locate actual exports and consumers; inject FNF tenant configuration; add capabilities to the canonical package when missing; prove production behavioral parity before any cutover or deletion. Do not create second authorities/registries.
