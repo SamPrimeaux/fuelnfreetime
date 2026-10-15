@@ -92,7 +92,7 @@ import {
   agentsamGithubOAuthStatus,
 } from "./agentsam-github.js";
 import { onlineStoreOverview, getStorePreferences, postStorePreferences } from "./store.js";
-import { getStoreTheme, publishStoreTheme, setThemePublishReady } from "./themes.js";
+import { getStoreTheme, publishStoreTheme, setThemePublishReady, selectThemePreview } from "./themes.js";
 import { getThemePage, listThemePages, saveThemePage, renderThemePreview } from "./theme-workspace.js";
 import { retryAssetJob, runAdminCompaction } from "./ops.js";
 import { handleGrowthApi } from "./growth.js";
@@ -718,7 +718,7 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   }
   if (path === "/api/admin/overview" && method === "GET") return overview(request, env);
   if (path === "/api/admin/store/online" && method === "GET") {
-    return onlineStoreOverview(env);
+    return onlineStoreOverview(env, user.account_id);
   }
   if (path === "/api/admin/store/preferences" && method === "GET") {
     return getStorePreferences(env);
@@ -728,6 +728,15 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   }
   if (path === "/api/admin/store/crawler" && method === "GET") {
     return getStoreSearchDiscovery(env);
+  }
+
+  if (path === "/api/admin/store/theme-selection" && method === "PUT") {
+    let body;
+    try { body = await request.json(); }
+    catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
+    const result = await selectThemePreview(env, body.slug, user.account_id,
+      body.expected_version ?? null);
+    return json(result, { status: result.status || 200 });
   }
 
   let themePageMatch = path.match(/^\/api\/admin\/store\/themes\/([^/]+)\/pages$/);
@@ -769,13 +778,13 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
 
   let themeMatch = path.match(/^\/api\/admin\/store\/themes\/([^/]+)$/);
   if (themeMatch && method === "GET") {
-    const theme = await getStoreTheme(env, decodeURIComponent(themeMatch[1]));
+    const theme = await getStoreTheme(env, decodeURIComponent(themeMatch[1]), user.account_id);
     return theme ? json({ ok: true, theme }) : json({ error: "Theme not found" }, { status: 404 });
   }
 
   themeMatch = path.match(/^\/api\/admin\/store\/themes\/([^/]+)\/publish$/);
   if (themeMatch && method === "POST") {
-    const result = await publishStoreTheme(env, decodeURIComponent(themeMatch[1]), user?.id || null);
+    const result = await publishStoreTheme(env, decodeURIComponent(themeMatch[1]), user?.id || null, user.account_id);
     return result.ok ? json(result) : json(result, { status: result.status || 500 });
   }
 
@@ -788,6 +797,7 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
       decodeURIComponent(themeMatch[1]),
       body.ready === true,
       user?.id || null,
+      user.account_id,
     );
     return result.ok ? json(result) : json(result, { status: result.status || 500 });
   }
