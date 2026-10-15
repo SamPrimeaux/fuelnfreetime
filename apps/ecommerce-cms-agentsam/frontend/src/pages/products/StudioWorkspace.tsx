@@ -552,7 +552,7 @@ export default function StudioWorkspace({
     return () => clearTimeout(timer);
   }, [mediaSearch]);
   useEffect(() => {
-    if (tab !== "upload") return;
+    if (tab !== "upload" && tab !== "tools") return;
     const controller = new AbortController();
     queueMicrotask(() => {
       if (!controller.signal.aborted) {
