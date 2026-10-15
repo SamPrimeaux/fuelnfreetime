@@ -2355,9 +2355,6 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
   .product-studio-shell .ps-stage-toolbar { flex-wrap: wrap; gap: 8px; }
   .product-studio-shell .ps-stage-toolbar__controls { flex-wrap: wrap; width: 100%; }
   .product-studio-shell .ps-toolrail__help { margin-top: 0; margin-left: auto; min-width: 52px; }
-  .product-studio-shell .ps-composer-dock {
-    left: auto; right: 14px; transform: none; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 40;
-  }
 }
 @media (max-width: 1080px) and (min-width: 761px) {
   .product-studio-shell .ps-steps li span:not(.ps-steps__dot) { display: none; }
