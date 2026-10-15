@@ -46,11 +46,15 @@ export async function listCatalogModels(env, input = {}) {
     const { results } = await env.DB.prepare(
       `SELECT c.model_key, c.api_model_id, c.display_name, c.provider, c.model_kind,
               c.tier, c.context_window, c.max_output_tokens, c.lifecycle_status,
+              c.effort_default, c.effort_param, c.effort_levels_json,
               c.is_active, c.show_in_picker, c.supports_tools, c.supports_vision,
               c.supports_streaming, c.supports_json_mode, c.supports_reasoning,
               c.specs_verified_at,
               p.is_active AS policy_active, p.routing_eligible,
-              p.requires_owner_approval, p.requires_budget_gate,
+              p.requires_owner_approval, p.requires_budget_gate, p.requires_artifact_capture,
+              p.target_input_tokens, p.compact_at_tokens, p.intervene_at_tokens,
+              p.max_normal_input_tokens, p.max_cumulative_input_tokens,
+              p.safety_margin_tokens, p.pricing_threshold_tokens,
               p.compaction_strategy, p.policy_source,
               (SELECT COUNT(*) FROM agentsam_model_pricing pr
                WHERE pr.model_key = c.model_key AND pr.is_active = 1
@@ -75,10 +79,14 @@ export async function listCatalogModels(env, input = {}) {
       supports_streaming: row.supports_streaming === 1,
       supports_json_mode: row.supports_json_mode === 1,
       supports_reasoning: row.supports_reasoning === 1,
+      effort_levels: typeof row.effort_levels_json === "string" && row.effort_levels_json
+        ? (() => { try { return JSON.parse(row.effort_levels_json); } catch { return []; } })()
+        : [],
       policy_active: row.policy_active === 1,
       routing_eligible: row.policy_active === 1 && row.routing_eligible === 1 && row.is_active === 1,
       requires_owner_approval: row.requires_owner_approval === 1,
       requires_budget_gate: row.requires_budget_gate === 1,
+      requires_artifact_capture: row.requires_artifact_capture === 1,
       pricing_verified: Number(row.current_price_rows) > 0 && Number(row.verified_price_rows) === Number(row.current_price_rows),
     }));
     const result = {
