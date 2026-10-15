@@ -2920,7 +2920,17 @@
   function setEditorDrawer(next, showMobileSheet = true) {
     const aside = byId('te-editor-drawer');
     if (aside && editorDrawer) drawerScroll[editorDrawer] = aside.scrollTop;
+    const wasClosed = editorDrawer === null;
     editorDrawer = editorDrawer === next ? null : next;
+    if (!editorDrawer) {
+      // Closing the left editing rail is a full storefront preview action:
+      // keep the selection, but remove the right inspector as well.
+      inspectorBeforeFullPreview = inspectorVisible;
+      setInspectorVisible(false);
+    } else if (wasClosed) {
+      // Opening a panel restores the previous inspector preference.
+      setInspectorVisible(inspectorBeforeFullPreview);
+    }
     if (editorDrawer !== 'sections') closeMiniAgentSam();
     const studio = document.querySelector('.theme-studio');
     if (studio) studio.setAttribute('data-editor-drawer', editorDrawer || 'closed');
