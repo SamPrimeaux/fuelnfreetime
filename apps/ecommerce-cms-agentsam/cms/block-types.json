@@ -41,9 +41,11 @@
       "content": [
         "label",
         "href",
+        "openInNewTab",
         "style"
       ],
-      "container": false
+      "container": false,
+      "definition": "cms_definitions:button@2"
     },
     "group": {
       "family": "basic",
