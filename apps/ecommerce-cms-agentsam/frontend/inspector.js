@@ -180,6 +180,7 @@
       page: location.pathname + location.search,
       surface: 'admin-page',
     }, () => ({ left: window.innerWidth / 2, top: window.innerHeight - 96, width: 0, height: 0 }));
+    markOpen(true, true);
   }
 
   function activate() {
