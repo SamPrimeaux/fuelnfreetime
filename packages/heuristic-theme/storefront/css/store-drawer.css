@@ -1,0 +1,47 @@
+/* Storewide cart preview. Values are theme tokens; no merchant-specific styles. */
+body.store-cart-open {overflow:hidden}
+#store-cart-drawer-root {position:fixed;z-index:20020;inset:0;visibility:hidden;pointer-events:none;font-family:var(--h-font-body,Inter,system-ui,sans-serif)}
+#store-cart-drawer-root.is-open {visibility:visible;pointer-events:auto}
+.drawer-backdrop {position:absolute;inset:0;background:rgba(5,5,5,.69);backdrop-filter:blur(7px);opacity:0;transition:opacity .24s ease}
+.is-open .drawer-backdrop {opacity:1}
+.drawer-panel {position:absolute;right:0;top:0;bottom:0;display:flex;flex-direction:column;width:min(100%,480px);background:#111210;color:#f7f4ed;border-left:1px solid #383633;box-shadow:-20px 0 90px #0008;transform:translateX(102%);transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+.is-open .drawer-panel {transform:none}
+.drawer-head {display:flex;justify-content:space-between;gap:16px;align-items:start;padding:30px 26px 23px;border-bottom:1px solid #35332f}
+.drawer-eyebrow {font:700 10px/1.3 var(--h-font-body,Inter,sans-serif);text-transform:uppercase;letter-spacing:.18em;color:#b99a77;margin:0 0 8px}
+.drawer-head h2 {font:400 clamp(30px,5vw,39px)/1.1 Georgia,serif;letter-spacing:-.03em;margin:0}
+.drawer-head h2 span {font:600 12px var(--h-font-body,Inter,sans-serif);color:#aba59d;margin-left:9px;vertical-align:middle}
+.drawer-close {background:none;border:0;color:#f7f4ed;font-size:30px;line-height:1;cursor:pointer;min-width:40px;min-height:40px}
+.drawer-items {padding:10px 26px;overflow-y:auto;min-height:0;flex:1;overscroll-behavior:contain}
+.drawer-line {display:grid;grid-template-columns:83px minmax(0,1fr) auto;gap:14px;padding:18px 0;border-bottom:1px solid #343431;align-items:start}
+.drawer-line__image {display:block;width:83px;aspect-ratio:3/4;border-radius:3px;background:#282825;overflow:hidden}
+.drawer-line__image img {width:100%;height:100%;object-fit:cover}
+.drawer-line__copy {min-width:0}
+.drawer-line__title {display:block;color:#fff;text-decoration:none;font-size:12px;line-height:1.45;font-weight:750;letter-spacing:.035em;text-transform:uppercase}
+.drawer-line__title:hover{text-decoration:underline}
+.drawer-line__option {color:#a8a49d;font-size:11px;line-height:1.5;margin:8px 0 14px}
+.drawer-line__qty {border:1px solid #484640;display:inline-flex;align-items:center;height:32px}
+.drawer-line__qty button {background:transparent;border:0;color:#fff;cursor:pointer;width:31px;height:30px;font-size:15px}
+.drawer-line__qty button:disabled{opacity:.3;cursor:default}
+.drawer-line__qty output {font:600 12px var(--h-font-body,Inter,sans-serif);min-width:18px;text-align:center}
+.drawer-line__price {display:flex;flex-direction:column;align-items:end;gap:20px;white-space:nowrap}
+.drawer-line__price strong{font-size:12px}
+.drawer-line__price button{color:#aaa49a;font:600 10px var(--h-font-body,Inter,sans-serif);background:none;border:0;text-decoration:underline;cursor:pointer}
+.drawer-summary {margin-top:auto;border-top:1px solid #383633;padding:25px 26px 30px;background:#151612}
+.drawer-subtotal {display:flex;justify-content:space-between;gap:12px;font-size:15px;font-weight:700}
+.drawer-summary p {font-size:11px;color:#a9a59d;margin:12px 0 18px}
+.drawer-checkout {display:flex;align-items:center;justify-content:space-between;background:#f4f1eb;color:#161614;text-transform:uppercase;font-size:12px;font-weight:800;letter-spacing:.12em;padding:18px 20px;text-decoration:none;min-height:54px}
+.drawer-checkout:hover {background:#e8ded0}
+.drawer-continue {display:block;border:0;background:none;color:#cdc7bb;margin:15px auto 0;text-decoration:underline;font-size:12px;cursor:pointer}
+.drawer-empty {display:grid;align-content:center;justify-items:center;text-align:center;min-height:45vh;gap:14px}
+.drawer-empty p {font:400 27px Georgia,serif;margin:0}
+.drawer-empty span {font-size:12px;color:#aaa49a}
+.drawer-empty a {font-size:12px;color:#f0e6d5}
+@media(max-width:520px){
+.drawer-head{padding:23px 20px 19px}
+.drawer-items{padding-inline:20px}
+.drawer-summary{padding:20px 20px max(24px,env(safe-area-inset-bottom))}
+.drawer-line{grid-template-columns:70px minmax(0,1fr) auto;gap:10px}
+.drawer-line__image{width:70px}
+.drawer-line__price strong{font-size:11px}
+}
+@media(prefers-reduced-motion:reduce){.drawer-backdrop,.drawer-panel{transition:none}}

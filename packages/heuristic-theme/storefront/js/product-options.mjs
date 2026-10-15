@@ -51,9 +51,9 @@ export function imagesForColor(product={},color="") {
   const images=normalizeImages(product);
   if(!norm(color))return { images, reference:false };
   const direct=images.filter(i=>norm(i.color)===norm(color));
-  if(direct.length)return {images:direct.concat(images.filter(i=>norm(i.color)!==norm(color))),reference:false};
+  if(direct.length)return {images:direct,reference:false};
   const references=(product.color_images||[]).filter(i=>norm(i.color)===norm(color) && i.url);
   // Provider reference is an actual catalog image, not a decorated FNF photo.
-  if(references.length)return {images:references.concat(images),reference:true};
+  if(references.length)return {images:references,reference:true};
   return {images,reference:false};
 }

@@ -141,7 +141,7 @@
   }
 
   function cartIconHtml() {
-    return `<a href="/cart" class="fnf-cart-btn" id="fnfCartBtn" aria-label="Cart">${CART_SVG}<span class="fnf-cart-count" data-cart-count hidden>0</span></a>`;
+    return `<a href="/checkout" data-cart-open class="fnf-cart-btn" id="fnfCartBtn" aria-label="Open bag">${CART_SVG}<span class="fnf-cart-count" data-cart-count hidden>0</span></a>`;
   }
 
   function headerBlock(includeSpacer) {
@@ -195,7 +195,7 @@
       <div class="fnf-mobile" id="fnfMobile" aria-hidden="true">
         <div class="fnf-mobile-backdrop" id="fnfMobileBackdrop"></div>
         <nav class="fnf-mobile-panel" aria-label="Mobile">
-          <ul>${mobileItems}<li><a href="/cart" data-nav-id="cart">Cart</a></li></ul>
+          <ul>${mobileItems}<li><a href="/checkout" data-cart-open data-nav-id="cart">Bag</a></li></ul>
         </nav>
       </div>
       ${includeSpacer ? '<div class="fnf-spacer" aria-hidden="true"></div>' : ""}`;
@@ -336,6 +336,7 @@
     bindHeader();
     applyHeaderTone(document.getElementById("fnfHeader"));
     updateCartBadge();
+    import("./store-drawer.mjs").catch(error=>console.error("Cart preview unavailable:", error));
   }
 
   function cmsSection(page, key) {

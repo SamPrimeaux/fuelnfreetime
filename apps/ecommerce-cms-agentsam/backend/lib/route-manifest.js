@@ -20,7 +20,7 @@ const STORE_ROUTES = [
   { id: "store.collaborate", path: "/collaborate", surface: "storefront", handler: "cms-page", page: "collaborate", context: "cms.page", indexable: true, legacy: ["/collaborate.html", "/pages/collaborate", "/pages/collaborate/"] },
   { id: "store.policies", path: "/policies", surface: "storefront", handler: "cms-page", page: "policies", context: "cms.page", indexable: true, legacy: ["/policies.html", "/pages/policies", "/pages/policies/"] },
   { id: "store.terms", path: "/terms", surface: "storefront", handler: "cms-page", page: "terms", context: "cms.page", indexable: true, legacy: ["/terms.html", "/pages/terms", "/pages/terms/"] },
-  { id: "store.cart", path: "/cart", surface: "storefront", handler: "static", page: "cart", context: "commerce.cart", indexable: false, legacy: ["/cart.html", "/pages/cart", "/pages/cart/"] },
+  { id: "store.checkout", path: "/checkout", surface: "storefront", handler: "static", page: "cart", context: "commerce.checkout", indexable: false, legacy: ["/cart", "/cart.html", "/pages/cart", "/pages/cart/"] },
 ];
 
 const coreAdmin = (route) => ({
