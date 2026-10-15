@@ -10,6 +10,7 @@ import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { getRegistryPage, registryForAdmin } from "../apps/ecommerce-cms-agentsam/backend/cms/registry.js";
+import { attachCmsDefinitions, normalizeCmsDefinition } from "../apps/ecommerce-cms-agentsam/backend/cms/definition-registry.mjs";
 
 const exec = promisify(execFile);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -32,11 +33,20 @@ about.status = 'draft';
 about.content_authority = 'cms-draft-linked';
 about.sections = about.sections.map(section => ({...section,status:'draft',version:1}));
 const pages = {ok:true,pages:[{slug:"shop",title:"Shop",status:"draft",has_live_storefront:true, cms_published:false,draft_exists:true},{slug:"about",title:"About",status:"draft",has_live_storefront:true,cms_published:false,draft_exists:true}]};
+// Reproduce the currently installed D1 definition that previously hid tile
+// media/link controls by imposing empty section fields and a "group" restriction.
+const installedD1Drift = normalizeCmsDefinition({
+ id:"cmsd_editorial_grid_v1",definition_key:"editorial-grid",kind:"section",
+ label:"Collections Editorial Grid",version:"1",origin:"package",status:"active",
+ settings_schema_json:'{"eyebrow":{"type":"text"},"heading":{"type":"text"},"anchor":{"type":"text"}}',
+ allowed_blocks_json:'["group"]'
+});
+const productionShapedRegistry = attachCmsDefinitions(registryForAdmin(), [installedD1Drift]);
 const shim = "<script>" +
  "window.__nativeConfirmCount=0;window.confirm=()=>{window.__nativeConfirmCount++;return true;};window.__submitted=null;window.__linked=false;window.__saved=[];window.__isNewPage=new URLSearchParams(location.search).get('unseeded')==='1';window.__nativeDraft=new URLSearchParams(location.search).get('native')==='1';" +
  "window.renderShell=function(_,html){document.body.insertAdjacentHTML('afterbegin',html);};" +
  "window.adminFetch=async function(url,options){" +
- "if(url.endsWith('/registry'))return " + JSON.stringify(registryForAdmin()) + ";" +
+ "if(url.endsWith('/registry'))return " + JSON.stringify(productionShapedRegistry) + ";" +
  "if(url.endsWith('/pages/site'))return {page:" + JSON.stringify(site) + "};" +
  "if(url.endsWith('/pages/about'))return {page:" + JSON.stringify(about) + ",seeded:false};" +
  "if(url.endsWith('/pages/shop/import-live')){window.__submitted=JSON.parse(options.body);window.__linked=true;return {ok:true,published:false};}" +
@@ -94,7 +104,14 @@ const probe = "<script>setTimeout(function(){" +
  "fieldKeys:[...document.querySelectorAll('#te-inspector-body [data-field-key]')].map(e=>e.dataset.fieldKey)};" +
  "document.getElementById('te-inspector-parent')?.click();" +
  "before.blockInspector.parentTitle=document.getElementById('te-inspector-title')?.textContent;" +
- "}}" +
+ "}" +
+ "var tile=document.querySelector('[data-select-block=tile1][data-block-section=editorial-grid]');" +
+ "if(tile){tile.click();before.editorialTileInspector={eyebrow:document.querySelector('[data-field-input=\\\"tile1.eyebrow\\\"]')?.value," +
+ "headline:document.querySelector('[data-field-input=\\\"tile1.headline\\\"]')?.value," +
+ "photo:!!document.querySelector('[data-pick-media=\\\"tile1.imageUrl\\\"]')," +
+ "link:!!document.querySelector('[data-link-trigger=\\\"tile1.href\\\"]')," +
+ "staleFields:!!document.querySelector('[data-field-input=\\\"anchor\\\"]')};}" +
+ "}" +
  "if(window.innerWidth<=900){" +
  "var nav=document.getElementById('te-mobile-pane-switch');" +
  "var modes=nav.querySelectorAll('[data-mobile-pane]');" +
@@ -264,6 +281,9 @@ assert.equal(result.before.blockInspector.advancedClosed,true);
 assert.ok(result.before.blockInspector.fieldKeys.some(k=>k.endsWith(".href")));
 assert.equal(result.before.blockInspector.parentButton,true);
 assert.equal(result.before.blockInspector.parentTitle,"Collections");
+assert.deepEqual(result.before.editorialTileInspector,{
+ eyebrow:"High Octane",headline:"Run it past redline",photo:true,link:true,staleFields:false
+},"A clicked High Octane card must keep its actual nested R2 content and native media/link controls despite stale active D1 definition");
 assert.equal(result.before.saveDisabled,true,'Read-only live preview must not offer normal draft save');
 assert.equal(result.before.noImplicitImport,true,'Save without edits must not trigger import');
 assert.equal(result.before.reviewOpened,true,'Explicit import must open the in-app review dialog');
