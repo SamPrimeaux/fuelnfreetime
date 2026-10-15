@@ -35,6 +35,10 @@ const candidates = [
 ].filter(Boolean);
 const chrome = candidates.find(existsSync);
 
+test('Chrome is required for CI preview-layout acceptance', { skip: !process.env.CI }, () => {
+  assert.ok(chrome, 'Chrome must be installed; the preview geometry test cannot be skipped on CI.');
+});
+
 test('Chrome: clicking Sections, Theme Settings and App Embeds twice gives full-width preview and restores controls', { skip: !chrome }, () => {
   const dir = mkdtempSync(join(tmpdir(), 'fnf-full-preview-'));
   try {
