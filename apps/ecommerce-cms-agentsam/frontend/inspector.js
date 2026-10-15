@@ -158,12 +158,30 @@
     if (!available && active) deactivate({ close: true });
   }
 
+  // Page-level composer pinned bottom-center. A page with its own miniAgentSam context
+  // (e.g. Product Studio) claims the request by cancelling `agentsam:mini-open`.
+  function openPageComposer() {
+    const unclaimed = window.dispatchEvent(new CustomEvent('agentsam:mini-open', { cancelable: true }));
+    if (!unclaimed) return;
+    instance.select({
+      type: 'ui_element',
+      id: location.pathname,
+      label: cleanText(document.title, 100) || 'Admin page',
+      page: location.pathname + location.search,
+      surface: 'admin-page',
+    }, () => ({ left: window.innerWidth / 2, top: window.innerHeight - 96, width: 0, height: 0 }));
+  }
+
   function activate() {
-    if (!instance || !button || button.disabled) return;
+    if (!instance || !button) return;
     const image = mediaPreviewImage();
     if (image) {
       // The image is already selected on its detail page; one click opens the real shared composer.
       selectMedia(image);
+      return;
+    }
+    if (!inspectable) {
+      openPageComposer();
       return;
     }
     active = true;
