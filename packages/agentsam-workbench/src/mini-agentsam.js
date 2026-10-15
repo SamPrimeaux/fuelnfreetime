@@ -39,7 +39,7 @@ export function createMiniAgentSam(host) {
   <div class="hint" role="status" aria-live="polite" hidden>Click an element to annotate · Esc to exit</div>
   <section class="composer" aria-label="miniAgentSam" hidden>
     <div class="row">
-      <img class="icon" src="${miniAgentSamTokens.icon}" alt="AgentSam">
+      <img class="icon" src="${host.iconUrl || miniAgentSamTokens.icon}" alt="AgentSam">
       <textarea aria-label="Ask for changes" placeholder="Ask for changes" rows="1" wrap="off"></textarea>
       <button class="expand" aria-label="Expand message preview" aria-expanded="false">↗</button>
       <button class="more" aria-label="More miniAgentSam tools" aria-expanded="false">…</button>
