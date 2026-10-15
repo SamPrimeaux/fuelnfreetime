@@ -3280,11 +3280,24 @@
         applyThemeIdentity(await host.adapter.getThemeIdentity());
         return;
       }
-      const response = await fetch('/api/admin/store', { credentials: 'include' });
-      const data = await response.json();
-      const theme = data.active_theme || data.theme || null;
-      applyThemeIdentity({ name: theme && theme.name, status: theme && (theme.state || theme.status) });
+      const catalog = await editorRequest('/api/admin/cms/themes');
+      if (!catalog.ok) throw new Error(catalog.error || 'Installed theme catalog unavailable');
+      installedThemeSlugs = new Set((catalog.themes || []).map(function(theme) { return theme.slug; }));
+      persistedThemeVersion = Number(catalog.content_version || 0);
+      selectedTheme = catalog.preview_theme?.slug || catalog.active_theme?.slug || 'heuristic';
+      document.querySelectorAll('[data-theme-preview]').forEach(function(button) {
+        const installed = installedThemeSlugs.has(button.dataset.themePreview);
+        button.disabled = !installed;
+        button.title = installed ? 'Choose installed theme preview' : 'Theme artifact is not installed';
+        button.classList.toggle('is-active', button.dataset.themePreview === selectedTheme);
+        button.setAttribute('aria-pressed', String(button.dataset.themePreview === selectedTheme));
+      });
+      const theme = catalog.active_theme || null;
+      applyThemeIdentity({ name: theme?.name, status: theme?.state });
+      syncPublishCapability();
+      refreshPreview();
     } catch (error) {
+      setNote('Installed theme selection unavailable: ' + error.message, 'error');
       applyThemeIdentity({ name: '', status: '' });
     }
   }
