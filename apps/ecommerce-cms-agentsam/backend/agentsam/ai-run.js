@@ -208,6 +208,10 @@ async function executeModel(env, model, systemPrompt, userMessage, routing) {
   const taskType = model.task_type || routing.task_type;
   const user = String(userMessage || "").slice(0, 4000);
 
+  // #UNFINISHEDTOOLS (media.image.generate): not a registered tool. Model, size, n and format are HARDCODED
+  // below (gpt-image-2, 1024x1024, n:1) so Studio's size/quality/background options are ignored. There is no
+  // edit (/v1/images/edits), upscale or variations path. Replace with a real tool that honors the input schema in
+  // backend/tools/packs/media.planned.ts and resolves provider/model from the agentsam_ai registry.
   if (taskType === "image_generation") {
     if (!env.OPENAI_API_KEY) throw new Error("missing_OPENAI_API_KEY_secret");
 
