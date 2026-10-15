@@ -3,6 +3,7 @@
  * Definitions describe settings and semantics; the source/portable storefront
  * renderer remains the implementation authority until an artifact is verified.
  */
+import { normalizeSettingContract, overlayRenderableBlockFields } from "./setting-contract.ts";
 const KEY = /^[a-z][a-z0-9-]{0,63}$/;
 const KIND = new Set(["section", "block"]);
 const STATUS = new Set(["active", "draft", "deprecated", "archived"]);
@@ -78,30 +79,18 @@ export async function listCmsDefinitions(env, accountId, filters = {}) {
 // Canonical definition fields take precedence over the old JS page
 // descriptor when a genuine implementation has already been registered.
 // This only describes the inspector; it never fabricates a renderer.
-function definitionFields(fields) {
-  return Object.entries(fields || {})
-    .filter(([key, spec]) => KEY.test(key) && spec && typeof spec === "object" && !Array.isArray(spec))
-    .map(([key, spec]) => ({
-      key,
-      label: String(spec.label || key),
-      type: String(spec.type || "text"),
-      ...(spec.description ? {description:String(spec.description)} : {}),
-      ...(spec.min != null ? {min:spec.min} : {}),
-      ...(spec.max != null ? {max:spec.max} : {}),
-      ...(spec.step != null ? {step:spec.step} : {}),
-      ...(Array.isArray(spec.options) ? {options:spec.options} : {}),
-      ...(spec.binding ? {binding:spec.binding} : {}),
-    }));
-}
-
 export function attachCmsDefinitions(registry, definitions) {
   const pages = structuredClone(registry.pages || {});
   const indexed = new Map();
+  const blockIndexed = new Map();
   for (const definition of definitions) {
-    if (definition.status !== "active" || definition.kind !== "section") continue;
-    const old = indexed.get(definition.key);
+    if (definition.status !== "active") continue;
+    const target = definition.kind === "section" ? indexed :
+      definition.kind === "block" ? blockIndexed : null;
+    if (!target) continue;
+    const old = target.get(definition.key);
     if (!old || String(definition.version).localeCompare(String(old.version), undefined, { numeric: true }) > 0) {
-      indexed.set(definition.key, definition);
+      target.set(definition.key, definition);
     }
   }
   for (const page of Object.values(pages)) {
@@ -111,7 +100,8 @@ export function attachCmsDefinitions(registry, definitions) {
     // templates; a generated definition is installed via explicit acceptance.
     for (const definition of indexed.values()) {
       if (definition.origin !== "generated" || !definition.artifact || page.sections?.[definition.key]) continue;
-      const fields = definitionFields(definition.fields);
+      const normalized = normalizeSettingContract(definition.fields);
+      const fields = normalized.fields;
       if (!fields.length) continue;
       page.sections[definition.key] = {
         sortOrder: 1000,
@@ -121,6 +111,9 @@ export function attachCmsDefinitions(registry, definitions) {
         fields, blocks:[],settings:[],guardrails:{ allowRawCss:false,allowRawHtml:false },
         definitionKey:definition.key, definitionVersion:definition.version,
         definitionOrigin:"generated", definitionId:definition.id,
+        ...(normalized.issues.length ? { schemaConflicts: normalized.issues.map(issue => ({
+          ...issue, definitionId:definition.id,
+        })) } : {}),
       };
     }
     for (const [key, section] of Object.entries(page.sections || {})) {
@@ -136,7 +129,11 @@ export function attachCmsDefinitions(registry, definitions) {
       // fallback. Active D1 definitions supply the authoritative inspector
       // schema whenever they declare actual settings. Empty definitions
       // intentionally leave existing controls intact.
-      const fields = definitionFields(definition.fields);
+      const normalized = normalizeSettingContract(definition.fields);
+      const fields = normalized.fields;
+      for (const issue of normalized.issues) {
+        (section.schemaConflicts ||= []).push({...issue, definitionId:definition.id});
+      }
       // A source-backed section with no native section fields and real
       // children is block-only. Imported/legacy D1 rows must not turn its
       // nested card properties into unbound section-level controls.
@@ -175,6 +172,22 @@ export function attachCmsDefinitions(registry, definitions) {
       if (definition.maxBlocks != null) {
         section.guardrails = { ...(section.guardrails || {}), maxBlocks: definition.maxBlocks };
       }
+    }
+    // A block definition may enhance an existing renderer/editor schema,
+    // but may not register a fictional block or invent a missing binding.
+    for (const section of Object.values(page.sections || {})) {
+      if (!Array.isArray(section.blocks) || !section.blocks.length) continue;
+      section.blocks = section.blocks.map(block => {
+        const blockDefinition = blockIndexed.get(block.key);
+        if (!blockDefinition) return block;
+        const projected = overlayRenderableBlockFields(block, blockDefinition);
+        for (const conflict of projected.conflicts) {
+          (section.schemaConflicts ||= []).push({
+            ...conflict, blockKey:block.key, definitionId:blockDefinition.id,
+          });
+        }
+        return projected.block;
+      });
     }
   }
   const known = new Set(Object.values(pages).flatMap((page) => Object.keys(page.sections || {})));
