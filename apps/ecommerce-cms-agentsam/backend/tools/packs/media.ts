@@ -23,6 +23,11 @@ export const semanticSearchInputSchema = {
 } as const satisfies JSONSchema;
 export type SemanticSearchInput = ToolInput<typeof semanticSearchInputSchema>;
 
+// #UNFINISHEDTOOLS: only media.library.list and search.semantic are registered. The image/merch tools
+// (generate, edit, background.remove, upscale, artwork preflight/prepare, mockup render) are declared in
+// ./media.planned.ts and must be moved here with defineTool(...) once each has an executor, because
+// backend/tools/doctor.mjs fails the gate for a registered tool with no handler.
+// Audit: docs/AGENTSAM_MERCH_AND_TOOLS_AUDIT_20261015.md (F4). Tracked: tkt_13207989954e4171.
 export const mediaTools = [
   defineTool({
     id: "media.library.list", wireName: "media_library_list",
