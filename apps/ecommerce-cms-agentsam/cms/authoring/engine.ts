@@ -124,6 +124,12 @@ export function normalizeDefinition(raw: unknown): Definition {
   const rendererKey = typeof metadata.rendererKey === 'string' && metadata.rendererKey.trim()
     ? metadata.rendererKey : isObject(raw.artifact) && typeof raw.artifact.id === 'string'
       ? raw.artifact.id : null;
+  // A metadata rendererKey is a claim, not proof that implementation exists.
+  // The D1 adapter attaches artifact only after the account-scoped ready join.
+  const artifactReady = isObject(raw.artifact) &&
+    typeof raw.artifact.id === 'string' &&
+    typeof raw.artifact.contentHash === 'string' &&
+    typeof raw.artifact.manifestR2Key === 'string';
   const displayLabel = Array.isArray(metadata.displayLabel) &&
     metadata.displayLabel.every(v => typeof v === 'string')
       ? metadata.displayLabel as string[] : ['heading','title','text','label'];
@@ -133,7 +139,7 @@ export function normalizeDefinition(raw: unknown): Definition {
     origin:typeof raw.origin === 'string' ? raw.origin : 'unknown',
     settings:Object.freeze(settings), allowedChildren:Object.freeze([...allowed]) as string[],
     maxBlocks: maxBlocks as number | null, rendererKey,
-    renderable: rendererKey !== null, displayLabel:Object.freeze([...displayLabel])
+    renderable: artifactReady, displayLabel:Object.freeze([...displayLabel])
   });
 }
 
@@ -147,13 +153,22 @@ function isVisible(setting: Setting, values: Record<string,unknown>): boolean {
 }
 
 /** Read-model for a tenant's validated definition records; no extra registry/state owner. */
-export function createAuthoringEngine(raw: readonly unknown[]) {
+export function createAuthoringEngine(raw: readonly unknown[], options: {verifiedRenderers?: readonly string[]} = {}) {
   if (!Array.isArray(raw)) return fail('definitions_not_array');
+  // The host passes renderer keys obtained from its trusted implementation
+  // registry. D1 metadata cannot grant itself renderer availability.
+  const verified = new Set(options.verifiedRenderers || []);
   const definitions = new Map<string,Definition>();
   const diagnostics: Array<{key:string;error:string}> = [];
   for (const row of raw) {
     try {
-      const definition = normalizeDefinition(row);
+      const normalized = normalizeDefinition(row);
+      const definition: Definition = Object.freeze({
+        ...normalized,
+        renderable: normalized.renderable ||
+          (normalized.origin !== 'generated' &&
+            normalized.rendererKey !== null && verified.has(normalized.rendererKey))
+      });
       const identity = definition.kind + ':' + definition.key;
       const previous = definitions.get(identity);
       if (!previous || definition.version.localeCompare(previous.version,undefined,{numeric:true}) > 0)
