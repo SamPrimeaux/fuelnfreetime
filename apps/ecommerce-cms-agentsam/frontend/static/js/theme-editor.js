@@ -8,7 +8,9 @@
   let pages = [];
   let activeSectionKey = null;
   let activeSectionOwner = slug;
-  let selectedTheme = localStorage.getItem('theme-studio:selected-theme') || 'heuristic';
+  let selectedTheme = 'heuristic';
+  let persistedThemeVersion = 0;
+  let installedThemeSlugs = new Set(['heuristic']);
   let previewBlobUrl = null;
   let siteDraftTouched = false;
   let liveUnimported = false;
