@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "types": "wrangler types --strict-vars false",
+    "types:check": "wrangler types --strict-vars false --check",
     "app:frontend:sync": "node scripts/sync-app-frontend.mjs",
     "build": "npm run build:admin",
     "build:admin": "node scripts/ensure-admin-deps.mjs && npm run build --prefix apps/ecommerce-cms-agentsam/frontend && npm run app:frontend:sync && npm run guard:boundaries",
