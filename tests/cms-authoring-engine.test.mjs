@@ -73,7 +73,7 @@ test('renderer field projection respects typed visibility without hiding stale f
   assert.equal(custom.length,3);
   const extra=[...native,{key:'brandNew',type:'text',label:'Existing Renderer Field'}];
   const preserved=engine.rendererFields('block','button',extra,{style:'primary'});
-  assert.deepEqual(preserved,extra);
+  assert.equal(JSON.stringify(preserved),JSON.stringify(extra));
   assert.notEqual(preserved,extra);
 });
 
