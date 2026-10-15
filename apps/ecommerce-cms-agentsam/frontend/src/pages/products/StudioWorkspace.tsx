@@ -1103,18 +1103,6 @@ export default function StudioWorkspace({
           </ol>
         </nav>
         <div className="ps-workspace-actions">
-          <button type="button" ref={miniTriggerRef}
-            className="ps-agent-trigger ps-agent-trigger--icon ps-agent-trigger--header"
-            aria-label={agentVisible ? "Close miniAgentSam" : "Open miniAgentSam"}
-            aria-pressed={agentVisible}
-            title={agentVisible ? "Close miniAgentSam" : "Open miniAgentSam"}
-            onClick={openMiniAgentSam}>
-            <img src="/admin/brand/mini-agentsam-trigger.svg" alt="" aria-hidden="true" />
-          </button>
-          <a className="ps-text-button" href="/admin/products/help/artwork">
-            <StudioIcon name="tools" size={15} />
-            <span>Artwork help</span>
-          </a>
           <button className="ps-button" disabled={Boolean(busy)} onClick={() => void saveDraft()}>
             {busy === "save" ? "Saving…" : "Save design"}
           </button>
