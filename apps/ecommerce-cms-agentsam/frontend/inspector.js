@@ -339,7 +339,7 @@
       onClose: () => {
         active = false;
         window.__fnfGlobalInspectMode = false;
-        button?.setAttribute('aria-pressed', 'false');
+        markOpen(false);
       },
       send: async ({ prompt, resource, capabilities, attachments: files, signal }) => {
         if (!window.sendAgentsamMessage) {
