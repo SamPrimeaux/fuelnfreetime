@@ -215,6 +215,8 @@ export default function StudioWorkspace({
   const [flipY, setFlipY] = useState(false);
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [mediaSearch, setMediaSearch] = useState("");
+  // Default to artwork made or uploaded in Product Studio; the full media library is opt-in.
+  const [artworkScope, setArtworkScope] = useState<"studio" | "library">("studio");
   const [mediaQuery, setMediaQuery] = useState("");
   const [showArtwork, setShowArtwork] = useState(true);
   const [guides, setGuides] = useState(false);
