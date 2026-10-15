@@ -466,6 +466,24 @@ export default function StudioWorkspace({
       previousFocus?.focus();
     };
   }, [manageVariants]);
+  // Color thumbnails: one per color being sold, so every colorway can be reviewed without opening a menu.
+  // These are client composites (garment plate + current artwork placement), not stored mockups.
+  // #NOTDONE: stored per-color mockups are tracked in tkt_a6482217d8ca4be4.
+  const colorAxis = optionAxes.find((axis) => /color|colour/i.test(axis));
+  const colorways = colorAxis
+    ? variantAxisValues(detail.variants, colorAxis).flatMap((value) => {
+        const sample = detail.variants.find((candidate) =>
+          variantAttributes(candidate)[colorAxis] === value && selectedVariantSet.has(catalogVariantId(candidate)));
+        if (!sample) return [];
+        const blank = blankGarmentImageSources(sample, detail.product);
+        const image = selectStudioSideImage(
+          [], locationId, catalogVariantId(sample), location?.artboard_image_url,
+          blank[0], isFrontLocation, variantAttributes(sample), hasDistinctProviderSideArtboard,
+        );
+        const sources = image ? (isFrontLocation && blank.length ? blank : [image]) : [];
+        return [{ value, sources }];
+      })
+    : [];
   const printPixels = printPixelSize(location);
   const ratio =
     location?.file_width && location.file_height
