@@ -94,3 +94,41 @@ test("admin registry overlays active D1 metadata without replacing section rende
   assert.equal(data.definitions.find((entry)=>entry.key==="collections").insertable,true);
   assert.equal(data.pages.shop.sections["unbuilt-scene"],undefined);
 });
+
+
+test("active D1 schema overrides legacy editor fields without inventing any implementation", () => {
+  const registered = registryForAdmin();
+  const legacy = registered.pages.shop.sections.collections.fields;
+  const canonical = normalizeCmsDefinition({
+    id:"cmsd_collections_v4", definition_key:"collections", kind:"section",
+    label:"Collection Grid", version:"4",origin:"imported",status:"active",
+    settings_schema_json:JSON.stringify({
+      title:{type:"richtext",label:"Editorial title",description:"Visible heading"},
+      columns:{type:"range",label:"Columns",min:1,max:6,step:1},
+    }),
+    allowed_blocks_json:'["collection-card"]', max_blocks:4, metadata_json:"{}",
+  });
+  const result = attachCmsDefinitions(registered,[canonical]);
+  const section = result.pages.shop.sections.collections;
+  assert.deepEqual(section.fields.map(f=>f.key),["title","columns"]);
+  assert.equal(section.fields[0].type,"richtext");
+  assert.equal(section.fields[1].max,6);
+  assert.equal(section.schemaAuthority,"cms_definitions");
+  assert.equal(section.guardrails.maxBlocks,4);
+  assert.ok(section.blocks.every(block=>block.key==="collection-card"));
+  assert.deepEqual(registered.pages.shop.sections.collections.fields,legacy,
+    "canonicalization must not mutate the legacy source or other tenants");
+  assert.equal(result.pages.shop.sections["not-a-renderer"],undefined);
+});
+
+test("D1 definitions that declare no settings retain source-backed inspector fields",()=>{
+  const existing=registryForAdmin();
+  const def=normalizeCmsDefinition({
+    id:"cmsd_existing",definition_key:"hero",kind:"section",version:"2",
+    label:"Hero",origin:"imported",status:"active",
+    settings_schema_json:"{}",allowed_blocks_json:"[]",metadata_json:"{}",
+  });
+  const result=attachCmsDefinitions(existing,[def]);
+  assert.deepEqual(result.pages.shop.sections.hero.fields,existing.pages.shop.sections.hero.fields);
+  assert.equal(result.pages.shop.sections.hero.schemaAuthority,undefined);
+});

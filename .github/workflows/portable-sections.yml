@@ -7,6 +7,10 @@ on:
       - packages/heuristic-theme/storefront/js/cms-hydrate.js
       - packages/heuristic-theme/storefront/js/page-composer.js
       - apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor.js
+      - apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor-mini-agentsam.mjs
+      - packages/agentsam-workbench/src/mini-agentsam.js
+      - tests/theme-editor-selection-scroll.test.mjs
+      - tests/cms-mini-agentsam-browser.test.mjs
       - apps/ecommerce-cms-agentsam/frontend/static/css/theme-editor.css
       - apps/ecommerce-cms-agentsam/frontend/static/css/console.css
       - tests/theme-studio-hidden-topbar-browser.test.mjs
@@ -97,6 +101,8 @@ jobs:
           node --check apps/ecommerce-cms-agentsam/frontend/static/js/agentsam-composer.js
           node --check apps/ecommerce-cms-agentsam/frontend/static/js/miniagentsam-codepreview.js
           node --check apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor.js
+          node --check apps/ecommerce-cms-agentsam/frontend/static/js/theme-editor-mini-agentsam.mjs
+          node --check packages/agentsam-workbench/src/mini-agentsam.js
       - name: Real renderer and shared catalog checks
         run: node --test tests/portable-sections.test.mjs tests/revise-atlas-contract.test.mjs tests/theme-studio-universal.test.mjs tests/cms-editor-mutations.test.mjs tests/cms-generated-section-accept.test.mjs tests/cms-generated-stream.test.mjs tests/cms-definition-registry.test.mjs tests/storefront-header-presets-editor.test.mjs
       - name: Actual Chrome public DOM and live editor preview proof
@@ -107,6 +113,10 @@ jobs:
         run: node tests/launch/portable-editor-browser-smoke.mjs
       - name: Real Chrome full-preview toggle and inspector restoration
         run: node --test tests/theme-editor-full-preview.test.mjs tests/theme-editor-drawer-layout.test.mjs tests/theme-editor-visual-catalog.test.mjs
+      - name: Selection scrolls the real storefront frame, not the editor document
+        run: node --test tests/theme-editor-selection-scroll.test.mjs
+      - name: Real miniAgentSam preview positioning and approved CMS edit in Chrome
+        run: node tests/cms-mini-agentsam-browser.test.mjs
       - name: Editor shell fills viewport without reserving a hidden admin topbar
         run: node tests/theme-studio-hidden-topbar-browser.test.mjs
       - name: Real live Shop content and safe CMS draft import in Chrome

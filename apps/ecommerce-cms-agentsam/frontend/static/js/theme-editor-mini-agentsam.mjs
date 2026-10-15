@@ -4,7 +4,7 @@ import { createMiniAgentSam } from '/admin/workbench/mini-agentsam.js';
 export function createThemeEditorMiniAgentSam({ onProposal, onClose, positionBounds }) {
   const conversations = new Map();
   const mini = createMiniAgentSam({
-    preferAbove: true,
+    preferAbove: false,
     positionBounds,
     iconUrl: '/admin/brand/agentsam-gorilla-tiny.svg',
     resultStatus: 'AgentSam request sent',
