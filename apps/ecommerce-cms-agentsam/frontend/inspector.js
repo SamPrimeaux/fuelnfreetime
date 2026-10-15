@@ -301,6 +301,12 @@
     button.title = 'miniAgentSam · ask for changes';
     button.setAttribute('aria-label', button.title);
     button.setAttribute('aria-pressed', 'false');
+    if (!document.getElementById('inspect-toggle-style')) {
+      const style = document.createElement('style');
+      style.id = 'inspect-toggle-style';
+      style.textContent = '.console-icon-btn[data-inspect-toggle][aria-pressed="true"]{background:#2b2142;color:#c5a5ff}';
+      document.head.appendChild(style);
+    }
 
     const attachments = createAttachmentController({
       upload: async (file) => {
