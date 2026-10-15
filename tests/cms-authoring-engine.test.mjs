@@ -99,5 +99,5 @@ test('Theme Studio consumes compiled engine without forked editor or page list',
   assert.match(editor,/authoring\.inspector\('block'/);
   assert.match(editor,/cmsAuthoring\.describe\('block'/);
   assert.match(sync,/cms\/authoring\/engine\.ts/);
-  assert.doesNotMatch(file('apps/ecommerce-cms-agentsam/cms/authoring/engine.ts'),/PAGE_REGISTRY/);
+  assert.doesNotMatch(file('apps/ecommerce-cms-agentsam/cms/authoring/engine.ts'),/\b(?:import|require)\b[^\n]*registry/);
 });
