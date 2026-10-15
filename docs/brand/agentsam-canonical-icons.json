@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "owner": "InnerAnimalMedia",
+  "product": "AgentSam",
+  "status": "canonical-originals",
+  "policy": "Preserve exact original SVG files. Put experiments or remasters in separately versioned filenames; never replace these files silently.",
+  "assets": [
+    {
+      "id": "agentsam.mascot.gorilla",
+      "role": "Primary AgentSam gorilla mascot",
+      "file": "apps/ecommerce-cms-agentsam/frontend/static/brand/agentsam-gorilla-tiny.svg",
+      "sha256": "6056930e4154740ff9ca6cf349114928ce081a4f0a00fb9f88082da70fed37be",
+      "archive": {
+        "bucket": "brands",
+        "key": "inneranimalmedia/agentsam/identity/v1/agentsam-gorilla-tiny.svg"
+      }
+    },
+    {
+      "id": "agentsam.product.mark",
+      "role": "AgentSam professional application mark",
+      "file": "apps/ecommerce-cms-agentsam/frontend/static/brand/agentsam-mark.svg",
+      "sha256": "d75d9a6a83045c126c8372dbabdcadd91a087bacda789dcd5aec06c7658f9e9a",
+      "archive": {
+        "bucket": "brands",
+        "key": "inneranimalmedia/agentsam/identity/v1/agentsam-mark.svg"
+      }
+    }
+  ]
+}
