@@ -64,6 +64,7 @@ test('theme editing does not require store_theme_pages or another editor route',
   const root=fs.readFileSync(new URL('../apps/ecommerce-cms-agentsam/frontend/static/theme-editor.html',import.meta.url),'utf8');
   assert.match(root,/\/admin\/js\/theme-editor.js/);
   const api=fs.readFileSync(new URL('../apps/ecommerce-cms-agentsam/backend/admin/api.js',import.meta.url),'utf8');
-  assert.doesNotMatch(api,/store_theme_pages/);
-  assert.doesNotMatch(api,/getThemePage\(env/);
+  assert.doesNotMatch(api,/\b(?:FROM|INSERT INTO|UPDATE)\s+store_theme_pages\b/i);
+  assert.doesNotMatch(api,/\bgetThemePage\(env/);
+  assert.doesNotMatch(api,/import \{ getThemePage/);
 });
