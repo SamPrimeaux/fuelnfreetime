@@ -1533,8 +1533,28 @@ export default function StudioWorkspace({
         </aside>
         <div className="ps-stage-column" ref={stage}>
           <div className="ps-stage-toolbar">
-            <div>
-              <strong>Product design</strong>
+            <h1 className="ps-stage-title" title={detail.product.name}>{detail.product.name}</h1>
+            <div className="ps-stage-toolbar__controls">
+              {enabledLocations.length > 1 && (
+                <div className="ps-print-side-toggle" role="group" aria-label="Print location">
+                  {enabledLocations.map((candidate) => (
+                    <button type="button" key={candidate.print_location_id}
+                      className={locationId === candidate.print_location_id ? "is-active" : ""}
+                      aria-pressed={locationId === candidate.print_location_id}
+                      onClick={() => choosePrintLocation(candidate.print_location_id)}>
+                      {candidate.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="ps-canvas-controls">
+                <button type="button" onClick={() => setCanvasZoom(100)}>Fit</button>
+                <label><span className="ps-sr-only">Canvas zoom</span>
+                  <input type="range" min="50" max="160" step="5" value={canvasZoom}
+                    aria-label="Canvas zoom" onChange={(event) => setCanvasZoom(Number(event.target.value))} />
+                </label>
+                <span>{canvasZoom}%</span>
+              </div>
             </div>
           </div>
           <div className="ps-stage" data-agentsam-resource="product-design-stage">
