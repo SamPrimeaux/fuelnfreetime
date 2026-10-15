@@ -730,6 +730,34 @@ function renderVariants(variants, supplierDraft = false, sellingSelection = null
   const form = document.getElementById("variant-form");
   const body = document.getElementById("variants-body");
 
+  if (supplierDraft && variants.length) {
+    // Supplier SKUs already exist and are mapped upstream. Never ask a merchant
+    // to enter local warehouse quantities for 90 color/size combinations.
+    wrap.style.display = "none";
+    form.style.display = "none";
+    empty.style.display = "block";
+    empty.classList.add("has-supplier-selection");
+    const sizes = [...new Set(variants.map(v => String(v.size || "").trim()).filter(Boolean))];
+    const colors = [...new Set(variants.map(v => String(v.color || "").trim()).filter(Boolean))];
+    const hint = empty.querySelector("p");
+    if (hint) hint.textContent = "Your supplier assortment is linked. Stock is managed by Completeful.";
+    const add = document.getElementById("show-variant-form");
+    if (add) add.hidden = true;
+    empty.querySelector(".product-supplier-selection")?.remove();
+    const summary = document.createElement("div");
+    summary.className = "product-supplier-selection";
+    const heading = document.createElement("strong");
+    heading.textContent = variants.length + " linked combinations";
+    const detail = document.createElement("p");
+    detail.textContent = [sizes.length ? sizes.length + " sizes" : "",
+      colors.length ? colors.length + " colors" : ""].filter(Boolean).join(" · ") +
+      " · No manual stock entry";
+    summary.append(heading, detail);
+    empty.append(summary);
+    renderInventory([], true);
+    return;
+  }
+  empty.classList.remove("has-supplier-selection");
   if (!variants.length) {
     empty.classList.toggle("has-supplier-selection", supplierDraft);
     empty.style.display = "block";
@@ -955,7 +983,7 @@ async function loadProduct() {
     updateHeaderTitle(p.title);
     syncStatusUi();
     updateSeoPreview();
-    renderVariants(d.variants, Boolean(d.design_draft?.completeful_catalog_product_id), d.selling_selection);
+    renderVariants(d.variants, Boolean(d.design_draft?.completeful_catalog_product_id || d.fulfillment?.completeful_store_product_id), d.selling_selection);
     selectedCollectionIds = new Set((d.collection_ids || []).map(Number));
     renderCollections();
     renderStudioDesign(d.design_draft, d.fulfillment, d.source, d.selling_selection);
@@ -1038,18 +1066,10 @@ async function saveProduct() {
     showNote("Finish preparing the artwork in Product Studio before publishing.", "error");
     return;
   }
-  if (payload.status === "active" && !isNew) {
-    const issues = [];
-    if (variantCount === 0) issues.push("Add at least one size variant so customers can purchase");
-    if (payload.price_cents <= 0 && variantCount === 0) issues.push("Set a base price or variant pricing");
-    if (issues.length) {
-      const ok = confirm(
-        "This product is active but not ready for checkout:\n\n• " +
-          issues.join("\n• ") +
-          "\n\nCustomers will see the product page but cannot add to cart. Save anyway?"
-      );
-      if (!ok) return;
-    }
+  if (payload.status === "active" && !isNew && variantCount === 0 && !publishSupplier) {
+    // Saving metadata is never blocked by a missing sellable option.
+    // This applies to hats, accessories and other products with no size axis.
+    showNote("Product details can be saved. Add a sellable option before customers can purchase.", "info");
   }
 
   // Keep changes made during an in-flight save unsaved until they persist.

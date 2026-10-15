@@ -57,7 +57,7 @@ test("missing or cross-product supplier variants are shown as unresolved, not fa
 test("legacy Product Details uses persisted selection, not an empty local variant form", () => {
   const html = readFileSync("apps/ecommerce-cms-agentsam/frontend/static/product-edit.html", "utf8");
   const api = readFileSync("apps/ecommerce-cms-agentsam/backend/admin/api.js", "utf8");
-  assert.match(html, /renderVariants\(d\.variants, Boolean\(d\.design_draft\?\.completeful_catalog_product_id\), d\.selling_selection\)/);
+  assert.match(html, /renderVariants\(d\.variants, Boolean\(d\.design_draft\?\.completeful_catalog_product_id \|\| d\.fulfillment\?\.completeful_store_product_id\), d\.selling_selection\)/);
   assert.match(html, /renderSupplierSelection\(selectionRoot, sellingSelection\)/);
   assert.match(html, /No manual SKU entry required/);
   assert.doesNotMatch(html, /Keep this product as Draft until Completeful creates and maps/);

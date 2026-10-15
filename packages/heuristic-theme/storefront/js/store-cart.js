@@ -53,7 +53,7 @@
     lines.innerHTML = cart
       .map(
         (item) =>
-          `<div class="checkout-line"><span>${item.qty}× ${item.title}${item.size ? " · " + item.size : ""}</span><strong>${money((item.price_cents || 0) * item.qty)}</strong></div>`
+          `<div class="checkout-line"><span>${item.qty}× ${item.title}${item.color ? " · " + item.color : ""}${item.size ? " · " + item.size : ""}</span><strong>${money((item.price_cents || 0) * item.qty)}</strong></div>`
       )
       .join("");
   }
@@ -127,7 +127,7 @@
           <a href="${productHref}"><img src="${item.image || ""}" alt=""></a>
           <div class="cart-line-body">
             <h2><a href="${productHref}">${item.title}</a></h2>
-            <p class="cart-line-meta">${item.size ? "Size " + item.size : "One size"} · ${money(item.price_cents)} each</p>
+            <p class="cart-line-meta">${[item.color, item.size ? "Size " + item.size : null].filter(Boolean).join(" · ") || "One option"} · ${money(item.price_cents)} each</p>
             <div class="cart-qty">
               <button type="button" data-dec aria-label="Decrease quantity">−</button>
               <span>${item.qty}</span>
