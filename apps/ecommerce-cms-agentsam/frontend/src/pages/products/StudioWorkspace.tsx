@@ -1853,6 +1853,32 @@ export default function StudioWorkspace({
               )}
             </div>
           </div>
+          {colorways.length > 1 && colorAxis && (
+            <div className="ps-colorway-rail" role="group" aria-label="Preview color">
+              {colorways.map(({ value, sources }) => (
+                <button type="button" key={value}
+                  className={"ps-colorway" + (selectedAttributes[colorAxis] === value ? " is-active" : "")}
+                  aria-pressed={selectedAttributes[colorAxis] === value}
+                  aria-label={`Preview ${value}`} title={value}
+                  onClick={() => chooseVariantOption(colorAxis, value)}>
+                  <span className="ps-colorway__thumb" style={{ aspectRatio: artboardAspectRatio }}>
+                    {sources.length
+                      ? <ProductImage sources={sources} alt="" />
+                      : <span className="ps-colorway__empty" aria-hidden="true" />}
+                    {sources.length > 0 && asset && showArtwork && (
+                      <span className="ps-mini-placement" style={placementFrameStyle}>
+                        <img src={artworkPreviewUrl} alt="" style={{
+                          width: `${scale}%`, left: `${x}%`, top: `${y}%`,
+                          transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})`,
+                        }} />
+                      </span>
+                    )}
+                  </span>
+                  <span className="ps-colorway__label">{value}</span>
+                </button>
+              ))}
+            </div>
+          )}
           {fullPreviewOpen && (
             <div className="ps-preview-overlay" onMouseDown={(event) => {
               if (event.target === event.currentTarget) setFullPreviewOpen(false);
