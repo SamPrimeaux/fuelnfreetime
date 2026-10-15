@@ -240,44 +240,10 @@ export async function verifyStorefrontPassword(env, password) {
   return verifyPassword(password, storePasswordHash, storePasswordSalt);
 }
 
-async function resolveThemes(env) {
-  const lifecycle = await listStoreThemes(env);
-  if (lifecycle.ok) return lifecycle;
-
-  // Compatibility fallback only until migrate-store-themes.sql is applied.
-  // agentsam_products remains catalog metadata, not theme lifecycle truth.
-  try {
-    const { results } = await env.DB.prepare(
-      `SELECT slug AS id, slug, name, version, status, updated_at, package_name
-       FROM agentsam_products
-       WHERE kind = 'theme'
-       ORDER BY updated_at DESC
-       LIMIT 20`,
-    ).all();
-    const themes = (results || []).map((t) => ({
-      id: t.id,
-      slug: t.slug,
-      name: t.name,
-      state: t.status === "wired" ? "active" : "draft",
-      version: t.version || null,
-      last_saved: t.updated_at || null,
-      edit_href: `/admin/theme-editor?slug=shop`,
-      preview_href: "/",
-      package_name: t.package_name || null,
-      appearance: appearanceForInstalledPackage(t),
-      publish_ready: false,
-    }));
-    const active = themes.find((t) => t.state === "active") || null;
-    return {
-      ok: false,
-      source: "agentsam_products_compat",
-      active_theme: active,
-      draft_themes: themes.filter((t) => t !== active),
-      themes,
-    };
-  } catch {
-    return { ok: false, source: "unavailable", active_theme: null, draft_themes: [], themes: [] };
-  }
+async function resolveThemes(env, accountId = null) {
+  // The installed theme inventory resolves from cms_artifacts and cms_globals.
+  // Never fall back to agentsam_products or a second theme-state family.
+  return listStoreThemes(env, accountId);
 }
 
 async function resolveStorePerformance(env) {
@@ -402,12 +368,12 @@ export async function postStorePreferences(request, env) {
   });
 }
 
-export async function onlineStoreOverview(env) {
+export async function onlineStoreOverview(env, accountId = null) {
   const [pagesResult, sectionsMax, publishedPages, themes, performance, company] = await Promise.all([
     env.DB.prepare(`SELECT slug, title, status, updated_at FROM pages ORDER BY updated_at DESC`).all(),
     env.DB.prepare(`SELECT MAX(updated_at) AS last_saved FROM page_sections`).first(),
     env.DB.prepare(`SELECT COUNT(*) AS n FROM pages WHERE status = 'published'`).first(),
-    resolveThemes(env),
+    resolveThemes(env, accountId),
     resolveStorePerformance(env),
     getCompany(env),
   ]);
@@ -429,6 +395,9 @@ export async function onlineStoreOverview(env) {
       ? { ...themes.active_theme, last_saved: themes.active_theme.last_saved || sectionsMax?.last_saved || null }
       : null,
     draft_themes: themes.draft_themes,
+    preview_theme: themes.preview_theme,
+    themes: themes.themes,
+    theme_content_version: themes.content_version,
     pages: pagesResult.results || [],
   });
 }
