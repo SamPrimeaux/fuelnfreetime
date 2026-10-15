@@ -36,7 +36,7 @@ export async function listCatalogModels(env, input = {}) {
   const clauses = [];
   const binds = [];
   if (!input.include_inactive) clauses.push("c.is_active = 1");
-  if (input.routing_eligible_only) clauses.push("p.is_active = 1 AND p.routing_eligible = 1");
+  if (input.routing_eligible_only) clauses.push("c.is_active = 1 AND p.is_active = 1 AND p.routing_eligible = 1");
   if (input.picker_only) clauses.push("c.show_in_picker = 1");
   if (input.provider) { clauses.push("c.provider = ?"); binds.push(input.provider.trim()); }
   if (input.model_kind) { clauses.push("c.model_kind = ?"); binds.push(input.model_kind.trim()); }
@@ -79,7 +79,7 @@ export async function listCatalogModels(env, input = {}) {
       routing_eligible: row.policy_active === 1 && row.routing_eligible === 1 && row.is_active === 1,
       requires_owner_approval: row.requires_owner_approval === 1,
       requires_budget_gate: row.requires_budget_gate === 1,
-      pricing_verified: Number(row.verified_price_rows) > 0,
+      pricing_verified: Number(row.current_price_rows) > 0 && Number(row.verified_price_rows) === Number(row.current_price_rows),
     }));
     const result = {
       ok: true,
