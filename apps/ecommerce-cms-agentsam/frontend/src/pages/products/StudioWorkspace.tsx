@@ -215,6 +215,8 @@ export default function StudioWorkspace({
   const [flipY, setFlipY] = useState(false);
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [mediaSearch, setMediaSearch] = useState("");
+  // Default to artwork made or uploaded in Product Studio; the full media library is opt-in.
+  const [artworkScope, setArtworkScope] = useState<"studio" | "library">("studio");
   const [mediaQuery, setMediaQuery] = useState("");
   const [showArtwork, setShowArtwork] = useState(true);
   const [guides, setGuides] = useState(false);
@@ -530,8 +532,13 @@ export default function StudioWorkspace({
     }>(`/api/admin/media?${query}`, { signal: controller.signal })
       .then((d) => {
         if (controller.signal.aborted) return;
+        // Generated derivatives (placement previews, prepared print files) are outputs, never inputs.
+        const isDerivative = (a: MediaAsset) =>
+          /\/studio\/(?:previews|prepared)\//.test(a.url || "") || /^(?:placement|prepared)-/i.test(a.filename || "");
+        const inStudioScope = (a: MediaAsset) => /\/studio\/artwork\//.test(a.url || "");
         const artwork = d.assets.filter((a) =>
-          a.content_type?.startsWith("image/") || /\.(png|jpe?g|webp|svg)$/i.test(a.filename));
+          (a.content_type?.startsWith("image/") || /\.(png|jpe?g|webp|svg)$/i.test(a.filename)) &&
+          !isDerivative(a) && (artworkScope === "library" || inStudioScope(a)));
         setMedia((current) => mediaPage === 1 ? artwork : [
           ...current, ...artwork.filter((a) => !current.some((item) => item.id === a.id)),
         ]);
@@ -545,7 +552,7 @@ export default function StudioWorkspace({
         if (!controller.signal.aborted) setBusy("");
       });
     return () => controller.abort();
-  }, [tab, albumId, mediaPage, mediaQuery]);
+  }, [tab, albumId, mediaPage, mediaQuery, artworkScope]);
   useEffect(() => {
     if (!asset) return;
     let active = true;
@@ -1091,22 +1098,18 @@ export default function StudioWorkspace({
           <StudioIcon name="back" />
           <span>Product details</span>
         </button>
-        <div>
-          <h1>{detail.product.name}</h1>
-        </div>
+        <nav className="ps-steps" aria-label="Product creation progress">
+          <ol>
+            {["Choose product", "Design", "Product details", "Publish"].map((label, index) => (
+              <li key={label} className={index === 1 ? "is-current" : index < 1 ? "is-done" : ""}
+                aria-current={index === 1 ? "step" : undefined}>
+                <span className="ps-steps__dot" aria-hidden="true">{index < 1 ? "✓" : index + 1}</span>
+                <span>{label}</span>
+              </li>
+            ))}
+          </ol>
+        </nav>
         <div className="ps-workspace-actions">
-          <button type="button" ref={miniTriggerRef}
-            className="ps-agent-trigger ps-agent-trigger--icon ps-agent-trigger--header"
-            aria-label={agentVisible ? "Close miniAgentSam" : "Open miniAgentSam"}
-            aria-pressed={agentVisible}
-            title={agentVisible ? "Close miniAgentSam" : "Open miniAgentSam"}
-            onClick={openMiniAgentSam}>
-            <img src="/admin/brand/mini-agentsam-trigger.svg" alt="" aria-hidden="true" />
-          </button>
-          <a className="ps-text-button" href="/admin/products/help/artwork">
-            <StudioIcon name="tools" size={15} />
-            <span>Artwork help</span>
-          </a>
           <button className="ps-button" disabled={Boolean(busy)} onClick={() => void saveDraft()}>
             {busy === "save" ? "Saving…" : "Save design"}
           </button>
@@ -1171,6 +1174,13 @@ export default function StudioWorkspace({
               <span>{t.label}</span>
             </button>
           ))}
+          <a className="ps-toolrail__help" href="/admin/products/help/artwork" title="Artwork help">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+              strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><path d="M12 17h.01" />
+            </svg>
+            <span>Artwork help</span>
+          </a>
         </nav>
         <aside className="ps-toolpanel" ref={panel} hidden={!panelOpen} aria-label="Selected design tool">
           <div className="ps-panel-heading">
@@ -1331,6 +1341,15 @@ export default function StudioWorkspace({
                   <option key={album.id} value={album.id}>{album.name} ({album.asset_count ?? 0})</option>
                 ))}
               </select>
+              <div className="ps-asset-scope" role="group" aria-label="Artwork source">
+                {([["studio", "Studio artwork"], ["library", "Whole library"]] as const).map(([value, label]) => (
+                  <button type="button" key={value} className={artworkScope === value ? "is-active" : ""}
+                    aria-pressed={artworkScope === value}
+                    onClick={() => { setArtworkScope(value); setMediaPage(1); setMedia([]); }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
               <label className="ps-asset-search">
                 <StudioIcon name="search" size={15} />
                 <input type="search" value={mediaSearch} onChange={(event) => setMediaSearch(event.target.value)}
@@ -1351,7 +1370,9 @@ export default function StudioWorkspace({
               </div>
               {!busy && filteredMedia.length === 0 && (
                 <p className="ps-asset-status">{mediaSearch ? "No matching artwork." :
-                  albumId ? "This album has no artwork yet." : "Choose or upload your first artwork."}</p>
+                  albumId ? "This album has no artwork yet." :
+                  artworkScope === "studio" ? "No studio artwork yet. Upload a file, or switch to Whole library." :
+                  "Choose or upload your first artwork."}</p>
               )}
               {mediaHasMore && (
                 <button type="button" className="ps-button ps-wide"
@@ -1530,14 +1551,34 @@ export default function StudioWorkspace({
         </aside>
         <div className="ps-stage-column" ref={stage}>
           <div className="ps-stage-toolbar">
-            <div>
-              <strong>Product design</strong>
+            <h1 className="ps-stage-title" title={detail.product.name}>{detail.product.name}</h1>
+            <div className="ps-stage-toolbar__controls">
+              {enabledLocations.length > 1 && (
+                <div className="ps-print-side-toggle" role="group" aria-label="Print location">
+                  {enabledLocations.map((candidate) => (
+                    <button type="button" key={candidate.print_location_id}
+                      className={locationId === candidate.print_location_id ? "is-active" : ""}
+                      aria-pressed={locationId === candidate.print_location_id}
+                      onClick={() => choosePrintLocation(candidate.print_location_id)}>
+                      {candidate.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="ps-canvas-controls">
+                <button type="button" onClick={() => setCanvasZoom(100)}>Fit</button>
+                <label><span className="ps-sr-only">Canvas zoom</span>
+                  <input type="range" min="50" max="160" step="5" value={canvasZoom}
+                    aria-label="Canvas zoom" onChange={(event) => setCanvasZoom(Number(event.target.value))} />
+                </label>
+                <span>{canvasZoom}%</span>
+              </div>
             </div>
           </div>
           <div className="ps-stage" data-agentsam-resource="product-design-stage">
             <div className="ps-product-design-preview" style={{
               transform: `scale(${canvasZoom / 100})`,
-              width: `min(100%, 880px, calc((100dvh - 290px) * ${artboardAspectRatio}))`,
+              width: `min(100%, 880px, calc((100dvh - 262px) * ${artboardAspectRatio}))`,
             }}>
               <div className="ps-product-design-image">
                 <div className="ps-design-guide" style={{ aspectRatio: artboardAspectRatio }}
@@ -1685,23 +1726,19 @@ export default function StudioWorkspace({
               </section>
             </div>
           )}
-          {enabledLocations.length > 1 && (
-            <div className="ps-print-side-toggle" role="group" aria-label="Print location">
-              {enabledLocations.map((candidate) => (
-                <button type="button" key={candidate.print_location_id}
-                  className={locationId === candidate.print_location_id ? "is-active" : ""}
-                  aria-pressed={locationId === candidate.print_location_id}
-                  onClick={() => choosePrintLocation(candidate.print_location_id)}>
-                  {candidate.name}
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="ps-canvas-controls">
-            <button type="button" onClick={() => setCanvasZoom(100)}>Fit · 100%</button>
-            <label>Canvas zoom <input type="range" min="50" max="160" step="5" value={canvasZoom} onChange={(event) => setCanvasZoom(Number(event.target.value))} /></label>
-            <span>{canvasZoom}%</span>
-          </div>
+          <button type="button" ref={miniTriggerRef} className="ps-composer-dock"
+            aria-label={agentVisible ? "Close miniAgentSam" : "Open miniAgentSam"}
+            aria-pressed={agentVisible}
+            title={agentVisible ? "Close miniAgentSam" : "Open miniAgentSam"}
+            onClick={openMiniAgentSam}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12.034 12.681a.498.498 0 0 1 .647-.647l9 3.5a.5.5 0 0 1-.033.943l-3.444 1.068a1 1 0 0 0-.66.66l-1.067 3.443a.5.5 0 0 1-.943.033z" />
+              <path d="M5 3a2 2 0 0 0-2 2" /><path d="M19 3a2 2 0 0 1 2 2" /><path d="M5 21a2 2 0 0 1-2-2" />
+              <path d="M9 3h1" /><path d="M9 21h2" /><path d="M14 3h1" /><path d="M3 9v1" />
+              <path d="M21 9v2" /><path d="M3 14v1" />
+            </svg>
+          </button>
           {reply && (
             <details open className="ps-ai-reply">
               <summary>Creative direction</summary>
