@@ -79,11 +79,22 @@ test('renderer field projection respects typed visibility without hiding stale f
 
 test('insertion respects ready renderer, allowed child, max count',async()=>{
   const {createAuthoringEngine} = await api();
-  const engine = createAuthoringEngine([section,button,unavailable]);
+  const unverified = createAuthoringEngine([section,button]);
+  assert.equal(unverified.eligibility({parentKey:'hero',childKey:'button',existingChildKeys:[]}).reason,'renderer_unavailable');
+  // Implementation availability comes from the trusted runtime registry,
+  // not a rendererKey string supplied in database metadata.
+  const engine = createAuthoringEngine([section,button,unavailable],{
+    verifiedRenderers:['core.hero','core.button']
+  });
   assert.equal(engine.eligibility({parentKey:'hero',childKey:'button',existingChildKeys:[]}).allowed,true);
   assert.equal(engine.eligibility({parentKey:'hero',childKey:'button',existingChildKeys:['text','text']}).reason,'parent_full');
   assert.equal(engine.eligibility({parentKey:'hero',childKey:'image',existingChildKeys:[]}).reason,'renderer_unavailable');
   assert.equal(engine.catalog('hero').map(v=>v.key).join(','),'button');
+  const ready = {...unavailable,artifact:{
+    id:'asset-ready',contentHash:'sha256:abc',manifestR2Key:'cms/artifacts/ready.json'
+  }};
+  const withArtifact = createAuthoringEngine([ready]);
+  assert.equal(withArtifact.get('block','image').renderable,true);
 });
 
 test('invalid definitions report diagnostics instead of generating placeholders',async()=>{
