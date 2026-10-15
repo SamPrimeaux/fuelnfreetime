@@ -51,3 +51,35 @@ test("Chrome: real theme color, button and CSS controls fit phone and desktop an
   }
  }finally{rmSync(dir,{recursive:true,force:true});}
 });
+
+
+test("Chrome: scoped Hero CSS changes the Hero but never its neighboring section", {skip:!chrome},()=>{
+ const dir=mkdtempSync(join(tmpdir(),"merchant-section-css-"));
+ try {
+  const runtime=readFileSync(join(root,"packages/heuristic-theme/storefront/js/cms-hydrate.js"),"utf8").replaceAll("</script","<\\/script");
+  const html='<!doctype html><html lang="en" data-cms-page="shop"><head><meta name="viewport" content="width=device-width,initial-scale=1">'+
+   '<style>.demo-heading {color:#000000}</style></head><body>'+
+   '<section data-cms-section="hero"><h1 class="demo-heading">Hero</h1></section>'+
+   '<section data-cms-section="collections"><h1 class="demo-heading">Neighbor</h1></section>'+
+   '<script>window.fetch=async url=>({ok:true,json:async()=>({page:String(url).includes("/site")?{sections:[]}:{sections:'+
+   '[{key:"hero",content:{__editor:{customCss:".demo-heading { color: #123456; }"}}},{key:"collections",content:{}}]}})});</script>'+
+   '<script>'+runtime+'</script>'+
+   '<script>setTimeout(()=>{const h=document.querySelector("[data-cms-section=hero] h1");const n=document.querySelector("[data-cms-section=collections] h1");'+
+   'const style=document.getElementById("cms-section-css-hero");const data={hero:getComputedStyle(h).color,neighbor:getComputedStyle(n).color,scoped:!!style&&style.textContent.includes("@scope")};'+
+   'const out=document.createElement("pre");out.id="browser-result";out.textContent=JSON.stringify(data);document.body.append(out);},800);</script></body></html>';
+  const file=join(dir,"fixture.html");
+  writeFileSync(file,html);
+  const run=spawnSync(chrome,["--headless=new","--no-sandbox","--disable-dev-shm-usage","--disable-gpu",
+   "--virtual-time-budget=2200","--window-size=1200,900",
+   "--user-data-dir="+join(dir,"chrome"),"--dump-dom",pathToFileURL(file).href],{
+    encoding:"utf8",timeout:30000,maxBuffer:1<<22
+   });
+  if(run.error)throw run.error;
+  const captured=(run.stdout||"").match(/<pre id="browser-result">([^<]+)<\/pre>/);
+  assert.ok(captured,"Chrome CSS result not produced: "+(run.stderr||"").slice(-600));
+  const data=JSON.parse(captured[1].replaceAll("&quot;",'"').replaceAll("&amp;","&"));
+  assert.equal(data.scoped,true);
+  assert.equal(data.hero,"rgb(18, 52, 86)");
+  assert.equal(data.neighbor,"rgb(0, 0, 0)");
+ } finally {rmSync(dir,{recursive:true,force:true});}
+});

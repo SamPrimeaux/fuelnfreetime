@@ -149,6 +149,11 @@
     applyStyleOverride(sectionEl,'text-align',['left','center','right'].includes(layout.alignment)?layout.alignment:null);
     // Actual authored Hero layout, not a cosmetic inspector control.
     if (sectionEl.classList.contains('shop-hero')) {
+      const height = {small:'32rem',medium:'45rem',tall:'68rem',screen:'100svh'}[layout.heroHeight] || null;
+      applyStyleOverride(sectionEl,'min-height',height);
+      const overlay = Number(layout.heroOverlay);
+      applyStyleOverride(sectionEl,'--cms-hero-overlay',Number.isFinite(overlay) && overlay >= 0 && overlay <= 100
+        ? String(overlay/100) : null);
       const vertical = {top:'start',center:'center',bottom:'end'}[layout.heroVertical] || null;
       applyStyleOverride(sectionEl,'align-items',vertical);
       const align = ['left','center','right'].includes(layout.heroAlignment) ? layout.heroAlignment : null;
@@ -486,6 +491,34 @@
     style.textContent = ':root{' + colors + font + '}' + radius + '\n' + css;
   }
 
+  function applySectionCustomCss(sections) {
+    const active = new Set();
+    for (const entry of sections) {
+      const key = entry?.key;
+      if (!/^[a-z0-9-]+$/.test(String(key))) continue;
+      const css = entry?.content?.__editor?.customCss;
+      const id = 'cms-section-css-' + key;
+      let style = document.getElementById(id);
+      const valid = typeof css === 'string' && css.length > 0 && css.length <= 8000 &&
+        !/@import\b|@font-face\b|url\s*\(|expression\s*\(|behavior\s*:|-moz-binding|<\/style|[\x00-\x08\x0b\x0e-\x1f]/i.test(css);
+      if (!valid) { style?.remove(); continue; }
+      if (!document.querySelector('[data-cms-section="' + key + '"]')) { style?.remove(); continue; }
+      active.add(id);
+      if (!style) {
+        style = document.createElement('style');
+        style.id = id;
+        style.dataset.cmsSectionCss = 'true';
+        document.head.appendChild(style);
+      }
+      // CSS @scope is supported by current modern storefront browsers.
+      // A rule can't mutate neighboring sections, header/footer or admin UI.
+      style.textContent = '@scope ([data-cms-section="' + key + '"]) {\n' + css + '\n}';
+    }
+    document.querySelectorAll('style[data-cms-section-css]').forEach(style => {
+      if (!active.has(style.id)) style.remove();
+    });
+  }
+
   function applySections(sections) {
     editorStyle();
     applyThemeSettings(sections);
@@ -495,6 +528,7 @@
     mountGeneratedSections(sections);
     ensureDynamicSections(sections);
     applySectionOrder(sections);
+    applySectionCustomCss(sections);
 
     document.querySelectorAll("[data-cms-section]").forEach((sectionEl) => {
       const content = byKey[sectionEl.dataset.cmsSection];

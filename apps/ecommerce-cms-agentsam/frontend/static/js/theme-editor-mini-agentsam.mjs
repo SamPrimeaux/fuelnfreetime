@@ -92,6 +92,7 @@ export function createThemeEditorMiniAgentSam({ onProposal, onClose, positionBou
   }
   return {
     select(selection, bounds) { mini.select(selection, bounds); },
+    reposition() { mini.reposition(); },
     close() { mini.close(); },
     destroy() { mini.destroy(); },
   };

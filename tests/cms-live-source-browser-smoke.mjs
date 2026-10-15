@@ -48,6 +48,7 @@ const shim = "<script>" +
 const probe = "<script>setTimeout(function(){" +
  "if(new URLSearchParams(location.search).get('visualRail')==='1')return;" +
  "var frame=document.getElementById('theme-preview');" +
+ "if(window.innerWidth>900)document.querySelector('[data-select-field=headline][data-field-section=hero]')?.click();" +
  "var before={src:frame.getAttribute('src'),headline:frame.contentDocument?.querySelector('[data-cms-section=\"hero\"] [data-cms=\"headline\"]')?.textContent," +
  "visible:!document.getElementById('te-import-live').hidden,liveOnly:[...document.querySelectorAll('.te-live-only-row strong')].map(e=>e.textContent)," +
  "inspector:document.getElementById('te-field-hero-headline')?.value," +
@@ -135,6 +136,7 @@ const probe = "<script>setTimeout(function(){" +
  "if(productField){productField.value='Merchant-edited product grid';productField.dispatchEvent(new Event('input',{bubbles:true}));}" +
  "}else{document.querySelector('[data-select-section=hero]')?.click();" +
  "var field=document.getElementById('te-field-hero-headline');" +
+ "if(!field){document.querySelector('[data-select-field=headline][data-field-section=hero]')?.click();field=document.getElementById('te-field-hero-headline');}" +
  "if(field){field.value='Private autosave browser proof';field.dispatchEvent(new Event('input',{bubbles:true}));}}" +
  "},300);" +
  "setTimeout(function(){var pre=document.createElement('pre');pre.id='browser-result';" +

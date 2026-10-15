@@ -40,11 +40,30 @@
     // Anchor the contextual composer to the entire selected DOM element, not
     // a 2px point within its text/button. The workbench can then avoid it.
     const anchor = miniAnchor;
-    const element = anchor?.element?.isConnected ? anchor.element : null;
+    let element = anchor?.element?.isConnected ? anchor.element : null;
+    let frame = anchor?.frame?.isConnected ? anchor.frame : null;
+    // A live CMS preview may remount its iframe after autosave or a theme
+    // refresh. Resolve the selected element again instead of anchoring the
+    // composer to the unrelated inspector header when the old DOM is stale.
+    if (!element && activeSectionKey) {
+      const candidateFrame = frame || byId('theme-preview');
+      try {
+        const preview = candidateFrame?.contentDocument;
+        const section = preview?.querySelector(
+          '[data-cms-section="' + CSS.escape(activeSectionKey) + '"], [data-section-id="' + CSS.escape(activeSectionKey) + '"]'
+        );
+        element = (activeFieldKey && section?.querySelector('[data-cms="' + CSS.escape(activeFieldKey) + '"]')) ||
+          (activeBlockId && section?.querySelector('[data-cms-block="' + CSS.escape(activeBlockId) + '"]')) ||
+          section || null;
+        if (element && candidateFrame) {
+          frame = candidateFrame;
+          setMiniAnchor(element, frame);
+        }
+      } catch { /* Cross-origin previews must not disrupt the editor. */ }
+    }
     const resolved = element || byId('te-inspector-title');
     if (!resolved) return { left: 12, top: 72, width: 30, height: 25 };
     const rect = resolved.getBoundingClientRect();
-    const frame = anchor?.frame;
     if (frame?.isConnected) {
       const outer = frame.getBoundingClientRect();
       const sx = outer.width / Math.max(frame.clientWidth, 1);
@@ -1417,6 +1436,12 @@
     let visibleKinds = Object.keys(groups).filter(function(kind) {
       return groups[kind].length > 0;
     });
+    // Shopify-like progressive disclosure: the selected Hero offers its
+    // section media and layout first. Heading, copy and CTAs are selected
+    // directly from the left tree/canvas and own their contextual inspector.
+    if (section.key === 'hero' && !activeFieldKey && !activeBlockId) {
+      visibleKinds = groups.media.length ? ['media'] : [];
+    }
     const focusedField = activeFieldKey ? fieldByKey(activeFieldKey) : null;
     if (focusedField && currentSchema().some(function(field) { return field.key === focusedField.key; })) {
       const focusedKind = fieldKind(focusedField);
@@ -1474,7 +1499,53 @@
       }).join('');
     }
 
+    // Advanced, section-only CSS belongs to the section. Never add this
+    // disclosure to a selected button, heading, image or block inspector.
+    if (!focusedField && !activeBlockId) {
+      const css = section.content?.__editor?.customCss || '';
+      html += '<details class="te-inspector-group te-inspector-group--advanced te-section-css">' +
+        '<summary>Custom CSS</summary>' +
+        '<label for="te-section-css-input">This section only</label>' +
+        '<textarea id="te-section-css-input" data-section-css rows="7" maxlength="8000" spellcheck="false" ' +
+        'placeholder=".heading { color: #ffffff; }">' + cmsEscapeHtml(css) + '</textarea>' +
+        '<p class="te-section-css-feedback" data-section-css-feedback role="status"></p></details>';
+    }
     return html;
+  }
+
+  function validateSectionCss(source) {
+    if (typeof source !== 'string' || source.length > 8000) return 'CSS must be under 8 KB.';
+    if (/@import\b|@font-face\b|url\s*\(|expression\s*\(|behavior\s*:|-moz-binding|<\/style|[\x00-\x08\x0b\x0e-\x1f]/i.test(source))
+      return 'Remote resources and CSS imports are not supported.';
+    let depth = 0;
+    for (const char of source) {
+      if (char === '{') depth++;
+      if (char === '}') depth--;
+      if (depth < 0 || depth > 12) return 'Check the CSS braces.';
+    }
+    return depth ? 'Close the CSS braces to apply.' : '';
+  }
+
+  function wireSectionCss() {
+    const input = byId('te-section-css-input');
+    if (!input) return;
+    input.addEventListener('input', function() {
+      const feedback = byId('te-inspector-body').querySelector('[data-section-css-feedback]');
+      const error = validateSectionCss(input.value);
+      input.setAttribute('aria-invalid', String(Boolean(error)));
+      if (feedback) feedback.textContent = error;
+      if (error || liveUnimported) return;
+      const section = currentSection();
+      if (!section) return;
+      const before = structuredClone(section.content);
+      if (!section.content.__editor) section.content.__editor = {};
+      if (input.value) section.content.__editor.customCss = input.value;
+      else delete section.content.__editor.customCss;
+      if (JSON.stringify(before) === JSON.stringify(section.content)) return;
+      recordFieldHistory(section, '__editor.customCss', before, structuredClone(section.content));
+      markSectionDirty(section);
+      scheduleLocalPreview();
+    });
   }
 
   function renderInspector() {
@@ -1512,6 +1583,7 @@
     });
     wireFields();
     wireLinkPickers();
+    wireSectionCss();
     // These minimal toolbar actions are real field-style overrides: they use
     // the same preview, undo, draft save and reset pipeline as typography.
     panel.querySelectorAll('[data-inline-style-key]').forEach(function(button) {
@@ -2232,6 +2304,15 @@
       // Anchor to the visible CMS inspector rather than the browser's generic annotation mode.
       miniAgentSam.select(selection, selectedMiniBounds);
       miniAgentSamVisible = true;
+      // Preview layout/fonts can settle after its first selection paint.
+      // Recompute using the current DOM rather than leaving the overlay
+      // fixed over the Heading when the iframe shifts independently.
+      requestAnimationFrame(function() {
+        if (tick === miniAgentSamSelectionTick) miniAgentSam?.reposition?.();
+      });
+      setTimeout(function() {
+        if (tick === miniAgentSamSelectionTick) miniAgentSam?.reposition?.();
+      }, 180);
 
     } catch (error) {
       // The hosting page may have navigated away while dynamic import ran.

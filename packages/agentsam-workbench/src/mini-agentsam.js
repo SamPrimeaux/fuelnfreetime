@@ -20,7 +20,7 @@ export function createMiniAgentSam(host) {
   root.innerHTML = `<style>
     :host{position:fixed;inset:0;z-index:10000;pointer-events:none;font:13px/1.4 system-ui;color:#f5f2fb;--accent:${miniAgentSamTokens.accent}}
     *{box-sizing:border-box}[hidden]{display:none!important}
-    .outline{position:fixed;border:2px solid var(--accent);border-radius:6px;background:#8b5cf60c;box-shadow:0 0 0 1px #ffffff35 inset;pointer-events:none;transition:left .08s ease,top .08s ease,width .08s ease,height .08s ease}
+    .outline{position:fixed;border:2px solid var(--accent);border-radius:6px;background:#8b5cf60c;box-shadow:0 0 0 1px #ffffff35 inset;pointer-events:none;transition:left .08s ease,top .08s ease,width .08s ease}
     .hint{position:fixed;top:72px;left:50%;transform:translateX(-50%);max-width:min(520px,calc(100vw - 28px));padding:9px 14px;border:1px solid #ffffff2c;border-radius:999px;background:#211b30e8;backdrop-filter:blur(18px);box-shadow:0 10px 34px #160c3430;color:#eee7fb;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .composer{position:fixed;width:min(416px,calc(100vw - 24px));min-height:48px;padding:7px 9px;border:1px solid #ffffff2a;border-radius:24px;background:#211b30eb;backdrop-filter:blur(18px);box-shadow:0 12px 36px #160c342e;pointer-events:auto}
     .composer.message-expanded{border-radius:18px}
@@ -337,6 +337,7 @@ export function createMiniAgentSam(host) {
       rect = null;
       outline.hidden = true;
     },
+    reposition: position,
     select(selection, bounds) {
       if (busy) close();
       resource = selection;

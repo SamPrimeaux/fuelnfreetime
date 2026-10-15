@@ -612,12 +612,15 @@ export const PAGE_REGISTRY = {
       hero: {
         sortOrder: 0,
         settings: [
+          { key: "__editor.layout.heroHeight", label: "Hero height", type: "select", group: "layout", default: "theme",
+            options: [{value:"theme",label:"Theme default"},{value:"small",label:"Small"},{value:"medium",label:"Medium"},{value:"tall",label:"Tall"},{value:"screen",label:"Full screen"}] },
           { key: "__editor.layout.heroVertical", label: "Content position", type: "select", group: "layout", default: "theme",
             options: [{value:"theme",label:"Theme default"},{value:"top",label:"Top"},{value:"center",label:"Center"},{value:"bottom",label:"Bottom"}] },
           { key: "__editor.layout.heroAlignment", label: "Content alignment", type: "select", group: "layout", default: "theme",
             options: [{value:"theme",label:"Theme default"},{value:"left",label:"Left"},{value:"center",label:"Center"},{value:"right",label:"Right"}] },
           { key: "__editor.layout.heroImageFocus", label: "Image focal point", type: "select", group: "media", default: "theme",
             options: [{value:"theme",label:"Theme default"},{value:"left",label:"Left"},{value:"center",label:"Center"},{value:"right",label:"Right"}] },
+          { key: "__editor.layout.heroOverlay", label: "Image overlay", type: "range", group: "media", default: 100, min: 0, max: 100, step: 5, unit: "%" },
         ],
         fields: [
           { key: "eyebrow", label: "Eyebrow", type: "text" },

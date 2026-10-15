@@ -95,3 +95,23 @@ test("Hero placement and focal position are actual CMS-rendered styles, not insp
  assert.equal(hero.querySelector(".shop-hero__media img").style.objectPosition,"15% center");
  dom.window.close();
 });
+
+
+test("section Custom CSS is section-scoped and present in the public CMS runtime",async()=>{
+ const dom=new JSDOM('<!doctype html><html data-cms-page="shop"><head></head><body><main><section data-cms-section="hero"><h1 class="demo-heading">A</h1></section><section data-cms-section="collections"><h1 class="demo-heading">B</h1></section></main></body></html>',{
+  url:"https://store.test/shop",runScripts:"outside-only",pretendToBeVisual:true
+ });
+ const w=dom.window;
+ w.CSS={escape: value=>String(value)};
+ w.fetch=async url=>({ok:true,json:async()=>({page:String(url).includes("/site")?{sections:[]}:
+  {sections:[{key:"hero",content:{__editor:{customCss:'.demo-heading { color: #123456; }'}}},{key:"collections",content:{}}]}})});
+ w.eval(hydrationJs);
+ if(w.document.readyState==="loading")w.document.dispatchEvent(new w.Event("DOMContentLoaded"));
+ await new Promise(resolve=>setTimeout(resolve,60));
+ const style=w.document.getElementById('cms-section-css-hero');
+ assert.ok(style,"Storefront must mount the Hero CSS");
+ assert.match(style.textContent,/@scope \(\[data-cms-section="hero"\]\)/);
+ assert.match(style.textContent,/color: #123456/);
+ assert.equal(w.document.getElementById('cms-section-css-collections'),null);
+ dom.window.close();
+});

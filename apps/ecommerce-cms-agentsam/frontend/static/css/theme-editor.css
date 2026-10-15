@@ -3451,3 +3451,12 @@ dialog.te-section-menu .te-section-catalog-item--visual {
 .te-link-external input[aria-invalid=true]{border-color:#b8313c}
 .te-link-external button,.te-link-clear{margin-top:7px;border:0;background:transparent;color:#6643bc;cursor:pointer;font-size:11px;padding:5px}
 .te-link-clear{color:#7d4d59}
+
+.te-section-css{margin-top:8px}
+.te-section-css>label{display:block;margin:12px 0 7px;color:#6f6874;font-size:11px}
+.te-section-css textarea{width:100%;min-height:130px;max-width:100%;box-sizing:border-box;
+ border:1px solid #d7d2dd;border-radius:9px;padding:11px 10px;background:#fdfcfe;
+ color:#29262e;font:11px/1.6 ui-monospace,SFMono-Regular,monospace;resize:vertical}
+.te-section-css textarea:focus{outline:2px solid #8063d7;outline-offset:1px}
+.te-section-css textarea[aria-invalid=true]{border-color:#b8313c}
+.te-section-css-feedback{min-height:16px;margin:4px 0 10px;color:#ac2c32;font-size:11px;line-height:1.4}

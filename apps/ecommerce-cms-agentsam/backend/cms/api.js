@@ -1,6 +1,6 @@
 import { ROUTE_MANIFEST } from "../lib/route-manifest.js";
 import { attachCmsDefinitions, listCmsDefinitions } from "./definition-registry.mjs";
-import { validateThemeSettings } from "./theme-style-contract.mjs";
+import { validateThemeSettings, validateThemeCss } from "./theme-style-contract.mjs";
 import { attachGeneratedImplementations, inspectGeneratedSection, persistGeneratedImplementation } from "./generated-section.mjs";
 import {normalizeSettingFields} from "../../frontend/static/js/generated-settings-schema.mjs";
 import { guardSectionWrite } from "../../frontend/static/js/generation-namespace.mjs";
@@ -712,6 +712,11 @@ export async function updateSection(env, slug, sectionKey, body) {
 
   if (slug === "site" && sectionKey === "brand" && content.__editor?.themeSettings !== undefined) {
     const checked = validateThemeSettings(content.__editor.themeSettings);
+    if (!checked.ok) return {error: checked.error, status: 422};
+  }
+
+  if (content.__editor?.customCss !== undefined) {
+    const checked = validateThemeCss(content.__editor.customCss);
     if (!checked.ok) return {error: checked.error, status: 422};
   }
 

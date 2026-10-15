@@ -638,3 +638,20 @@ test("global theme color and Custom CSS changes persist to existing D1/R2 CMS si
    assert.match(draft.content.__editor.themeSettings.customCss,/letter-spacing/);
  }finally{fx.db.close();}
 });
+
+
+test("section-specific CSS is validated and versioned in the existing CMS section document",async()=>{
+ const fx=fixture();
+ try {
+   const original=structuredClone(fx.readDraft('hero').content);
+   const forbidden={...original,__editor:{...(original.__editor||{}),customCss:'.h-display { background-image: url(https://tracker.test/a); }'}};
+   const denied=await updateSection(fx.env,'shop','hero',{content:forbidden,expected_version:1});
+   assert.equal(denied.status,422,"unsafe CSS is not persisted");
+   const next={...original,__editor:{...(original.__editor||{}),customCss:'.h-display { color: #123456; }'}};
+   const result=await updateSection(fx.env,'shop','hero',{content:next,expected_version:1});
+   assert.equal(result.ok,true);
+   const after=fx.readDraft('hero');
+   assert.equal(after.content.__editor.customCss,'.h-display { color: #123456; }');
+   assert.equal(after.content.headline,original.headline,"original authored content survives CSS editing");
+ } finally {fx.db.close();}
+});
