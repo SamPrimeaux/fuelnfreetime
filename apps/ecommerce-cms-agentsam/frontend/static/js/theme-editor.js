@@ -566,10 +566,12 @@
 
   function currentSchema() {
     const block = currentBlockSchema();
-    if (block) {
-      return (block.fields || []).map(function(field) {
+    if (activeBlockId) {
+      // Never silently fall back to section-level fields after a selected
+      // block's schema was filtered out by an incompatible D1 definition.
+      return block ? (block.fields || []).map(function(field) {
         return { ...field, key: activeBlockId + '.' + field.key, blockRelativeKey: field.key };
-      });
+      }) : [];
     }
     const schema = currentSectionSchema();
     return (schema && schema.fields) || (window.SECTION_FIELDS && window.SECTION_FIELDS[slug] && window.SECTION_FIELDS[slug][activeSectionKey]) || [];
@@ -1228,6 +1230,38 @@
     return /^(https?:\/\/|\/(?!\/))/i.test(source) ? source : '';
   }
 
+  // Internal destinations come from the merchant's actual CMS page and
+  // storefront inventory. Never present fabricated collection/product links.
+  let merchantLinkCatalog = null;
+  let merchantLinkCatalogRequest = null;
+  let merchantLinkCatalogVersion = 0;
+  async function loadMerchantLinkCatalog() {
+    if (merchantLinkCatalog) return merchantLinkCatalog;
+    if (merchantLinkCatalogRequest) return merchantLinkCatalogRequest;
+    const version = merchantLinkCatalogVersion;
+    merchantLinkCatalogRequest = Promise.allSettled([
+      adminFetch('/api/store/collections'),
+      adminFetch('/api/store/products'),
+    ]).then(function(results) {
+      const links = [];
+      const collections = results[0].status === 'fulfilled' ? results[0].value?.collections : [];
+      const products = results[1].status === 'fulfilled' ? results[1].value?.products : [];
+      for (const collection of Array.isArray(collections) ? collections : []) {
+        if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(String(collection.slug || ''))) continue;
+        links.push({label:String(collection.title || collection.slug),href:'/shop/collections/' + encodeURIComponent(collection.slug),group:'Collections'});
+      }
+      for (const product of Array.isArray(products) ? products : []) {
+        if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(String(product.slug || ''))) continue;
+        links.push({label:String(product.title || product.slug),href:'/products/' + encodeURIComponent(product.slug),group:'Products'});
+      }
+      if (version === merchantLinkCatalogVersion) merchantLinkCatalog = links;
+      return links;
+    }).finally(function() {
+      if (version === merchantLinkCatalogVersion) merchantLinkCatalogRequest = null;
+    });
+    return merchantLinkCatalogRequest;
+  }
+
   function merchantPageLinks(query = '') {
     const needle = String(query).trim().toLowerCase();
     const found = new Map();
@@ -1235,10 +1269,12 @@
       const href = page.live_route || page.route || pageRoute(page.slug);
       if (!href || !/^\/(?!\/)/.test(href)) continue;
       const label = String(page.title || humanize(page.slug));
-      if (!needle || (label + ' ' + href).toLowerCase().includes(needle))
-        found.set(href, { label, href });
+      found.set(href, { label, href, group:'Pages' });
     }
-    return [...found.values()];
+    for (const item of merchantLinkCatalog || []) found.set(item.href, item);
+    return [...found.values()].filter(function(item) {
+      return !needle || (item.label + ' ' + item.href + ' ' + item.group).toLowerCase().includes(needle);
+    });
   }
 
   function describeLink(value) {
@@ -1285,12 +1321,16 @@
     };
     const paint = function(picker, search = '') {
       const rows = merchantPageLinks(search);
+      let lastGroup = '';
       picker.querySelector('[data-link-results]').innerHTML = rows.length
         ? rows.map(function(item) {
-          return '<button type="button" data-link-choice="' + cmsEscapeAttr(item.href) + '"><strong>' + cmsEscapeHtml(item.label) +
+          const heading = item.group !== lastGroup
+            ? '<div class="te-link-group-label">' + cmsEscapeHtml(item.group) + '</div>' : '';
+          lastGroup = item.group;
+          return heading + '<button type="button" data-link-choice="' + cmsEscapeAttr(item.href) + '"><strong>' + cmsEscapeHtml(item.label) +
             '</strong><small>' + cmsEscapeHtml(item.href) + '</small></button>';
         }).join('')
-        : '<p class="te-link-empty">No matching pages</p>';
+        : '<p class="te-link-empty">No matching destinations</p>';
     };
     panel.querySelectorAll('[data-link-trigger]').forEach(function(trigger) {
       trigger.addEventListener('click', function() {
@@ -1302,6 +1342,17 @@
         trigger.setAttribute('aria-expanded', 'true');
         open = picker;
         paint(picker);
+        if (!merchantLinkCatalog) {
+          const results = picker.querySelector('[data-link-results]');
+          if (results) results.insertAdjacentHTML('beforeend','<p class="te-link-empty" data-link-loading>Loading collections and products…</p>');
+          void loadMerchantLinkCatalog().then(function() {
+            if (!picker.isConnected) return;
+            const current = cmsGetPath(currentSection()?.content || {}, trigger.dataset.linkTrigger);
+            const caption = trigger.querySelector('.te-link-trigger__name');
+            if (caption) caption.textContent = describeLink(current);
+            if (!picker.hidden) paint(picker, picker.querySelector('[data-link-search]')?.value);
+          });
+        }
         picker.querySelector('[data-link-search]')?.focus();
       });
     });
@@ -1423,6 +1474,9 @@
   // One contextual inspector for the selected section or block. Field types
   // determine visual grouping, not competing editor tabs or stored schemas.
   function renderInspectorGroups(section) {
+    if (activeBlockId && !currentBlockSchema()) {
+      return '<div class="te-empty" role="status">This block’s editing definition is unavailable. The existing storefront card has not been modified.</div>';
+    }
     const groups = { content: [], media: [], links: [] };
     currentSchema().forEach(function(field) {
       const kind = fieldKind(field);
@@ -1888,7 +1942,9 @@
     const key = mediaUndoKey(fieldKey);
     if (key && !mediaUndo.has(key)) mediaUndo.set(key, prior);
     cmsSetPath(section.content, fieldKey, url);
-    activeFieldKey = fieldKey;
+    // Replacing a photo from a selected card should keep the entire card
+    // inspector visible (including its destination and text controls).
+    if (!activeBlockId) activeFieldKey = fieldKey;
     markSectionDirty(section);
     renderInspector();
     scheduleLocalPreview();
@@ -1903,7 +1959,7 @@
     const previous = mediaUndo.get(key);
     mediaUndo.delete(key);
     cmsSetPath(section.content, fieldKey, previous);
-    activeFieldKey = fieldKey;
+    if (!activeBlockId) activeFieldKey = fieldKey;
     markSectionDirty(section);
     renderInspector();
     scheduleLocalPreview();
@@ -2662,6 +2718,11 @@
   }
 
   async function loadPage() {
+    // Invalidate asynchronous catalog reads across page/workspace changes.
+    // Tenant-specific product/collection links must never be cached globally.
+    merchantLinkCatalogVersion += 1;
+    merchantLinkCatalog = null;
+    merchantLinkCatalogRequest = null;
     undoHistory.length = 0;
     redoHistory.length = 0;
     lastHistoryTime = 0;

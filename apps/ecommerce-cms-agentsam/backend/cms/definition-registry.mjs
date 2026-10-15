@@ -137,14 +137,40 @@ export function attachCmsDefinitions(registry, definitions) {
       // schema whenever they declare actual settings. Empty definitions
       // intentionally leave existing controls intact.
       const fields = definitionFields(definition.fields);
+      // A source-backed section with no native section fields and real
+      // children is block-only. Imported/legacy D1 rows must not turn its
+      // nested card properties into unbound section-level controls.
+      const nativeBlocks = Array.isArray(section.blocks) ? section.blocks : [];
+      const sourceBlockOnly = Array.isArray(section.fields) &&
+        section.fields.length === 0 && nativeBlocks.length > 0;
       if (fields.length && definition.origin !== "generated") {
-        section.fields = fields;
-        section.schemaAuthority = "cms_definitions";
+        if (sourceBlockOnly) {
+          (section.schemaConflicts ||= []).push({
+            kind: "unbound-section-fields",
+            definitionId: definition.id,
+            fieldKeys: fields.map((field) => field.key),
+          });
+        } else {
+          section.fields = fields;
+          section.schemaAuthority = "cms_definitions";
+        }
       }
-      if (definition.allowedBlocks?.length && section.blocks?.length) {
-        // Never advertise child blocks with no installed renderer/template.
+      if (definition.allowedBlocks?.length && nativeBlocks.length) {
         const allowed = new Set(definition.allowedBlocks);
-        section.blocks = section.blocks.filter((block) => allowed.has(block.key));
+        const renderable = nativeBlocks.filter((block) => allowed.has(block.key));
+        if (renderable.length) {
+          section.blocks = renderable;
+        } else {
+          // A stale "group"-only definition must not erase native, editable
+          // card templates. Keep the renderer-bound children untouched and
+          // expose exact disagreement for the definition repair sprint.
+          (section.schemaConflicts ||= []).push({
+            kind: "unsupported-block-types",
+            definitionId: definition.id,
+            declared: definition.allowedBlocks,
+            renderable: nativeBlocks.map((block) => block.key),
+          });
+        }
       }
       if (definition.maxBlocks != null) {
         section.guardrails = { ...(section.guardrails || {}), maxBlocks: definition.maxBlocks };

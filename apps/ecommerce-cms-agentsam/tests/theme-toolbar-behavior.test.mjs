@@ -3,13 +3,14 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import { getRegistryPage, registryForAdmin } from "../backend/cms/registry.js";
+import { attachCmsDefinitions, normalizeCmsDefinition } from "../backend/cms/definition-registry.mjs";
 
 const require = createRequire(new URL("../package.json", import.meta.url));
 const { JSDOM } = require("jsdom");
 const root = new URL("../frontend/static/js/", import.meta.url);
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 
-async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = [], themePreviews = [], visualViewportHeight = null } = {}) {
+async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = [], themePreviews = [], visualViewportHeight = null, registryOverride = null, linkDestinations = null } = {}) {
   const dom = new JSDOM("<!doctype html><html><body></body></html>", {
     url: "https://editor.test/admin/theme-editor?slug=" + pageSlug,
     runScripts: "outside-only",
@@ -38,7 +39,9 @@ async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = 
   w.renderShell = (_route, markup) => w.document.body.insertAdjacentHTML("afterbegin", markup);
   w.fetch = async () => ({ ok: true, json: async () => ({ active_theme: { name: "Heuristic", status: "active" } }) });
   w.adminFetch = async (url, options = {}) => {
-    if (url.endsWith("/registry")) return registryForAdmin();
+    if (url.endsWith("/registry")) return registryOverride || registryForAdmin();
+    if (linkDestinations && url === "/api/store/collections") return {ok:true,collections:linkDestinations.collections || []};
+    if (linkDestinations && url === "/api/store/products") return {ok:true,products:linkDestinations.products || []};
     if (url.endsWith("/pages/site")) return { page: site };
     if (url.endsWith("/pages/" + pageSlug)) return { page, seeded: false };
     if (url.endsWith("/pages")) return { pages: [{ slug: pageSlug, title: page.title, live_route: "/" + pageSlug }] };
@@ -624,4 +627,99 @@ test("Hero selection is media/layout-first; Heading and CTA edit through individ
    assert.ok(inspector.querySelector('[data-field-input="headline"]'),"heading editing is available through the tree");
    assert.equal(inspector.querySelector('[data-pick-media="imageUrl"]'),null,"heading does not get unrelated image options");
  } finally {dom.window.close();}
+});
+
+
+test("Editorial Tile selection reads existing published nested block values and exposes media and destination",async()=>{
+ const {dom,doc}=await editorFixture();
+ try {
+  const tile=doc.querySelector('[data-select-block="tile1"][data-block-section="editorial-grid"]');
+  assert.ok(tile,'editorial tile must be selectable in the page hierarchy');
+  tile.click();
+  const inspector=doc.getElementById('te-inspector-body');
+  assert.ok(inspector.querySelector('[data-field-input="tile1.eyebrow"]'));
+  assert.equal(inspector.querySelector('[data-field-input="tile1.eyebrow"]').value,"High Octane");
+  assert.equal(inspector.querySelector('[data-field-input="tile1.headline"]').value,"Run it past redline");
+  assert.ok(inspector.querySelector('[data-pick-media="tile1.imageUrl"]'),"tile has real media picker");
+  assert.match(inspector.querySelector('[data-media-preview]')?.innerHTML||inspector.querySelector('.te-media-preview').innerHTML,/earned-hours-hero.webp/);
+  assert.ok(inspector.querySelector('[data-link-trigger="tile1.href"]'),"tile has CMS destination picker");
+  assert.match(inspector.querySelector('[data-link-trigger="tile1.href"]').textContent,/collections|high-octane/i);
+ }finally{dom.window.close()}
+});
+
+
+test("real D1 editorial-grid drift must not degrade the clicked tile inspector to empty eyebrow/heading/anchor controls",async()=>{
+ const stale=normalizeCmsDefinition({id:"cmsd_stale",definition_key:"editorial-grid",kind:"section",
+  origin:"package",status:"active",version:"1",label:"Collections Editorial Grid",
+  settings_schema_json:'{"eyebrow":{"type":"text"},"heading":{"type":"text"},"anchor":{"type":"text"}}',
+  allowed_blocks_json:'["group"]'});
+ const reg=attachCmsDefinitions(registryForAdmin(),[stale]);
+ const {dom,w,doc,writes}=await editorFixture({registryOverride:reg});
+ try{
+  const chosen=doc.querySelector('[data-select-block="tile1"][data-block-section="editorial-grid"]');
+  chosen.click();
+  const panel=doc.getElementById('te-inspector-body');
+  assert.equal(panel.querySelector('[data-field-input="eyebrow"]'),null,"stale section field must not hijack tile selection");
+  assert.equal(panel.querySelector('[data-field-input="heading"]'),null);
+  assert.equal(panel.querySelector('[data-field-input="anchor"]'),null);
+  assert.equal(panel.querySelector('[data-field-input="tile1.eyebrow"]')?.value,"High Octane");
+  assert.equal(panel.querySelector('[data-field-input="tile1.headline"]')?.value,"Run it past redline");
+  assert.equal(panel.querySelector('[data-field-input="tile1.imageUrl"]')?.value,"/assets/presets/fuel-free-time/earned-hours-hero.webp");
+  assert.ok(panel.querySelector('[data-pick-media="tile1.imageUrl"]'));
+  assert.ok(panel.querySelector('[data-link-trigger="tile1.href"]'));
+  const secondBefore=doc.querySelector('[data-select-block="tile2"]')?.textContent;
+  const eyebrow=panel.querySelector('[data-field-input="tile1.eyebrow"]');
+  eyebrow.value="New editorial kicker";
+  eyebrow.dispatchEvent(new w.Event("input",{bubbles:true}));
+  const source=panel.querySelector('[data-field-input="tile1.imageUrl"]');
+  source.value="/media/editorials/replacement.webp";
+  source.dispatchEvent(new w.Event("change",{bubbles:true}));
+  doc.getElementById('te-save').click();
+  await tick();await tick();
+  assert.equal(writes.length,1);
+  assert.equal(writes[0].content.tile1.eyebrow,"New editorial kicker");
+  assert.equal(writes[0].content.tile1.imageUrl,"/media/editorials/replacement.webp");
+  assert.equal(writes[0].content.tile2.eyebrow,"The long way home");
+  assert.equal(writes[0].content.tile1.href,"/shop/collections/high-octane-performance-gear");
+  assert.equal(doc.querySelector('[data-select-block="tile2"]')?.textContent,secondBefore);
+ }finally{dom.window.close();}
+});
+
+
+test("Editorial Tile merchant chooses a real Media Library image and another existing collection; only tile1 saves",async()=>{
+ const stale=normalizeCmsDefinition({id:"cmsd_stale",definition_key:"editorial-grid",kind:"section",
+  origin:"package",status:"active",version:"1",
+  settings_schema_json:'{"eyebrow":{"type":"text"},"heading":{"type":"text"},"anchor":{"type":"text"}}',
+  allowed_blocks_json:'["group"]'});
+ const registryOverride=attachCmsDefinitions(registryForAdmin(),[stale]);
+ const newImage="https://assets.example.test/r2/new-editorial.webp";
+ const {dom,doc,w,writes}=await editorFixture({registryOverride,
+  mediaAssets:[{id:42,filename:"new-editorial.webp",r2_key:"editorial/new.webp",content_type:"image/webp",delivery_url:newImage}],
+  linkDestinations:{collections:[{slug:"masters",title:"Masters Collection"},{slug:"high-octane-performance-gear",title:"High Octane Collection"}],
+    products:[{slug:"heavyweight-tee",title:"Heavyweight Tee"}]}});
+ try {
+  doc.querySelector('[data-select-block="tile1"][data-block-section="editorial-grid"]').click();
+  doc.querySelector('[data-pick-media="tile1.imageUrl"]').click();
+  await tick();await tick();
+  assert.ok(doc.querySelector('#te-media-grid [data-media-url]'));
+  doc.querySelector('#te-media-grid [data-media-url]').click();
+  doc.getElementById('te-media-confirm').click();
+  assert.equal(doc.querySelector('[data-field-input="tile1.imageUrl"]').value,newImage);
+  const linkButton=doc.querySelector('[data-link-trigger="tile1.href"]');
+  linkButton.click();
+  await tick();await tick();await tick();
+  const picker=doc.querySelector('[data-link-picker="tile1.href"]');
+  assert.ok(picker.querySelector('[data-link-choice="/shop/collections/masters"]'),"real collections are discoverable");
+  assert.ok(picker.querySelector('[data-link-choice="/products/heavyweight-tee"]'),"real products are discoverable");
+  picker.querySelector('[data-link-choice="/shop/collections/masters"]').click();
+  assert.match(doc.querySelector('[data-link-trigger="tile1.href"]').textContent,/Masters Collection/);
+  doc.getElementById('te-save').click();
+  await tick();await tick();
+  assert.equal(writes.length,1);
+  assert.equal(writes[0].content.tile1.imageUrl,newImage);
+  assert.equal(writes[0].content.tile1.href,"/shop/collections/masters");
+  assert.equal(writes[0].content.tile2.imageUrl,"/assets/presets/fuel-free-time/masters.webp");
+  assert.equal(writes[0].content.tile3.headline,"Clock out. Get gone.");
+  assert.equal(writes[0].content.__editor.blocks.length,3);
+ }finally{dom.window.close();}
 });

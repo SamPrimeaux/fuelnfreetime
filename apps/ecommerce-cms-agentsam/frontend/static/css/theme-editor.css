@@ -3460,3 +3460,4 @@ dialog.te-section-menu .te-section-catalog-item--visual {
 .te-section-css textarea:focus{outline:2px solid #8063d7;outline-offset:1px}
 .te-section-css textarea[aria-invalid=true]{border-color:#b8313c}
 .te-section-css-feedback{min-height:16px;margin:4px 0 10px;color:#ac2c32;font-size:11px;line-height:1.4}
+\n.te-link-group-label{font-size:10px;font-weight:700;color:#78737f;padding:9px 10px 4px;text-transform:uppercase;letter-spacing:.07em}\n

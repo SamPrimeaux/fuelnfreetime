@@ -132,3 +132,21 @@ test("D1 definitions that declare no settings retain source-backed inspector fie
   assert.deepEqual(result.pages.shop.sections.hero.fields,existing.pages.shop.sections.hero.fields);
   assert.equal(result.pages.shop.sections.hero.schemaAuthority,undefined);
 });
+
+
+test("production-style stale D1 section fields and generic group restriction cannot replace a real Editorial Tile's native contract",()=>{
+  const native=registryForAdmin();
+  const legacy=normalizeCmsDefinition({
+    id:"cmsd_editorial_grid_v1",definition_key:"editorial-grid",kind:"section",
+    label:"Collections Editorial Grid",version:"1",origin:"package",status:"active",
+    settings_schema_json:'{"eyebrow":{"type":"text"},"heading":{"type":"text"},"anchor":{"type":"text"}}',
+    allowed_blocks_json:'["group"]',metadata_json:"{}",
+  });
+  const section=attachCmsDefinitions(native,[legacy]).pages.shop.sections["editorial-grid"];
+  assert.deepEqual(section.fields,[],"a card-only renderer has no standalone eyebrow/heading/anchor fields");
+  assert.deepEqual(section.blocks.map(block=>block.key),["editorial-tile"],"D1 generic group cannot erase actual renderable tiles");
+  assert.deepEqual(section.blocks[0].fields.map(field=>field.key),["eyebrow","headline","imageUrl","href"]);
+  assert.ok(section.schemaConflicts?.some(issue=>issue.kind==="unbound-section-fields"));
+  assert.ok(section.schemaConflicts?.some(issue=>issue.kind==="unsupported-block-types"));
+  assert.equal(section.schemaAuthority,undefined,"incompatible D1 schema is not allowed to claim inspector authority");
+});
