@@ -12,10 +12,12 @@
     "preview": "node bin/ecommerce.mjs preview",
     "build:frontend": "npm run build --prefix frontend",
     "build:assets": "node bin/build-assets.mjs",
-    "build": "npm run build:frontend && npm run build:assets",
+    "build": "npm run verify:cms && npm run build:frontend && npm run build:assets",
     "dev": "npm run build && wrangler dev",
     "deploy": "npm run build && wrangler deploy",
     "test:package": "node --test tests/package-boundaries.test.mjs && npm run test:tools",
+    "typecheck:cms": "tsc --project tsconfig.cms.json",
+    "verify:cms": "npm run typecheck:cms && node --test tests/cms-setting-contract.test.mjs",
     "typecheck:tools": "tsc --project tsconfig.tools.json",
     "test:tools": "npm run typecheck:tools && node --test tests/typed-tool-registry.test.mjs tests/core-tools-readonly.test.mjs tests/d1-crud.test.mjs && node backend/tools/doctor.mjs"
   },
