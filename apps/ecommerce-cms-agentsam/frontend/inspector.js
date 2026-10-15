@@ -246,8 +246,8 @@
 
       const resource = describe(element, frame);
       active = false;
-      button.setAttribute('aria-pressed', 'false');
       instance.select(resource, boundsFor(element, frame));
+      markOpen(true, true);
     }, true);
 
     doc.addEventListener('keydown', (event) => {
