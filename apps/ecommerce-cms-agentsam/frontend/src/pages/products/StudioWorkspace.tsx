@@ -280,6 +280,29 @@ export default function StudioWorkspace({
     window.addEventListener("agentsam:mini-open", claim);
     return () => window.removeEventListener("agentsam:mini-open", claim);
   }, []);
+  // Report composer state so the global crosshair stays lit while this page's composer is open.
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("agentsam:mini-state", { detail: { open: agentVisible } }));
+    return () => { window.dispatchEvent(new CustomEvent("agentsam:mini-state", { detail: { open: false } })); };
+  }, [agentVisible]);
+
+  // #UNFINISHEDTOOLS (media.image.generate): this goes through askAI -> /api/admin/agentsam/chat ->
+  // ai-run.js, which hardcodes OpenAI gpt-image-2 at 1024x1024 and IGNORES size/quality/background.
+  // Until the real tool exists (backend/tools/packs/media.planned.ts) the options below are folded into the
+  // prompt as hints only. Replace this with a call to the registered media.image.generate tool.
+  async function generateImage() {
+    const hints = [aiPrompt.trim()];
+    hints.push(aiBackground === "transparent" ? "transparent background, isolated artwork" : "plain white background");
+    if (aiSize !== "auto") {
+      hints.push({ square: "square 1:1 composition", landscape: "landscape 3:2 composition", portrait: "portrait 2:3 composition" }[aiSize]);
+    }
+    if (aiQuality !== "auto") hints.push(aiQuality + " detail");
+    try { await askAI(true, hints.join(", ")); } catch { /* askAI already surfaced the error */ }
+  }
+  // #UNFINISHEDTOOLS: renderMockup is intentionally detached from the UI (the "Render Completeful mockup"
+  // button was removed). It renders ONE mockup for the first selected variant and has never run in production.
+  // Rebuild as commerce.mockup.render (per color x side) per tkt_a6482217d8ca4be4, then delete this reference.
+  void renderMockup;
   const nextLabel = busy === "prepare" ? "Preparing print artwork…"
     : busy === "save" ? "Saving design…" : "Next step · Product details";
 
