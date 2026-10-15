@@ -1121,11 +1121,25 @@ export default function StudioWorkspace({
           </ol>
         </nav>
         <div className="ps-workspace-actions">
-          <button className="ps-button" disabled={Boolean(busy)} onClick={() => void saveDraft()}>
-            {busy === "save" ? "Saving…" : "Save design"}
+          <button type="button" className="ps-icon-action" data-tip={busy === "save" ? "Saving…" : "Save design"}
+            aria-label="Save design" disabled={Boolean(busy)} onClick={() => void saveDraft()}>
+            {busy === "save" ? <span className="ps-icon-action__busy" aria-hidden="true" /> : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 17V3" /><path d="m6 11 6 6 6-6" /><path d="M19 21H5" />
+              </svg>
+            )}
+            <span className="ps-sr-only">Save design</span>
           </button>
-          <button className="ps-button ps-primary" disabled={Boolean(busy)} onClick={() => void continueToProductDetails()}>
-            {busy === "prepare" ? "Preparing print artwork…" : busy === "save" ? "Saving design…" : "Next step · Product details →"}
+          <button type="button" className="ps-icon-action ps-icon-action--primary" data-tip={nextLabel}
+            aria-label={nextLabel} disabled={Boolean(busy)} onClick={() => void continueToProductDetails()}>
+            {busy === "prepare" ? <span className="ps-icon-action__busy" aria-hidden="true" /> : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M17 12H3" /><path d="m11 18 6-6-6-6" /><path d="M21 5v14" />
+              </svg>
+            )}
+            <span className="ps-sr-only">{nextLabel}</span>
           </button>
           {error && <p className="ps-step-feedback ps-step-feedback--error" role="alert">{error}</p>}
           {cropError && <p className="ps-step-feedback ps-step-feedback--error" role="alert">{cropError}</p>}
