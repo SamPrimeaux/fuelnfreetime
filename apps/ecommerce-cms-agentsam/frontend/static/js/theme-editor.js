@@ -2862,6 +2862,8 @@
 
   let editorDrawer = null;
   let inspectorVisible = true;
+  // Preserve an intentionally closed inspector when returning from full preview.
+  let inspectorBeforeFullPreview = true;
   function setInspectorVisible(value) {
     inspectorVisible = Boolean(value);
     const studio = document.querySelector('.theme-studio');
