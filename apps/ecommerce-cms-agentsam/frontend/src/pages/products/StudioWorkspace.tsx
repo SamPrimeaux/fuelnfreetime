@@ -217,6 +217,12 @@ export default function StudioWorkspace({
   const [mediaSearch, setMediaSearch] = useState("");
   // Default to artwork made or uploaded in Product Studio; the full media library is opt-in.
   const [artworkScope, setArtworkScope] = useState<"studio" | "library">("studio");
+  // Tools panel (AI image tools). #UNFINISHEDTOOLS: see docs/AGENTSAM_MERCH_AND_TOOLS_AUDIT_20261015.md
+  const [aiMode, setAiMode] = useState<"generate" | "edit">("generate");
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiBackground, setAiBackground] = useState<"transparent" | "white">("transparent");
+  const [aiSize, setAiSize] = useState<"auto" | "square" | "landscape" | "portrait">("auto");
+  const [aiQuality, setAiQuality] = useState<"auto" | "high" | "medium" | "low">("auto");
   const [mediaQuery, setMediaQuery] = useState("");
   const [showArtwork, setShowArtwork] = useState(true);
   const [guides, setGuides] = useState(false);
