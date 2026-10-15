@@ -1370,7 +1370,9 @@ export default function StudioWorkspace({
               </div>
               {!busy && filteredMedia.length === 0 && (
                 <p className="ps-asset-status">{mediaSearch ? "No matching artwork." :
-                  albumId ? "This album has no artwork yet." : "Choose or upload your first artwork."}</p>
+                  albumId ? "This album has no artwork yet." :
+                  artworkScope === "studio" ? "No studio artwork yet. Upload a file, or switch to Whole library." :
+                  "Choose or upload your first artwork."}</p>
               )}
               {mediaHasMore && (
                 <button type="button" className="ps-button ps-wide"
