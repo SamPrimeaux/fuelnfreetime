@@ -86,6 +86,11 @@ export function createMiniAgentSam(host) {
       outline.hidden = true;
       return null;
     }
+    // A zero-size anchor (e.g. a composer pinned to a screen edge) has nothing to outline.
+    if (!(r.width > 0 && r.height > 0)) {
+      outline.hidden = true;
+      return r;
+    }
     Object.assign(outline.style, {
       left: `${r.left}px`,
       top: `${r.top}px`,
