@@ -178,6 +178,28 @@ export function createAuthoringEngine(raw: readonly unknown[]) {
       valueSource:own(values,s.key) ? 'stored' : own(s,'default') ? 'default' : 'unset'
     }));
   }
+  /**
+   * The storefront renderer defines what fields actually exist. Apply D1's
+   * declarative schema only when it covers all those fields with compatible
+   * types; stale definitions must never hide or invent editable controls.
+   */
+  function rendererFields(
+    kind: Kind,key: string,
+    nativeFields: readonly {key:string; type?:string; [name:string]:unknown}[],
+    values: Record<string,unknown> = {}
+  ) {
+    const definition = get(kind,key);
+    if (!definition) return [...nativeFields];
+    const declared = new Map(definition.settings.map(setting => [setting.key,setting]));
+    if (!nativeFields.every(field => {
+      const spec = declared.get(field.key);
+      return spec && spec.type === (field.type || 'text');
+    })) return [...nativeFields];
+    const shown = new Set(inspector(kind,key,values).map(field => field.key));
+    return nativeFields.filter(field => shown.has(field.key)).map(field => ({
+      ...field, ...declared.get(field.key), key:field.key
+    }));
+  }
   function eligibility(request: Insertion): Eligibility {
     const parent = get('section',request.parentKey) || get('block',request.parentKey);
     const child = get('block',request.childKey);
@@ -204,6 +226,6 @@ export function createAuthoringEngine(raw: readonly unknown[]) {
     }
     return definition.label;
   }
-  return Object.freeze({ get,inspector,eligibility,catalog,describe,
+  return Object.freeze({ get,inspector,rendererFields,eligibility,catalog,describe,
     diagnostics:Object.freeze(diagnostics),count:definitions.size });
 }
