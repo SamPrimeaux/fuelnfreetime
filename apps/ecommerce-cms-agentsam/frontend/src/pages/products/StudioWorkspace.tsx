@@ -532,8 +532,13 @@ export default function StudioWorkspace({
     }>(`/api/admin/media?${query}`, { signal: controller.signal })
       .then((d) => {
         if (controller.signal.aborted) return;
+        // Generated derivatives (placement previews, prepared print files) are outputs, never inputs.
+        const isDerivative = (a: MediaAsset) =>
+          /\/studio\/(?:previews|prepared)\//.test(a.url || "") || /^(?:placement|prepared)-/i.test(a.filename || "");
+        const inStudioScope = (a: MediaAsset) => /\/studio\/artwork\//.test(a.url || "");
         const artwork = d.assets.filter((a) =>
-          a.content_type?.startsWith("image/") || /\.(png|jpe?g|webp|svg)$/i.test(a.filename));
+          (a.content_type?.startsWith("image/") || /\.(png|jpe?g|webp|svg)$/i.test(a.filename)) &&
+          !isDerivative(a) && (artworkScope === "library" || inStudioScope(a)));
         setMedia((current) => mediaPage === 1 ? artwork : [
           ...current, ...artwork.filter((a) => !current.some((item) => item.id === a.id)),
         ]);
