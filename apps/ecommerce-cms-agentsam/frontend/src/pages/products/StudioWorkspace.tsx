@@ -1734,7 +1734,7 @@ export default function StudioWorkspace({
           <div className="ps-stage" data-agentsam-resource="product-design-stage">
             <div className="ps-product-design-preview" style={{
               transform: `scale(${canvasZoom / 100})`,
-              width: `min(100%, 880px, calc((100dvh - 262px) * ${artboardAspectRatio}))`,
+              width: `min(100%, 880px, calc((100dvh - 350px) * ${artboardAspectRatio}))`,
             }}>
               <div className="ps-product-design-image">
                 <div className="ps-design-guide" style={{ aspectRatio: artboardAspectRatio }}
