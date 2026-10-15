@@ -477,10 +477,27 @@
     return [...native, ...portable];
   }
 
-  function setTheme(nextTheme) {
+  async function setTheme(nextTheme) {
     if (!nextTheme || nextTheme === selectedTheme) return;
+    if (!installedThemeSlugs.has(nextTheme)) {
+      setNote('This theme is a reference preview, not an installed CMS artifact.', 'error');
+      return;
+    }
+    if (!host) {
+      try {
+        const saved = await editorRequest('/api/admin/cms/theme-selection', {
+          method: 'PUT',
+          body: JSON.stringify({ slug: nextTheme, expected_version: persistedThemeVersion }),
+        });
+        if (!saved.ok) throw new Error(saved.code || saved.error || 'Theme selection could not be saved');
+        persistedThemeVersion = saved.content_version;
+      } catch (error) {
+        setNote('Theme selection was not saved: ' + error.message, 'error');
+        await loadThemeIdentity();
+        return;
+      }
+    }
     selectedTheme = nextTheme;
-    localStorage.setItem('theme-studio:selected-theme', selectedTheme);
     document.querySelectorAll('[data-theme-preview]').forEach(function(button) {
       const current = button.dataset.themePreview === selectedTheme;
       button.classList.toggle('is-active', current);
