@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { __setApplicationAccountId } from "../backend/lib/account-context.js";
 import { listCatalogModels } from "../backend/agentsam/model-catalog-tools.js";
+import { executeCoreTool } from "../backend/agentsam/core-tools.js";
 import { listAgentSamTools, getAgentSamTool } from "../backend/agentsam/tools-registry.js";
 import { isAgentSamToolExecutable } from "../backend/agentsam/tool-handlers.js";
 
@@ -145,4 +146,15 @@ test("runtime bindings are verified without any hardcoded FNF platform-scope nam
   assert.equal(isAgentSamToolExecutable(visible[0]), true);
   assert.deepEqual((await listAgentSamTools({ DB: db })).map(x => x.tool_key), []);
   __setApplicationAccountId(null);
+});
+
+test("legacy model tool key executes only the new canonical reader", async () => {
+  const db = dbFixture({ catalog: [fakeCatalogModel] });
+  const out = await executeCoreTool({ DB: db }, { tool_key: "fnf_agentsam_ai_models" }, {
+    include_inactive: true, provider: "openai",
+  });
+  assert.equal(out.ok, true);
+  assert.equal(out.source, "agentsam_model_catalog");
+  assert.deepEqual(out.models.map(model => model.model_key), ["openai:test"]);
+  assert.ok(!db.statements.some(q => /\\bagentsam_ai\\b/.test(q.sql)));
 });
