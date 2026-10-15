@@ -286,10 +286,9 @@
     button = document.createElement('button');
     button.className = 'console-icon-btn';
     button.dataset.inspectToggle = 'true';
-    button.textContent = '⌖';
-    button.title = 'Open a customer-facing storefront preview to annotate';
+    button.innerHTML = MINI_ICON;
+    button.title = 'miniAgentSam · ask for changes';
     button.setAttribute('aria-label', button.title);
-    button.disabled = true;
     button.setAttribute('aria-pressed', 'false');
 
     const attachments = createAttachmentController({
