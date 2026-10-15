@@ -350,6 +350,7 @@ export function createMiniAgentSam(host) {
       rect = null;
       outline.hidden = true;
     },
+    reposition: position,
     select(selection, bounds) {
       if (busy) close();
       resource = selection;
