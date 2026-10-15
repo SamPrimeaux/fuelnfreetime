@@ -228,7 +228,6 @@ export default function StudioWorkspace({
   const [agentVisible, setAgentVisible] = useState(false);
   const miniRef = useRef<ReturnType<typeof createMiniAgentSam> | null>(null);
   const miniSendRef = useRef<(message: string, signal: AbortSignal, resource: unknown) => Promise<{ reply: string }>>(async () => ({ reply: "" }));
-  const miniTriggerRef = useRef<HTMLButtonElement>(null);
   const variantDialogRef = useRef<HTMLElement>(null);
   const fullPreviewCloseRef = useRef<HTMLButtonElement>(null);
   const dragRef = useRef<{ mode: "move" | "resize"; corner: "tl" | "tr" | "bl" | "br"; startX: number; startY: number; x: number; y: number; scale: number } | null>(null);
