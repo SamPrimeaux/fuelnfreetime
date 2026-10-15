@@ -99,19 +99,29 @@ export function createMiniAgentSam(host) {
     const r = positionOutline();
     if (!r || composer.hidden) return;
 
+    const rawBounds = host.positionBounds?.();
+    const limits = {
+      left: Math.max(12, rawBounds?.left ?? 12),
+      right: Math.min(innerWidth - 12, rawBounds?.right ?? innerWidth - 12),
+      top: Math.max(12, rawBounds?.top ?? 12),
+      bottom: Math.min(innerHeight - 12, rawBounds?.bottom ?? innerHeight - 12),
+    };
+    composer.style.maxWidth = Math.max(160, limits.right - limits.left) + 'px';
     const width = composer.offsetWidth;
     const height = composer.offsetHeight;
-    const left = Math.max(
-      12,
-      Math.min(innerWidth - width - 12, r.left + r.width / 2 - width / 2),
-    );
+    const clamp = (value, start, end) => Math.max(start, Math.min(Math.max(start, end), value));
+    const left = clamp(r.left + r.width / 2 - width / 2, limits.left, limits.right - width);
     const below = r.top + r.height + 10;
     const above = r.top - height - 10;
+    const fitsBelow = below + height <= limits.bottom;
+    const fitsAbove = above >= limits.top;
     const preferAbove = host.preferAbove === true;
+    // Keep the composer next to the selection and inside the actual preview.
+    // When a selected section spans the entire iframe, prioritize visibility.
     const desiredTop = preferAbove
-      ? (above >= 12 ? above : below)
-      : (below + height <= innerHeight - 12 ? below : above);
-    const top = Math.max(12, Math.min(innerHeight - height - 12, desiredTop));
+      ? (fitsAbove ? above : fitsBelow ? below : limits.bottom - height)
+      : (fitsBelow ? below : fitsAbove ? above : limits.bottom - height);
+    const top = clamp(desiredTop, limits.top, limits.bottom - height);
     Object.assign(composer.style, { left: `${left}px`, top: `${top}px` });
   }
 

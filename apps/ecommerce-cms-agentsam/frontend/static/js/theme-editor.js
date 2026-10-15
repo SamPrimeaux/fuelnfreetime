@@ -438,14 +438,16 @@
     const registry = window.SECTION_SCHEMAS?.[slug] || {};
     const native = Object.entries(registry)
       .filter(function([key]) {
-        // Do not offer native sections unless the storefront actually has
-        // an insertable renderer/template for this page. Cross-theme portable
-        // sections below remain available on every merchant-editable page.
-        const supported = {
-          home: ['hero', 'manifesto', 'collections', 'values', 'community', 'newsletter'],
-          shop: ['hero', 'collections', 'stories'],
-        };
-        return (supported[slug] || []).includes(key);
+        // A legacy descriptor alone does NOT prove a renderer exists.
+        // Offer native templates only after finding their rendered source
+        // section in the current storefront. This works for arbitrary
+        // merchant pages rather than handpicked home/shop section names.
+        try {
+          const doc = byId('theme-preview')?.contentDocument;
+          return Boolean(doc?.querySelector(
+            '[data-cms-section="' + CSS.escape(key) + '"], [data-section-id="' + CSS.escape(key) + '"]'
+          ));
+        } catch { return false; }
       })
       .map(function([key, definition]) {
         return { id: 'heuristic/' + key, label: definition.label || humanize(key),
@@ -956,11 +958,8 @@
     function renderCatalog(query) {
       const needle = String(query || '').trim().toLowerCase();
       let entries = themeCatalog();
-      if (!entries.length) {
-        entries = Object.entries(registrySections).map(function(pair) {
-          return { id: selectedTheme + '/' + pair[0], label: pair[1].label || humanize(pair[0]), type: pair[0], templateKey: pair[0], preset: selectedTheme + '/' + pair[0] };
-        });
-      }
+      // No fallback to arbitrary JS registry keys: without a proven
+      // renderer a text-only entry would become an uneditable fake preset.
       const filtered = entries.filter(function(entry) {
         return !needle || (entry.label + ' ' + entry.type + ' ' + entry.id).toLowerCase().includes(needle);
       });
@@ -2083,18 +2082,20 @@
           onProposal: presentAgentProposal,
           onClose: function() { miniAgentSamVisible = false; },
           positionBounds: function() {
-            // Keep the composer in the *visible canvas*, clear of the fixed
-            // editor toolbar, mobile tabs, and Safari's native controls.
-            // This does not affect the selected CMS node or its data.
-            if (!isPhoneEditor()) return null;
+            // The composer must stay in the *actual storefront viewport* on
+            // both desktop and phone, not float above the editor toolbar.
+            const frame = byId('theme-preview');
             const canvas = document.querySelector('.theme-studio .te-preview-stage');
+            const rect = frame?.getBoundingClientRect();
+            const pane = canvas?.getBoundingClientRect();
             const tabs = byId('te-mobile-pane-switch');
-            if (!canvas) return null;
-            const box = canvas.getBoundingClientRect();
-            if (box.width < 100 || box.height < 80) return null;
+            if (!rect || !pane || rect.width < 100 || rect.height < 80) return null;
             return {
-              left: box.left, top: box.top, right: box.right,
-              bottom: Math.min(box.bottom, tabs?.getBoundingClientRect().top ?? box.bottom),
+              left: Math.max(rect.left, pane.left) + 7,
+              top: Math.max(rect.top, pane.top) + 7,
+              right: Math.min(rect.right, pane.right) - 7,
+              bottom: Math.min(rect.bottom, pane.bottom,
+                isPhoneEditor() ? (tabs?.getBoundingClientRect().top ?? rect.bottom) : rect.bottom) - 7,
             };
           },
         }); })
@@ -2153,6 +2154,41 @@
     }));
   }
 
+  function scrollPreviewToSelection(sectionKey, fieldKey, blockId) {
+    // A tree item belongs to the *iframe's* scrolling page, not the admin
+    // document. Scroll there immediately so the inspector and contextual
+    // composer refer to something the merchant can actually see.
+    const frame = byId('theme-preview');
+    let doc;
+    try { doc = frame?.contentDocument; } catch { return false; }
+    if (!doc) return false;
+    const wrapper = doc.querySelector(
+      '[data-cms-section="' + CSS.escape(sectionKey) + '"], [data-section-id="' + CSS.escape(sectionKey) + '"]'
+    );
+    if (!wrapper) return false;
+    const selectedBlock = blockId && wrapper.querySelector('[data-cms-block="' + CSS.escape(blockId) + '"]');
+    const selectedField = fieldKey && (
+      (selectedBlock || wrapper).querySelector('[data-cms="' + CSS.escape(fieldKey) + '"]') ||
+      wrapper.querySelector('[data-cms="' + CSS.escape(fieldKey) + '"]')
+    );
+    const target = selectedField || selectedBlock || wrapper;
+    try {
+      const view = frame.contentWindow;
+      const top = target.getBoundingClientRect().top;
+      const current = view?.scrollY || doc.scrollingElement?.scrollTop || 0;
+      if (view?.scrollTo && Number.isFinite(top)) {
+        // Leave space above the selected control and, when possible, below it
+        // for miniAgentSam. No host-page scrolling or CMS write is involved.
+        view.scrollTo({ top: Math.max(0, current + top - 88), behavior: 'instant' });
+      } else {
+        target.scrollIntoView?.({ behavior: 'instant', block: 'start' });
+      }
+    } catch {
+      try { target.scrollIntoView?.({ behavior: 'auto', block: 'start' }); } catch {}
+    }
+    return true;
+  }
+
   function selectSection(sectionKey, fieldKey, scrollPreview, ownerSlug) {
     const section = findSection(sectionKey, ownerSlug);
     if (!section) return;
@@ -2172,15 +2208,7 @@
     const prefix = activeSectionOwner === 'site' ? 'Global' : slug;
     byId('te-selected-path').textContent = fieldKey ? prefix + ' / ' + sectionKey + ' / ' + fieldKey : prefix + ' / ' + sectionKey;
 
-    if (scrollPreview) {
-      try {
-        const doc = byId('theme-preview').contentDocument;
-        const wrapper = doc && doc.querySelector('[data-cms-section="' + CSS.escape(sectionKey) + '"], [data-section-id="' + CSS.escape(sectionKey) + '"]');
-        const selector = fieldKey ? '[data-cms="' + CSS.escape(fieldKey) + '"]' : null;
-        const target = (selector && (wrapper?.querySelector(selector) || doc?.querySelector(selector))) || wrapper;
-        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } catch {}
-    }
+    if (scrollPreview) scrollPreviewToSelection(sectionKey, fieldKey, null);
     highlightPreviewSelection();
     closeAgentProposal();
     publishGenerationSelection();
@@ -2217,14 +2245,7 @@
       ? prefix + ' / ' + sectionKey + ' / ' + blockId + ' / ' + activeFieldKey.replace(blockId + '.', '')
       : prefix + ' / ' + sectionKey + ' / ' + blockId;
 
-    if (scrollPreview) {
-      try {
-        const doc = byId('theme-preview').contentDocument;
-        const sectionNode = doc && doc.querySelector('[data-cms-section="' + CSS.escape(sectionKey) + '"], [data-section-id="' + CSS.escape(sectionKey) + '"]');
-        const target = sectionNode && sectionNode.querySelector('[data-cms-block="' + CSS.escape(blockId) + '"]');
-        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } catch {}
-    }
+    if (scrollPreview) scrollPreviewToSelection(sectionKey, activeFieldKey, blockId);
     highlightPreviewSelection();
     closeAgentProposal();
     publishGenerationSelection();

@@ -143,6 +143,10 @@ try{
  assert.equal(result.beforeChatCount,0,'Selection must never send an AI request');
  assert.equal(result.arrow,'↑','Send must be an upward arrow');
  assert.ok(result.initialComposerRect.right>=result.sourceRect.left-10 && result.initialComposerRect.left<=result.sourceRect.right+10, 'Composer must anchor beside the selected canvas element');
+ if(result.sourceRect.bottom + (result.initialComposerRect.bottom-result.initialComposerRect.top) + 10 <= result.previewBounds.bottom) {
+   assert.ok(result.initialComposerRect.top >= result.sourceRect.bottom - 2,
+     'miniAgentSam must prefer below the selected CMS element when there is room');
+ }
  assert.ok(Math.abs(result.initialComposerRect.bottom-result.sourceRect.top)<150 || Math.abs(result.initialComposerRect.top-result.sourceRect.bottom)<150, 'Composer must appear near the selected canvas element');
  assert.match(result.caption,/hero.*headline/i);
  assert.equal(result.proposed,message);

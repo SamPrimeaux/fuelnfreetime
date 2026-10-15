@@ -75,6 +75,25 @@ export async function listCmsDefinitions(env, accountId, filters = {}) {
  * Bridge an ACTIVE semantic definition to an ALREADY RENDERABLE host section.
  * Never synthesize an unimplemented visual section from a database record.
  */
+// Canonical definition fields take precedence over the old JS page
+// descriptor when a genuine implementation has already been registered.
+// This only describes the inspector; it never fabricates a renderer.
+function definitionFields(fields) {
+  return Object.entries(fields || {})
+    .filter(([key, spec]) => KEY.test(key) && spec && typeof spec === "object" && !Array.isArray(spec))
+    .map(([key, spec]) => ({
+      key,
+      label: String(spec.label || key),
+      type: String(spec.type || "text"),
+      ...(spec.description ? {description:String(spec.description)} : {}),
+      ...(spec.min != null ? {min:spec.min} : {}),
+      ...(spec.max != null ? {max:spec.max} : {}),
+      ...(spec.step != null ? {step:spec.step} : {}),
+      ...(Array.isArray(spec.options) ? {options:spec.options} : {}),
+      ...(spec.binding ? {binding:spec.binding} : {}),
+    }));
+}
+
 export function attachCmsDefinitions(registry, definitions) {
   const pages = structuredClone(registry.pages || {});
   const indexed = new Map();
@@ -92,15 +111,7 @@ export function attachCmsDefinitions(registry, definitions) {
     // templates; a generated definition is installed via explicit acceptance.
     for (const definition of indexed.values()) {
       if (definition.origin !== "generated" || !definition.artifact || page.sections?.[definition.key]) continue;
-      const fields = Object.entries(definition.fields || {}).map(([key, spec]) => ({
-        key, label: String(spec?.label || key), type: spec?.type || "text",
-        ...(spec?.min!=null?{min:spec.min}:{}),
-        ...(spec?.max!=null?{max:spec.max}:{}),
-        ...(spec?.step!=null?{step:spec.step}:{}),
-        ...(Array.isArray(spec?.options)?{options:spec.options}:{}),
-        ...(spec?.binding?{binding:spec.binding}:{}),
-        ...(spec?.description?{description:spec.description}:{}),
-      }));
+      const fields = definitionFields(definition.fields);
       if (!fields.length) continue;
       page.sections[definition.key] = {
         sortOrder: 1000,
@@ -121,6 +132,23 @@ export function attachCmsDefinitions(registry, definitions) {
       section.definitionOrigin = definition.origin;
       section.definitionStatus = definition.status;
       section.definitionId = definition.id;
+      // The legacy registry supplies an implementation compatibility
+      // fallback. Active D1 definitions supply the authoritative inspector
+      // schema whenever they declare actual settings. Empty definitions
+      // intentionally leave existing controls intact.
+      const fields = definitionFields(definition.fields);
+      if (fields.length && definition.origin !== "generated") {
+        section.fields = fields;
+        section.schemaAuthority = "cms_definitions";
+      }
+      if (definition.allowedBlocks?.length && section.blocks?.length) {
+        // Never advertise child blocks with no installed renderer/template.
+        const allowed = new Set(definition.allowedBlocks);
+        section.blocks = section.blocks.filter((block) => allowed.has(block.key));
+      }
+      if (definition.maxBlocks != null) {
+        section.guardrails = { ...(section.guardrails || {}), maxBlocks: definition.maxBlocks };
+      }
     }
   }
   const known = new Set(Object.values(pages).flatMap((page) => Object.keys(page.sections || {})));
