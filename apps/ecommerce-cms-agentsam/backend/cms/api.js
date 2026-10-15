@@ -1,5 +1,6 @@
 import { ROUTE_MANIFEST } from "../lib/route-manifest.js";
 import { attachCmsDefinitions, listCmsDefinitions } from "./definition-registry.mjs";
+import { createAuthoringEngine } from "../../cms/authoring/engine.ts";
 import { validateThemeSettings, validateThemeCss } from "./theme-style-contract.mjs";
 import { attachGeneratedImplementations, inspectGeneratedSection, persistGeneratedImplementation } from "./generated-section.mjs";
 import {normalizeSettingFields} from "../../frontend/static/js/generated-settings-schema.mjs";
@@ -1541,7 +1542,9 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
       version: url.searchParams.get("version") || undefined,
     };
     try {
-      return json({ ok: true, definitions: await listCmsDefinitions(env, context.accountId, filters) });
+      const definitions = await listCmsDefinitions(env, context.accountId, filters);
+      const authoring = createAuthoringEngine(definitions);
+      return json({ ok: true, definitions, authoring_diagnostics: authoring.diagnostics });
     } catch (error) {
       if (/^invalid_definition_/.test(String(error.message))) {
         return json({ error: error.message }, { status: 400 });
