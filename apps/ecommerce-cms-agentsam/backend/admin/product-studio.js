@@ -165,6 +165,11 @@ function scopeMatches(scope, attrs) {
   });
 }
 
+// #UNFINISHEDTOOLS (commerce.mockup.render): resolves ONE mockup from selection.variants[0] (the first selected
+// variant's color) and renderDraft() renders only that. Completeful scopes a mockup per Color x print location
+// (12 for Comfort Colors 1717), so a 6-color product needs a per-color x per-side loop whose results are stored
+// with media_assets.meta_json.variant_color. The provider render path has never run in production
+// (completeful_render_status is NULL on both published products). Tracked: tkt_a6482217d8ca4be4.
 async function resolveMockup(env, draft, selection) {
   const locationId = draft.print_location_ids[0];
   if (!locationId) return null;
