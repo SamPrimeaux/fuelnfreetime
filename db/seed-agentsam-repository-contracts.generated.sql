@@ -60,7 +60,7 @@ INSERT INTO agentsam_repository_contracts (
   name, description, manifest_path, contract_hash, status, metadata_json,
   created_at, updated_at
 )
-SELECT 'rct_ab22b8ef8ca4de3f', r.account_id, r.id, 'app.product-studio', '1.0.0', 'package', 'Product Studio App', 'Bundled commerce Product Studio App contract.', 'apps/ecommerce-cms-agentsam/apps/product-studio/agentsam.app.json', 'bec3505bde00d306ded43cd94b716e87156f3848df2fb2521cc0640aa56d1e7c', 'active', '{"app_id":"product-studio","hash_algorithm":"sha256"}', unixepoch(), unixepoch()
+SELECT 'rct_ab22b8ef8ca4de3f', r.account_id, r.id, 'app.product-studio', '1.0.0', 'package', 'Product Studio App', 'Bundled commerce Product Studio App contract.', 'apps/ecommerce-cms-agentsam/apps/product-studio/agentsam.app.json', 'a78a364a6e60b54259d7bbca3b62a793707e85b92835c9790d17125c36445dc8', 'active', '{"app_id":"product-studio","hash_algorithm":"sha256"}', unixepoch(), unixepoch()
 FROM code_repositories r WHERE r.id = 'github:samprimeaux/fuelnfreetime'
 ON CONFLICT(repository_id,contract_key,contract_version) DO UPDATE SET
   account_id=excluded.account_id,
