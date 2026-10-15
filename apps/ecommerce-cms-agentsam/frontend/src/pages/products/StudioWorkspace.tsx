@@ -1521,87 +1521,147 @@ export default function StudioWorkspace({
             </>
           )}
           {tab === "tools" && (
-            <>
-              <label className="ps-field">
-                Working design name
-                <input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={180} />
-              </label>
-              <label className="ps-field">
-                Design notes
-                <textarea
-                  rows={5}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Placement notes, color direction, changes for the next version…"
-                />
-              </label>
-              <label className="ps-check">
-                <input
-                  type="checkbox"
-                  checked={guides}
-                  onChange={(e) => setGuides(e.target.checked)}
-                />{" "}
-                Show grid
-              </label>
-              <label className="ps-check">
-                <input type="checkbox" checked={snapEnabled} onChange={(event) => setSnapEnabled(event.target.checked)} />
-                Snap to grid
-              </label>
-              <button
-                className="ps-button ps-wide"
-                disabled={!asset || Boolean(busy)}
-                onClick={() => void prepareArtwork()}
-              >
-                {busy === "prepare" ? "Preparing…" : preparedIsCurrent ? "Rebuild production artwork" : "Prepare for print"}
-              </button>
-              {subjectRemovalAvailable && (
-                <div className="ps-prep-options">
-                  <button type="button" className="ps-button ps-wide"
-                    disabled={!asset || Boolean(busy)}
-                    onClick={() => void removeBackgroundAI()}>
-                    {busy === "remove-background" ? "Removing background…" : "Remove background"}
+            <div className="ps-ai-tools">
+              <div className="ps-ai-tabs" role="tablist" aria-label="AI image tools">
+                {([["generate", "Image generator"], ["edit", "Upscale & edit"]] as const).map(([id, label]) => (
+                  <button type="button" role="tab" key={id} aria-selected={aiMode === id}
+                    className={aiMode === id ? "is-active" : ""} onClick={() => setAiMode(id)}>
+                    {label}
                   </button>
-                </div>
-              )}
-              <div className="ps-paper-note ps-prep-options">
-                <strong>Artwork preparation</strong>
-                <label className="ps-check">
-                  <input
-                    type="checkbox"
-                    checked={removeFlatBackground}
-                    onChange={(e) => setRemoveFlatBackground(e.target.checked)}
-                  />{" "}
-                  Remove connected flat background
-                </label>
-                <label className="ps-check">
-                  <input
-                    type="checkbox"
-                    checked={trimTransparent}
-                    onChange={(e) => setTrimTransparent(e.target.checked)}
-                  />{" "}
-                  Trim transparent edges
-                </label>
+                ))}
               </div>
-              {asset && preparedAsset && preparedIsCurrent && (
-                <div className="ps-derivative-compare" aria-label="Original and prepared artwork comparison">
-                  <figure>
-                    <img src={asset.url} alt="Original artwork" />
-                    <figcaption>Original · unchanged</figcaption>
-                  </figure>
-                  <figure>
-                    <img src={preparedAsset.url} alt="Prepared artwork derivative" />
-                    <figcaption>Prepared derivative</figcaption>
-                  </figure>
-                </div>
+              {aiMode === "generate" && (
+                <>
+                  <label className="ps-field ps-ai-prompt">
+                    Prompt
+                    <textarea rows={4} value={aiPrompt} maxLength={1000}
+                      onChange={(event) => setAiPrompt(event.target.value)}
+                      placeholder={'e.g. "Retro sunset badge, bold vector shapes, 2 colors"'} />
+                    <small className="ps-ai-count">{aiPrompt.length} / 1000</small>
+                  </label>
+                  <details className="ps-ai-options" open>
+                    <summary>More options</summary>
+                    <div className="ps-chip-group" role="group" aria-label="Background">
+                      <span>Background</span>
+                      {(["transparent", "white"] as const).map((value) => (
+                        <button type="button" key={value} className={aiBackground === value ? "is-active" : ""}
+                          aria-pressed={aiBackground === value} onClick={() => setAiBackground(value)}>
+                          {value === "transparent" ? "Transparent" : "White"}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="ps-chip-group" role="group" aria-label="Size">
+                      <span>Size</span>
+                      {(["auto", "square", "landscape", "portrait"] as const).map((value) => (
+                        <button type="button" key={value} className={aiSize === value ? "is-active" : ""}
+                          aria-pressed={aiSize === value} onClick={() => setAiSize(value)}>
+                          {{ auto: "Auto", square: "Square (1:1)", landscape: "Landscape (3:2)", portrait: "Portrait (2:3)" }[value]}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="ps-chip-group" role="group" aria-label="Quality">
+                      <span>Quality</span>
+                      {(["auto", "high", "medium", "low"] as const).map((value) => (
+                        <button type="button" key={value} className={aiQuality === value ? "is-active" : ""}
+                          aria-pressed={aiQuality === value} onClick={() => setAiQuality(value)}>
+                          {value}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="ps-ai-hint">Options guide the generator. Final print size is set by the print area.</p>
+                  </details>
+                  <button type="button" className="ps-button ps-primary ps-wide"
+                    disabled={!aiPrompt.trim() || Boolean(busy)} onClick={() => void generateImage()}>
+                    {busy === "generate" ? "Generating…" : "Generate image"}
+                  </button>
+                  <div className="ps-ai-gallery-head">
+                    <strong>Your AI images</strong>
+                    <span className="ps-count">{aiImages.length}</span>
+                  </div>
+                  {aiImages.length ? (
+                    <div className="ps-media-grid ps-ai-gallery">
+                      {aiImages.map((item) => (
+                        <button type="button" key={item.id} title={item.filename}
+                          aria-label={`Place ${item.filename}`} aria-pressed={asset?.id === item.id}
+                          className={asset?.id === item.id ? "is-active" : ""} onClick={() => choose(item)}>
+                          <img src={item.url} alt="" loading="lazy" />
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="ps-asset-status">Generated images appear here.</p>
+                  )}
+                </>
               )}
-              <button
-                className="ps-button ps-wide"
-                disabled={!preparedIsCurrent || Boolean(busy)}
-                onClick={() => void renderMockup()}
-              >
-                {busy === "render" ? "Rendering with Completeful…" : "Render Completeful mockup"}
-              </button>
-            </>
+              {aiMode === "edit" && (
+                <>
+                  <div className="ps-ai-source">
+                    {asset ? (
+                      <>
+                        <img src={asset.url} alt="" />
+                        <div><strong>{asset.filename}</strong><small>Selected artwork</small></div>
+                      </>
+                    ) : (
+                      <p className="ps-asset-status">Choose artwork to edit.</p>
+                    )}
+                    <button type="button" className="ps-button" onClick={() => openTab("upload")}>
+                      {asset ? "Change" : "Choose artwork"}
+                    </button>
+                  </div>
+                  <div className="ps-ai-actions">
+                    <strong>Edit</strong>
+                    <button type="button" className="ps-button ps-wide"
+                      disabled={!asset || Boolean(busy) || !subjectRemovalAvailable}
+                      title={subjectRemovalAvailable ? "Remove the background and save a cutout copy" : "Background removal is not configured for this install"}
+                      onClick={() => void removeBackgroundAI()}>
+                      {busy === "remove-background" ? "Removing background…" : "Remove background"}
+                    </button>
+                    <label className="ps-check">
+                      <input type="checkbox" checked={removeFlatBackground}
+                        onChange={(event) => setRemoveFlatBackground(event.target.checked)} />
+                      Remove connected flat background
+                    </label>
+                    <label className="ps-check">
+                      <input type="checkbox" checked={trimTransparent}
+                        onChange={(event) => setTrimTransparent(event.target.checked)} />
+                      Trim transparent edges
+                    </label>
+                    {/* #UNFINISHEDTOOLS (media.image.upscale): no upscale provider/tool exists yet.
+                        Planned definition: backend/tools/packs/media.planned.ts. Enable when registered. */}
+                    <button type="button" className="ps-button ps-wide" disabled data-unfinished="media.image.upscale"
+                      title="Upscale is coming soon">
+                      Upscale <span className="ps-soon">Soon</span>
+                    </button>
+                    {/* #UNFINISHEDTOOLS (media.image.edit): imgx_edit_image is defined but inactive on the IAM
+                        registry and the FNF app has no edit path. Planned definition: media.planned.ts. */}
+                    <label className="ps-field">
+                      Edit with a prompt
+                      <textarea rows={3} disabled placeholder="Describe the change. Coming soon." />
+                    </label>
+                    <button type="button" className="ps-button ps-wide" disabled data-unfinished="media.image.edit"
+                      title="Prompt editing is coming soon">
+                      Apply edit <span className="ps-soon">Soon</span>
+                    </button>
+                  </div>
+                  <button type="button" className="ps-button ps-wide"
+                    disabled={!asset || Boolean(busy)} onClick={() => void prepareArtwork()}>
+                    {busy === "prepare" ? "Preparing…" : preparedIsCurrent ? "Rebuild production artwork" : "Prepare for print"}
+                  </button>
+                  {asset && preparedAsset && preparedIsCurrent && (
+                    <div className="ps-derivative-compare" aria-label="Original and prepared artwork comparison">
+                      <figure>
+                        <img src={asset.url} alt="Original artwork" />
+                        <figcaption>Original · unchanged</figcaption>
+                      </figure>
+                      <figure>
+                        <img src={preparedAsset.url} alt="Prepared artwork derivative" />
+                        <figcaption>Prepared derivative</figcaption>
+                      </figure>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           )}
         </aside>
         <div className="ps-stage-column" ref={stage}>
