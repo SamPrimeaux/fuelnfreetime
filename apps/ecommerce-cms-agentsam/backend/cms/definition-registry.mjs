@@ -4,6 +4,7 @@
  * renderer remains the implementation authority until an artifact is verified.
  */
 import { normalizeSettingContract, overlayRenderableBlockFields } from "./setting-contract.ts";
+import { installedDefinition } from "./composition-contract.ts";
 const KEY = /^[a-z][a-z0-9-]{0,63}$/;
 const KIND = new Set(["section", "block"]);
 const STATUS = new Set(["active", "draft", "deprecated", "archived"]);
@@ -19,6 +20,24 @@ function parseJson(value, fallback) {
 
 export function normalizeCmsDefinition(row) {
   const fields = parseJson(row.settings_schema_json, {});
+  const metadata = parseJson(row.metadata_json, {});
+  const allowedBlocks = parseJson(row.allowed_blocks_json, []);
+  const normalizedBlocks = Array.isArray(allowedBlocks)
+    ? allowedBlocks.filter(item => typeof item === "string" && KEY.test(item))
+    : [];
+  // cms_definitions is the authority; metadata is a typed projection rather
+  // than a second local section/preset registry. Fail closed on invalid data.
+  let composition = null;
+  let compositionError = null;
+  try {
+    composition = installedDefinition({
+      definition_key: row.definition_key, kind: row.kind,
+      origin: row.origin, version: row.version, status: row.status,
+      metadata, allowedBlocks: normalizedBlocks, maxBlocks: row.max_blocks,
+    });
+  } catch (error) {
+    compositionError = String(error?.message || error);
+  }
   return {
     id: row.id,
     key: row.definition_key,
@@ -30,11 +49,11 @@ export function normalizeCmsDefinition(row) {
     origin: row.origin,
     status: row.status,
     fields,
-    allowedBlocks: Array.isArray(parseJson(row.allowed_blocks_json, []))
-      ? parseJson(row.allowed_blocks_json, []).filter((item) => typeof item === "string" && KEY.test(item))
-      : [],
+    allowedBlocks: normalizedBlocks,
     maxBlocks: row.max_blocks == null ? null : Number(row.max_blocks),
-    metadata: parseJson(row.metadata_json, {}),
+    metadata,
+    composition,
+    ...(compositionError ? {compositionError} : {}),
     artifact: row.artifact_id && row.artifact_status === "ready"
       ? { id: row.artifact_id, type: row.artifact_type, version: row.artifact_version,
           manifestR2Key: row.manifest_r2_key, contentHash: row.content_hash }
@@ -125,6 +144,15 @@ export function attachCmsDefinitions(registry, definitions) {
       section.definitionOrigin = definition.origin;
       section.definitionStatus = definition.status;
       section.definitionId = definition.id;
+      if (definition.composition?.presets?.length) {
+        section.installedPresets = definition.composition.presets;
+      }
+      if (definition.compositionError) {
+        (section.schemaConflicts ||= []).push({
+          kind: "invalid-installed-composition", definitionId: definition.id,
+          error: definition.compositionError,
+        });
+      }
       // The legacy registry supplies an implementation compatibility
       // fallback. Active D1 definitions supply the authoritative inspector
       // schema whenever they declare actual settings. Empty definitions
