@@ -1497,6 +1497,14 @@ export default function StudioWorkspace({
                     <input type="checkbox" checked={flipY} onChange={(event) => setFlipY(event.target.checked)} />
                     Flip vertically
                   </label>
+                  <label className="ps-check">
+                    <input type="checkbox" checked={guides} onChange={(event) => setGuides(event.target.checked)} />
+                    Show grid
+                  </label>
+                  <label className="ps-check">
+                    <input type="checkbox" checked={snapEnabled} onChange={(event) => setSnapEnabled(event.target.checked)} />
+                    Snap to grid
+                  </label>
                   <button
                     className="ps-button"
                     onClick={() => {
