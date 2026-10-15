@@ -3426,3 +3426,28 @@ dialog.te-section-menu .te-section-catalog-item--visual {
   #te-block-panel .te-generation-dragbar:focus-visible span{background:#8058de;}
 }
 @media(max-width:900px){#te-block-panel .te-generation-dragbar{display:none}}
+
+/* Contextual merchant link picker: internal destinations are first-class. */
+.te-link-field{position:relative}
+.te-link-trigger{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;
+ min-height:37px;padding:9px 11px;border:1px solid #d8d5de;border-radius:8px;
+ background:#fff;color:#25232a;text-align:left;font-size:12px;cursor:pointer}
+.te-link-trigger:focus-visible{outline:2px solid #7250c7;outline-offset:1px}
+.te-link-trigger__name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.te-link-picker{position:relative;z-index:15;margin-top:6px;padding:9px;
+ background:#fff;border:1px solid #dedbe5;border-radius:11px;box-shadow:0 12px 26px #2421361c}
+.te-link-picker[hidden]{display:none!important}
+.te-link-picker>input{width:100%;min-height:36px;border:1px solid #d6d0e4;border-radius:7px;padding:7px 10px;font:inherit}
+.te-link-results{max-height:216px;overflow-y:auto;padding:5px 0}
+.te-link-results button{width:100%;display:flex;flex-direction:column;gap:1px;align-items:flex-start;
+ background:transparent;border:0;border-radius:6px;padding:8px 9px;text-align:left;cursor:pointer}
+.te-link-results button:hover,.te-link-results button:focus-visible{background:#f1edfc}
+.te-link-results strong{color:#302b36;font-weight:600;font-size:12px}
+.te-link-results small{color:#777180;font-size:10px}
+.te-link-empty{font-size:11px;color:#777180;padding:9px}
+.te-link-external{border-top:1px solid #ece8f1;padding:8px 3px}
+.te-link-external summary{cursor:pointer;font-size:11px;color:#615c66}
+.te-link-external input{margin-top:7px;max-width:100%;width:100%;border:1px solid #d5d0dd;border-radius:7px;padding:8px;font:inherit}
+.te-link-external input[aria-invalid=true]{border-color:#b8313c}
+.te-link-external button,.te-link-clear{margin-top:7px;border:0;background:transparent;color:#6643bc;cursor:pointer;font-size:11px;padding:5px}
+.te-link-clear{color:#7d4d59}

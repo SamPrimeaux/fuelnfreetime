@@ -611,6 +611,14 @@ export const PAGE_REGISTRY = {
     sections: {
       hero: {
         sortOrder: 0,
+        settings: [
+          { key: "__editor.layout.heroVertical", label: "Content position", type: "select", group: "layout", default: "theme",
+            options: [{value:"theme",label:"Theme default"},{value:"top",label:"Top"},{value:"center",label:"Center"},{value:"bottom",label:"Bottom"}] },
+          { key: "__editor.layout.heroAlignment", label: "Content alignment", type: "select", group: "layout", default: "theme",
+            options: [{value:"theme",label:"Theme default"},{value:"left",label:"Left"},{value:"center",label:"Center"},{value:"right",label:"Right"}] },
+          { key: "__editor.layout.heroImageFocus", label: "Image focal point", type: "select", group: "media", default: "theme",
+            options: [{value:"theme",label:"Theme default"},{value:"left",label:"Left"},{value:"center",label:"Center"},{value:"right",label:"Right"}] },
+        ],
         fields: [
           { key: "eyebrow", label: "Eyebrow", type: "text" },
           { key: "headline", label: "Headline", type: "text" },

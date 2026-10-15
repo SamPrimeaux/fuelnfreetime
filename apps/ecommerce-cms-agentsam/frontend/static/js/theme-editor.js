@@ -567,34 +567,61 @@
       ({key:prefix+key,label,type:'select',group,options:options.map(function(value){
         return {label:value === 'inherit'?'Theme default':value,value};
       }),default:'inherit',designStyle:true});
+    const keyIsAction = /cta|button|action|href|link/i.test(selected.key);
+    if (keyIsAction) return [
+      {key:prefix+'backgroundColor',label:'Background',type:'color',group:'button colors',designStyle:true},
+      {key:prefix+'color',label:'Text',type:'color',group:'button colors',designStyle:true},
+      {key:prefix+'borderColor',label:'Border',type:'color',group:'button colors',designStyle:true},
+      number('borderWidth','Border width','size',0,10),
+      number('borderRadius','Corner radius','size',0,160),
+      number('paddingTop','Vertical padding','size',0,160),
+      number('paddingLeft','Horizontal padding','size',0,160),
+    ];
     return [
       number('fontSize','Font size','typography',8,180),
       choices('fontWeight','Font weight','typography',['inherit','400','500','600','700','800','900']),
+      choices('fontStyle','Italic','typography',['inherit','normal','italic']),
+      choices('textDecoration','Underline','typography',['inherit','none','underline']),
       number('lineHeight','Line height','typography',0.8,3,0.05,'×'),
       number('letterSpacing','Letter spacing','typography',-5,24,0.25),
       choices('textAlign','Alignment','typography',['inherit','left','center','right']),
       choices('textTransform','Text case','typography',['inherit','none','uppercase','lowercase','capitalize']),
       {key:prefix+'color',label:'Text color',type:'color',group:'appearance',designStyle:true},
       {key:prefix+'backgroundColor',label:'Background',type:'color',group:'appearance',designStyle:true},
-      ...['Top','Bottom','Left','Right'].map(function(side) {
-        return number('padding'+side,side+' padding','spacing',0,160);
-      }),
-      number('borderRadius','Corner radius','appearance',0,160),
+      number('paddingTop','Top padding','spacing',0,160),
+      number('paddingBottom','Bottom padding','spacing',0,160),
     ];
   }
 
   function currentSettings() {
     const block = currentBlockSchema();
     if (activeBlockId) {
+      // A selected block owns its controls. Do not append the host section's
+      // generic layout inventory to a Button or Heading.
       const settings = block && Array.isArray(block.settings) ? block.settings.map(function(field) {
         return {...field,key:activeBlockId+'.__settings.'+field.key,blockRelativeKey:field.key};
       }) : [];
       return settings.concat(contextualStyleFields());
     }
+    if (activeFieldKey) {
+      const schema = currentSectionSchema();
+      const sectionPadding = ((schema && schema.settings) || []).filter(function(field) {
+        return field.key === "__editor.spacing.paddingTop" || field.key === "__editor.spacing.paddingBottom";
+      }).map(function(field) { return {...field,designStyle:true}; });
+      // A heading retains the parent section's two main spacing controls,
+      // but not its irrelevant media, motion and margin inventory.
+      return contextualStyleFields().concat(/cta|button|href|link/i.test(activeFieldKey) ? [] : sectionPadding);
+    }
     const schema = currentSectionSchema();
-    return ((schema && schema.settings) || []).map(function(field) {
-      return {...field,designStyle:true};
-    }).concat(contextualStyleFields());
+    const defined = ((schema && schema.settings) || []).filter(function(field) {
+      // A merchant adjusts the common layout and spacing in the standard
+      // inspector. Rare motion/visibility are available under the section menu.
+      return /^(layout|spacing|appearance|media)$/.test(field.group || '');
+    }).filter(function(field) {
+      // Initial surface should not expose 12 identical margin controls.
+      return !/margin(Top|Bottom|Left|Right)|padding(Left|Right)|borderRadius/.test(field.key);
+    }).map(function(field) { return {...field,designStyle:true}; });
+    return defined;
   }
 
   function allEditableFields() {
@@ -1182,6 +1209,98 @@
     return /^(https?:\/\/|\/(?!\/))/i.test(source) ? source : '';
   }
 
+  function merchantPageLinks(query = '') {
+    const needle = String(query).trim().toLowerCase();
+    const found = new Map();
+    for (const page of (pages.length ? pages : fallbackPages)) {
+      const href = page.live_route || page.route || pageRoute(page.slug);
+      if (!href || !/^\/(?!\/)/.test(href)) continue;
+      const label = String(page.title || humanize(page.slug));
+      if (!needle || (label + ' ' + href).toLowerCase().includes(needle))
+        found.set(href, { label, href });
+    }
+    return [...found.values()];
+  }
+
+  function describeLink(value) {
+    const href = String(value || '').trim();
+    const match = merchantPageLinks().find(function(page) { return page.href === href; });
+    return match ? match.label : href ? href : 'Select a page';
+  }
+
+  function renderLinkField(field, value, id, help) {
+    const href = String(value || '');
+    return '<div class="te-field te-link-field" data-field-key="' + cmsEscapeAttr(field.key) + '">' +
+      '<label for="' + id + '">' + cmsEscapeHtml(field.label) + '</label>' +
+      '<button id="' + id + '" type="button" class="te-link-trigger" data-link-trigger="' + cmsEscapeAttr(field.key) + '" aria-haspopup="dialog" aria-expanded="false">' +
+      '<span class="te-link-trigger__name">' + cmsEscapeHtml(describeLink(href)) + '</span><span aria-hidden="true">⌄</span></button>' +
+      '<div class="te-link-picker" data-link-picker="' + cmsEscapeAttr(field.key) + '" role="dialog" aria-label="Choose a link destination" hidden>' +
+        '<input type="search" data-link-search placeholder="Search pages" aria-label="Search available pages" autocomplete="off">' +
+        '<div data-link-results class="te-link-results"></div>' +
+        '<details class="te-link-external"><summary>External URL or anchor</summary>' +
+        '<input type="text" data-link-external placeholder="https://example.com or #section" aria-label="External URL or anchor" value="' + cmsEscapeAttr(href) + '">' +
+        '<button type="button" data-link-apply="' + cmsEscapeAttr(field.key) + '">Use link</button></details>' +
+        '<button type="button" class="te-link-clear" data-link-clear="' + cmsEscapeAttr(field.key) + '">Remove link</button>' +
+      '</div>' + help + '</div>';
+  }
+
+  function wireLinkPickers() {
+    const panel = byId('te-inspector-body');
+    let open = null;
+    const close = function() {
+      if (!open) return;
+      open.hidden = true;
+      panel.querySelector('[data-link-trigger="' + CSS.escape(open.dataset.linkPicker) + '"]')?.setAttribute('aria-expanded', 'false');
+      open = null;
+    };
+    const choose = function(key, href) {
+      const field = fieldByKey(key);
+      if (!field || liveUnimported) return;
+      if (href && !(/^(?:\/(?!\/)|#|https:\/\/|mailto:|tel:)/i.test(href))) {
+        const message = panel.querySelector('[data-link-picker="' + CSS.escape(key) + '"] [data-link-external]');
+        message?.setAttribute('aria-invalid', 'true');
+        return;
+      }
+      setFieldValue(field, href);
+      renderInspector();
+    };
+    const paint = function(picker, search = '') {
+      const rows = merchantPageLinks(search);
+      picker.querySelector('[data-link-results]').innerHTML = rows.length
+        ? rows.map(function(item) {
+          return '<button type="button" data-link-choice="' + cmsEscapeAttr(item.href) + '"><strong>' + cmsEscapeHtml(item.label) +
+            '</strong><small>' + cmsEscapeHtml(item.href) + '</small></button>';
+        }).join('')
+        : '<p class="te-link-empty">No matching pages</p>';
+    };
+    panel.querySelectorAll('[data-link-trigger]').forEach(function(trigger) {
+      trigger.addEventListener('click', function() {
+        const picker = panel.querySelector('[data-link-picker="' + CSS.escape(trigger.dataset.linkTrigger) + '"]');
+        if (!picker) return;
+        if (open === picker) { close(); return; }
+        close();
+        picker.hidden = false;
+        trigger.setAttribute('aria-expanded', 'true');
+        open = picker;
+        paint(picker);
+        picker.querySelector('[data-link-search]')?.focus();
+      });
+    });
+    panel.querySelectorAll('[data-link-picker]').forEach(function(picker) {
+      const key = picker.dataset.linkPicker;
+      picker.querySelector('[data-link-search]')?.addEventListener('input', function(event) { paint(picker,event.target.value); });
+      picker.addEventListener('click', function(event) {
+        const choice = event.target.closest('[data-link-choice]');
+        if (choice) choose(key,choice.dataset.linkChoice);
+      });
+      picker.querySelector('[data-link-apply]')?.addEventListener('click',function() {
+        choose(key,picker.querySelector('[data-link-external]').value.trim());
+      });
+      picker.querySelector('[data-link-clear]')?.addEventListener('click',function() { choose(key,''); });
+      picker.addEventListener('keydown',function(event) { if (event.key === 'Escape') { event.stopPropagation(); close(); picker.previousElementSibling?.focus(); } });
+    });
+  }
+
   function renderField(section, field) {
     const value = valueForField(section, field);
     const safeValue = cmsEscapeAttr(typeof value === 'object' ? JSON.stringify(value) : String(value));
@@ -1255,11 +1374,16 @@
         '<select id="' + id + '" data-resource-field="' + cmsEscapeAttr(field.key) + '" data-resource-type="' + cmsEscapeAttr(field.type) + '"><option value="' + safeValue + '">' + cmsEscapeHtml(value ? String(value) : 'Loading…') + '</option></select>' + help + '</div>';
     }
 
-    const inputType = field.type === 'number' ? 'number' : (field.type === 'link' || field.type === 'url' ? 'url' : 'text');
+    if (field.type === 'link' || field.type === 'url')
+      return renderLinkField(field, value, id, help);
+
+    const inputType = field.type === 'number' ? 'number' : 'text';
     const selectedText = activeFieldKey === field.key && ['text','textarea'].includes(field.type) && !/cta|button|link|href/i.test(field.key);
     const stylePrefix = '__editor.fieldStyles.' + field.key + '.';
     const controls = selectedText ? [
       ['fontWeight','800','B','Bold'],
+      ['fontStyle','italic','I','Italic'],
+      ['textDecoration','underline','U','Underline'],
       ['textTransform','uppercase','Aa','Uppercase'],
       ['textAlign','center','≡','Center alignment'],
     ] : [];
@@ -1387,6 +1511,7 @@
       selectSection(section.key, null, false, sectionOwner(section));
     });
     wireFields();
+    wireLinkPickers();
     // These minimal toolbar actions are real field-style overrides: they use
     // the same preview, undo, draft save and reset pipeline as typography.
     panel.querySelectorAll('[data-inline-style-key]').forEach(function(button) {
@@ -2492,6 +2617,7 @@
       byId('te-save').textContent = 'Save';
       siteData = results[2].page;
       pages = (results[1].pages || []).filter(function(page) { return page.slug !== 'site'; });
+      document.dispatchEvent(new CustomEvent('theme-editor:global-settings-ready'));
 
       (pageData.sections || []).forEach(function(section) { section.__ownerSlug = slug; });
       (siteData.sections || []).forEach(function(section) { section.__ownerSlug = 'site'; });
@@ -3650,5 +3776,25 @@
   setDevice(device);
   setEditorDrawer('sections', false);
   loadThemeIdentity();
+  // Reusable Theme Settings panel edits the existing global brand section.
+  // The same standard dirty/save/publish machinery handles the payload;
+  // there is no browser-only mock, new theme table, or separate authority.
+  window.CmsThemeSettings = {
+    read: function() {
+      const brand = ownerSections('site').find(function(section) { return section.key === 'brand'; });
+      return brand ? structuredClone(brand.content?.__editor?.themeSettings || {}) : null;
+    },
+    update: function(settings) {
+      const brand = ownerSections('site').find(function(section) { return section.key === 'brand'; });
+      if (!brand || !settings || liveUnimported) return false;
+      const previous = structuredClone(brand.content || {});
+      if (!brand.content.__editor) brand.content.__editor = {};
+      brand.content.__editor.themeSettings = structuredClone(settings);
+      if (JSON.stringify(previous) === JSON.stringify(brand.content)) return true;
+      markSectionDirty(brand);
+      scheduleLocalPreview();
+      return true;
+    },
+  };
   loadPage();
 })();

@@ -543,3 +543,32 @@ test("mobile scroll handoff remains browser-first and miniAgentSam honors canvas
   assert.match(css,/grid-template-rows: minmax\(0, 1fr\) var\(--te-mobile-tabs-height\)/,
     "Three-tab mobile navigation is retained");
 });
+
+
+test("button selection offers a searchable CMS page destination, not raw URL entry or section-wide settings", async () => {
+ const {dom,w,doc,writes}=await editorFixture();
+ try {
+   const frame=doc.getElementById("theme-preview");
+   const previewDoc=doc.implementation.createHTMLDocument("Storefront");
+   Object.defineProperty(frame,"contentDocument",{configurable:true,value:previewDoc});
+   previewDoc.body.innerHTML='<section data-cms-section="hero"><a data-cms="ctaPrimary.href" data-cms-attr="href" href="#catalog"><span data-cms="ctaPrimary.label">Shop now</span></a></section>';
+   frame.dispatchEvent(new w.Event("load"));
+   previewDoc.querySelector('[data-cms="ctaPrimary.href"]').dispatchEvent(new w.MouseEvent("click",{bubbles:true}));
+   const inspector=doc.getElementById("te-inspector-body");
+   assert.ok(inspector.querySelector('[data-link-trigger="ctaPrimary.href"]'),"CTA should have a real internal link picker");
+   assert.equal(inspector.querySelector('[data-field-input="ctaPrimary.href"]'),null,"raw URL is not the default field");
+   const labels=[...inspector.querySelectorAll(".te-inspector-group__head h3")].map(n=>n.textContent);
+   assert.ok(labels.includes("Buttons and links"));
+   assert.ok(!labels.includes("Media"));
+   assert.equal(inspector.querySelector('[data-field-key="__editor.spacing.marginLeft"]'),null);
+   inspector.querySelector('[data-link-trigger="ctaPrimary.href"]').click();
+   const choices=[...inspector.querySelectorAll('[data-link-choice]')];
+   assert.ok(choices.some(node=>node.dataset.linkChoice==="/shop"),"real CMS page inventory is surfaced");
+   const selected=choices.find(node=>node.dataset.linkChoice==="/shop");
+   selected.click();
+   doc.getElementById("te-save").click();
+   await tick();await tick();
+   assert.equal(writes.length,1);
+   assert.equal(writes[0].content.ctaPrimary.href,"/shop");
+ } finally {dom.window.close();}
+});
