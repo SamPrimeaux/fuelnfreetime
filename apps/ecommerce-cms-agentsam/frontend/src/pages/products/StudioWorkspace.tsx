@@ -278,7 +278,7 @@ export default function StudioWorkspace({
     miniRef.current.select(
       { type: "product_artwork", surface: "product-studio",
         productId: catalogId, variantId, locationId, assetId: asset?.id || null },
-      () => ({ left: window.innerWidth / 2, top: window.innerHeight - 96, width: 0, height: 0 }),
+      () => new DOMRect(window.innerWidth / 2, window.innerHeight - 96, 0, 0),
     );
     setAgentVisible(true);
   }
