@@ -122,7 +122,8 @@ function renderMcpBanner(data) {
 function updateStatusLine(extra) {
   const status = document.getElementById("agentsam-status");
   if (!status) return;
-  status.textContent = extra || "Context-aware admin chat";
+  status.textContent = extra || "";
+  status.hidden = !extra;
 }
 
 /* Render model Markdown as safe DOM text; never inject model-authored HTML. */
