@@ -161,6 +161,12 @@ export function resolveAIRouting(classification, message, context = {}) {
     return { ...base, task_type: "text_to_speech", lane: "audio" };
   }
 
+  // An explicit Studio generate action must not be demoted to text routing
+  // merely because its prompt omits the word "image".
+  if (context.task_type === "image_generation" && context.mode === "image") {
+    return { ...base, task_type: "image_generation", lane: context.lane || "image" };
+  }
+
   // If image is attached, always route vision — no keywords required
   if (hasImage) {
     return { ...base, task_type: "image_to_text", lane: "vision" };
