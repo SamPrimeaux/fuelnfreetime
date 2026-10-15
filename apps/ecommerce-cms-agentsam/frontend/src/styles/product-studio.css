@@ -2294,16 +2294,43 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
 }
 .product-studio-shell .ps-toolrail__help:hover { background: var(--ps-accent-soft); color: var(--ps-accent); }
 
-/* miniAgentSam composer trigger: bottom-center dock. The shared composer anchors above it. */
-.product-studio-shell .ps-composer-dock {
-  position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%);
-  z-index: 30; display: grid; place-items: center; width: 48px; height: 48px; padding: 0;
-  border-radius: 999px; border: 1px solid color-mix(in srgb, var(--ps-accent) 40%, white);
-  background: #fff; color: var(--ps-accent); box-shadow: 0 8px 28px rgba(35, 17, 67, .18);
-  cursor: pointer; transition: background .15s;
+/* Header actions: compact icon buttons with tooltips (Save design, Next step, Back). */
+.product-studio-shell .ps-workspace-actions { gap: 8px; }
+.product-studio-shell .ps-icon-action {
+  position: relative; display: inline-grid; place-items: center; flex: 0 0 auto;
+  width: 40px; height: 40px; min-width: 40px; min-height: 40px; padding: 0; gap: 0;
+  border-radius: 10px; border: 1px solid var(--ps-line); background: #fff; color: var(--ps-ink);
+  cursor: pointer; transition: background .15s, border-color .15s;
 }
-.product-studio-shell .ps-composer-dock:hover { background: var(--ps-accent-soft); }
-.product-studio-shell .ps-composer-dock[aria-pressed="true"] { background: var(--ps-accent); color: #fff; }
+.product-studio-shell .ps-icon-action:hover:not(:disabled) {
+  background: var(--ps-accent-soft); border-color: color-mix(in srgb, var(--ps-accent) 35%, white); text-decoration: none;
+}
+.product-studio-shell .ps-icon-action--primary { background: var(--ps-ink); border-color: var(--ps-ink); color: #fff; }
+.product-studio-shell .ps-icon-action--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ps-ink) 80%, var(--ps-accent)); border-color: transparent;
+}
+.product-studio-shell .ps-icon-action--ghost { border-color: transparent; background: transparent; }
+.product-studio-shell .ps-icon-action[data-tip]::after {
+  content: attr(data-tip); position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  padding: 5px 9px; border-radius: 7px; background: #1b1a22; color: #fff;
+  font-size: 11px; font-weight: 600; white-space: nowrap; opacity: 0; pointer-events: none;
+  transition: opacity .12s; z-index: 40;
+}
+.product-studio-shell .ps-icon-action--primary[data-tip]::after { left: auto; right: 0; transform: none; }
+.product-studio-shell .ps-icon-action--ghost[data-tip]::after { left: 0; transform: none; }
+.product-studio-shell .ps-icon-action[data-tip]:hover::after,
+.product-studio-shell .ps-icon-action[data-tip]:focus-visible::after { opacity: 1; }
+.product-studio-shell .ps-icon-action__busy {
+  width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor;
+  border-right-color: transparent; animation: ps-spin .7s linear infinite;
+}
+@keyframes ps-spin { to { transform: rotate(360deg); } }
+/* Breadcrumb labels collapse to the current step when the header is narrow (e.g. side chat open). */
+.product-studio-shell .ps-workspace-header { container-type: inline-size; }
+@container (max-width: 720px) {
+  .ps-steps li span:not(.ps-steps__dot) { display: none; }
+  .ps-steps li.is-current span:not(.ps-steps__dot) { display: inline; }
+}
 
 /* Artwork picker: scope toggle (studio artwork vs whole library). */
 .product-studio-shell .ps-asset-scope {
