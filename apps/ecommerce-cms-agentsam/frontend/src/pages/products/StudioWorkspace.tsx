@@ -552,7 +552,7 @@ export default function StudioWorkspace({
         if (!controller.signal.aborted) setBusy("");
       });
     return () => controller.abort();
-  }, [tab, albumId, mediaPage, mediaQuery]);
+  }, [tab, albumId, mediaPage, mediaQuery, artworkScope]);
   useEffect(() => {
     if (!asset) return;
     let active = true;
