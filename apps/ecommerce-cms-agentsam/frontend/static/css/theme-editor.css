@@ -1757,6 +1757,26 @@ body.shell-mode-theme-editor .theme-studio {
 .theme-studio[data-editor-drawer="closed"] .theme-studio-tree {
   display: none;
 }
+
+/* True desktop fullscreen preview: both editing rails yield their space.
+   Preserve inspector/selection state in JS so a returning panel restores it.
+   The old 0/1fr/328px grid and implicit placement left a blank right column
+   (or shifted the inspector into the preview) after a second toggle. */
+@media (min-width: 901px) {
+  .theme-studio[data-editor-drawer="closed"][data-inspector="closed"] .theme-studio-workspace {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .theme-studio[data-editor-drawer="closed"][data-inspector="closed"] .theme-studio-workspace > .theme-studio-canvas {
+    grid-column: 1 / -1 !important;
+    grid-row: 1;
+    min-width: 0;
+    width: 100%;
+  }
+  .theme-studio[data-editor-drawer="closed"][data-inspector="closed"] .theme-studio-tree,
+  .theme-studio[data-editor-drawer="closed"][data-inspector="closed"] .theme-editor-panel {
+    display: none !important;
+  }
+}
 .te-drawer-panel[hidden] { display: none; }
 .te-theme-options {
   display: flex;
@@ -3313,3 +3333,96 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
     -webkit-overflow-scrolling: touch;
   }
 }
+
+/* CMS authoring: closing both rails must display the responsive storefront,
+   not a narrow saved mobile iframe floating in a gray desktop workspace. */
+@media (min-width:901px) {
+  .theme-studio[data-editor-drawer="closed"][data-inspector="closed"] .theme-studio-canvas {
+    width:100%; min-width:0; max-width:none;
+  }
+  .theme-studio[data-editor-drawer="closed"][data-inspector="closed"] .te-preview-stage {
+    padding:0; display:block; overflow:auto; background:#fff;
+  }
+  .theme-studio[data-editor-drawer="closed"][data-inspector="closed"] .te-preview-device[data-device] {
+    width:100%!important; max-width:none!important; min-height:0;
+    height:100%; border:0; border-radius:0; box-shadow:none;
+  }
+}
+/* Visual cards are backed by the registered section renderer; nonportable
+   native sections show explicitly structural thumbnails. */
+dialog.te-section-menu .te-section-catalog-item--visual {
+  display:flex; flex-direction:column; align-items:stretch; text-align:left;
+  min-height:184px; padding:7px; gap:9px; overflow:hidden;
+}
+.te-catalog-visual-wrap {display:block; width:100%; height:122px; border:1px solid #e9e9ef;
+  border-radius:8px; overflow:hidden; position:relative; background:#fff;}
+.te-catalog-visual {display:block;width:320%;height:320%;transform:scale(.3125);
+  transform-origin:top left;border:0;pointer-events:none;background:#fff;}
+.te-catalog-card-copy {display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:0 4px 4px;}
+.te-catalog-card-copy strong {font-size:12px;line-height:1.35;}
+.te-catalog-card-copy small {font-size:10px;color:#747482;line-height:1.4;}
+.te-catalog-structure {display:flex;flex-direction:column;justify-content:center;gap:8px;
+  background:linear-gradient(135deg,#f7f7fa,#e9e9f0);height:100%;padding:14px 18px;color:#25252a;}
+.te-catalog-structure__kicker {font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:#79768d}
+.te-catalog-structure__heading {font-size:15px;font-weight:750;letter-spacing:-.03em;}
+.te-catalog-structure__rule {width:48%;height:4px;border-radius:2px;background:#bcbacb}
+.te-catalog-structure__tiles {display:flex;gap:5px;}
+.te-catalog-structure__tiles i {display:block;width:28%;height:21px;border-radius:3px;background:#dad9e4;}
+.te-catalog-generate {grid-column:1/-1;display:flex;align-items:center;gap:11px;min-height:57px;
+  padding:9px 12px; border-radius:11px;border:1px solid #dcd3f9;background:#f6f3ff;color:#37256c;
+  text-align:left;cursor:pointer;}
+.te-catalog-generate img {width:28px;height:28px;object-fit:contain;}
+.te-catalog-generate>span:nth-child(2) {flex:1;display:flex;flex-direction:column;gap:2px;}
+.te-catalog-generate strong {font-size:12px;}
+.te-catalog-generate small {font-size:10px;color:#676077;}
+.te-catalog-generate:hover,.te-catalog-generate:focus-visible {border-color:#825de8;outline-offset:2px;}
+@media(max-width:640px) {dialog.te-section-menu .te-section-catalog-item--visual{min-height:157px}.te-catalog-visual-wrap{height:100px}}
+/* A readable, resizable AgentSam generation workspace. Generated source
+   remains text-only and non-executable; the review iframe remains sandboxed. */
+@media(min-width:901px) {
+  .theme-studio #te-block-panel[data-panel-state] {
+    box-sizing:border-box;resize:both;min-width:260px;
+    max-width:min(730px,calc(100vw - 24px)); min-height:175px;
+    max-height:min(82dvh,740px)!important;overflow:auto;
+    background:#fff;border:1px solid #d8d5e6;border-radius:15px;
+    box-shadow:0 20px 60px rgba(23,16,44,.17);
+  }
+}
+#te-block-panel .te-generation-progress {display:flex;align-items:center;gap:9px;
+  padding:10px 12px;background:#f8f6ff;border:1px solid #ebe6fb;border-radius:9px;
+  font-size:11px;line-height:1.5;color:#5c5277;margin-bottom:12px;}
+#te-block-panel .te-generation-progress img {width:22px;height:22px;object-fit:contain}
+#te-block-panel .te-generation-head {background:#fff;border-bottom:1px solid #ecebf2;padding-bottom:12px;}
+#te-block-panel miniagentsam-codepreview {background:#fff;color:#1e2130;border:1px solid #eeeaf3;
+  border-radius:10px;padding:12px;min-height:145px;overflow:auto;}
+#te-block-panel .te-generated-sandbox {border:1px solid #ddd8eb;border-radius:11px;background:#fff;}
+
+#te-block-panel .te-generation-identity{display:flex;align-items:center;gap:8px;}
+#te-block-panel .te-generation-identity img{width:25px;height:25px;object-fit:contain;}
+#te-block-panel .te-generation-identity strong{font-size:13px;color:#27243a;}
+#te-block-panel .te-generation-head>button{border:1px solid #e5e2ec;background:#fff;
+  width:28px;height:28px;border-radius:8px;color:#514d63;cursor:pointer;}
+#te-block-panel .te-generation-lead{font:400 11px/1.65 system-ui,sans-serif;color:#696575;margin:6px 0 13px;}
+#te-block-panel .te-generation-code-label{display:block;font:650 11px/1.5 system-ui,sans-serif;
+  color:#454151;margin-bottom:7px;}
+#te-block-panel .te-generation-review-kind{display:block;color:#716b80;font-size:11px;margin:8px 0 11px;}
+
+.te-block-visual{background:linear-gradient(135deg,#f7f7fa,#eeedf5);}
+.te-block-visual__fields{display:flex;gap:5px;align-items:stretch;min-height:36px;}
+.te-block-visual__field{display:flex;align-items:center;justify-content:center;
+  border-radius:4px;background:#fff;color:#66627c;font-size:9px;
+  border:1px solid #e4e1ec;padding:5px 8px;min-width:0;max-width:100%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.te-block-visual__field--media{background:#d9d5e5;min-width:42px;}
+
+@media(min-width:901px){
+  #te-block-panel .te-generation-dragbar{
+    display:flex;align-items:center;justify-content:center;width:100%;height:18px;
+    margin:-7px 0 9px;padding:5px 0;border:0;border-bottom:1px solid #edeaf3;
+    background:#fff;cursor:ns-resize;touch-action:none;user-select:none;
+  }
+  #te-block-panel .te-generation-dragbar span{display:block;width:48px;height:4px;border-radius:4px;background:#c8c4d5;}
+  #te-block-panel .te-generation-dragbar:hover span,
+  #te-block-panel .te-generation-dragbar:focus-visible span{background:#8058de;}
+}
+@media(max-width:900px){#te-block-panel .te-generation-dragbar{display:none}}

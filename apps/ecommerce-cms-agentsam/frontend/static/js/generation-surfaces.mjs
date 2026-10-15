@@ -79,6 +79,8 @@ export function createGenerationFlow(regions) {
   // cannot disappear beneath a long section tree. The live code stream and
   // sandbox review reuse the installed flow; no second generator is created.
   function pinGenerationPreview() {
+    if (regions.panel.dataset.userResized === "true" &&
+        regions.panel.getBoundingClientRect().width > 120) return;
     const rail = regions.tree.closest('.theme-studio-tree');
     if (!rail) return;
     const rect = rail.getBoundingClientRect();
@@ -95,6 +97,47 @@ export function createGenerationFlow(regions) {
     if (!regions.panel.hidden && regions.panel.hasAttribute('data-panel-state')) pinGenerationPreview();
   }, { passive: true });
 
+
+  function addResizeBar() {
+    const bar = doc.createElement("button");
+    bar.type = "button";
+    bar.className = "te-generation-dragbar";
+    bar.setAttribute("aria-label", "Resize AgentSam generation workspace");
+    bar.title = "Drag upward to expand generation workspace";
+    const handle = doc.createElement("span");
+    handle.setAttribute("aria-hidden", "true");
+    bar.append(handle);
+    function resizeBy(delta, bottom) {
+      const max = Math.max(240, Math.min(doc.defaultView.innerHeight * .82, bottom - 8));
+      const height = Math.min(max, Math.max(215, delta));
+      regions.panel.style.height = height + "px";
+      regions.panel.style.top = (bottom - height) + "px";
+      regions.panel.dataset.userResized = "true";
+    }
+    bar.addEventListener("pointerdown", event => {
+      if (doc.defaultView.innerWidth <= 900 || !event.isPrimary) return;
+      const rect = regions.panel.getBoundingClientRect();
+      const startY = event.clientY, startHeight = rect.height, bottom = rect.bottom;
+      bar.setPointerCapture?.(event.pointerId);
+      const move = next => resizeBy(startHeight - (next.clientY - startY), bottom);
+      const stop = () => {
+        bar.removeEventListener("pointermove", move);
+        bar.removeEventListener("pointerup", stop);
+        bar.removeEventListener("pointercancel", stop);
+      };
+      bar.addEventListener("pointermove", move);
+      bar.addEventListener("pointerup", stop);
+      bar.addEventListener("pointercancel", stop);
+      event.preventDefault();
+    });
+    bar.addEventListener("keydown", event => {
+      if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+      const rect = regions.panel.getBoundingClientRect();
+      resizeBy(rect.height + (event.key === "ArrowUp" ? 42 : -42), rect.bottom);
+      event.preventDefault();
+    });
+    regions.panel.prepend(bar);
+  }
 
   const flow = {
     state,
@@ -125,12 +168,35 @@ export function createGenerationFlow(regions) {
     },
     openRequest() {
       if (state.generating) return;
+      // Preserve the existing ephemeral placement marker in the preview.
+      // This is not an installed CMS block: no D1/R2 write occurs until
+      // the separate authenticated review and acceptance step.
       if (!placeholder || !placeholder.isConnected) placeholder = insertGeneratingNode(regions.tree);
       regions.panel.hidden = false;
       pinGenerationPreview();
       regions.panel.setAttribute("data-panel-state", "request");
       regions.panel.setAttribute("data-surface", "left");
       regions.panel.replaceChildren();
+      const heading = doc.createElement("div");
+      heading.className = "te-generation-head";
+      const identity = doc.createElement("div");
+      identity.className = "te-generation-identity";
+      const mark = doc.createElement("img");
+      mark.src = "/admin/brand/agentsam-gorilla-tiny.svg";
+      mark.alt = "";
+      mark.setAttribute("aria-hidden", "true");
+      const title = doc.createElement("strong");
+      title.textContent = "Generate section";
+      identity.append(mark, title);
+      const close = doc.createElement("button");
+      close.type = "button";
+      close.setAttribute("aria-label", "Close AgentSam generation workspace");
+      close.textContent = "×";
+      close.addEventListener("click", () => { regions.panel.hidden = true; });
+      heading.append(identity, close);
+      const explanation = doc.createElement("p");
+      explanation.className = "te-generation-lead";
+      explanation.textContent = "Describe the component you want. Review the live build, then choose whether to install it in your private CMS draft.";
       const label = doc.createElement("label");
       const requestId = "agentsam-generation-request-text";
       label.htmlFor = requestId;
@@ -149,7 +215,8 @@ export function createGenerationFlow(regions) {
       send.textContent = "Send →";
       send.addEventListener("click", () => flow.send());
       actions.append(send);
-      regions.panel.append(label, box, actions);
+      regions.panel.append(heading, explanation, label, box, actions);
+      addResizeBar();
       box.focus();
     },
     send() {
@@ -178,9 +245,21 @@ export function createGenerationFlow(regions) {
       stop.setAttribute("aria-label", "Stop section generation");
       stop.textContent = "Stop";
       head.append(phase, stop);
+      const progress = doc.createElement("div");
+      progress.className = "te-generation-progress";
+      const mark = doc.createElement("img");
+      mark.src = "/admin/brand/agentsam-gorilla-tiny.svg";
+      mark.alt = "";
+      const explanation = doc.createElement("span");
+      explanation.textContent = "AgentSam is preparing editable markup and styles. Progress below reports build stages, not private reasoning.";
+      progress.append(mark, explanation);
+      const codeHeading = doc.createElement("strong");
+      codeHeading.className = "te-generation-code-label";
+      codeHeading.textContent = "Building component · source preview";
       const preview = doc.createElement("miniagentsam-codepreview");
       preview.setAttribute("data-lines", "13");
-      regions.panel.append(head, preview);
+      regions.panel.append(head, progress, codeHeading, preview);
+      addResizeBar();
       stop.addEventListener("click", () => emit("agentsam-generation-stop"));
       const detail = { request, phase, stop, preview };
       emit("agentsam-generation-request", detail);
@@ -241,7 +320,11 @@ export function createGenerationFlow(regions) {
           note.setAttribute("role", "alert");
         }
       });
-      regions.panel.append(title, note, preview, acceptButton, edit);
+      const name = doc.createElement("small");
+      name.className = "te-generation-review-kind";
+      name.textContent = "Reusable CMS section · native inspector after installation";
+      regions.panel.append(title, name, note, preview, acceptButton, edit);
+      addResizeBar();
     },
     complete(settings = {}, provenance = {}) {
       state.generating = false;

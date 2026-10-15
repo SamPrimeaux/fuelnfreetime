@@ -215,6 +215,17 @@ async function init() {
 
   showHistoryAction(bridge.context?.());
 
+  // Explicit action from the real Add Section catalog. The left workspace
+  // uses the existing generation endpoint, review gate and D1/R2 install.
+  window.addEventListener("theme-editor:generate-request", event => {
+    if (event.detail?.kind !== "section") return;
+    const sectionsButton = document.querySelector('[data-drawer-mode="sections"]');
+    if (sectionsButton && sectionsButton.getAttribute("aria-pressed") !== "true") {
+      sectionsButton.click();
+    }
+    flow.openRequest();
+  });
+
   panel.addEventListener("agentsam-generation-stop", () => {
     activeSession?.abort();
   });

@@ -146,9 +146,9 @@
     refresh: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M20 6v5h-5M4 18v-5h5" stroke="currentColor" stroke-width="1.7"/><path d="M6 9a7 7 0 0 1 12-2l2 2M4 15l2 2a7 7 0 0 0 12-2" stroke="currentColor" stroke-width="1.7"/></svg>',
     external: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M14 5h5v5M19 5l-8 8" stroke="currentColor" stroke-width="1.7"/><path d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" stroke="currentColor" stroke-width="1.7"/></svg>',
     exit: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M10 7 5 12l5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 12h9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M14 5h4a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-4" stroke="currentColor" stroke-width="1.7"/></svg>',
-    sections: '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M12.5 8h5M12.5 12h5M12.5 16h3"/></svg>',
-    settings: '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.86l.07.07-1.95 1.95-.07-.07A1.7 1.7 0 0 0 16 18.47l-.08.03V21h-3.84v-2.5L12 18.47a1.7 1.7 0 0 0-1.86.34l-.07.07-1.95-1.95.07-.07A1.7 1.7 0 0 0 8.53 15l-.03-.08H6v-3.84h2.5l.03-.08a1.7 1.7 0 0 0-.34-1.86l-.07-.07 1.95-1.95.07.07A1.7 1.7 0 0 0 12 7.53l.08-.03V5h3.84v2.5l.08.03a1.7 1.7 0 0 0 1.86-.34l.07-.07 1.95 1.95-.07.07A1.7 1.7 0 0 0 19.47 11l.03.08H22v3.84h-2.5Z" transform="translate(-2 -1) scale(1.1)"/></svg>',
-    embeds: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><rect x="13" y="13" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.7"/><path d="M13 7h5a2 2 0 0 1 2 2v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>'
+    sections: '<svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/><path d="M14 4h7M14 9h7M14 15h7M14 20h7"/></svg>',
+    settings: '<svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></svg>',
+    embeds: '<svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1M19 3a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1m-12 5 3 3m-3 3 3-3H5a2 2 0 0 1-2-2v-2"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="3" width="7" height="7" rx="1"/></svg>'
     ,
     panel: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>',
     inspect: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.034 12.681a.498.498 0 0 1 .647-.647l9 3.5a.5.5 0 0 1-.033.943l-3.444 1.068a1 1 0 0 0-.66.66l-1.067 3.443a.5.5 0 0 1-.943.033z"/><path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/><path d="M5 21a2 2 0 0 1-2-2"/><path d="M9 3h1"/><path d="M9 21h2"/><path d="M14 3h1"/><path d="M3 9v1"/><path d="M21 9v2"/><path d="M3 14v1"/></svg>',
@@ -763,12 +763,21 @@
         const used = existingBlocks.filter(function(block) { return block.templateKey === template.key; }).length;
         const disabled = (Number.isFinite(Number(template.max)) && used >= Number(template.max)) ||
           (totalMax > 0 && existingBlocks.length >= totalMax);
-        return '<button type="button" class="te-section-catalog-item" data-choose-block="' +
+        const fields = (template.fields || []).slice(0, 4);
+        const sketch = '<span class="te-catalog-structure te-block-visual" aria-hidden="true">' +
+          '<span class="te-catalog-structure__kicker">' + cmsEscapeHtml(template.label || template.key) + '</span>' +
+          '<span class="te-block-visual__fields">' + fields.map(function(field) {
+            const kind = field.type === 'media' || field.type === 'image' ? 'media' : 'text';
+            return '<span class="te-block-visual__field te-block-visual__field--' + kind + '">' +
+              cmsEscapeHtml(field.label || field.key || kind) + '</span>';
+          }).join('') + '</span></span>';
+        return '<button type="button" class="te-section-catalog-item te-section-catalog-item--visual" data-choose-block="' +
           cmsEscapeAttr(template.key) + '"' + (disabled ? ' disabled' : '') + '>' +
-          '<span class="te-section-catalog-item__icon">' + icon.section + '</span>' +
-          '<span><strong>' + cmsEscapeHtml(template.label || humanize(template.key)) + '</strong>' +
+          '<span class="te-catalog-visual-wrap">' + sketch + '</span>' +
+          '<span class="te-catalog-card-copy"><strong>' + cmsEscapeHtml(template.label || humanize(template.key)) + '</strong>' +
           '<small>' + cmsEscapeHtml(disabled ? 'Maximum blocks reached' :
-            (template.description || (template.fields || []).length + ' editable fields')) + '</small></span></button>';
+            (template.description || (template.fields || []).length + ' editable fields')) +
+          '</small></span></button>';
       }).join('') : '<div class="te-empty">No compatible blocks match that search.</div>';
     }
     paint('');
@@ -912,6 +921,38 @@
       '</dialog>' +
       '<div class="te-tree-group te-tree-group--global"><div class="te-tree-group__label">Footer</div>' + footerRow + '</div>';
 
+    // Draw portable catalog previews using the SAME registered renderer and
+    // CSS as the storefront. Never fabricate a card for a missing renderer.
+    function catalogVisual(entry) {
+      const api = window.ThemePortableSections;
+      const preset = entry.preset || entry.id;
+      if (api && typeof api.defaults === 'function' && typeof api.render === 'function') {
+        const content = api.defaults(preset);
+        if (content) {
+          const markup = api.render({ key: 'catalog-preview', content });
+          if (markup) {
+            const html = '<!doctype html><html><head><meta charset="utf-8">' +
+              '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+              '<link rel="stylesheet" href="/js/portable-sections.css">' +
+              '<style>html,body{margin:0;background:#fff}body{pointer-events:none}</style>' +
+              '</head><body>' + markup + '</body></html>';
+            return '<iframe class="te-catalog-visual" title="Preview of ' +
+              cmsEscapeAttr(entry.label) + '" sandbox="" loading="lazy" tabindex="-1" ' +
+              'srcdoc="' + cmsEscapeAttr(html) + '"></iframe>';
+          }
+        }
+      }
+      // A template without a registered portable renderer is not advertised
+      // as a faithful screenshot. Keep a clear structural preview instead.
+      return '<span class="te-catalog-structure" aria-label="Structure preview for ' +
+        cmsEscapeAttr(entry.label) + '"><span class="te-catalog-structure__kicker">' +
+        cmsEscapeHtml(humanize(entry.type || 'Section')) +
+        '</span><span class="te-catalog-structure__heading">' +
+        cmsEscapeHtml(entry.label) +
+        '</span><span class="te-catalog-structure__rule"></span>' +
+        '<span class="te-catalog-structure__tiles"><i></i><i></i><i></i></span></span>';
+    }
+
     function renderCatalog(query) {
       const needle = String(query || '').trim().toLowerCase();
       let entries = themeCatalog();
@@ -923,12 +964,26 @@
       const filtered = entries.filter(function(entry) {
         return !needle || (entry.label + ' ' + entry.type + ' ' + entry.id).toLowerCase().includes(needle);
       });
-      byId('te-section-catalog').innerHTML = filtered.length ? filtered.map(function(entry) {
-        return '<button type="button" class="te-section-catalog-item" data-catalog-template="' + cmsEscapeAttr(entry.templateKey) + '" data-catalog-preset="' + cmsEscapeAttr(entry.preset || entry.id) + '">' +
-          '<span class="te-section-catalog-item__icon">' + icon.section + '</span><span><strong>' + cmsEscapeHtml(entry.label) + '</strong><small>' + cmsEscapeHtml(humanize(entry.source || 'heuristic')) + ' · ' + cmsEscapeHtml(entry.type || entry.templateKey) + '</small></span>' +
-        '</button>';
-      }).join('') : '<div class="te-empty">No sections match that search.</div>';
+      const visualCards = filtered.map(function(entry) {
+        return '<button type="button" class="te-section-catalog-item te-section-catalog-item--visual" data-catalog-template="' +
+          cmsEscapeAttr(entry.templateKey) + '" data-catalog-preset="' +
+          cmsEscapeAttr(entry.preset || entry.id) + '">' +
+          '<span class="te-catalog-visual-wrap">' + catalogVisual(entry) + '</span>' +
+          '<span class="te-catalog-card-copy"><strong>' + cmsEscapeHtml(entry.label) +
+          '</strong><small>' + cmsEscapeHtml(humanize(entry.source || 'heuristic')) +
+          ' · ' + cmsEscapeHtml(entry.type || entry.templateKey) + '</small></span></button>';
+      }).join('');
+      byId('te-section-catalog').innerHTML =
+        '<button type="button" class="te-catalog-generate" data-start-section-generation>' +
+        '<img src="/admin/brand/agentsam-gorilla-tiny.svg" alt="" aria-hidden="true">' +
+        '<span><strong>Generate with AgentSam</strong><small>Create a reusable editable CMS section</small></span><span aria-hidden="true">↗</span></button>' +
+        (filtered.length ? visualCards : '<div class="te-empty">No sections match that search.</div>');
 
+      byId('te-section-catalog').querySelector('[data-start-section-generation]')?.addEventListener('click', function() {
+        if (menu.open) menu.close();
+        else menu.hidden = true;
+        window.dispatchEvent(new CustomEvent('theme-editor:generate-request', { detail: { kind: 'section' } }));
+      });
       byId('te-section-catalog').querySelectorAll('[data-catalog-template]').forEach(function(button) {
         button.addEventListener('click', function() {
           const insertAt = sectionInsertIndex;
@@ -2862,6 +2917,8 @@
 
   let editorDrawer = null;
   let inspectorVisible = true;
+  // Preserve an intentionally closed inspector when returning from full preview.
+  let inspectorBeforeFullPreview = true;
   function setInspectorVisible(value) {
     inspectorVisible = Boolean(value);
     const studio = document.querySelector('.theme-studio');
@@ -2918,7 +2975,17 @@
   function setEditorDrawer(next, showMobileSheet = true) {
     const aside = byId('te-editor-drawer');
     if (aside && editorDrawer) drawerScroll[editorDrawer] = aside.scrollTop;
+    const wasClosed = editorDrawer === null;
     editorDrawer = editorDrawer === next ? null : next;
+    if (!editorDrawer) {
+      // Closing the left editing rail is a full storefront preview action:
+      // keep the selection, but remove the right inspector as well.
+      inspectorBeforeFullPreview = inspectorVisible;
+      setInspectorVisible(false);
+    } else if (wasClosed) {
+      // Opening a panel restores the previous inspector preference.
+      setInspectorVisible(inspectorBeforeFullPreview);
+    }
     if (editorDrawer !== 'sections') closeMiniAgentSam();
     const studio = document.querySelector('.theme-studio');
     if (studio) studio.setAttribute('data-editor-drawer', editorDrawer || 'closed');

@@ -87,8 +87,16 @@ test("real editor mounts compact toolbar, one drawer and installed page tree", a
     assert.equal(doc.getElementById("te-tree-path"), null);
     assert.equal(doc.getElementById("te-library-browse"), null);
     doc.getElementById("te-add-section").click();
-    assert.doesNotMatch(doc.getElementById("te-section-catalog").textContent, /Generate with AgentSam/i,
-      "catalog contains installable definitions only; contextual mini composer handles requests");
+    const generate = doc.querySelector("#te-section-catalog [data-start-section-generation]");
+    assert.ok(generate, "the Add Section catalog exposes the actual AgentSam generation entry");
+    assert.match(generate.textContent, /Generate with AgentSam/i);
+    let generationRequest = null;
+    dom.window.addEventListener("theme-editor:generate-request", event => {
+      generationRequest = event.detail?.kind;
+    }, { once: true });
+    generate.click();
+    assert.equal(generationRequest, "section",
+      "Generate must open the real section-generation workflow, not insert a fake recipe");
     assert.equal(doc.querySelector("#te-more-menu").hidden, true);
     const settings = doc.querySelector('[data-drawer-mode="theme-settings"]');
     settings.click();
