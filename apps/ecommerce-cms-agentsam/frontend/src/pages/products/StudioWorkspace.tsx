@@ -1102,6 +1102,8 @@ export default function StudioWorkspace({
   });
   const lowResolution = quality.lowResolution;
   const filteredMedia = media;
+  // Generated artwork is saved as studio-artwork-<id>.<ext> by upload() after askAI().
+  const aiImages = media.filter((item) => /^studio-artwork-/i.test(item.filename || ""));
   const currentPlacementKey = placementKey(asset?.id, variantId, locationId, x, y, scale, rotation, flipX, flipY, trimTransparent, removeFlatBackground);
   const preparedIsCurrent = Boolean(preparedAsset && preparedFor === currentPlacementKey);
   const currentRenderUrl = preparedIsCurrent ? providerRenderUrl : null;
