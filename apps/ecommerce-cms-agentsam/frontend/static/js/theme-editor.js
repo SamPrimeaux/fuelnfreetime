@@ -567,11 +567,17 @@
   function currentSchema() {
     const block = currentBlockSchema();
     if (activeBlockId) {
-      // Never silently fall back to section-level fields after a selected
-      // block's schema was filtered out by an incompatible D1 definition.
-      return block ? (block.fields || []).map(function(field) {
+      // Never fall back to the section inspector when a block is selected.
+      if (!block) return [];
+      const meta = currentBlockMeta();
+      const values = currentSection()?.content?.[activeBlockId] || {};
+      // All schema coverage, visibility and compatible overrides belong to the
+      // typed authoring engine, not ad hoc field-name rules in this UI module.
+      const fields = window.cmsAuthoring?.rendererFields('block', meta?.templateKey,
+        block.fields || [], values) || block.fields || [];
+      return fields.map(function(field) {
         return { ...field, key: activeBlockId + '.' + field.key, blockRelativeKey: field.key };
-      }) : [];
+      });
     }
     const schema = currentSectionSchema();
     return (schema && schema.fields) || (window.SECTION_FIELDS && window.SECTION_FIELDS[slug] && window.SECTION_FIELDS[slug][activeSectionKey]) || [];
@@ -905,7 +911,10 @@
       const blockRows = blockMeta.map(function(meta, blockIndex) {
         const blockSchema = blockSchemaFor(section, meta) || {};
         const blockValue = cmsGetPath(section.content || {}, meta.id + '.label');
-        const blockLabel = (typeof blockValue === 'string' && blockValue.trim()) || blockSchema.label || humanize(meta.templateKey || meta.id);
+        const definition = window.cmsAuthoring?.get('block', meta.templateKey);
+        const blockLabel = definition
+          ? window.cmsAuthoring.describe('block', meta.templateKey, section.content?.[meta.id] || {})
+          : ((typeof blockValue === 'string' && blockValue.trim()) || blockSchema.label || humanize(meta.templateKey || meta.id));
         return '<div class="te-block-row' + (sectionSelected && meta.id === activeBlockId ? ' is-active' : '') + '" data-block-id="' + cmsEscapeAttr(meta.id) + '" data-block-index="' + blockIndex + '" data-block-section="' + cmsEscapeAttr(section.key) + '" data-block-owner="' + cmsEscapeAttr(owner) + '" draggable="true">' +
           '<button type="button" class="te-block-row__main" data-select-block="' + cmsEscapeAttr(meta.id) + '" data-block-section="' + cmsEscapeAttr(section.key) + '" data-block-owner="' + cmsEscapeAttr(owner) + '">' +
             '<span class="te-field-row__icon te-field-row__icon--link" aria-hidden="true"></span><span class="te-block-row__copy"><strong>' + cmsEscapeHtml(blockLabel) + '</strong></span>' +
