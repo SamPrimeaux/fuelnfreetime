@@ -2651,6 +2651,19 @@ dialog.te-section-menu .te-section-catalog-item small { font-size: 10px; }
   .theme-studio:not([data-editor-drawer="closed"]) .theme-studio-workspace {
     grid-template-columns: 278px minmax(0, 1fr) 328px;
   }
+  /* When the left rail is hidden, grid auto-placement otherwise shifts the
+     canvas into the 0px rail column and stretches the inspector across the
+     canvas column. Pin both remaining panels to their intended tracks. */
+  .theme-studio .theme-studio-workspace > .theme-studio-canvas {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+  }
+  .theme-studio .theme-studio-workspace > .theme-editor-panel {
+    grid-column: 3;
+    grid-row: 1;
+    min-width: 0;
+  }
 }
 .theme-studio .theme-studio-tree {
   box-sizing: border-box;
