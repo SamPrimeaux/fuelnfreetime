@@ -58,6 +58,25 @@ test('TypeScript definitions drive inspector state and conditional controls',asy
   assert.equal(engine.describe('block','button',{label:'Buy now'}),'Button — Buy now');
 });
 
+test('renderer field projection respects typed visibility without hiding stale fields',async()=>{
+  const {createAuthoringEngine}=await api();
+  const engine=createAuthoringEngine([section,button]);
+  const native=[
+    {key:'label',type:'text',label:'Legacy Label'},
+    {key:'style',type:'select',label:'Style'},
+    {key:'background',type:'color',label:'Legacy Background'}
+  ];
+  const primary=engine.rendererFields('block','button',native,{style:'primary'});
+  assert.deepEqual(primary.map(f=>f.key),['label','style']);
+  assert.equal(primary[0].label,'Label');
+  const custom=engine.rendererFields('block','button',native,{style:'custom'});
+  assert.equal(custom.length,3);
+  const extra=[...native,{key:'brandNew',type:'text',label:'Existing Renderer Field'}];
+  const preserved=engine.rendererFields('block','button',extra,{style:'primary'});
+  assert.deepEqual(preserved,extra);
+  assert.notEqual(preserved,extra);
+});
+
 test('insertion respects ready renderer, allowed child, max count',async()=>{
   const {createAuthoringEngine} = await api();
   const engine = createAuthoringEngine([section,button,unavailable]);
@@ -96,7 +115,7 @@ test('Theme Studio consumes compiled engine without forked editor or page list',
   assert.ok(html.indexOf('/admin/js/cms-authoring-engine.js') <
     html.indexOf('/admin/js/pages-shared.js'));
   assert.match(shared,/createAuthoringEngine\(data\.definitions \|\| \[\]\)/);
-  assert.match(editor,/authoring\.inspector\('block'/);
+  assert.match(editor,/cmsAuthoring\?\.rendererFields\('block'/);
   assert.match(editor,/cmsAuthoring\.describe\('block'/);
   assert.match(sync,/cms\/authoring\/engine\.ts/);
   assert.doesNotMatch(file('apps/ecommerce-cms-agentsam/cms/authoring/engine.ts'),/\b(?:import|require)\b[^\n]*registry/);
