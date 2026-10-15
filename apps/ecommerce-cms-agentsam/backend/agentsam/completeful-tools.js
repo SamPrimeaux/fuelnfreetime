@@ -189,6 +189,11 @@ export async function executeCompletefulTool(env, tool, params = {}) {
     case "webhooks.list":
       return listWebhookSubscriptions(env, params);
 
+    // #UNFINISHEDTOOLS: not implemented here (and not in backend/completeful as modules): design create/export,
+    // mockup render (per color x side), order quote/create, webhook subscription CRUD, catalog assets,
+    // print_files[] multi-location. Design/render logic is inline in backend/admin/product-studio.js. Add each as
+    // an `operation` here AND in COMPLETEFUL_EXECUTABLE_OPERATIONS (tool-handlers.js) when it is real.
+    // Audit: docs/AGENTSAM_MERCH_AND_TOOLS_AUDIT_20261015.md (F6). Tracked: tkt_13207989954e4171.
     default:
       return {
         ok: false,
