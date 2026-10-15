@@ -198,6 +198,9 @@ test("mobile image cards retain non-collapsing image dimensions and native picke
 test("undo/redo alter real CMS draft fields; Save writes draft but never publishes", async () => {
   const { dom, w, doc, writes } = await editorFixture();
   try {
+    const headline = doc.querySelector('[data-select-field="headline"][data-field-section="hero"]');
+    assert.ok(headline,"the Heading is a selectable child of Hero");
+    headline.click();
     const field = doc.getElementById("te-field-hero-headline");
     assert.ok(field);
     const original = field.value;
@@ -245,7 +248,11 @@ test("a real edit keeps Save actionable after automatic draft persistence",async
  try{
   const save=doc.getElementById("te-save");
   assert.equal(save.disabled,true,"clean editor starts with nothing to save");
+  const heading=doc.querySelector('[data-select-field="headline"][data-field-section="hero"]');
+  assert.ok(heading);
+  heading.click();
   const field=doc.getElementById("te-field-hero-headline");
+  assert.ok(field);
   field.value="Save CTA remains ready";
   field.dispatchEvent(new w.Event("input",{bubbles:true}));
   assert.equal(save.disabled,false,"first keystroke enables Save immediately");
@@ -542,4 +549,79 @@ test("mobile scroll handoff remains browser-first and miniAgentSam honors canvas
   assert.match(editor,/querySelector\('\.theme-studio \.te-preview-stage'\)/);
   assert.match(css,/grid-template-rows: minmax\(0, 1fr\) var\(--te-mobile-tabs-height\)/,
     "Three-tab mobile navigation is retained");
+});
+
+
+test("button selection offers a searchable CMS page destination, not raw URL entry or section-wide settings", async () => {
+ const {dom,w,doc,writes}=await editorFixture();
+ try {
+   const frame=doc.getElementById("theme-preview");
+   const previewDoc=doc.implementation.createHTMLDocument("Storefront");
+   Object.defineProperty(frame,"contentDocument",{configurable:true,value:previewDoc});
+   previewDoc.body.innerHTML='<section data-cms-section="hero"><a data-cms="ctaPrimary.href" data-cms-attr="href" href="#catalog"><span data-cms="ctaPrimary.label">Shop now</span></a></section>';
+   frame.dispatchEvent(new w.Event("load"));
+   previewDoc.querySelector('[data-cms="ctaPrimary.href"]').dispatchEvent(new w.MouseEvent("click",{bubbles:true}));
+   const inspector=doc.getElementById("te-inspector-body");
+   assert.ok(inspector.querySelector('[data-link-trigger="ctaPrimary.href"]'),"CTA should have a real internal link picker");
+   assert.equal(inspector.querySelector('[data-field-input="ctaPrimary.href"]'),null,"raw URL is not the default field");
+   const labels=[...inspector.querySelectorAll(".te-inspector-group__head h3")].map(n=>n.textContent);
+   assert.ok(labels.includes("Buttons and links"));
+   assert.ok(!labels.includes("Media"));
+   assert.equal(inspector.querySelector('[data-field-key="__editor.spacing.marginLeft"]'),null);
+   inspector.querySelector('[data-link-trigger="ctaPrimary.href"]').click();
+   const choices=[...inspector.querySelectorAll('[data-link-choice]')];
+   assert.ok(choices.some(node=>node.dataset.linkChoice==="/shop"),"real CMS page inventory is surfaced");
+   const selected=choices.find(node=>node.dataset.linkChoice==="/shop");
+   selected.click();
+   doc.getElementById("te-save").click();
+   await tick();await tick();
+   assert.equal(writes.length,1);
+   assert.equal(writes[0].content.ctaPrimary.href,"/shop");
+ } finally {dom.window.close();}
+});
+
+
+test("section-only CSS edits persist as canonical CMS content while selected Button stays focused",async()=>{
+ const {dom,w,doc,writes}=await editorFixture();
+ try {
+  doc.querySelector('[data-select-section="hero"]').click();
+  const input=doc.querySelector('#te-section-css-input');
+  assert.ok(input,"section inspector must offer an optional Custom CSS disclosure");
+  input.value='.h-display { color: #123456; }';
+  input.dispatchEvent(new w.Event('input',{bubbles:true}));
+  doc.getElementById('te-save').click();
+  await tick();await tick();
+  assert.equal(writes.length,1);
+  assert.equal(writes[0].content.__editor.customCss,'.h-display { color: #123456; }');
+  const prior=input.value;
+  input.value='@import url(https://tracker.example)';
+  input.dispatchEvent(new w.Event('input',{bubbles:true}));
+  assert.equal(input.getAttribute('aria-invalid'),'true');
+  assert.equal(writes[0].content.__editor.customCss,prior);
+  const frame=doc.getElementById('theme-preview');
+  const previewDoc=doc.implementation.createHTMLDocument('CMS Hero');
+  Object.defineProperty(frame,'contentDocument',{configurable:true,value:previewDoc});
+  previewDoc.body.innerHTML='<section data-cms-section="hero"><a data-cms="ctaPrimary.href"><span data-cms="ctaPrimary.label">Shop</span></a></section>';
+  frame.dispatchEvent(new w.Event('load'));
+  previewDoc.querySelector('[data-cms="ctaPrimary.href"]').dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
+  assert.equal(doc.querySelector('#te-section-css-input'),null,"per-section CSS must not spill into Button inspector");
+ } finally {dom.window.close();}
+});
+
+
+test("Hero selection is media/layout-first; Heading and CTA edit through individual child selections",async()=>{
+ const {dom,doc}=await editorFixture();
+ try {
+   const hero=doc.querySelector('[data-select-section="hero"]');hero.click();
+   const inspector=doc.getElementById('te-inspector-body');
+   assert.ok(inspector.querySelector('[data-pick-media="imageUrl"]'));
+   assert.ok(inspector.querySelector('[data-field-input="__editor.layout.heroHeight"]'));
+   assert.ok(inspector.querySelector('[data-field-input="__editor.layout.heroOverlay"]') || inspector.querySelector('[data-range-field="__editor.layout.heroOverlay"]'));
+   assert.equal(inspector.querySelector('[data-field-input="headline"]'),null,"headline is not repeated in Hero settings");
+   assert.equal(inspector.querySelector('[data-link-trigger="ctaPrimary.href"]'),null,"button editing belongs to its own selection");
+   const heading=doc.querySelector('[data-select-field="headline"][data-field-section="hero"]');
+   heading.click();
+   assert.ok(inspector.querySelector('[data-field-input="headline"]'),"heading editing is available through the tree");
+   assert.equal(inspector.querySelector('[data-pick-media="imageUrl"]'),null,"heading does not get unrelated image options");
+ } finally {dom.window.close();}
 });

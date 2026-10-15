@@ -35,7 +35,9 @@ const probe=`<script>(async function(){
  let stage='initial';
  async function until(fn){for(let i=0;i<45;i++){const val=fn();if(val)return val;await sleep(125)}throw Error('Wait timeout at '+stage)}
  try{
-  stage='field';const selected=await until(()=>document.getElementById('te-field-hero-headline'));
+  stage='field';const headingRow=await until(()=>document.querySelector('[data-select-field=headline][data-field-section=hero]'));
+  headingRow.click();
+  const selected=await until(()=>document.getElementById('te-field-hero-headline'));
   const initialValue=selected.value;
   // Select the actual rendered heading. This supplies the correct field key
   // and anchors the mini composer to the canvas, not a generic section row.
@@ -54,6 +56,9 @@ const probe=`<script>(async function(){
   const previewVisibleDuringEdit=innerWidth<=900 ? getComputedStyle(document.querySelector('.theme-studio-canvas')).display!=='none' : true;
   if(innerWidth<=900)document.querySelector('[data-mobile-pane="preview"]').click();
   stage='mini composer';const portal=await until(()=>{const p=document.querySelector('[data-mini-agentsam]');return p&&!p.shadowRoot.querySelector('.composer').hidden?p:null});
+  // The selection outline transitions when the tree selection resolves into
+  // the iframe; wait for its motion before comparing pixel-level placement.
+  await sleep(160);
   const mini=portal.shadowRoot;
   const initialVisible=!mini.querySelector('.composer').hidden;
   const beforeChatCount=window.__chatCount;

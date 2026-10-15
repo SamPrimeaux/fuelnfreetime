@@ -14,7 +14,7 @@ body a { color: inherit; }
 .shop-hero__media, .shop-hero__media::after { position: absolute; inset: 0; }
 .shop-hero__media { z-index: -2; }
 .shop-hero__media img { width: 100%; height: 100%; object-fit: cover; object-position: 62% center; transform: translateY(var(--h-section-shift, 0)) scale(1.025); filter: blur(var(--h-section-blur, 0)); will-change: transform, filter; }
-.shop-hero__media::after { content: ""; background: linear-gradient(90deg, rgba(5,5,5,.93) 0%, rgba(5,5,5,.64) 42%, rgba(5,5,5,.15) 72%), linear-gradient(0deg, rgba(5,5,5,.72), transparent 48%); }
+.shop-hero__media::after { content: ""; opacity: var(--cms-hero-overlay, 1); background: linear-gradient(90deg, rgba(5,5,5,.93) 0%, rgba(5,5,5,.64) 42%, rgba(5,5,5,.15) 72%), linear-gradient(0deg, rgba(5,5,5,.72), transparent 48%); }
 .shop-hero__content { width: min(100%, 760px); padding-block: clamp(5rem, 13vh, 9rem); }
 .shop-hero__copy { max-width: 50ch; margin: 1.4rem 0 1.8rem; color: #d5d1ca; font-size: clamp(1rem, 1.5vw, 1.25rem); }
 .shop-hero__actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }

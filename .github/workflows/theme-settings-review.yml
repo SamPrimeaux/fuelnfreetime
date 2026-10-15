@@ -3,6 +3,11 @@ on:
   pull_request:
     paths:
       - "apps/ecommerce-cms-agentsam/frontend/static/js/theme-settings-panel.js"
+      - "apps/ecommerce-cms-agentsam/frontend/static/js/theme-settings-live.js"
+      - "apps/ecommerce-cms-agentsam/frontend/static/css/theme-settings-live.css"
+      - "apps/ecommerce-cms-agentsam/backend/cms/theme-style-contract.mjs"
+      - "apps/ecommerce-cms-agentsam/tests/theme-merchant-settings.test.mjs"
+      - "tests/merchant-theme-settings-browser.test.mjs"
       - "apps/ecommerce-cms-agentsam/frontend/static/css/theme-settings-panel.css"
       - "apps/ecommerce-cms-agentsam/frontend/static/theme-editor.html"
       - "apps/ecommerce-cms-agentsam/tests/theme-settings-panel.test.mjs"
@@ -26,7 +31,9 @@ jobs:
       - name: Install isolated DOM test dependency
         run: npm install --no-save --ignore-scripts --package-lock=false jsdom@26
       - name: Unit and control contracts
-        run: node --test apps/ecommerce-cms-agentsam/tests/theme-settings-panel.test.mjs
+        run: node --test apps/ecommerce-cms-agentsam/tests/theme-settings-panel.test.mjs apps/ecommerce-cms-agentsam/tests/theme-merchant-settings.test.mjs
+      - name: Real merchant CMS theme controls on desktop and phone
+        run: node --test tests/merchant-theme-settings-browser.test.mjs
       - name: Real Chromium interaction and screenshots
         env:
           THEME_SETTINGS_SCREENSHOT_DIR: ${{ runner.temp }}/theme-settings-captures

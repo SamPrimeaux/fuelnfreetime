@@ -610,3 +610,48 @@ test("Shop editorial and product grids share native edit, duplicate, move, hide,
     fx.db.close();
   }
 });
+
+
+test("global theme color and Custom CSS changes persist to existing D1/R2 CMS site brand revision",async()=>{
+ const fx=fixture();
+ try {
+   fx.db.exec("INSERT INTO pages(id,slug,title,status) VALUES(2,'site','Global','published')");
+   fx.db.exec("INSERT INTO page_sections(page_id,section_key,sort_order,content_json,content_r2_key,content_version,status) VALUES(2,'brand',1,'{}','cms/pages/site/draft/brand.json',1,'published')");
+   const content={logoUrl:"/original-logo.svg",tagline:"Existing brand",
+     __editor:{themeSettings:{colors:{accent:"#ff3366",canvas:"#101010"},font:"Inter",buttonRadius:18,
+       customCss:".shop-hero h1 {letter-spacing: 1px;}"}}
+   };
+   const rejected=await updateSection(fx.env,"site","brand",{
+     content:{...content,__editor:{themeSettings:{customCss:"@import url(https://bad.example/track.css)"}}},
+     expected_version:1,
+   });
+   assert.equal(rejected.status,422);
+   assert.equal(fx.db.prepare("SELECT content_version FROM page_sections WHERE page_id=2 AND section_key='brand'").get().content_version,1);
+   const saved=await updateSection(fx.env,"site","brand",{content,expected_version:1});
+   assert.equal(saved.ok,true);
+   const row=fx.db.prepare("SELECT content_version,content_r2_key,status FROM page_sections WHERE page_id=2 AND section_key='brand'").get();
+   assert.equal(row.content_version,2);
+   assert.ok(row.content_r2_key.startsWith("cms/pages/site/history/brand.v2."));
+   const draft=JSON.parse(fx.objects.get(row.content_r2_key));
+   assert.equal(draft.content.logoUrl,"/original-logo.svg","preserve the original site brand data");
+   assert.equal(draft.content.__editor.themeSettings.colors.accent,"#ff3366");
+   assert.match(draft.content.__editor.themeSettings.customCss,/letter-spacing/);
+ }finally{fx.db.close();}
+});
+
+
+test("section-specific CSS is validated and versioned in the existing CMS section document",async()=>{
+ const fx=fixture();
+ try {
+   const original=structuredClone(fx.readDraft('hero').content);
+   const forbidden={...original,__editor:{...(original.__editor||{}),customCss:'.h-display { background-image: url(https://tracker.test/a); }'}};
+   const denied=await updateSection(fx.env,'shop','hero',{content:forbidden,expected_version:1});
+   assert.equal(denied.status,422,"unsafe CSS is not persisted");
+   const next={...original,__editor:{...(original.__editor||{}),customCss:'.h-display { color: #123456; }'}};
+   const result=await updateSection(fx.env,'shop','hero',{content:next,expected_version:1});
+   assert.equal(result.ok,true);
+   const after=fx.readDraft('hero');
+   assert.equal(after.content.__editor.customCss,'.h-display { color: #123456; }');
+   assert.equal(after.content.headline,original.headline,"original authored content survives CSS editing");
+ } finally {fx.db.close();}
+});
