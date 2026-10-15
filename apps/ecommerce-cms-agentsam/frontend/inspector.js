@@ -149,11 +149,11 @@
     const mediaDetail = Boolean(mediaPreviewImage());
     const mediaGallery = Boolean(mediaLibraryGrid()?.querySelector('.media-item[data-id]'));
     const available = hasFrame || mediaDetail || mediaGallery;
-    button.disabled = !available;
-    button.title = mediaDetail ? 'Inspect this image with AgentSam'
+    inspectable = available;
+    button.title = mediaDetail ? 'Inspect this image with miniAgentSam'
       : mediaGallery ? 'Inspect & annotate media assets'
       : hasFrame ? 'Inspect & annotate storefront preview'
-      : 'Open an image or storefront preview to inspect with AgentSam';
+      : 'miniAgentSam · ask for changes';
     button.setAttribute('aria-label', button.title);
     if (!available && active) deactivate({ close: true });
   }
