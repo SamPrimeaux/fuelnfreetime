@@ -141,8 +141,8 @@
     if (!resource.id) return;
     active = false;
     window.__fnfGlobalInspectMode = false;
-    button?.setAttribute('aria-pressed', 'false');
     instance.select(resource, boundsFor(element));
+    markOpen(true, true);
   }
 
   function refreshAvailability() {
