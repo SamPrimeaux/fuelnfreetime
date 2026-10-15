@@ -5,6 +5,8 @@
   let instance;
   let active = false;
   let inspectable = false;
+  let composerOpen = false; // any miniAgentSam composer is open (ours or a page's)
+  let ownComposer = false; // the composer this adapter opened (so a second click can close it)
   let mounted = false;
   let button;
   const watched = new WeakSet();
