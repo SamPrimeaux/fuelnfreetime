@@ -563,6 +563,7 @@ export async function agentsamChat(request, env, executionCtx = null) {
     has_image: aiRouting.has_image || context.has_image,
     image_base64: aiRouting.image_base64 || context.image_base64,
     image_url: aiRouting.image_url || context.image_url,
+    image_options: context.image_options || {},
     image_mime_type:
       aiRouting.image_mime_type ||
       attachments.find((a) => a.mime_type?.startsWith("image/"))?.mime_type ||
@@ -877,6 +878,7 @@ export async function agentsamChat(request, env, executionCtx = null) {
       registry: ai.registry ?? true,
       image_base64: ai.image_base64 || null,
       mime_type: ai.mime_type || null,
+      error_code: ai.ok ? null : String(ai.error || "image_generation_failed").slice(0, 120),
       input_tokens: ai.input_tokens,
       output_tokens: ai.output_tokens,
       estimated_cost_usd: ai.estimated_cost_usd,

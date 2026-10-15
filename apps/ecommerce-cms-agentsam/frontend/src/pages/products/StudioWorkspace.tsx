@@ -232,7 +232,7 @@ export default function StudioWorkspace({
   // Tools panel (AI image tools). #UNFINISHEDTOOLS: see docs/AGENTSAM_MERCH_AND_TOOLS_AUDIT_20261015.md
   const [aiMode, setAiMode] = useState<"generate" | "edit">("generate");
   const [aiPrompt, setAiPrompt] = useState("");
-  const [aiBackground, setAiBackground] = useState<"transparent" | "white">("transparent");
+  const [aiBackground, setAiBackground] = useState<"auto" | "transparent" | "white">("auto");
   const [aiSize, setAiSize] = useState<"auto" | "square" | "landscape" | "portrait">("auto");
   const [aiQuality, setAiQuality] = useState<"auto" | "high" | "medium" | "low">("auto");
   const [mediaQuery, setMediaQuery] = useState("");
@@ -250,6 +250,12 @@ export default function StudioWorkspace({
   const fullPreviewCloseRef = useRef<HTMLButtonElement>(null);
   const dragRef = useRef<{ mode: "move" | "resize"; corner: "tl" | "tr" | "bl" | "br"; startX: number; startY: number; x: number; y: number; scale: number } | null>(null);
   const [reply, setReply] = useState("");
+  // Generated images remain candidates until explicitly accepted. A model
+  // response must not silently replace existing artwork or placement.
+  const [generatedCandidate, setGeneratedCandidate] = useState<{
+    base64: string; mime: string; prompt: string;
+  } | null>(null);
+
   const [conversationId, setConversationId] = useState<string>();
   const [notes, setNotes] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
@@ -298,18 +304,10 @@ export default function StudioWorkspace({
     return () => { window.dispatchEvent(new CustomEvent("agentsam:mini-state", { detail: { open: false } })); };
   }, [agentVisible]);
 
-  // #UNFINISHEDTOOLS (media.image.generate): this goes through askAI -> /api/admin/agentsam/chat ->
-  // ai-run.js, which hardcodes OpenAI gpt-image-2 at 1024x1024 and IGNORES size/quality/background.
-  // Until the real tool exists (backend/tools/packs/media.planned.ts) the options below are folded into the
-  // prompt as hints only. Replace this with a call to the registered media.image.generate tool.
+  // The actual image model and requested output settings are resolved by the
+  // server. Provider-incompatible options fail clearly instead of being ignored.
   async function generateImage() {
-    const hints = [aiPrompt.trim()];
-    hints.push(aiBackground === "transparent" ? "transparent background, isolated artwork" : "plain white background");
-    if (aiSize !== "auto") {
-      hints.push({ square: "square 1:1 composition", landscape: "landscape 3:2 composition", portrait: "portrait 2:3 composition" }[aiSize]);
-    }
-    if (aiQuality !== "auto") hints.push(aiQuality + " detail");
-    try { await askAI(true, hints.join(", ")); } catch { /* askAI already surfaced the error */ }
+    try { await askAI(true, aiPrompt); } catch { /* askAI presents the failure */ }
   }
   // #UNFINISHEDTOOLS: renderMockup is intentionally detached from the UI (the "Render Completeful mockup"
   // button was removed). It renders ONE mockup for the first selected variant and has never run in production.
@@ -745,15 +743,15 @@ export default function StudioWorkspace({
     return result.assets?.[0];
   }
 
-  async function upload(file?: File) {
-    if (!file) return;
+  async function upload(file?: File): Promise<boolean> {
+    if (!file) return false;
     if (!/\.(png|jpe?g|webp|svg|pdf)$/i.test(file.name)) {
       setError("Choose a PNG, JPG, WebP, SVG, or PDF file.");
-      return;
+      return false;
     }
     if (file.size > 20 * 1024 * 1024) {
       setError("Choose a file under the studio’s 20 MB upload limit.");
-      return;
+      return false;
     }
     setBusy("upload");
     setError("");
@@ -781,9 +779,12 @@ export default function StudioWorkspace({
         }
         setMedia((current) => [uploaded, ...current.filter((item) => item.id !== uploaded.id)]);
         choose(uploaded);
+        return true;
       }
+      return false;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
+      return false;
     } finally {
       setBusy("");
       if (fileInput.current) fileInput.current.value = "";
@@ -801,12 +802,19 @@ export default function StudioWorkspace({
             lane: "image",
             mode: "image",
             workflow_key: "fnf_creative_studio",
+            image_options: {
+              background: aiBackground,
+              size: aiSize,
+              quality: aiQuality,
+              format: "png",
+              variations: 1,
+            },
           }
         : {};
       const result = await adminFetch<{
         reply: string;
         conversation_id?: string;
-        ai?: { image_base64?: string; mime_type?: string };
+        ai?: { image_base64?: string; mime_type?: string; error_code?: string };
       }>("/api/admin/agentsam/chat", {
         method: "POST",
         signal,
@@ -824,18 +832,22 @@ export default function StudioWorkspace({
       });
       setReply(result.reply);
       setConversationId(result.conversation_id);
-      if (result.ai?.image_base64) {
-        const mime = result.ai.mime_type || "image/png";
-        const bytes = Uint8Array.from(atob(result.ai.image_base64), (c) =>
-          c.charCodeAt(0),
-        );
-        await upload(
-          new File(
-            [bytes],
-            `studio-artwork-${crypto.randomUUID().slice(0, 12)}.${mime === "image/jpeg" ? "jpg" : "png"}`,
-            { type: mime },
-          ),
-        );
+      if (generate) {
+        if (!result.ai?.image_base64) {
+          const error = result.ai?.error_code || "";
+          const guidance = error === "workers_ai_image_options_require_model_profile"
+            ? "This Workers AI model needs Auto background, size, and quality. Change those options and try again."
+            : error === "openai_credentials_unavailable" ? "OpenAI is not configured for this installation."
+            : error.startsWith("openai_image_http_") ? "The image provider rejected this request (" + error.replace("openai_image_http_", "HTTP ") + "). Check model access and options."
+            : error === "provider_returned_invalid_image" ? "The image provider returned an unreadable file. No artwork was changed."
+            : "No image was produced by the selected model. Check its media capability and try again.";
+          throw new Error(guidance);
+        }
+        setGeneratedCandidate({
+          base64: result.ai.image_base64,
+          mime: result.ai.mime_type || "image/png",
+          prompt: text.trim(),
+        });
       }
       return { reply: result.reply };
     } catch (e) {
@@ -852,6 +864,15 @@ export default function StudioWorkspace({
       return askAI(generate, message, signal, resource);
     };
   });
+  async function acceptGeneratedCandidate() {
+    if (!generatedCandidate) return;
+    const candidate = generatedCandidate;
+    const bytes = Uint8Array.from(atob(candidate.base64), (c) => c.charCodeAt(0));
+    const ext = candidate.mime === "image/webp" ? "webp" : candidate.mime === "image/jpeg" ? "jpg" : "png";
+    const saved = await upload(new File([bytes], `studio-artwork-${crypto.randomUUID().slice(0, 12)}.${ext}`, { type: candidate.mime }));
+    if (saved) setGeneratedCandidate(null);
+  }
+
   async function saveDraft(nextPrepared: MediaAsset | null = preparedFor === currentPlacementKey ? preparedAsset : null,
     nextPreview: MediaAsset | null = preparedFor === currentPlacementKey ? previewAsset : null,
     placementScale: number = scale) {
@@ -1584,10 +1605,10 @@ export default function StudioWorkspace({
                     <summary>More options</summary>
                     <div className="ps-chip-group" role="group" aria-label="Background">
                       <span>Background</span>
-                      {(["transparent", "white"] as const).map((value) => (
+                      {(["auto", "transparent", "white"] as const).map((value) => (
                         <button type="button" key={value} className={aiBackground === value ? "is-active" : ""}
                           aria-pressed={aiBackground === value} onClick={() => setAiBackground(value)}>
-                          {value === "transparent" ? "Transparent" : "White"}
+                          {value === "auto" ? "Auto" : value === "transparent" ? "Transparent" : "White"}
                         </button>
                       ))}
                     </div>
@@ -1609,12 +1630,30 @@ export default function StudioWorkspace({
                         </button>
                       ))}
                     </div>
-                    <p className="ps-ai-hint">Options guide the generator. Final print size is set by the print area.</p>
+                    <p className="ps-ai-hint">Options are sent to the selected model. Some Workers AI models require Auto settings. Final print quality is verified separately.</p>
                   </details>
                   <button type="button" className="ps-button ps-primary ps-wide"
                     disabled={!aiPrompt.trim() || Boolean(busy)} onClick={() => void generateImage()}>
                     {busy === "generate" ? "Generating…" : "Generate image"}
                   </button>
+                  {generatedCandidate && (
+                    <section className="ps-ai-source" aria-label="Generated artwork candidate">
+                      <img src={`data:${generatedCandidate.mime};base64,${generatedCandidate.base64}`}
+                        alt="Generated artwork preview; not yet applied" />
+                      <div>
+                        <strong>Review generated artwork</strong>
+                        <small>Not added to your design. The original is unchanged.</small>
+                        <div className="ps-ai-actions">
+                          <button type="button" className="ps-button ps-primary"
+                            disabled={Boolean(busy)} onClick={() => void acceptGeneratedCandidate()}>
+                            Accept and add to design
+                          </button>
+                          <button type="button" className="ps-button" disabled={Boolean(busy)}
+                            onClick={() => setGeneratedCandidate(null)}>Discard</button>
+                        </div>
+                      </div>
+                    </section>
+                  )}
                   <div className="ps-ai-gallery-head">
                     <strong>Your AI images</strong>
                     <span className="ps-count">{aiImages.length}</span>

@@ -3,6 +3,7 @@
  */
 
 import { trackAgentSamEvent, estimateCostUsd, estimateTokens } from "./analytics.js";
+import { generateRegisteredImage } from "./media-image-runtime.js";
 import {
   getFallbackChain,
   normalizeChatRouting,
@@ -81,31 +82,6 @@ function trimSystem(text) {
   const s = String(text || "");
   if (s.length <= MAX_SYSTEM_CHARS) return s;
   return `${s.slice(0, MAX_SYSTEM_CHARS)}\n\n[context truncated]`;
-}
-
-function bytesToBase64(bytes) {
-  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-  if (!u8.length) return "";
-  let binary = "";
-  const chunk = 0x8000;
-  for (let i = 0; i < u8.length; i += chunk) {
-    binary += String.fromCharCode.apply(null, u8.subarray(i, i + chunk));
-  }
-  return btoa(binary);
-}
-
-function normalizeImageBytes(result) {
-  if (!result) return null;
-  if (result instanceof ArrayBuffer) return new Uint8Array(result);
-  if (result instanceof Uint8Array) return result;
-  if (result instanceof ReadableStream) return null;
-  if (result?.image instanceof Uint8Array) return result.image;
-  if (result?.image instanceof ArrayBuffer) return new Uint8Array(result.image);
-  if (Array.isArray(result) && result[0]?.image) {
-    const img = result[0].image;
-    return img instanceof Uint8Array ? img : new Uint8Array(img);
-  }
-  return null;
 }
 
 function resolveImageDataUrl(routing) {
@@ -208,45 +184,8 @@ async function executeModel(env, model, systemPrompt, userMessage, routing) {
   const taskType = model.task_type || routing.task_type;
   const user = String(userMessage || "").slice(0, 4000);
 
-  // #UNFINISHEDTOOLS (media.image.generate): not a registered tool. Model, size, n and format are HARDCODED
-  // below (gpt-image-2, 1024x1024, n:1) so Studio's size/quality/background options are ignored. There is no
-  // edit (/v1/images/edits), upscale or variations path. Replace with a real tool that honors the input schema in
-  // backend/tools/packs/media.planned.ts and resolves provider/model from the agentsam_ai registry.
   if (taskType === "image_generation") {
-    if (!env.OPENAI_API_KEY) throw new Error("missing_OPENAI_API_KEY_secret");
-
-    const imgRes = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-image-2",
-        prompt: user,
-        n: 1,
-        size: "1024x1024",
-        response_format: "b64_json",
-      }),
-    });
-
-    const rawText = await imgRes.text();
-    console.log("[image_gen] status:", imgRes.status, "body:", rawText.slice(0, 300));
-
-    if (!imgRes.ok) {
-      throw new Error(`openai_image_${imgRes.status}: ${rawText.slice(0, 200)}`);
-    }
-
-    const imgData = JSON.parse(rawText);
-    const b64 = imgData?.data?.[0]?.b64_json;
-    if (b64) {
-      return {
-        reply: "Here is your generated image.",
-        image_base64: b64,
-        mime_type: "image/png",
-      };
-    }
-    throw new Error("empty_b64_response: " + rawText.slice(0, 200));
+    return generateRegisteredImage(env, model, user, routing.image_options || {});
   }
 
   if (model.provider === 'openai' && taskType !== 'image_generation') {
