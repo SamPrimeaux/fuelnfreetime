@@ -569,24 +569,13 @@
     if (activeBlockId) {
       // Never fall back to the section inspector when a block is selected.
       if (!block) return [];
-      const fields = block.fields || [];
-      const authoring = window.cmsAuthoring;
       const meta = currentBlockMeta();
-      const definition = meta && authoring?.get('block', meta.templateKey);
-      let visibleKeys = null;
-      if (definition) {
-        // Only apply conditional visibility when the definition covers every
-        // renderer-bound field. Partial/stale D1 records must never hide controls.
-        const definedKeys = new Set(definition.settings.map(function(field) { return field.key; }));
-        if (fields.every(function(field) { return definedKeys.has(field.key); })) {
-          const section = currentSection();
-          const values = section?.content?.[activeBlockId] || {};
-          visibleKeys = new Set(authoring.inspector('block', meta.templateKey, values).map(function(field) { return field.key; }));
-        }
-      }
-      return fields.filter(function(field) {
-        return !visibleKeys || visibleKeys.has(field.key);
-      }).map(function(field) {
+      const values = currentSection()?.content?.[activeBlockId] || {};
+      // All schema coverage, visibility and compatible overrides belong to the
+      // typed authoring engine, not ad hoc field-name rules in this UI module.
+      const fields = window.cmsAuthoring?.rendererFields('block', meta?.templateKey,
+        block.fields || [], values) || block.fields || [];
+      return fields.map(function(field) {
         return { ...field, key: activeBlockId + '.' + field.key, blockRelativeKey: field.key };
       });
     }
