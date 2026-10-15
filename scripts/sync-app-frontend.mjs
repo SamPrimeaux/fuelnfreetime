@@ -21,6 +21,18 @@ await cp(path.join(root, 'packages/fnf-theme/src/theme/tokens.css'), path.join(o
 await cp(path.join(root, 'packages/fnf-theme/src/layout/layout.css'), path.join(output, 'admin/theme-previews/fnf/layout.css'));
 await cp(path.join(root, 'packages/fnf-theme/src/sections/scene-hero/scene-hero.css'), path.join(output, 'admin/theme-previews/fnf/scene-hero.css'));
 await cp(path.join(frontend, 'static'), path.join(output, 'admin'), { recursive: true });
+// Build the same typed authoring semantics used by Theme Studio from source.
+// No hand-maintained browser copy and no additional page/preset registry.
+const authoringBundle = await bundle({
+  entryPoints: [path.join(root, 'apps/ecommerce-cms-agentsam/cms/authoring/engine.ts')],
+  bundle: true,
+  platform: 'browser',
+  format: 'iife',
+  globalName: 'AgentSamCmsAuthoring',
+  target: 'es2022',
+  write: false,
+});
+await writeFile(path.join(output, 'admin/js/cms-authoring-engine.js'), authoringBundle.outputFiles[0].contents);
 await mkdir(path.join(output, 'admin/fixtures'), { recursive: true });
 await cp(path.join(root, 'apps/ecommerce-cms-agentsam/fixtures/fnf-revise-site.json'),
   path.join(output, 'admin/fixtures/fnf-revise-site.json'));
