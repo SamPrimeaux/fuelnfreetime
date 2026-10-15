@@ -236,13 +236,13 @@ export async function getAgentSamTool(env, toolKey) {
   try {
     const row = await env.DB.prepare(
       `SELECT * FROM agentsam_tools
-       WHERE account_id = ? AND tool_key = ? AND is_active = 1
+       WHERE account_id = ? AND tool_key = ? AND is_active = 1 AND is_degraded = 0
        LIMIT 1`
     )
       .bind(requireApplicationAccountId(), toolKey)
       .first();
     const tool = mapToolRow(row);
-    if (!tool) return null;
+    if (!tool || tool.is_degraded || !tool.is_active || !isToolKeyAllowed(tool.tool_key, tool.display_name)) return null;
     return await matchesInstalledToolScope(env, tool, requireApplicationAccountId()) ? tool : null;
   } catch {
     return null;
