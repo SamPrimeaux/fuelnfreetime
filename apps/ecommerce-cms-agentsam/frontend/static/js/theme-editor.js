@@ -567,11 +567,28 @@
   function currentSchema() {
     const block = currentBlockSchema();
     if (activeBlockId) {
-      // Never silently fall back to section-level fields after a selected
-      // block's schema was filtered out by an incompatible D1 definition.
-      return block ? (block.fields || []).map(function(field) {
+      // Never fall back to the section inspector when a block is selected.
+      if (!block) return [];
+      const fields = block.fields || [];
+      const authoring = window.cmsAuthoring;
+      const meta = currentBlockMeta();
+      const definition = meta && authoring?.get('block', meta.templateKey);
+      let visibleKeys = null;
+      if (definition) {
+        // Only apply conditional visibility when the definition covers every
+        // renderer-bound field. Partial/stale D1 records must never hide controls.
+        const definedKeys = new Set(definition.settings.map(function(field) { return field.key; }));
+        if (fields.every(function(field) { return definedKeys.has(field.key); })) {
+          const section = currentSection();
+          const values = section?.content?.[activeBlockId] || {};
+          visibleKeys = new Set(authoring.inspector('block', meta.templateKey, values).map(function(field) { return field.key; }));
+        }
+      }
+      return fields.filter(function(field) {
+        return !visibleKeys || visibleKeys.has(field.key);
+      }).map(function(field) {
         return { ...field, key: activeBlockId + '.' + field.key, blockRelativeKey: field.key };
-      }) : [];
+      });
     }
     const schema = currentSectionSchema();
     return (schema && schema.fields) || (window.SECTION_FIELDS && window.SECTION_FIELDS[slug] && window.SECTION_FIELDS[slug][activeSectionKey]) || [];
