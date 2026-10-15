@@ -4,6 +4,9 @@ const WIDTHS = new Set([320, 640, 1200]);
 export function catalogImageSource(value, env = {}) {
   try {
     const url = new URL(value);
+    // #NOTDONE: the default is Completeful's public storage host hardcoded inline. It is a provider CDN, not a
+    // secret, but should be one named constant sourced from the app config/manifest so a clone is not coupled
+    // to a literal project id. Audit F7: docs/AGENTSAM_MERCH_AND_TOOLS_AUDIT_20261015.md.
     const origins = (env.CATALOG_IMAGE_ORIGINS || "https://jvkydnvdajcfnqysmuwt.supabase.co").split(",");
     if (url.protocol !== "https:" || url.username || url.password || url.search ||
         !origins.includes(url.origin) ||
