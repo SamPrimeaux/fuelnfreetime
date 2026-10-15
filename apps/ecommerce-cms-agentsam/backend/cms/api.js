@@ -1,6 +1,7 @@
 import { ROUTE_MANIFEST } from "../lib/route-manifest.js";
 import { attachCmsDefinitions, listCmsDefinitions } from "./definition-registry.mjs";
 import { createAuthoringEngine } from "../../cms/authoring/engine.ts";
+import { reconcileCanonicalBlocks } from "../../cms/authoring/block-projection.ts";
 import { validateThemeSettings, validateThemeCss } from "./theme-style-contract.mjs";
 import { attachGeneratedImplementations, inspectGeneratedSection, persistGeneratedImplementation } from "./generated-section.mjs";
 import {normalizeSettingFields} from "../../frontend/static/js/generated-settings-schema.mjs";
@@ -127,36 +128,84 @@ async function currentSectionVersion(env, pageId, sectionKey) {
   return Number(row?.content_version ?? 0);
 }
 
-/** Mirror the committed legacy pointer to the normalized CMS tables.
- * The versioned R2 document remains the content authority; the canonical
- * inline projection retains backwards-compatible inspector values.
- * Only sections with an existing canonical link are touched. */
+/** Keep the actual CMS section and block identities aligned with the saved
+ * R2 draft. The old page_sections row is a compatibility pointer, not a source
+ * for new component registrations. A missing canonical page is reported, never
+ * invented from PAGE_REGISTRY. Unmanaged block rows are never overwritten. */
 async function syncCanonicalDraftPointer(env, legacySectionId, content, r2Meta) {
-  const canonical = await env.DB.prepare(
+  let canonical = await env.DB.prepare(
     `SELECT id,account_id FROM cms_page_sections WHERE legacy_section_id=? LIMIT 1`
   ).bind(legacySectionId).first();
-  if (!canonical) return;
-  await env.DB.prepare(`UPDATE cms_page_sections
+  if (!canonical) {
+    // The AgentSam generated-section acceptance path owns its own canonical
+    // insert and revision; do not pre-create a competing section placement.
+    if (content?.__editor?.generated) return {status:'generated_revision_owner'};
+    // Sections added in Theme Studio after the data-family migration require
+    // a canonical placement. Derive ownership ONLY from the existing cms_pages
+    // account-scoped link, never from merchant-submitted IDs or page presets.
+    try {
+    await env.DB.prepare(`INSERT INTO cms_page_sections
+      (account_id,page_id,legacy_section_id,section_key,section_type,sort_order,
+       status,inline_content_json,content_r2_key,content_version,content_hash)
+      SELECT p.account_id,p.id,s.id,s.section_key,?,s.sort_order,
+             'draft',?,?,?,?
+      FROM page_sections s JOIN cms_pages p ON p.legacy_page_id=s.page_id
+      WHERE s.id=? AND s.status!='removed'
+        AND NOT EXISTS (SELECT 1 FROM cms_page_sections c WHERE c.legacy_section_id=s.id)`)
+      .bind(content?.__editor?.templateKey || 'section',JSON.stringify(content),
+        r2Meta.key,r2Meta.version,r2Meta.content_hash,legacySectionId).run();
+    } catch (error) {
+      // Old host fixtures and installations may not yet have the canonical
+      // data-family columns. Save the existing R2 draft normally but report
+      // that migration must finish before canonical linkage is possible.
+      if (/no such column|has no column named|no such table/i.test(String(error?.message)))
+        return {status:'unlinked',reason:'canonical_schema_not_ready'};
+      throw error;
+    }
+    canonical = await env.DB.prepare(
+      `SELECT id,account_id FROM cms_page_sections WHERE legacy_section_id=? LIMIT 1`
+    ).bind(legacySectionId).first();
+  }
+  if (!canonical) return {status:'unlinked',reason:'canonical_page_missing'};
+  // Section drafts can race across tabs. Never let an earlier, already-saved
+  // R2 version overwrite the canonical pointer or block projection of a later
+  // successful optimistic-lock commit.
+  const current = await env.DB.prepare(`SELECT content_version FROM page_sections WHERE id=?`)
+    .bind(legacySectionId).first();
+  if (Number(current?.content_version) !== Number(r2Meta.version))
+    return {status:'superseded',reason:'later_section_version_committed'};
+  const pointer = await env.DB.prepare(`UPDATE cms_page_sections
     SET inline_content_json=?,content_r2_key=?,content_version=?,content_hash=?,
         status='draft',updated_at=datetime('now')
-    WHERE id=? AND legacy_section_id=?`)
+    WHERE id=? AND legacy_section_id=?
+      AND (content_version IS NULL OR content_version <= ?)`)
     .bind(JSON.stringify(content),r2Meta.key,r2Meta.version,r2Meta.content_hash,
-      canonical.id,legacySectionId).run();
-  // Generated components have their own immutable revision pipeline below.
-  // Do not double-register these as ordinary draft revisions.
-  if (!content?.__editor?.generated) {
-    // The canonical revision is a pointer-only receipt; the immutable body lives
-    // at the exact R2 key. Existing imported revision v1 remains untouched.
-    await env.DB.prepare(`INSERT INTO cms_revisions
-      (account_id,entity_type,entity_id,revision_number,revision_kind,
-       content_r2_key,content_hash,snapshot_json,metadata_json)
-      SELECT ?, 'section', ?, ?, 'draft', ?, ?, '{}',
-             '{"source":"cms-editor-save","r2_authoritative":true}'
-      WHERE NOT EXISTS (SELECT 1 FROM cms_revisions
-        WHERE entity_type='section' AND entity_id=? AND revision_kind='draft'
-          AND revision_number=? AND content_r2_key=?)`)
-      .bind(canonical.account_id,canonical.id,r2Meta.version,r2Meta.key,r2Meta.content_hash,
-        canonical.id,r2Meta.version,r2Meta.key).run();
+      canonical.id,legacySectionId,r2Meta.version).run();
+  if (d1Changes(pointer) !== 1)
+    return {status:'superseded',reason:'canonical_pointer_has_newer_version'};
+  if (content?.__editor?.generated) return {status:'generated_revision_owner'};
+  await env.DB.prepare(`INSERT INTO cms_revisions
+    (account_id,entity_type,entity_id,revision_number,revision_kind,
+     content_r2_key,content_hash,snapshot_json,metadata_json)
+    SELECT ?, 'section', ?, ?, 'draft', ?, ?, '{}',
+           '{"source":"cms-editor-save","r2_authoritative":true}'
+    WHERE NOT EXISTS (SELECT 1 FROM cms_revisions
+      WHERE entity_type='section' AND entity_id=? AND revision_kind='draft'
+        AND revision_number=? AND content_r2_key=?)`)
+    .bind(canonical.account_id,canonical.id,r2Meta.version,r2Meta.key,r2Meta.content_hash,
+      canonical.id,r2Meta.version,r2Meta.key).run();
+  try {
+    const blocks=await reconcileCanonicalBlocks(env.DB,{
+      accountId:canonical.account_id,sectionId:canonical.id,content,
+    });
+    return {status:'linked',blocks};
+  } catch (error) {
+    // A section save has already committed its immutable R2 version and legacy
+    // pointer. Never claim the canonical block projection succeeded, and never
+    // destroy imported/foreign blocks to make the save appear successful.
+    const reason=String(error?.code || error?.message || 'unknown');
+    console.warn('CMS canonical block projection blocked:',reason);
+    return {status:'blocked',reason};
   }
 }
 
@@ -223,8 +272,8 @@ async function persistSectionDraft(
         .run();
 
       if (d1Changes(result) === 1) {
-        await syncCanonicalDraftPointer(env, existing.id, content, r2Meta);
-        return r2Meta;
+        const canonical = await syncCanonicalDraftPointer(env, existing.id, content, r2Meta);
+        return {...r2Meta,canonical};
       }
 
       if (hasExpected) {
@@ -256,14 +305,18 @@ async function persistSectionDraft(
           r2Meta.content_hash
         )
         .run();
-      const created = await env.DB.prepare(
-        `SELECT id FROM page_sections WHERE page_id=? AND section_key=?`
-      ).bind(pageId,sectionKey).first();
-      if (created) await syncCanonicalDraftPointer(env, created.id, content, r2Meta);
-      return r2Meta;
     } catch (error) {
       if (attempt >= 2) throw error;
+      continue;
     }
+    // The legacy row is committed. Never retry the INSERT because a separate
+    // canonical mirror is unavailable; that would turn success into a false
+    // cms_version_conflict on the next optimistic-lock iteration.
+    const created = await env.DB.prepare(
+      `SELECT id FROM page_sections WHERE page_id=? AND section_key=?`
+    ).bind(pageId,sectionKey).first();
+    const canonical = created ? await syncCanonicalDraftPointer(env, created.id, content, r2Meta) : {status:"unlinked",reason:"legacy_section_missing"};
+    return {...r2Meta,canonical};
   }
 
   const latest = await currentSectionVersion(env, pageId, sectionKey);
@@ -766,7 +819,7 @@ export async function updateSection(env, slug, sectionKey, body) {
     .bind(page.id)
     .run();
 
-  return { ok: true, version: meta.version, updated_at: meta.updated_at };
+  return { ok: true, version: meta.version, updated_at: meta.updated_at, canonical: meta.canonical };
 }
 
 function sectionKeyBase(value) {
@@ -1024,10 +1077,10 @@ export async function removeSection(env, slug, sectionKey) {
   await env.DB.prepare(
     `UPDATE page_sections SET status = 'removed', updated_at = datetime('now') WHERE page_id = ? AND section_key = ?`
   ).bind(page.id, sectionKey).run();
-  if (content.__editor?.generated) {
-    await env.DB.prepare(`UPDATE cms_page_sections SET status='removed' WHERE legacy_section_id=?`)
-      .bind(row.id).run();
-  }
+  // A removed section must be removed from the canonical page composition too.
+  // Preserve its block rows and revisions for undo/history; do not cascade-delete.
+  await env.DB.prepare(`UPDATE cms_page_sections SET status='removed',updated_at=datetime('now')
+    WHERE legacy_section_id=?`).bind(row.id).run();
   await markPageDraft(env, page.id, slug);
 
   return { ok: true, section_key: sectionKey, removed: true };
@@ -1107,17 +1160,19 @@ export async function insertBlock(env, slug, sectionKey, body = {}) {
     : blocks.length;
   blocks.splice(toIndex, 0, meta);
 
-  await persistSectionDraft(
+  const saved = await persistSectionDraft(
     env,
     slug,
     editable.page.id,
     sectionKey,
     editable.content,
-    editable.row.sort_order
+    editable.row.sort_order,
+    { expectedVersion: editable.row.content_version }
   );
+  if (saved.error) return saved;
   await markPageDraft(env, editable.page.id, slug);
 
-  return { ok: true, section_key: sectionKey, block_id: blockId, template_key: templateKey };
+  return { ok: true, section_key: sectionKey, block_id: blockId, template_key: templateKey, canonical: saved.canonical };
 }
 
 export async function duplicateBlock(env, slug, sectionKey, blockId) {
@@ -1147,17 +1202,19 @@ export async function duplicateBlock(env, slug, sectionKey, blockId) {
     enabled: true,
   });
 
-  await persistSectionDraft(
+  const saved = await persistSectionDraft(
     env,
     slug,
     editable.page.id,
     sectionKey,
     editable.content,
-    editable.row.sort_order
+    editable.row.sort_order,
+    { expectedVersion: editable.row.content_version }
   );
+  if (saved.error) return saved;
   await markPageDraft(env, editable.page.id, slug);
 
-  return { ok: true, section_key: sectionKey, block_id: newId };
+  return { ok: true, section_key: sectionKey, block_id: newId, canonical: saved.canonical };
 }
 
 export async function moveBlock(env, slug, sectionKey, blockId, body = {}) {
@@ -1174,17 +1231,19 @@ export async function moveBlock(env, slug, sectionKey, blockId, body = {}) {
   const [moved] = blocks.splice(fromIndex, 1);
   blocks.splice(toIndex, 0, moved);
 
-  await persistSectionDraft(
+  const saved = await persistSectionDraft(
     env,
     slug,
     editable.page.id,
     sectionKey,
     editable.content,
-    editable.row.sort_order
+    editable.row.sort_order,
+    { expectedVersion: editable.row.content_version }
   );
+  if (saved.error) return saved;
   await markPageDraft(env, editable.page.id, slug);
 
-  return { ok: true, section_key: sectionKey, block_id: blockId, to_index: toIndex };
+  return { ok: true, section_key: sectionKey, block_id: blockId, to_index: toIndex, canonical: saved.canonical };
 }
 
 export async function removeBlock(env, slug, sectionKey, blockId) {
@@ -1205,17 +1264,19 @@ export async function removeBlock(env, slug, sectionKey, blockId) {
   blocks.splice(index, 1);
   delete editable.content[blockId];
 
-  await persistSectionDraft(
+  const saved = await persistSectionDraft(
     env,
     slug,
     editable.page.id,
     sectionKey,
     editable.content,
-    editable.row.sort_order
+    editable.row.sort_order,
+    { expectedVersion: editable.row.content_version }
   );
+  if (saved.error) return saved;
   await markPageDraft(env, editable.page.id, slug);
 
-  return { ok: true, section_key: sectionKey, block_id: blockId, removed: true };
+  return { ok: true, section_key: sectionKey, block_id: blockId, removed: true, canonical: saved.canonical };
 }
 
 export async function publishPage(env, slug) {
