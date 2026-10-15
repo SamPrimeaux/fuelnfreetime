@@ -60,8 +60,7 @@
 
   function renderTotals(cart) {
     const subtotal = cart.reduce((sum, item) => sum + (item.price_cents || 0) * item.qty, 0);
-    const shippingGoal = 7500;
-    const discount = getDiscount();
+     const discount = getDiscount();
     const discountCents = discount?.discount_cents || 0;
     const total = Math.max(0, subtotal - discountCents);
 
@@ -77,14 +76,6 @@
     if (discountEl) discountEl.textContent = "−" + money(discountCents);
     if (totalEl) totalEl.textContent = money(total);
 
-    const progress = document.getElementById("cart-progress");
-    const progressBar = document.getElementById("cart-progress-bar");
-    const progressLabel = document.getElementById("cart-progress-label");
-    const progressValue = document.getElementById("cart-progress-value");
-    if (progress) progress.hidden = cart.length === 0;
-    if (progressBar) progressBar.style.width = `${Math.min(100, (subtotal / shippingGoal) * 100)}%`;
-    if (progressLabel) progressLabel.textContent = subtotal >= shippingGoal ? "Shipping milestone unlocked." : "Build your order toward complimentary shipping.";
-    if (progressValue) progressValue.textContent = subtotal >= shippingGoal ? "Ready" : `${money(shippingGoal - subtotal)} to go`;
 
     const codeInput = document.getElementById("checkout-discount");
     const msg = document.getElementById("checkout-discount-msg");

@@ -1,5 +1,7 @@
 /* Sitewide storefront header — single source (store-shell.js + D1 nav config) */
 
+@import url("/css/store-drawer.css");
+
 :root {
   --fnf-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --fnf-ink: #fff;
@@ -43,6 +45,7 @@ body.fnf-nav-open {
 }
 
 .fnf-header {
+  font-family: var(--h-font-body, "Inter", system-ui, sans-serif);
   position: fixed;
   inset: 0 0 auto 0;
   height: calc(var(--fnf-header) + var(--fnf-announcement-h));

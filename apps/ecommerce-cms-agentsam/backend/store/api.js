@@ -116,8 +116,9 @@ export async function getStoreProduct(env, slug) {
   const colorImages = (supplierReferences || []).flatMap((entry) => {
     const color = parseMockupColor(entry.variant_scope_json);
     const key = color?.toLocaleLowerCase("en-US");
-    if (!color || !/^https:\/\//i.test(entry.url || "") || seenReferences.has(key)) return [];
-    seenReferences.add(key);
+    const imageKey = key + "|" + String(entry.url || "");
+    if (!color || !/^https:\/\//i.test(entry.url || "") || seenReferences.has(imageKey)) return [];
+    seenReferences.add(imageKey);
     return [{ url: entry.url, color, source: "supplier_reference" }];
   });
 

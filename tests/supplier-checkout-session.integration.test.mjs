@@ -12,14 +12,16 @@ function fixture() {
     CREATE TABLE product_variants (id INTEGER PRIMARY KEY, product_id INTEGER, sku TEXT,
       size TEXT, color TEXT, price_cents INTEGER, inventory_qty INTEGER);
     CREATE TABLE completeful_product_links (id INTEGER PRIMARY KEY, product_id INTEGER,
-      sync_status TEXT);
+      sync_status TEXT, completeful_catalog_product_id TEXT);
+    CREATE TABLE completeful_catalog_mockups (completeful_product_id TEXT, preview_url TEXT,
+      variant_scope_json TEXT, active INTEGER, sort_order INTEGER);
     CREATE TABLE completeful_variant_links (id INTEGER PRIMARY KEY, variant_id INTEGER,
       product_link_id INTEGER, completeful_catalog_variant_id TEXT);
     CREATE TABLE inventory_reservations (id INTEGER PRIMARY KEY, order_id INTEGER,
       variant_id INTEGER, qty INTEGER, status TEXT, expires_at TEXT);
     CREATE TABLE product_images (product_id INTEGER, media_asset_id INTEGER,
       is_primary INTEGER, position INTEGER);
-    CREATE TABLE media_assets (id INTEGER PRIMARY KEY, url TEXT, filename TEXT, alt_text TEXT);
+    CREATE TABLE media_assets (id INTEGER PRIMARY KEY, url TEXT, filename TEXT, alt_text TEXT, meta_json TEXT);
     CREATE TABLE orders (id INTEGER PRIMARY KEY AUTOINCREMENT, customer_email TEXT, status TEXT,
       total_cents INTEGER, subtotal_cents INTEGER, discount_cents INTEGER,
       discount_id INTEGER, discount_code TEXT, created_at TEXT, stripe_checkout_session_id TEXT);
@@ -31,7 +33,7 @@ function fixture() {
     INSERT INTO product_variants VALUES
       (2,20,'POD-M','M','White',2500,0),
       (3,30,'POD-PENDING','L','Gray',2500,0);
-    INSERT INTO completeful_product_links VALUES (100,20,'linked'),(101,30,'pending');
+    INSERT INTO completeful_product_links VALUES (100,20,'linked','hoodie-catalog'),(101,30,'pending','hoodie-catalog');
     INSERT INTO completeful_variant_links VALUES
       (200,2,100,'provider-variant-2'),(201,3,101,'provider-variant-3');
   `);
@@ -103,4 +105,17 @@ test("unready provider mapping is rejected before order creation or Stripe call"
   ), env);
   assert.equal(response.status, 400);
   assert.equal(db.prepare("SELECT COUNT(*) AS n FROM orders").get().n, 0);
+});
+
+test("PDP returns both supplier color views when the provider has more than one",async()=>{
+ const {db,env}=fixture();
+ db.exec(`INSERT INTO completeful_catalog_mockups VALUES
+  ('hoodie-catalog','https://catalog.example/ash-front.png','{"Color":"Ash"}',1,0),
+  ('hoodie-catalog','https://catalog.example/ash-back.png','{"Color":"Ash"}',1,0)`);
+ try{
+   const data=await (await getStoreProduct(env,"mapped-hoodie")).json();
+   assert.equal(data.product.color_images.length,2);
+   assert.deepEqual(data.product.color_images.map(i=>i.url).sort(),[
+     "https://catalog.example/ash-back.png","https://catalog.example/ash-front.png"]);
+ }finally{db.close();}
 });

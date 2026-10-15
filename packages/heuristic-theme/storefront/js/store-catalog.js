@@ -131,7 +131,7 @@
     CART_KEY,
     getCart() { try { return JSON.parse(localStorage.getItem(CART_KEY) || "[]"); } catch { return []; } },
     setCart(items) { localStorage.setItem(CART_KEY, JSON.stringify(items)); document.dispatchEvent(new CustomEvent("fnf:cart-updated")); },
-    addItem(item) { const items = this.getCart(); const found = items.find((entry) => entry.variant_id === item.variant_id); found ? found.qty += item.qty : items.push(item); this.setCart(items); },
+    addItem(item) { const items = this.getCart(); const found = items.find((entry) => entry.variant_id === item.variant_id); found ? found.qty = Math.min(10,found.qty + item.qty) : items.push(item); this.setCart(items); document.dispatchEvent(new CustomEvent("fnf:cart-added")); },
     cartCount() { return this.getCart().reduce((total, item) => total + item.qty, 0); },
   };
 
