@@ -41,3 +41,11 @@ test("catalog and generated sections share the existing real CMS install flow", 
   assert.match(surfaces, /Accept into private draft/);
   assert.match(surfaces, /preview\.setAttribute\("sandbox", ""\)/);
 });
+
+test("generation workspace offers a real accessible vertical dragbar and contextual source preview", () => {
+  assert.match(surfaces, /aria-label", "Resize AgentSam generation workspace"/);
+  assert.match(surfaces, /bar\.addEventListener\("pointerdown"/);
+  assert.match(surfaces, /bar\.addEventListener\("keydown"/);
+  assert.match(surfaces, /te-generation-progress/);
+  assert.match(surfaces, /miniagentsam-codepreview/);
+});

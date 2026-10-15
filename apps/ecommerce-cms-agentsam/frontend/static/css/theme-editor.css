@@ -3414,3 +3414,15 @@ dialog.te-section-menu .te-section-catalog-item--visual {
   border:1px solid #e4e1ec;padding:5px 8px;min-width:0;max-width:100%;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .te-block-visual__field--media{background:#d9d5e5;min-width:42px;}
+
+@media(min-width:901px){
+  #te-block-panel .te-generation-dragbar{
+    display:flex;align-items:center;justify-content:center;width:100%;height:18px;
+    margin:-7px 0 9px;padding:5px 0;border:0;border-bottom:1px solid #edeaf3;
+    background:#fff;cursor:ns-resize;touch-action:none;user-select:none;
+  }
+  #te-block-panel .te-generation-dragbar span{display:block;width:48px;height:4px;border-radius:4px;background:#c8c4d5;}
+  #te-block-panel .te-generation-dragbar:hover span,
+  #te-block-panel .te-generation-dragbar:focus-visible span{background:#8058de;}
+}
+@media(max-width:900px){#te-block-panel .te-generation-dragbar{display:none}}
