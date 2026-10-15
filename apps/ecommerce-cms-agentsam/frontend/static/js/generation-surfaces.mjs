@@ -168,8 +168,10 @@ export function createGenerationFlow(regions) {
     },
     openRequest() {
       if (state.generating) return;
-      // Do not insert a fake generating block into the tree before the
-      // merchant explicitly submits a request.
+      // Preserve the existing ephemeral placement marker in the preview.
+      // This is not an installed CMS block: no D1/R2 write occurs until
+      // the separate authenticated review and acceptance step.
+      if (!placeholder || !placeholder.isConnected) placeholder = insertGeneratingNode(regions.tree);
       regions.panel.hidden = false;
       pinGenerationPreview();
       regions.panel.setAttribute("data-panel-state", "request");
