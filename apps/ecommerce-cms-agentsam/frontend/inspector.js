@@ -371,8 +371,11 @@
 
     button.onclick = () => {
       if (active) deactivate({ close: true });
-      else activate();
+      else if (ownComposer) instance.close(); // second click hides the composer we opened
+      else activate(); // a page-owned composer (e.g. Product Studio) toggles itself via agentsam:mini-open
     };
+    // Pages that own their composer report open/closed so the crosshair stays lit.
+    window.addEventListener('agentsam:mini-state', (event) => markOpen(Boolean(event.detail?.open)));
     bar.prepend(button);
 
     // Only actual storefront preview elements or selected merchant media assets are inspectable.
