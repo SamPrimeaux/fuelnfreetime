@@ -37,6 +37,7 @@ test("primary storefront pages all mount the one global footer implementation", 
   for (const file of [
     "home.html",
     "shop.html",
+    "product.html",
     "about.html",
     "community.html",
     "collaborate.html",
@@ -58,9 +59,15 @@ test("about and community no longer bake the canonical footer into each page", a
   }
 });
 
-test("shop gains the canonical footer without replacing its shared store header", async () => {
-  const html = await storefrontFile("shop.html");
-  assert.match(html, /id="fnf-store-mount"/);
-  assert.match(html, /\/js\/store-shell\.js/);
-  assert.match(html, /id="fnf-footer-mount"/);
+test("shop and PDP share the CMS-managed header and footer without duplicate shells", async () => {
+  const shop = await storefrontFile("shop.html");
+  const product = await storefrontFile("product.html");
+  for (const html of [shop, product]) {
+    assert.match(html, /id="fnf-store-mount"/);
+    assert.match(html, /\/js\/store-shell\.js/);
+    assert.match(html, /id="fnf-footer-mount"/);
+    assert.match(html, /\/js\/global-footer\.js/);
+    assert.match(html, /data-header-preset="frost-pill"/);
+    assert.doesNotMatch(html, /<footer class="fnf-footer"/);
+  }
 });
