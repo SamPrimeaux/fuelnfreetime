@@ -1239,7 +1239,7 @@ export default function StudioWorkspace({
               aria-pressed={panelOpen && tab === t.id}
               aria-expanded={panelOpen && tab === t.id}
             >
-              <StudioIcon name={t.icon} />
+              {t.id === "tools" ? <PencilSparklesIcon /> : <StudioIcon name={t.icon} />}
               <span>{t.label}</span>
             </button>
           ))}
