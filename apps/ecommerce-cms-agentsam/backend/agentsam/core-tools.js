@@ -1,6 +1,7 @@
 import { readOnlySql } from "./d1-sql.ts";
 import { runD1Mutation } from "./d1-mutation.ts";
 import { listCatalogModels } from "./model-catalog-tools.js";
+import { MEDIA_EXECUTABLE_TOOL_KEYS, executeMediaTool } from "./media-tool-executors.js";
 
 const D1_QUERY_MAX_ROWS = 200;
 
@@ -20,6 +21,7 @@ export const CORE_EXECUTABLE_TOOL_KEYS = new Set([
   "fnf_store_products_list",
   "fnf_cms_pages_list",
   "fnf_media_library_list",
+  ...MEDIA_EXECUTABLE_TOOL_KEYS,
   "fnf_r2_media_list",
   "fnf_agentsam_ai_models",
   "agentsam_ping",
@@ -32,6 +34,9 @@ export const CORE_EXECUTABLE_TOOL_KEYS = new Set([
 export const SELF_CONFIRMING_TOOL_KEYS = new Set(["agentsam_d1_write", "agentsam_d1_delete"]);
 
 export async function executeCoreTool(env, tool, params = {}, options = {}) {
+  if (MEDIA_EXECUTABLE_TOOL_KEYS.has(tool?.tool_key)) {
+    return executeMediaTool(env, tool, params, options);
+  }
   switch (tool?.tool_key) {
     case "fnf_store_orders_list": {
       const limit = boundedLimit(params.limit, 20, 100);

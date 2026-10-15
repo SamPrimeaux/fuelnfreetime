@@ -193,6 +193,12 @@ export default function StudioWorkspace({
   const [restoringDraft, setRestoringDraft] = useState(Boolean(resumeDraftId));
   const [title, setTitle] = useState(detail.product.default_title || detail.product.name);
   const [providerRenderUrl, setProviderRenderUrl] = useState<string | null>(null);
+  const [supplierMockups, setSupplierMockups] = useState<Array<{
+    mockup_id: string; variant_color: string; print_location_id: string;
+    render_id?: string; status: string; error?: string;
+    asset?: { url: string } | null;
+  }>>([]);
+
   const [trimTransparent, setTrimTransparent] = useState(false);
   const [croppedPreview, setCroppedPreview] = useState<{
     key: string; url: string; crop: ArtworkCrop;
@@ -229,9 +235,14 @@ export default function StudioWorkspace({
   const [mediaSearch, setMediaSearch] = useState("");
   // Default to artwork made or uploaded in Product Studio; the full media library is opt-in.
   const [artworkScope, setArtworkScope] = useState<"studio" | "library">("studio");
-  // Tools panel (AI image tools). #UNFINISHEDTOOLS: see docs/AGENTSAM_MERCH_AND_TOOLS_AUDIT_20261015.md
+  // Image tools use the installed Model Catalog and preserve original artwork.
   const [aiMode, setAiMode] = useState<"generate" | "edit">("generate");
   const [aiPrompt, setAiPrompt] = useState("");
+  const [editPrompt, setEditPrompt] = useState("");
+  const [editableModels, setEditableModels] = useState<Array<{ id: string; name: string }>>([]);
+  const [editModel, setEditModel] = useState("");
+  const [revisionCandidate, setRevisionCandidate] = useState<MediaAsset | null>(null);
+
   const [aiBackground, setAiBackground] = useState<"auto" | "transparent" | "white">("auto");
   const [aiSize, setAiSize] = useState<"auto" | "square" | "landscape" | "portrait">("auto");
   const [aiQuality, setAiQuality] = useState<"auto" | "high" | "medium" | "low">("auto");
@@ -309,10 +320,6 @@ export default function StudioWorkspace({
   async function generateImage() {
     try { await askAI(true, aiPrompt); } catch { /* askAI presents the failure */ }
   }
-  // #UNFINISHEDTOOLS: renderMockup is intentionally detached from the UI (the "Render Completeful mockup"
-  // button was removed). It renders ONE mockup for the first selected variant and has never run in production.
-  // Rebuild as commerce.mockup.render (per color x side) per tkt_a6482217d8ca4be4, then delete this reference.
-  void renderMockup;
   const nextLabel = busy === "prepare" ? "Preparing print artwork…"
     : busy === "save" ? "Saving design…" : "Next step · Product details";
 
@@ -466,7 +473,7 @@ export default function StudioWorkspace({
   }, [manageVariants]);
   // Color thumbnails: one per color being sold, so every colorway can be reviewed without opening a menu.
   // These are client composites (garment plate + current artwork placement), not stored mockups.
-  // #NOTDONE: stored per-color mockups are tracked in tkt_a6482217d8ca4be4.
+  // These small color chips are local previews; exact per-color provider renders are saved in supplierMockups.
   const colorAxis = optionAxes.find((axis) => /color|colour/i.test(axis));
   const colorways = colorAxis
     ? variantAxisValues(detail.variants, colorAxis).flatMap((value) => {
@@ -692,11 +699,54 @@ export default function StudioWorkspace({
     };
   }, [asset, trimTransparent, removeFlatBackground]);
 
+  useEffect(() => {
+    if (aiMode !== "edit") return;
+    const controller = new AbortController();
+    adminFetch<{ models?: Array<{ id: string; name: string }> }>("/api/admin/media/image-models", {
+      signal: controller.signal,
+    }).then(({ models }) => {
+      if (controller.signal.aborted) return;
+      setEditableModels(models || []);
+      setEditModel((current) => current && models?.some((model) => model.id === current)
+        ? current : models?.[0]?.id || "");
+    }).catch(() => { if (!controller.signal.aborted) setEditableModels([]); });
+    return () => controller.abort();
+  }, [aiMode]);
+
+  async function reviseSelectedArtwork(kind: "ai-edit" | "resample") {
+    if (!asset || busy) return;
+    if (kind === "ai-edit" && (!editModel || !editPrompt.trim())) {
+      setError("Choose an available image editing model and describe the change.");
+      return;
+    }
+    const sourceId = asset.id;
+    setBusy(kind);
+    setError("");
+    try {
+      const result = await adminFetch<{ ok: boolean; asset: MediaAsset }>(
+        `/api/admin/media/${encodeURIComponent(sourceId)}/${kind}`, {
+          method: "POST",
+          body: JSON.stringify(kind === "ai-edit"
+            ? { model_id: editModel, prompt: editPrompt.trim() } : { scale: 2 }),
+        },
+      );
+      if (!result.ok || !result.asset) throw new Error("Image operation produced no asset.");
+      setMedia((current) => [result.asset, ...current.filter((item) => item.id !== result.asset.id)]);
+      setRevisionCandidate(result.asset);
+      setNotice("New version saved. Your selected original has not been replaced.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Image operation failed.");
+    } finally {
+      setBusy("");
+    }
+  }
+
   function choose(a: MediaAsset) {
     setDimensions(null);
     setCroppedPreview(null);
     setCropError("");
     setAsset(a);
+    setRevisionCandidate(null);
     setPreparedAsset(null);
     setPreparedFor(null);
     setPreviewAsset(null);
@@ -1073,70 +1123,59 @@ export default function StudioWorkspace({
     }
   }
 
-  async function renderMockup() {
+  async function renderSupplierMockups() {
     if (!preparedAsset || preparedFor !== currentPlacementKey) {
-      setError("Prepare the updated artwork before rendering the mockup.");
+      setError("Prepare the current artwork before rendering supplier mockups.");
       return;
     }
-    let saved = await saveDraft();
+    const saved = await saveDraft();
     if (!saved) return;
-    setBusy("render");
+    setBusy("render-batch");
     setError("");
     try {
       const result = await adminFetch<{
-        mode: "provider_render" | "placement_preview";
-        provider_render: boolean;
-        status?: string;
-        render_id?: string;
-        render_url?: string | null;
-        message?: string;
-        draft?: StudioDraft;
-      }>(`/api/admin/product-studio/drafts/${encodeURIComponent(saved.id)}/render`, { method: "POST" });
-      if (result.draft) {
-        saved = result.draft;
-        setDraft(result.draft);
+        ok: boolean; error?: string; skipped?: Array<{ reason: string }>;
+        rendered?: Array<{
+          mockup_id: string; variant_color: string; print_location_id: string;
+          render_id?: string; status: string; error?: string; asset?: { url: string } | null;
+        }>;
+      }>(`/api/admin/product-studio/drafts/${encodeURIComponent(saved.id)}/render-batch`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      if (!result.ok || !result.rendered?.length) {
+        throw new Error(result.error || "No color-verified supplier mockups were available.");
       }
-      if (!result.provider_render) {
-        setProviderRenderUrl(null);
-        setNotice(result.message || "This product has no Completeful mockup target; showing the labeled placement preview.");
-        return;
-      }
-      if (result.render_url) {
-        setProviderRenderUrl(result.render_url);
-        setNotice("Completeful rendered the selected artwork on the selected product.");
-        return;
-      }
-      if (!result.render_id) {
-        setNotice("Completeful accepted the render but did not return a render id.");
-        return;
-      }
-      setNotice("Completeful render queued. Waiting for the provider result…");
-      for (let attempt = 0; attempt < 10; attempt += 1) {
-        await new Promise((resolve) => window.setTimeout(resolve, 1400));
-        const polled = await adminFetch<{
-          status: string;
-          render_id: string;
-          mockups?: { url: string; width: number; height: number }[];
-          error?: string;
-        }>(
-          `/api/admin/product-studio/renders/${encodeURIComponent(result.render_id)}?draft_id=${encodeURIComponent(saved.id)}`,
-        );
-        if (polled.status === "succeeded") {
-          const url = polled.mockups?.[0]?.url || null;
-          setProviderRenderUrl(url);
-          setDraft((current) =>
-            current
-              ? { ...current, state: "rendered", completeful_render_status: "succeeded", completeful_render_url: url }
-              : current,
-          );
-          setNotice("Completeful mockup render ready.");
-          return;
+      setSupplierMockups(result.rendered);
+      const missing = result.skipped?.length || 0;
+      setNotice(`Submitted ${result.rendered.length} exact-color supplier mockups.` +
+        (missing ? ` ${missing} combinations lack supplier imagery and were skipped.` : ""));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Supplier mockup rendering failed.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function refreshSupplierMockups() {
+    const pending = supplierMockups.filter((item) => item.render_id && !item.asset && item.status !== "failed");
+    if (!pending.length || busy) return;
+    setBusy("refresh-mockups");
+    try {
+      const results = await Promise.all(pending.map(async (item) => {
+        try {
+          return await adminFetch<{
+            status: string; render_id: string; asset?: { url: string } | null;
+          }>(`/api/admin/product-studio/renders/${encodeURIComponent(item.render_id!)}/batch`);
+        } catch {
+          return null;
         }
-        if (polled.status === "failed") throw new Error(polled.error || "Completeful mockup render failed");
-      }
-      setNotice("Completeful is still rendering. You can continue working and retry the render check shortly.");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Mockup render failed");
+      }));
+      setSupplierMockups((current) => current.map((item) => {
+        const next = results.find((result) => result?.render_id === item.render_id);
+        return next ? { ...item, status: next.status, asset: next.asset || item.asset } : item;
+      }));
+      setNotice("Supplier render statuses refreshed. Completed images are saved in Media Library.");
     } finally {
       setBusy("");
     }
@@ -1706,27 +1745,87 @@ export default function StudioWorkspace({
                         onChange={(event) => setTrimTransparent(event.target.checked)} />
                       Trim transparent edges
                     </label>
-                    {/* #UNFINISHEDTOOLS (media.image.upscale): no upscale provider/tool exists yet.
-                        Planned definition: backend/tools/packs/media.planned.ts. Enable when registered. */}
-                    <button type="button" className="ps-button ps-wide" disabled data-unfinished="media.image.upscale"
-                      title="Upscale is coming soon">
-                      Upscale <span className="ps-soon">Soon</span>
+                    <button type="button" className="ps-button ps-wide"
+                      disabled={!asset || Boolean(busy)}
+                      onClick={() => void reviseSelectedArtwork("resample")}>
+                      {busy === "resample" ? "Resampling…" : "Resize to 2× pixels"}
                     </button>
-                    {/* #UNFINISHEDTOOLS (media.image.edit): imgx_edit_image is defined but inactive on the IAM
-                        registry and the FNF app has no edit path. Planned definition: media.planned.ts. */}
+                    <small>Resampling does not recover missing image detail or certify print readiness.</small>
+                    <label className="ps-field">
+                      AI edit model
+                      <select value={editModel} onChange={(event) => setEditModel(event.target.value)}
+                        disabled={!editableModels.length || Boolean(busy)}>
+                        {!editableModels.length && <option value="">No enabled image-edit models</option>}
+                        {editableModels.map((model) => (
+                          <option key={model.id} value={model.id}>{model.name || model.id}</option>
+                        ))}
+                      </select>
+                    </label>
                     <label className="ps-field">
                       Edit with a prompt
-                      <textarea rows={3} disabled placeholder="Describe the change. Coming soon." />
+                      <textarea rows={3} value={editPrompt} maxLength={1000}
+                        onChange={(event) => setEditPrompt(event.target.value)}
+                        placeholder="Describe exactly what should change in the selected artwork" />
                     </label>
-                    <button type="button" className="ps-button ps-wide" disabled data-unfinished="media.image.edit"
-                      title="Prompt editing is coming soon">
-                      Apply edit <span className="ps-soon">Soon</span>
+                    <button type="button" className="ps-button ps-wide"
+                      disabled={!asset || !editPrompt.trim() || !editModel || Boolean(busy)}
+                      onClick={() => void reviseSelectedArtwork("ai-edit")}>
+                      {busy === "ai-edit" ? "Editing…" : "Generate edited version"}
                     </button>
+                    {revisionCandidate && (
+                      <section className="ps-ai-source" aria-label="Artwork revision review">
+                        <img src={revisionCandidate.url} alt="Proposed new artwork version" />
+                        <div>
+                          <strong>New version · not selected</strong>
+                          <small>Saved separately in Media Library. Original remains unchanged.</small>
+                          <div className="ps-ai-actions">
+                            <button type="button" className="ps-button ps-primary"
+                              disabled={Boolean(busy)} onClick={() => choose(revisionCandidate)}>
+                              Use this version
+                            </button>
+                            <button type="button" className="ps-button" disabled={Boolean(busy)}
+                              onClick={() => setRevisionCandidate(null)}>
+                              Keep current version
+                            </button>
+                          </div>
+                        </div>
+                      </section>
+                    )}
                   </div>
                   <button type="button" className="ps-button ps-wide"
                     disabled={!asset || Boolean(busy)} onClick={() => void prepareArtwork()}>
                     {busy === "prepare" ? "Preparing…" : preparedIsCurrent ? "Rebuild production artwork" : "Prepare for print"}
                   </button>
+                  <button type="button" className="ps-button ps-wide"
+                    disabled={!preparedIsCurrent || Boolean(busy)}
+                    onClick={() => void renderSupplierMockups()}>
+                    {busy === "render-batch" ? "Submitting supplier renders…" : "Render Completeful colorways"}
+                  </button>
+                  <small>Uses exact supplier color and print-area mockups. Missing color matches are not fabricated.</small>
+                  {supplierMockups.length > 0 && (
+                    <section className="ps-ai-gallery" aria-label="Supplier mockup results">
+                      <div className="ps-ai-gallery-head">
+                        <strong>Completeful renders</strong>
+                        <span className="ps-count">{supplierMockups.length}</span>
+                      </div>
+                      <div className="ps-media-grid">
+                        {supplierMockups.map((mockup) => (
+                          <figure key={mockup.mockup_id + mockup.variant_color + mockup.print_location_id}>
+                            {mockup.asset?.url
+                              ? <img src={mockup.asset.url} alt={`Completeful ${mockup.variant_color} ${mockup.print_location_id} mockup`} />
+                              : <div className="ps-asset-status" role="status">{mockup.status}</div>}
+                            <figcaption>{mockup.variant_color} · {mockup.print_location_id}</figcaption>
+                          </figure>
+                        ))}
+                      </div>
+                      {supplierMockups.some((mockup) => mockup.render_id && !mockup.asset && mockup.status !== "failed") && (
+                        <button type="button" className="ps-button"
+                          disabled={Boolean(busy)} onClick={() => void refreshSupplierMockups()}>
+                          {busy === "refresh-mockups" ? "Checking…" : "Refresh supplier renders"}
+                        </button>
+                      )}
+                    </section>
+                  )}
                   {asset && preparedAsset && preparedIsCurrent && (
                     <div className="ps-derivative-compare" aria-label="Original and prepared artwork comparison">
                       <figure>
