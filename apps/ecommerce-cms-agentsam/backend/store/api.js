@@ -16,6 +16,20 @@ function json(data, init = {}) {
   return Response.json(data, init);
 }
 
+function mediaColor(value) {
+  try {
+    const metadata = typeof value === "string" ? JSON.parse(value) : (value || {});
+    return String(metadata.variant_color || metadata.product_color || metadata.color || "").trim() || null;
+  } catch { return null; }
+}
+
+function parseMockupColor(value) {
+  try {
+    const scope = typeof value === "string" ? JSON.parse(value) : (value || {});
+    return String(scope.Color || scope.color || "").trim() || null;
+  } catch { return null; }
+}
+
 function formatProduct(row) {
   return {
     id: row.id,
@@ -79,7 +93,7 @@ export async function getStoreProduct(env, slug) {
   const variants = await listProductVariantAvailability(env, product.id);
 
   const { results: images } = await env.DB.prepare(
-    `SELECT m.id, m.url, m.filename, m.alt_text, pi.position, pi.is_primary
+    `SELECT m.id, m.url, m.filename, m.alt_text, m.meta_json, pi.position, pi.is_primary
      FROM product_images pi
      JOIN media_assets m ON m.id = pi.media_asset_id
      WHERE pi.product_id = ?
@@ -87,6 +101,25 @@ export async function getStoreProduct(env, slug) {
   )
     .bind(product.id)
     .all();
+
+  // Read existing supplier catalog imagery as optional color references.
+  // It is not a product artwork render and never changes merchant gallery records.
+  const { results: supplierReferences } = await env.DB.prepare(
+    `SELECT cm.preview_url AS url, cm.variant_scope_json
+     FROM completeful_product_links pl
+     JOIN completeful_catalog_mockups cm
+       ON cm.completeful_product_id = pl.completeful_catalog_product_id
+     WHERE pl.product_id = ? AND cm.active = 1 AND cm.preview_url IS NOT NULL
+     ORDER BY cm.sort_order ASC LIMIT 100`,
+  ).bind(product.id).all();
+  const seenReferences = new Set();
+  const colorImages = (supplierReferences || []).flatMap((entry) => {
+    const color = parseMockupColor(entry.variant_scope_json);
+    const key = color?.toLocaleLowerCase("en-US");
+    if (!color || !/^https:\/\//i.test(entry.url || "") || seenReferences.has(key)) return [];
+    seenReferences.add(key);
+    return [{ url: entry.url, color, source: "supplier_reference" }];
+  });
 
   return json({
     ok: true,
@@ -96,7 +129,11 @@ export async function getStoreProduct(env, slug) {
         primary_image: images.find((i) => i.is_primary)?.url || product.image_url,
         sizes: variants.map((v) => v.size).filter(Boolean).join(","),
       }),
-      images,
+      images: images.map(({ meta_json, ...image }) => ({
+        ...image,
+        color: mediaColor(meta_json),
+      })),
+      color_images: colorImages,
     },
     variants,
   });
