@@ -922,7 +922,10 @@
       const blockRows = blockMeta.map(function(meta, blockIndex) {
         const blockSchema = blockSchemaFor(section, meta) || {};
         const blockValue = cmsGetPath(section.content || {}, meta.id + '.label');
-        const blockLabel = (typeof blockValue === 'string' && blockValue.trim()) || blockSchema.label || humanize(meta.templateKey || meta.id);
+        const definition = window.cmsAuthoring?.get('block', meta.templateKey);
+        const blockLabel = definition
+          ? window.cmsAuthoring.describe('block', meta.templateKey, section.content?.[meta.id] || {})
+          : ((typeof blockValue === 'string' && blockValue.trim()) || blockSchema.label || humanize(meta.templateKey || meta.id));
         return '<div class="te-block-row' + (sectionSelected && meta.id === activeBlockId ? ' is-active' : '') + '" data-block-id="' + cmsEscapeAttr(meta.id) + '" data-block-index="' + blockIndex + '" data-block-section="' + cmsEscapeAttr(section.key) + '" data-block-owner="' + cmsEscapeAttr(owner) + '" draggable="true">' +
           '<button type="button" class="te-block-row__main" data-select-block="' + cmsEscapeAttr(meta.id) + '" data-block-section="' + cmsEscapeAttr(section.key) + '" data-block-owner="' + cmsEscapeAttr(owner) + '">' +
             '<span class="te-field-row__icon te-field-row__icon--link" aria-hidden="true"></span><span class="te-block-row__copy"><strong>' + cmsEscapeHtml(blockLabel) + '</strong></span>' +
