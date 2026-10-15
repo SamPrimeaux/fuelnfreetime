@@ -1,5 +1,11 @@
 import { attachCapabilityMenu } from './composer.js';
 
+// #NOTDONE: DUPLICATE SOURCE. apps/ecommerce-cms-agentsam/packages/agentsam-workbench/src/mini-agentsam.js
+// is the copy that SHIPS (bin/build-assets.mjs assembles /admin/workbench from the app-local package so a
+// release never depends on this monorepo). This copy is used by repo tests. Real fix: publish
+// @inneranimalmedia/agentsam-workbench and consume it via installed(), like revise-theme in build-assets.
+// Until then keep both copies feature-aligned; tests/workbench-parity.test.mjs guards the feature set.
+// See docs/AGENTSAM_MERCH_AND_TOOLS_AUDIT_20261015.md (F9).
 export const miniAgentSamTokens = {
   accent: '#8b5cf6',
   icon: 'https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ac515729-af6b-4ea5-8b10-e581a4d02100/thumbnail',
