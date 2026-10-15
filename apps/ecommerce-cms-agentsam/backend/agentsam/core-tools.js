@@ -1,5 +1,6 @@
 import { readOnlySql } from "./d1-sql.ts";
 import { runD1Mutation } from "./d1-mutation.ts";
+import { listCatalogModels } from "./model-catalog-tools.js";
 
 const D1_QUERY_MAX_ROWS = 200;
 
@@ -133,17 +134,8 @@ export async function executeCoreTool(env, tool, params = {}, options = {}) {
       };
     }
 
-    case "fnf_agentsam_ai_models": {
-      const { results } = await env.DB.prepare(
-        `SELECT model_id, display_name, task_type, lane, status, priority,
-                is_default, is_fallback, supports_tools, supports_vision,
-                supports_json, cost_tier
-           FROM agentsam_ai
-           WHERE status IN ('active','experimental')
-           ORDER BY task_type, lane, priority`,
-      ).all();
-      return { ok: true, models: results || [] };
-    }
+    case "fnf_agentsam_ai_models":
+      return listCatalogModels(env, params);
 
     case "agentsam_ping": {
       let db = "unbound";

@@ -3,7 +3,7 @@
  */
 
 import { requireApplicationAccountId } from "../lib/account-context.js";
-import { FNF_PLATFORM_SCOPE, FNF_TOOL_SCOPE_NOTE } from "./constants.js";
+import { resolveGithubRepo } from "../lib/integration-config.js";
 import { isToolKeyAllowed } from "./feature-gates.js";
 import { sanitizeAnalyticsText } from "./analytics.js";
 
@@ -73,30 +73,42 @@ function mapServerRow(row) {
 }
 
 
-function matchesFnfPlatformScope(tool) {
+/**
+ * Validate a registered operation against this installation's actual bindings and
+ * authenticated account. Resource names and repository authority come from the
+ * installed runtime/D1 plugins, never merchant-specific constants in application JS.
+ *
+ * A scope error denies only the offending operation; it must not erase the catalog.
+ */
+async function matchesInstalledToolScope(env, tool, accountId) {
   const cfg = tool.handler_config || {};
-  const scope = tool.resource_scope || cfg.fnf_scope || {};
+  const scope = tool.resource_scope || {};
+  if (scope.account_id && scope.account_id !== accountId) return false;
 
-  if (cfg.database && cfg.database !== FNF_PLATFORM_SCOPE.d1_database) return false;
-  if (cfg.d1_database && cfg.d1_database !== FNF_PLATFORM_SCOPE.d1_database) return false;
-  if (cfg.binding && cfg.binding !== FNF_PLATFORM_SCOPE.d1_binding && cfg.binding !== FNF_PLATFORM_SCOPE.r2_binding) {
-    return false;
+  if (cfg.binding) {
+    const bindingName = String(cfg.binding);
+    const binding = env?.[bindingName];
+    if (!binding || (typeof binding !== "object" && typeof binding !== "function")) return false;
+    if (tool.handler_type === "d1" && typeof binding.prepare !== "function") return false;
+    if (tool.handler_type === "vectorize" && typeof binding.query !== "function") return false;
+    if (tool.handler_type === "ai" && typeof binding.run !== "function") return false;
+    if (tool.handler_type === "cf" && !(
+      typeof binding.list === "function" ||
+      typeof binding.get === "function" ||
+      typeof binding.run === "function"
+    )) return false;
   }
-  if (cfg.r2_bucket && cfg.r2_bucket !== FNF_PLATFORM_SCOPE.r2_bucket) return false;
-  if (cfg.worker && cfg.worker !== FNF_PLATFORM_SCOPE.worker) return false;
 
   const repos = cfg.repo_allowlist || scope.github_repos || [];
-  if (Array.isArray(repos) && repos.length) {
-    const ok = repos.every((r) => String(r).toLowerCase() === FNF_PLATFORM_SCOPE.github_repo.toLowerCase());
-    if (!ok) return false;
+  if (repos && (!Array.isArray(repos) || repos.some(r => typeof r !== "string" || !r.trim()))) return false;
+  if (repos.length) {
+    const installed = await resolveGithubRepo(env, { accountId });
+    if (!installed.ok || !installed.repo) return false;
+    const authorizedRepo = installed.repo.toLowerCase();
+    if (!repos.every(repo => repo.toLowerCase() === authorizedRepo)) return false;
   }
-
-  if (scope.account_id && scope.account_id !== requireApplicationAccountId()) return false;
-
   return true;
 }
-
-
 
 /**
  * Convert D1 tool rows into Workers AI traditional function definitions.
@@ -115,17 +127,13 @@ export function toolsForWorkersAi(tools = []) {
     }));
 }
 
+/** Prompt guidance; never insert hardcoded resource identities or trust this as ACL. */
 export function formatScopeForPrompt() {
-  return `TOOL PLATFORM SCOPE (hard limit):
-- Worker: ${FNF_PLATFORM_SCOPE.worker}
-- D1: ${FNF_PLATFORM_SCOPE.d1_database} via ${FNF_PLATFORM_SCOPE.d1_binding}
-- R2: ${FNF_PLATFORM_SCOPE.r2_bucket} via ${FNF_PLATFORM_SCOPE.r2_binding}
-- GitHub: ${FNF_PLATFORM_SCOPE.github_repo}
-- Domain: ${FNF_PLATFORM_SCOPE.domain}
-${FNF_TOOL_SCOPE_NOTE}`;
+  return "TOOL ACCESS: Tools execute only against the authenticated installation's " +
+    "authorized account, enabled provider integrations and runtime resource bindings. " +
+    "Unregistered resources, unapproved writes and cross-account access must be denied. " +
+    "Tool metadata does not grant permissions; the executor enforces them.";
 }
-
-export { FNF_PLATFORM_SCOPE, FNF_TOOL_SCOPE_NOTE };
 
 export function scoreTool(
   tool,
@@ -204,10 +212,19 @@ export async function listAgentSamTools(env, options = {}) {
       .bind(...binds)
       .all();
 
-    return (results || [])
-      .map(mapToolRow)
-      .filter((t) => matchesFnfPlatformScope(t))
-      .filter((t) => isToolKeyAllowed(t.tool_key, t.display_name));
+    const accepted = [];
+    const accountId = options.account_id || requireApplicationAccountId();
+    for (const row of results || []) {
+      try {
+        const tool = mapToolRow(row);
+        if (!tool || !isToolKeyAllowed(tool.tool_key, tool.display_name)) continue;
+        if (await matchesInstalledToolScope(env, tool, accountId)) accepted.push(tool);
+      } catch (error) {
+        // Broken configuration never takes down discovery for otherwise valid tools.
+        console.warn("agentsam tool scope denied", row?.tool_key, String(error?.message || error));
+      }
+    }
+    return accepted;
   } catch (err) {
     console.error("agentsam tools list failed", err?.message || err);
     return [];
@@ -219,12 +236,14 @@ export async function getAgentSamTool(env, toolKey) {
   try {
     const row = await env.DB.prepare(
       `SELECT * FROM agentsam_tools
-       WHERE account_id = ? AND tool_key = ? AND is_active = 1
+       WHERE account_id = ? AND tool_key = ? AND is_active = 1 AND is_degraded = 0
        LIMIT 1`
     )
       .bind(requireApplicationAccountId(), toolKey)
       .first();
-    return mapToolRow(row);
+    const tool = mapToolRow(row);
+    if (!tool || tool.is_degraded || !tool.is_active || !isToolKeyAllowed(tool.tool_key, tool.display_name)) return null;
+    return await matchesInstalledToolScope(env, tool, requireApplicationAccountId()) ? tool : null;
   } catch {
     return null;
   }

@@ -17,17 +17,6 @@ export const FNF_GITHUB_REPO = "SamPrimeaux/fuelnfreetime";
 /** @deprecated Prefer getCompanyDomain(env) from lib/company.js */
 export const FNF_APP_DOMAIN = "fuelnfreetime.com";
 
-export const FNF_PLATFORM_SCOPE = {
-  worker: FNF_WORKER_NAME,
-  d1_binding: FNF_D1_BINDING,
-  d1_database: FNF_D1_DATABASE,
-  r2_binding: FNF_R2_BINDING,
-  r2_bucket: FNF_R2_BUCKET,
-};
-
-export const FNF_TOOL_SCOPE_NOTE =
-  "AgentSam tools are limited to the Fuel & Free Time account and its Worker, D1, R2, GitHub repository, and domain resources. Never access resources owned by another account.";
-
 /** Studio workflows shown in the AgentSam drawer picker */
 export const DRAWER_WORKFLOW_KEYS = [
   "fnf_content_studio",
