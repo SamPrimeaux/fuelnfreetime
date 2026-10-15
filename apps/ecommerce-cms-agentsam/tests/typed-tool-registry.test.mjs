@@ -32,5 +32,5 @@ test("merchant provider descriptors use exact explicit wire names and exclude op
 test("doctor discovers real legacy handlers, rejects missing handlers and collisions", () => {
   assert.deepEqual(inspectRegistry(CORE_EXECUTABLE_TOOL_KEYS), []);
   assert.ok(inspectRegistry(new Set()).some(error => error.includes("unresolved legacy handler")));
-  assert.equal(listToolDescriptors().length, 6);
+  assert.equal(listToolDescriptors().length, 13);
 });

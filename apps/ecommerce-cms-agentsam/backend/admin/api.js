@@ -1,4 +1,5 @@
 import { removeMediaBackground } from "./media-background.js";
+import { editImageWithPrompt, resampleImage, listEditableImageModels } from "../media/image-operations.js";
 import {
   hashPassword,
   verifyPassword,
@@ -831,6 +832,9 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   if (path === "/api/admin/brand/assets" && method === "GET") return searchBrandAssets(request, env);
   if (path === "/api/admin/brand" && method === "PATCH") return patchBrandWorkspace(request, env);
 
+  if (path === "/api/admin/media/image-models" && method === "GET") {
+    return json({ ok: true, models: await listEditableImageModels(env) });
+  }
   if (path === "/api/admin/media" && method === "POST") return uploadMedia(request, env, executionCtx);
   if (path === "/api/admin/media" && method === "GET") return listMedia(request, env, url);
   if (path === "/api/admin/media/batch" && method === "POST") return batchMedia(request, env);
@@ -845,6 +849,31 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   m = path.match(/^\/api\/admin\/media\/albums\/(\d+)$/);
   if (m && method === "PATCH") return updateMediaAlbum(request, env, m[1]);
   if (m && method === "DELETE") return deleteMediaAlbum(request, env, m[1]);
+
+  m = path.match(/^\/api\/admin\/media\/(\d+)\/(ai-edit|resample)$/);
+  if (m && method === "POST") {
+    const input = await readJson(request);
+    if (!input || typeof input !== "object" || Array.isArray(input)) {
+      return json({ ok: false, error: "invalid_image_operation" }, { status: 400 });
+    }
+    try {
+      const result = m[2] === "ai-edit"
+        ? await editImageWithPrompt(env, {
+            media_asset_id: Number(m[1]), prompt: input.prompt,
+            model_id: input.model_id, actor_id: user.id,
+          })
+        : await resampleImage(env, {
+            media_asset_id: Number(m[1]), scale: input.scale, actor_id: user.id,
+          });
+      return json(result, { status: 201 });
+    } catch (error) {
+      const code = String(error?.message || "image_operation_failed");
+      const status = code.startsWith("openai_image_edit_http_") ? 502
+        : code === "media_asset_not_found" || code === "media_source_object_not_found" ? 404
+        : code === "media_storage_unavailable" ? 503 : 400;
+      return json({ ok: false, error: code }, { status });
+    }
+  }
 
   m = path.match(/^\/api\/admin\/media\/(\d+)\/remove-background$/);
   if (m && method === "POST") return removeMediaBackground(request, env, m[1], user);
