@@ -160,6 +160,14 @@
     if (!available && active) deactivate({ close: true });
   }
 
+  // The crosshair is lit while ANY miniAgentSam composer is open (ours, or a page's via agentsam:mini-state).
+  function markOpen(open, own = false) {
+    composerOpen = Boolean(open);
+    ownComposer = composerOpen ? (own || ownComposer) : false;
+    button?.setAttribute('aria-pressed', String(composerOpen || active));
+    button?.classList.toggle('is-agentsam-active', composerOpen);
+  }
+
   // Page-level composer pinned bottom-center. A page with its own miniAgentSam context
   // (e.g. Product Studio) claims the request by cancelling `agentsam:mini-open`.
   function openPageComposer() {
