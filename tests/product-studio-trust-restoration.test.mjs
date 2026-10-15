@@ -64,5 +64,5 @@ test("supplier catalog drafts never pretend missing variants are warehouse stock
   assert.match(productEdit, /Your selected sizes and colors are saved/);
   assert.match(productEdit, /card.hidden = Boolean\(supplierDraft\)/);
   assert.match(productEdit, /add\.hidden = supplierDraft/);
-  assert.match(productEdit, /Boolean\(d\.design_draft\?\.completeful_catalog_product_id\)/);
+  assert.match(productEdit, /Boolean\(d\.design_draft\?\.completeful_catalog_product_id \|\| d\.fulfillment\?\.completeful_store_product_id\)/);
 });
