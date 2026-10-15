@@ -1091,9 +1091,17 @@ export default function StudioWorkspace({
           <StudioIcon name="back" />
           <span>Product details</span>
         </button>
-        <div>
-          <h1>{detail.product.name}</h1>
-        </div>
+        <nav className="ps-steps" aria-label="Product creation progress">
+          <ol>
+            {["Choose product", "Design", "Product details", "Publish"].map((label, index) => (
+              <li key={label} className={index === 1 ? "is-current" : index < 1 ? "is-done" : ""}
+                aria-current={index === 1 ? "step" : undefined}>
+                <span className="ps-steps__dot" aria-hidden="true">{index < 1 ? "✓" : index + 1}</span>
+                <span>{label}</span>
+              </li>
+            ))}
+          </ol>
+        </nav>
         <div className="ps-workspace-actions">
           <button type="button" ref={miniTriggerRef}
             className="ps-agent-trigger ps-agent-trigger--icon ps-agent-trigger--header"
