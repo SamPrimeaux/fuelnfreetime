@@ -265,6 +265,18 @@ export default function StudioWorkspace({
     setAgentVisible(true);
   }
 
+  // The global top-bar crosshair dispatches a cancelable `agentsam:mini-open`. Product Studio owns
+  // product/artwork context (and artwork generation), so it claims the request and opens its composer.
+  const openMiniRef = useRef(openMiniAgentSam);
+  openMiniRef.current = openMiniAgentSam;
+  useEffect(() => {
+    const claim = (event: Event) => { event.preventDefault(); openMiniRef.current(); };
+    window.addEventListener("agentsam:mini-open", claim);
+    return () => window.removeEventListener("agentsam:mini-open", claim);
+  }, []);
+  const nextLabel = busy === "prepare" ? "Preparing print artwork…"
+    : busy === "save" ? "Saving design…" : "Next step · Product details";
+
   function startDrag(event: PointerEvent<HTMLDivElement>, mode: "move" | "resize", corner: "tl" | "tr" | "bl" | "br" = "br") {
     if (!asset || !showArtwork) return;
     event.preventDefault();
