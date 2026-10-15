@@ -763,12 +763,21 @@
         const used = existingBlocks.filter(function(block) { return block.templateKey === template.key; }).length;
         const disabled = (Number.isFinite(Number(template.max)) && used >= Number(template.max)) ||
           (totalMax > 0 && existingBlocks.length >= totalMax);
-        return '<button type="button" class="te-section-catalog-item" data-choose-block="' +
+        const fields = (template.fields || []).slice(0, 4);
+        const sketch = '<span class="te-catalog-structure te-block-visual" aria-hidden="true">' +
+          '<span class="te-catalog-structure__kicker">' + cmsEscapeHtml(template.label || template.key) + '</span>' +
+          '<span class="te-block-visual__fields">' + fields.map(function(field) {
+            const kind = field.type === 'media' || field.type === 'image' ? 'media' : 'text';
+            return '<span class="te-block-visual__field te-block-visual__field--' + kind + '">' +
+              cmsEscapeHtml(field.label || field.key || kind) + '</span>';
+          }).join('') + '</span></span>';
+        return '<button type="button" class="te-section-catalog-item te-section-catalog-item--visual" data-choose-block="' +
           cmsEscapeAttr(template.key) + '"' + (disabled ? ' disabled' : '') + '>' +
-          '<span class="te-section-catalog-item__icon">' + icon.section + '</span>' +
-          '<span><strong>' + cmsEscapeHtml(template.label || humanize(template.key)) + '</strong>' +
+          '<span class="te-catalog-visual-wrap">' + sketch + '</span>' +
+          '<span class="te-catalog-card-copy"><strong>' + cmsEscapeHtml(template.label || humanize(template.key)) + '</strong>' +
           '<small>' + cmsEscapeHtml(disabled ? 'Maximum blocks reached' :
-            (template.description || (template.fields || []).length + ' editable fields')) + '</small></span></button>';
+            (template.description || (template.fields || []).length + ' editable fields')) +
+          '</small></span></button>';
       }).join('') : '<div class="te-empty">No compatible blocks match that search.</div>';
     }
     paint('');
@@ -912,6 +921,38 @@
       '</dialog>' +
       '<div class="te-tree-group te-tree-group--global"><div class="te-tree-group__label">Footer</div>' + footerRow + '</div>';
 
+    // Draw portable catalog previews using the SAME registered renderer and
+    // CSS as the storefront. Never fabricate a card for a missing renderer.
+    function catalogVisual(entry) {
+      const api = window.ThemePortableSections;
+      const preset = entry.preset || entry.id;
+      if (api && typeof api.defaults === 'function' && typeof api.render === 'function') {
+        const content = api.defaults(preset);
+        if (content) {
+          const markup = api.render({ key: 'catalog-preview', content });
+          if (markup) {
+            const html = '<!doctype html><html><head><meta charset="utf-8">' +
+              '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+              '<link rel="stylesheet" href="/js/portable-sections.css">' +
+              '<style>html,body{margin:0;background:#fff}body{pointer-events:none}</style>' +
+              '</head><body>' + markup + '</body></html>';
+            return '<iframe class="te-catalog-visual" title="Preview of ' +
+              cmsEscapeAttr(entry.label) + '" sandbox="" loading="lazy" tabindex="-1" ' +
+              'srcdoc="' + cmsEscapeAttr(html) + '"></iframe>';
+          }
+        }
+      }
+      // A template without a registered portable renderer is not advertised
+      // as a faithful screenshot. Keep a clear structural preview instead.
+      return '<span class="te-catalog-structure" aria-label="Structure preview for ' +
+        cmsEscapeAttr(entry.label) + '"><span class="te-catalog-structure__kicker">' +
+        cmsEscapeHtml(humanize(entry.type || 'Section')) +
+        '</span><span class="te-catalog-structure__heading">' +
+        cmsEscapeHtml(entry.label) +
+        '</span><span class="te-catalog-structure__rule"></span>' +
+        '<span class="te-catalog-structure__tiles"><i></i><i></i><i></i></span></span>';
+    }
+
     function renderCatalog(query) {
       const needle = String(query || '').trim().toLowerCase();
       let entries = themeCatalog();
@@ -923,12 +964,26 @@
       const filtered = entries.filter(function(entry) {
         return !needle || (entry.label + ' ' + entry.type + ' ' + entry.id).toLowerCase().includes(needle);
       });
-      byId('te-section-catalog').innerHTML = filtered.length ? filtered.map(function(entry) {
-        return '<button type="button" class="te-section-catalog-item" data-catalog-template="' + cmsEscapeAttr(entry.templateKey) + '" data-catalog-preset="' + cmsEscapeAttr(entry.preset || entry.id) + '">' +
-          '<span class="te-section-catalog-item__icon">' + icon.section + '</span><span><strong>' + cmsEscapeHtml(entry.label) + '</strong><small>' + cmsEscapeHtml(humanize(entry.source || 'heuristic')) + ' · ' + cmsEscapeHtml(entry.type || entry.templateKey) + '</small></span>' +
-        '</button>';
-      }).join('') : '<div class="te-empty">No sections match that search.</div>';
+      const visualCards = filtered.map(function(entry) {
+        return '<button type="button" class="te-section-catalog-item te-section-catalog-item--visual" data-catalog-template="' +
+          cmsEscapeAttr(entry.templateKey) + '" data-catalog-preset="' +
+          cmsEscapeAttr(entry.preset || entry.id) + '">' +
+          '<span class="te-catalog-visual-wrap">' + catalogVisual(entry) + '</span>' +
+          '<span class="te-catalog-card-copy"><strong>' + cmsEscapeHtml(entry.label) +
+          '</strong><small>' + cmsEscapeHtml(humanize(entry.source || 'heuristic')) +
+          ' · ' + cmsEscapeHtml(entry.type || entry.templateKey) + '</small></span></button>';
+      }).join('');
+      byId('te-section-catalog').innerHTML =
+        '<button type="button" class="te-catalog-generate" data-start-section-generation>' +
+        '<img src="/admin/brand/agentsam-gorilla-tiny.svg" alt="" aria-hidden="true">' +
+        '<span><strong>Generate with AgentSam</strong><small>Create a reusable editable CMS section</small></span><span aria-hidden="true">↗</span></button>' +
+        (filtered.length ? visualCards : '<div class="te-empty">No sections match that search.</div>');
 
+      byId('te-section-catalog').querySelector('[data-start-section-generation]')?.addEventListener('click', function() {
+        if (menu.open) menu.close();
+        else menu.hidden = true;
+        window.dispatchEvent(new CustomEvent('theme-editor:generate-request', { detail: { kind: 'section' } }));
+      });
       byId('te-section-catalog').querySelectorAll('[data-catalog-template]').forEach(function(button) {
         button.addEventListener('click', function() {
           const insertAt = sectionInsertIndex;

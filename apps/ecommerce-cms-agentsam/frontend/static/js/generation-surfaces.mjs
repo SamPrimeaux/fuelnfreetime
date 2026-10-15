@@ -125,12 +125,33 @@ export function createGenerationFlow(regions) {
     },
     openRequest() {
       if (state.generating) return;
-      if (!placeholder || !placeholder.isConnected) placeholder = insertGeneratingNode(regions.tree);
+      // Do not insert a fake generating block into the tree before the
+      // merchant explicitly submits a request.
       regions.panel.hidden = false;
       pinGenerationPreview();
       regions.panel.setAttribute("data-panel-state", "request");
       regions.panel.setAttribute("data-surface", "left");
       regions.panel.replaceChildren();
+      const heading = doc.createElement("div");
+      heading.className = "te-generation-head";
+      const identity = doc.createElement("div");
+      identity.className = "te-generation-identity";
+      const mark = doc.createElement("img");
+      mark.src = "/admin/brand/agentsam-gorilla-tiny.svg";
+      mark.alt = "";
+      mark.setAttribute("aria-hidden", "true");
+      const title = doc.createElement("strong");
+      title.textContent = "Generate section";
+      identity.append(mark, title);
+      const close = doc.createElement("button");
+      close.type = "button";
+      close.setAttribute("aria-label", "Close AgentSam generation workspace");
+      close.textContent = "×";
+      close.addEventListener("click", () => { regions.panel.hidden = true; });
+      heading.append(identity, close);
+      const explanation = doc.createElement("p");
+      explanation.className = "te-generation-lead";
+      explanation.textContent = "Describe the component you want. Review the live build, then choose whether to install it in your private CMS draft.";
       const label = doc.createElement("label");
       const requestId = "agentsam-generation-request-text";
       label.htmlFor = requestId;
@@ -149,7 +170,7 @@ export function createGenerationFlow(regions) {
       send.textContent = "Send →";
       send.addEventListener("click", () => flow.send());
       actions.append(send);
-      regions.panel.append(label, box, actions);
+      regions.panel.append(heading, explanation, label, box, actions);
       box.focus();
     },
     send() {
@@ -178,9 +199,20 @@ export function createGenerationFlow(regions) {
       stop.setAttribute("aria-label", "Stop section generation");
       stop.textContent = "Stop";
       head.append(phase, stop);
+      const progress = doc.createElement("div");
+      progress.className = "te-generation-progress";
+      const mark = doc.createElement("img");
+      mark.src = "/admin/brand/agentsam-gorilla-tiny.svg";
+      mark.alt = "";
+      const explanation = doc.createElement("span");
+      explanation.textContent = "AgentSam is preparing editable markup and styles. Progress below reports build stages, not private reasoning.";
+      progress.append(mark, explanation);
+      const codeHeading = doc.createElement("strong");
+      codeHeading.className = "te-generation-code-label";
+      codeHeading.textContent = "Building component · source preview";
       const preview = doc.createElement("miniagentsam-codepreview");
       preview.setAttribute("data-lines", "13");
-      regions.panel.append(head, preview);
+      regions.panel.append(head, progress, codeHeading, preview);
       stop.addEventListener("click", () => emit("agentsam-generation-stop"));
       const detail = { request, phase, stop, preview };
       emit("agentsam-generation-request", detail);
@@ -241,7 +273,10 @@ export function createGenerationFlow(regions) {
           note.setAttribute("role", "alert");
         }
       });
-      regions.panel.append(title, note, preview, acceptButton, edit);
+      const name = doc.createElement("small");
+      name.className = "te-generation-review-kind";
+      name.textContent = "Reusable CMS section · native inspector after installation";
+      regions.panel.append(title, name, note, preview, acceptButton, edit);
     },
     complete(settings = {}, provenance = {}) {
       state.generating = false;

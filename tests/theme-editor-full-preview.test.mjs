@@ -61,7 +61,7 @@ test('Chrome: clicking Sections, Theme Settings and App Embeds twice gives full-
       '<section data-drawer-panel="sections">Sections</section>',
       '<section data-drawer-panel="theme-settings" hidden>Theme Settings</section>',
       '<section data-drawer-panel="app-embeds" hidden>App Embeds</section></aside>',
-      '<main class="theme-studio-canvas"><div class="te-preview-device" data-device="desktop">Actual preview canvas</div></main>',
+      '<main class="theme-studio-canvas"><div class="te-preview-device" data-device="mobile">Actual preview canvas</div></main>',
       '<div class="te-mobile-selection-bar"></div>',
       '<aside class="theme-editor-panel">Inspector</aside>',
       '</div></div><pre id="result"></pre>',
@@ -80,8 +80,9 @@ test('Chrome: clicking Sections, Theme Settings and App Embeds twice gives full-
       "const canvas = document.querySelector('.theme-studio-canvas');",
       "const tree = document.querySelector('.theme-studio-tree');",
       "const panel = document.querySelector('.theme-editor-panel');",
+      "const viewport = document.querySelector('.te-preview-device');",
       'function measure() { const a=canvas.getBoundingClientRect(),w=ws.getBoundingClientRect();' +
-        ' return { canvasWidth:a.width, workspaceWidth:w.width, canvasX:a.left-w.left,' +
+        ' return { canvasWidth:a.width, viewportWidth:viewport.getBoundingClientRect().width, workspaceWidth:w.width, canvasX:a.left-w.left,' +
         ' treeDisplay:getComputedStyle(tree).display, panelDisplay:getComputedStyle(panel).display,' +
         ' drawer:studio.dataset.editorDrawer, inspector:studio.dataset.inspector,' +
         ' columns:getComputedStyle(ws).gridTemplateColumns }; }',
@@ -98,9 +99,9 @@ test('Chrome: clicking Sections, Theme Settings and App Embeds twice gives full-
       '}',
       "const closed = measurements.filter(([name])=>name.endsWith('-closed')).every(([,m])=>",
       '  m.drawer==="closed" && m.inspector==="closed" && m.treeDisplay==="none" && m.panelDisplay==="none" &&',
-      '  m.canvasWidth>=m.workspaceWidth-3 && Math.abs(m.canvasX)<3);',
+      '  m.canvasWidth>=m.workspaceWidth-3 && m.viewportWidth>=m.workspaceWidth-3 && Math.abs(m.canvasX)<3);',
       "const opened = measurements.filter(([name])=>name.endsWith('-opened')||name.endsWith('-reopened')).every(([,m])=>",
-      '  m.drawer!=="closed" && m.inspector==="open" && m.canvasWidth>200 && m.canvasWidth<m.workspaceWidth-450 &&',
+      '  m.drawer!=="closed" && m.inspector==="open" && m.canvasWidth>200 && m.canvasWidth<m.workspaceWidth-450 && m.viewportWidth<=431 &&',
       '  m.treeDisplay!=="none" && m.panelDisplay!=="none");',
       "const buttonState = [...document.querySelectorAll('[data-drawer-mode]')].filter(b=>b.getAttribute('aria-pressed')==='true').length===1;",
       'setInspectorVisible(false); button("app-embeds").click(); button("app-embeds").click();',
