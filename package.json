@@ -104,7 +104,7 @@
     "mail:backfill": "node scripts/backfill-inbound-mail.mjs",
     "mail:hydrate": "node scripts/hydrate-inbound-bodies.mjs",
     "cf:status": "./scripts/with-cf-admin-env.sh node scripts/cf-status.mjs",
-    "guard:boundaries": "node scripts/guard-boundaries.mjs && npm run check:authority",
+    "guard:boundaries": "node scripts/guard-boundaries.mjs && node --test tests/agentsam-icon-integrity.test.mjs && npm run check:authority",
     "db:migrate:catalog": "./scripts/with-cf-admin-env.sh ./node_modules/.bin/wrangler d1 execute fuelnfreetime --remote --file=db/migrate-agentsam-catalog.sql",
     "db:migrate:catalog:iam": "./scripts/with-cf-admin-env.sh ./node_modules/.bin/wrangler d1 execute inneranimalmedia-business --remote -c ../inneranimalmedia/wrangler.production.toml --file=db/migrate-agentsam-catalog.sql",
     "db:migrate:catalog:all": "npm run db:migrate:catalog && npm run db:migrate:catalog:iam",
