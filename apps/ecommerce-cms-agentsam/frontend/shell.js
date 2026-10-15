@@ -1,3 +1,5 @@
+// Brand asset path for the side-assistant trigger (served from the app's /admin/brand folder).
+const AGENT_TRIGGER_ICON = "/admin/brand/mini-agentsam-trigger.svg";
 const LOGO_URL =
   "https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ad23b2d9-e2e4-4ad6-eb81-9e4c983df000/thumbnail";
 
