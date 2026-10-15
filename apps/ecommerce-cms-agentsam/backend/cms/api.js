@@ -1,5 +1,6 @@
 import { ROUTE_MANIFEST } from "../lib/route-manifest.js";
 import { attachCmsDefinitions, listCmsDefinitions } from "./definition-registry.mjs";
+import { listStoreThemes, selectThemePreview } from "./theme-authority.mjs";
 import { createAuthoringEngine } from "../../cms/authoring/engine.ts";
 import { reconcileCanonicalBlocks } from "../../cms/authoring/block-projection.ts";
 import { validateThemeSettings, validateThemeCss } from "./theme-style-contract.mjs";
@@ -1584,6 +1585,21 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     catch { return json({error:"Invalid JSON"}, {status:400}); }
     const result = await acceptGeneratedSection(env,generatedMatch[1],context.accountId,body);
     return json(result,{status:result.status || 200});
+  }
+
+  if (path === "/api/admin/cms/themes" && method === "GET") {
+    if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
+    const result = await listStoreThemes(env, context.accountId);
+    return json(result, { status: result.ok ? 200 : 503 });
+  }
+  if (path === "/api/admin/cms/theme-selection" && method === "PUT") {
+    if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
+    let body;
+    try { body = await request.json(); }
+    catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
+    const result = await selectThemePreview(env, body.slug, context.accountId,
+      body.expected_version ?? null);
+    return json(result, { status: result.status || 200 });
   }
 
   if (path === "/api/admin/cms/registry" && method === "GET") {
