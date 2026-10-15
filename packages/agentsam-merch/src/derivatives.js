@@ -10,6 +10,13 @@ export const DERIVATIVE_ROLE = Object.freeze({
   MOCKUP: "mockup",
 });
 
+// #UNFINISHEDTOOLS (commerce.artwork.prepare): this PLANS derivatives (role/format/preserve) but nothing
+// EXECUTES the preflight `actions` (trim, place, rasterize, convert, color space, alpha, optimize), so no refined,
+// aligned production file is ever produced here. The only real execution is browser canvas code in
+// StudioWorkspace.tsx and storefront-oriented optimization in backend/assets/*. Build
+// createArtworkPreparer({ runtime }) (browser | Worker env.IMAGES/jSquash | Node sharp) that runs the actions in
+// order and re-runs evaluateManufacturingCompatibility to prove `ready`. Also add computePlacement().
+// Audit: docs/AGENTSAM_MERCH_AND_TOOLS_AUDIT_20261015.md (F1). Tracked: tkt_13207989954e4171.
 export function planMediaDerivatives({
   asset,
   profile,

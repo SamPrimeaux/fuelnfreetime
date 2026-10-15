@@ -20,5 +20,6 @@
   "source": {
     "kind": "operator-defined",
     "verified": false
-  }
+  },
+  "_unfinished": "#UNFINISHEDTOOLS: hand-written and inaccurate. Completeful's real tee print area is 14x16 in (4200x4800 px @300dpi) on BOTH front and back; this says 13 in / back only. Generate profiles from completeful_catalog_print_locations (see docs/AGENTSAM_MERCH_AND_TOOLS_AUDIT_20261015.md F2). Add chest/left-chest/sleeve and an embroidered-patch hat profile."
 }

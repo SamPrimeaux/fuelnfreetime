@@ -13,6 +13,13 @@ import { executeCompletefulTool } from "./completeful-tools.js";
 import { executeAdminAppTool } from "./admin-app-tools.js";
 import { CORE_EXECUTABLE_TOOL_KEYS, SELF_CONFIRMING_TOOL_KEYS, executeCoreTool } from "./core-tools.js";
 
+// #UNFINISHEDTOOLS: only the operations below (plus CORE_EXECUTABLE_TOOL_KEYS, vectorize, admin_api growth|mail)
+// are callable. Registry rows without an executor, including fnf_image_optimize, fnf_media_upload,
+// fnf_asset_publish, fnf_video_thumbnail, fnf_content_asset_link, fnf_brand_asset_audit and
+// fnf_image_variant_plan, are DECORATIVE and never offered to the model. Missing entirely: artwork
+// preflight/prepare, mockup render, design create/export, order quote, image generate/edit/upscale/
+// background-remove. Planned definitions: backend/tools/packs/media.planned.ts.
+// Audit: docs/AGENTSAM_MERCH_AND_TOOLS_AUDIT_20261015.md (F4). Tracked: tkt_13207989954e4171.
 const COMPLETEFUL_EXECUTABLE_OPERATIONS = new Set([
   "status",
   "shops.list",

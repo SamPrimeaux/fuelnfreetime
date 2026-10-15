@@ -63,7 +63,7 @@ function renderAgentsamShell() {
           <span class="agentsam-mark" aria-hidden="true"></span>
           <div>
             <strong>AgentSam</strong>
-            <span id="agentsam-status">Context-aware admin chat</span>
+            <span id="agentsam-status" hidden></span>
           </div>
         </div>
         <div data-assistant-actions="true"><button type="button" data-assistant-action="New chat" aria-label="Start a new chat" title="Start a new chat">${ASSISTANT_NEW_CHAT_ICON}</button><button type="button" data-assistant-action="Expand" aria-label="Expand Side Assistant" title="Expand Side Assistant">${ASSISTANT_EXPAND_ICON}</button></div>
@@ -122,7 +122,8 @@ function renderMcpBanner(data) {
 function updateStatusLine(extra) {
   const status = document.getElementById("agentsam-status");
   if (!status) return;
-  status.textContent = extra || "Context-aware admin chat";
+  status.textContent = extra || "";
+  status.hidden = !extra;
 }
 
 /* Render model Markdown as safe DOM text; never inject model-authored HTML. */

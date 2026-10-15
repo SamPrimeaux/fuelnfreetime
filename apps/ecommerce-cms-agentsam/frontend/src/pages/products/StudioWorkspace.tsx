@@ -134,6 +134,18 @@ function placementKey(assetId: number | null | undefined, variantId: string, loc
     trimTransparent, removeFlatBackground]);
 }
 
+// lucide pencil-sparkles: the Tools tab is the AI image toolkit.
+function PencilSparklesIcon({ size = 22 }: { size?: number }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M10 3H8" /><path d="m15.007 5.008 3.987 3.986" /><path d="M20 15v4" />
+      <path d="M21.174 6.813a2.82 2.82 0 0 0-3.986-3.987L3.842 16.175a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+      <path d="M22 17h-4" /><path d="M4 5v4" /><path d="M6 7H2" /><path d="M9 2v2" />
+    </svg>
+  );
+}
+
 const tabs = [
   { id: "options", label: "Options", icon: "options" },
   { id: "upload", label: "Upload", icon: "upload" },
@@ -217,6 +229,12 @@ export default function StudioWorkspace({
   const [mediaSearch, setMediaSearch] = useState("");
   // Default to artwork made or uploaded in Product Studio; the full media library is opt-in.
   const [artworkScope, setArtworkScope] = useState<"studio" | "library">("studio");
+  // Tools panel (AI image tools). #UNFINISHEDTOOLS: see docs/AGENTSAM_MERCH_AND_TOOLS_AUDIT_20261015.md
+  const [aiMode, setAiMode] = useState<"generate" | "edit">("generate");
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiBackground, setAiBackground] = useState<"transparent" | "white">("transparent");
+  const [aiSize, setAiSize] = useState<"auto" | "square" | "landscape" | "portrait">("auto");
+  const [aiQuality, setAiQuality] = useState<"auto" | "high" | "medium" | "low">("auto");
   const [mediaQuery, setMediaQuery] = useState("");
   const [showArtwork, setShowArtwork] = useState(true);
   const [guides, setGuides] = useState(false);
@@ -228,7 +246,6 @@ export default function StudioWorkspace({
   const [agentVisible, setAgentVisible] = useState(false);
   const miniRef = useRef<ReturnType<typeof createMiniAgentSam> | null>(null);
   const miniSendRef = useRef<(message: string, signal: AbortSignal, resource: unknown) => Promise<{ reply: string }>>(async () => ({ reply: "" }));
-  const miniTriggerRef = useRef<HTMLButtonElement>(null);
   const variantDialogRef = useRef<HTMLElement>(null);
   const fullPreviewCloseRef = useRef<HTMLButtonElement>(null);
   const dragRef = useRef<{ mode: "move" | "resize"; corner: "tl" | "tr" | "bl" | "br"; startX: number; startY: number; x: number; y: number; scale: number } | null>(null);
@@ -261,10 +278,45 @@ export default function StudioWorkspace({
     miniRef.current.select(
       { type: "product_artwork", surface: "product-studio",
         productId: catalogId, variantId, locationId, assetId: asset?.id || null },
-      () => miniTriggerRef.current?.getBoundingClientRect() || null,
+      () => new DOMRect(window.innerWidth / 2, window.innerHeight - 96, 0, 0),
     );
     setAgentVisible(true);
   }
+
+  // The global top-bar crosshair dispatches a cancelable `agentsam:mini-open`. Product Studio owns
+  // product/artwork context (and artwork generation), so it claims the request and opens its composer.
+  const openMiniRef = useRef(openMiniAgentSam);
+  openMiniRef.current = openMiniAgentSam;
+  useEffect(() => {
+    const claim = (event: Event) => { event.preventDefault(); openMiniRef.current(); };
+    window.addEventListener("agentsam:mini-open", claim);
+    return () => window.removeEventListener("agentsam:mini-open", claim);
+  }, []);
+  // Report composer state so the global crosshair stays lit while this page's composer is open.
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("agentsam:mini-state", { detail: { open: agentVisible } }));
+    return () => { window.dispatchEvent(new CustomEvent("agentsam:mini-state", { detail: { open: false } })); };
+  }, [agentVisible]);
+
+  // #UNFINISHEDTOOLS (media.image.generate): this goes through askAI -> /api/admin/agentsam/chat ->
+  // ai-run.js, which hardcodes OpenAI gpt-image-2 at 1024x1024 and IGNORES size/quality/background.
+  // Until the real tool exists (backend/tools/packs/media.planned.ts) the options below are folded into the
+  // prompt as hints only. Replace this with a call to the registered media.image.generate tool.
+  async function generateImage() {
+    const hints = [aiPrompt.trim()];
+    hints.push(aiBackground === "transparent" ? "transparent background, isolated artwork" : "plain white background");
+    if (aiSize !== "auto") {
+      hints.push({ square: "square 1:1 composition", landscape: "landscape 3:2 composition", portrait: "portrait 2:3 composition" }[aiSize]);
+    }
+    if (aiQuality !== "auto") hints.push(aiQuality + " detail");
+    try { await askAI(true, hints.join(", ")); } catch { /* askAI already surfaced the error */ }
+  }
+  // #UNFINISHEDTOOLS: renderMockup is intentionally detached from the UI (the "Render Completeful mockup"
+  // button was removed). It renders ONE mockup for the first selected variant and has never run in production.
+  // Rebuild as commerce.mockup.render (per color x side) per tkt_a6482217d8ca4be4, then delete this reference.
+  void renderMockup;
+  const nextLabel = busy === "prepare" ? "Preparing print artwork…"
+    : busy === "save" ? "Saving design…" : "Next step · Product details";
 
   function startDrag(event: PointerEvent<HTMLDivElement>, mode: "move" | "resize", corner: "tl" | "tr" | "bl" | "br" = "br") {
     if (!asset || !showArtwork) return;
@@ -414,6 +466,24 @@ export default function StudioWorkspace({
       previousFocus?.focus();
     };
   }, [manageVariants]);
+  // Color thumbnails: one per color being sold, so every colorway can be reviewed without opening a menu.
+  // These are client composites (garment plate + current artwork placement), not stored mockups.
+  // #NOTDONE: stored per-color mockups are tracked in tkt_a6482217d8ca4be4.
+  const colorAxis = optionAxes.find((axis) => /color|colour/i.test(axis));
+  const colorways = colorAxis
+    ? variantAxisValues(detail.variants, colorAxis).flatMap((value) => {
+        const sample = detail.variants.find((candidate) =>
+          variantAttributes(candidate)[colorAxis] === value && selectedVariantSet.has(catalogVariantId(candidate)));
+        if (!sample) return [];
+        const blank = blankGarmentImageSources(sample, detail.product);
+        const image = selectStudioSideImage(
+          [], locationId, catalogVariantId(sample), location?.artboard_image_url,
+          blank[0], isFrontLocation, variantAttributes(sample), hasDistinctProviderSideArtboard,
+        );
+        const sources = image ? (isFrontLocation && blank.length ? blank : [image]) : [];
+        return [{ value, sources }];
+      })
+    : [];
   const printPixels = printPixelSize(location);
   const ratio =
     location?.file_width && location.file_height
@@ -512,7 +582,7 @@ export default function StudioWorkspace({
     return () => clearTimeout(timer);
   }, [mediaSearch]);
   useEffect(() => {
-    if (tab !== "upload") return;
+    if (tab !== "upload" && tab !== "tools") return;
     const controller = new AbortController();
     queueMicrotask(() => {
       if (!controller.signal.aborted) {
@@ -1062,6 +1132,8 @@ export default function StudioWorkspace({
   });
   const lowResolution = quality.lowResolution;
   const filteredMedia = media;
+  // Generated artwork is saved as studio-artwork-<id>.<ext> by upload() after askAI().
+  const aiImages = media.filter((item) => /^studio-artwork-/i.test(item.filename || ""));
   const currentPlacementKey = placementKey(asset?.id, variantId, locationId, x, y, scale, rotation, flipX, flipY, trimTransparent, removeFlatBackground);
   const preparedIsCurrent = Boolean(preparedAsset && preparedFor === currentPlacementKey);
   const currentRenderUrl = preparedIsCurrent ? providerRenderUrl : null;
@@ -1091,12 +1163,13 @@ export default function StudioWorkspace({
     <div className="ps-workspace" data-agentsam-resource="product-design-workspace">
       <header className="ps-workspace-header">
         <button
-          className="ps-text-button"
+          className="ps-text-button ps-icon-action ps-icon-action--ghost"
+          data-tip="Back to product details"
           onClick={onBack}
           aria-label="Back to product details"
         >
           <StudioIcon name="back" />
-          <span>Product details</span>
+          <span className="ps-sr-only">Product details</span>
         </button>
         <nav className="ps-steps" aria-label="Product creation progress">
           <ol>
@@ -1110,11 +1183,25 @@ export default function StudioWorkspace({
           </ol>
         </nav>
         <div className="ps-workspace-actions">
-          <button className="ps-button" disabled={Boolean(busy)} onClick={() => void saveDraft()}>
-            {busy === "save" ? "Saving…" : "Save design"}
+          <button type="button" className="ps-icon-action" data-tip={busy === "save" ? "Saving…" : "Save design"}
+            aria-label="Save design" disabled={Boolean(busy)} onClick={() => void saveDraft()}>
+            {busy === "save" ? <span className="ps-icon-action__busy" aria-hidden="true" /> : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 17V3" /><path d="m6 11 6 6 6-6" /><path d="M19 21H5" />
+              </svg>
+            )}
+            <span className="ps-sr-only">Save design</span>
           </button>
-          <button className="ps-button ps-primary" disabled={Boolean(busy)} onClick={() => void continueToProductDetails()}>
-            {busy === "prepare" ? "Preparing print artwork…" : busy === "save" ? "Saving design…" : "Next step · Product details →"}
+          <button type="button" className="ps-icon-action ps-icon-action--primary" data-tip={nextLabel}
+            aria-label={nextLabel} disabled={Boolean(busy)} onClick={() => void continueToProductDetails()}>
+            {busy === "prepare" ? <span className="ps-icon-action__busy" aria-hidden="true" /> : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M17 12H3" /><path d="m11 18 6-6-6-6" /><path d="M21 5v14" />
+              </svg>
+            )}
+            <span className="ps-sr-only">{nextLabel}</span>
           </button>
           {error && <p className="ps-step-feedback ps-step-feedback--error" role="alert">{error}</p>}
           {cropError && <p className="ps-step-feedback ps-step-feedback--error" role="alert">{cropError}</p>}
@@ -1170,14 +1257,15 @@ export default function StudioWorkspace({
               aria-pressed={panelOpen && tab === t.id}
               aria-expanded={panelOpen && tab === t.id}
             >
-              <StudioIcon name={t.icon} />
+              {t.id === "tools" ? <PencilSparklesIcon /> : <StudioIcon name={t.icon} />}
               <span>{t.label}</span>
             </button>
           ))}
           <a className="ps-toolrail__help" href="/admin/products/help/artwork" title="Artwork help">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
               strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><path d="M12 17h.01" />
+              <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
+              <path d="M12 17h.01" /><path d="M9.1 9a3 3 0 0 1 5.82 1c0 2-3 3-3 3" />
             </svg>
             <span>Artwork help</span>
           </a>
@@ -1440,6 +1528,14 @@ export default function StudioWorkspace({
                     <input type="checkbox" checked={flipY} onChange={(event) => setFlipY(event.target.checked)} />
                     Flip vertically
                   </label>
+                  <label className="ps-check">
+                    <input type="checkbox" checked={guides} onChange={(event) => setGuides(event.target.checked)} />
+                    Show grid
+                  </label>
+                  <label className="ps-check">
+                    <input type="checkbox" checked={snapEnabled} onChange={(event) => setSnapEnabled(event.target.checked)} />
+                    Snap to grid
+                  </label>
                   <button
                     className="ps-button"
                     onClick={() => {
@@ -1466,87 +1562,147 @@ export default function StudioWorkspace({
             </>
           )}
           {tab === "tools" && (
-            <>
-              <label className="ps-field">
-                Working design name
-                <input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={180} />
-              </label>
-              <label className="ps-field">
-                Design notes
-                <textarea
-                  rows={5}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Placement notes, color direction, changes for the next version…"
-                />
-              </label>
-              <label className="ps-check">
-                <input
-                  type="checkbox"
-                  checked={guides}
-                  onChange={(e) => setGuides(e.target.checked)}
-                />{" "}
-                Show grid
-              </label>
-              <label className="ps-check">
-                <input type="checkbox" checked={snapEnabled} onChange={(event) => setSnapEnabled(event.target.checked)} />
-                Snap to grid
-              </label>
-              <button
-                className="ps-button ps-wide"
-                disabled={!asset || Boolean(busy)}
-                onClick={() => void prepareArtwork()}
-              >
-                {busy === "prepare" ? "Preparing…" : preparedIsCurrent ? "Rebuild production artwork" : "Prepare for print"}
-              </button>
-              {subjectRemovalAvailable && (
-                <div className="ps-prep-options">
-                  <button type="button" className="ps-button ps-wide"
-                    disabled={!asset || Boolean(busy)}
-                    onClick={() => void removeBackgroundAI()}>
-                    {busy === "remove-background" ? "Removing background…" : "Remove background"}
+            <div className="ps-ai-tools">
+              <div className="ps-ai-tabs" role="tablist" aria-label="AI image tools">
+                {([["generate", "Image generator"], ["edit", "Upscale & edit"]] as const).map(([id, label]) => (
+                  <button type="button" role="tab" key={id} aria-selected={aiMode === id}
+                    className={aiMode === id ? "is-active" : ""} onClick={() => setAiMode(id)}>
+                    {label}
                   </button>
-                </div>
-              )}
-              <div className="ps-paper-note ps-prep-options">
-                <strong>Artwork preparation</strong>
-                <label className="ps-check">
-                  <input
-                    type="checkbox"
-                    checked={removeFlatBackground}
-                    onChange={(e) => setRemoveFlatBackground(e.target.checked)}
-                  />{" "}
-                  Remove connected flat background
-                </label>
-                <label className="ps-check">
-                  <input
-                    type="checkbox"
-                    checked={trimTransparent}
-                    onChange={(e) => setTrimTransparent(e.target.checked)}
-                  />{" "}
-                  Trim transparent edges
-                </label>
+                ))}
               </div>
-              {asset && preparedAsset && preparedIsCurrent && (
-                <div className="ps-derivative-compare" aria-label="Original and prepared artwork comparison">
-                  <figure>
-                    <img src={asset.url} alt="Original artwork" />
-                    <figcaption>Original · unchanged</figcaption>
-                  </figure>
-                  <figure>
-                    <img src={preparedAsset.url} alt="Prepared artwork derivative" />
-                    <figcaption>Prepared derivative</figcaption>
-                  </figure>
-                </div>
+              {aiMode === "generate" && (
+                <>
+                  <label className="ps-field ps-ai-prompt">
+                    Prompt
+                    <textarea rows={4} value={aiPrompt} maxLength={1000}
+                      onChange={(event) => setAiPrompt(event.target.value)}
+                      placeholder={'e.g. "Retro sunset badge, bold vector shapes, 2 colors"'} />
+                    <small className="ps-ai-count">{aiPrompt.length} / 1000</small>
+                  </label>
+                  <details className="ps-ai-options" open>
+                    <summary>More options</summary>
+                    <div className="ps-chip-group" role="group" aria-label="Background">
+                      <span>Background</span>
+                      {(["transparent", "white"] as const).map((value) => (
+                        <button type="button" key={value} className={aiBackground === value ? "is-active" : ""}
+                          aria-pressed={aiBackground === value} onClick={() => setAiBackground(value)}>
+                          {value === "transparent" ? "Transparent" : "White"}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="ps-chip-group" role="group" aria-label="Size">
+                      <span>Size</span>
+                      {(["auto", "square", "landscape", "portrait"] as const).map((value) => (
+                        <button type="button" key={value} className={aiSize === value ? "is-active" : ""}
+                          aria-pressed={aiSize === value} onClick={() => setAiSize(value)}>
+                          {{ auto: "Auto", square: "Square (1:1)", landscape: "Landscape (3:2)", portrait: "Portrait (2:3)" }[value]}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="ps-chip-group" role="group" aria-label="Quality">
+                      <span>Quality</span>
+                      {(["auto", "high", "medium", "low"] as const).map((value) => (
+                        <button type="button" key={value} className={aiQuality === value ? "is-active" : ""}
+                          aria-pressed={aiQuality === value} onClick={() => setAiQuality(value)}>
+                          {value}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="ps-ai-hint">Options guide the generator. Final print size is set by the print area.</p>
+                  </details>
+                  <button type="button" className="ps-button ps-primary ps-wide"
+                    disabled={!aiPrompt.trim() || Boolean(busy)} onClick={() => void generateImage()}>
+                    {busy === "generate" ? "Generating…" : "Generate image"}
+                  </button>
+                  <div className="ps-ai-gallery-head">
+                    <strong>Your AI images</strong>
+                    <span className="ps-count">{aiImages.length}</span>
+                  </div>
+                  {aiImages.length ? (
+                    <div className="ps-media-grid ps-ai-gallery">
+                      {aiImages.map((item) => (
+                        <button type="button" key={item.id} title={item.filename}
+                          aria-label={`Place ${item.filename}`} aria-pressed={asset?.id === item.id}
+                          className={asset?.id === item.id ? "is-active" : ""} onClick={() => choose(item)}>
+                          <img src={item.url} alt="" loading="lazy" />
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="ps-asset-status">Generated images appear here.</p>
+                  )}
+                </>
               )}
-              <button
-                className="ps-button ps-wide"
-                disabled={!preparedIsCurrent || Boolean(busy)}
-                onClick={() => void renderMockup()}
-              >
-                {busy === "render" ? "Rendering with Completeful…" : "Render Completeful mockup"}
-              </button>
-            </>
+              {aiMode === "edit" && (
+                <>
+                  <div className="ps-ai-source">
+                    {asset ? (
+                      <>
+                        <img src={asset.url} alt="" />
+                        <div><strong>{asset.filename}</strong><small>Selected artwork</small></div>
+                      </>
+                    ) : (
+                      <p className="ps-asset-status">Choose artwork to edit.</p>
+                    )}
+                    <button type="button" className="ps-button" onClick={() => openTab("upload")}>
+                      {asset ? "Change" : "Choose artwork"}
+                    </button>
+                  </div>
+                  <div className="ps-ai-actions">
+                    <strong>Edit</strong>
+                    <button type="button" className="ps-button ps-wide"
+                      disabled={!asset || Boolean(busy) || !subjectRemovalAvailable}
+                      title={subjectRemovalAvailable ? "Remove the background and save a cutout copy" : "Background removal is not configured for this install"}
+                      onClick={() => void removeBackgroundAI()}>
+                      {busy === "remove-background" ? "Removing background…" : "Remove background"}
+                    </button>
+                    <label className="ps-check">
+                      <input type="checkbox" checked={removeFlatBackground}
+                        onChange={(event) => setRemoveFlatBackground(event.target.checked)} />
+                      Remove connected flat background
+                    </label>
+                    <label className="ps-check">
+                      <input type="checkbox" checked={trimTransparent}
+                        onChange={(event) => setTrimTransparent(event.target.checked)} />
+                      Trim transparent edges
+                    </label>
+                    {/* #UNFINISHEDTOOLS (media.image.upscale): no upscale provider/tool exists yet.
+                        Planned definition: backend/tools/packs/media.planned.ts. Enable when registered. */}
+                    <button type="button" className="ps-button ps-wide" disabled data-unfinished="media.image.upscale"
+                      title="Upscale is coming soon">
+                      Upscale <span className="ps-soon">Soon</span>
+                    </button>
+                    {/* #UNFINISHEDTOOLS (media.image.edit): imgx_edit_image is defined but inactive on the IAM
+                        registry and the FNF app has no edit path. Planned definition: media.planned.ts. */}
+                    <label className="ps-field">
+                      Edit with a prompt
+                      <textarea rows={3} disabled placeholder="Describe the change. Coming soon." />
+                    </label>
+                    <button type="button" className="ps-button ps-wide" disabled data-unfinished="media.image.edit"
+                      title="Prompt editing is coming soon">
+                      Apply edit <span className="ps-soon">Soon</span>
+                    </button>
+                  </div>
+                  <button type="button" className="ps-button ps-wide"
+                    disabled={!asset || Boolean(busy)} onClick={() => void prepareArtwork()}>
+                    {busy === "prepare" ? "Preparing…" : preparedIsCurrent ? "Rebuild production artwork" : "Prepare for print"}
+                  </button>
+                  {asset && preparedAsset && preparedIsCurrent && (
+                    <div className="ps-derivative-compare" aria-label="Original and prepared artwork comparison">
+                      <figure>
+                        <img src={asset.url} alt="Original artwork" />
+                        <figcaption>Original · unchanged</figcaption>
+                      </figure>
+                      <figure>
+                        <img src={preparedAsset.url} alt="Prepared artwork derivative" />
+                        <figcaption>Prepared derivative</figcaption>
+                      </figure>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           )}
         </aside>
         <div className="ps-stage-column" ref={stage}>
@@ -1578,7 +1734,7 @@ export default function StudioWorkspace({
           <div className="ps-stage" data-agentsam-resource="product-design-stage">
             <div className="ps-product-design-preview" style={{
               transform: `scale(${canvasZoom / 100})`,
-              width: `min(100%, 880px, calc((100dvh - 262px) * ${artboardAspectRatio}))`,
+              width: `min(100%, 880px, calc((100dvh - 350px) * ${artboardAspectRatio}))`,
             }}>
               <div className="ps-product-design-image">
                 <div className="ps-design-guide" style={{ aspectRatio: artboardAspectRatio }}
@@ -1697,6 +1853,32 @@ export default function StudioWorkspace({
               )}
             </div>
           </div>
+          {colorways.length > 1 && colorAxis && (
+            <div className="ps-colorway-rail" role="group" aria-label="Preview color">
+              {colorways.map(({ value, sources }) => (
+                <button type="button" key={value}
+                  className={"ps-colorway" + (selectedAttributes[colorAxis] === value ? " is-active" : "")}
+                  aria-pressed={selectedAttributes[colorAxis] === value}
+                  aria-label={`Preview ${value}`} title={value}
+                  onClick={() => chooseVariantOption(colorAxis, value)}>
+                  <span className="ps-colorway__thumb" style={{ aspectRatio: artboardAspectRatio }}>
+                    {sources.length
+                      ? <ProductImage sources={sources} alt="" />
+                      : <span className="ps-colorway__empty" aria-hidden="true" />}
+                    {sources.length > 0 && asset && showArtwork && (
+                      <span className="ps-mini-placement" style={placementFrameStyle}>
+                        <img src={artworkPreviewUrl} alt="" style={{
+                          width: `${scale}%`, left: `${x}%`, top: `${y}%`,
+                          transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})`,
+                        }} />
+                      </span>
+                    )}
+                  </span>
+                  <span className="ps-colorway__label">{value}</span>
+                </button>
+              ))}
+            </div>
+          )}
           {fullPreviewOpen && (
             <div className="ps-preview-overlay" onMouseDown={(event) => {
               if (event.target === event.currentTarget) setFullPreviewOpen(false);
@@ -1726,19 +1908,6 @@ export default function StudioWorkspace({
               </section>
             </div>
           )}
-          <button type="button" ref={miniTriggerRef} className="ps-composer-dock"
-            aria-label={agentVisible ? "Close miniAgentSam" : "Open miniAgentSam"}
-            aria-pressed={agentVisible}
-            title={agentVisible ? "Close miniAgentSam" : "Open miniAgentSam"}
-            onClick={openMiniAgentSam}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M12.034 12.681a.498.498 0 0 1 .647-.647l9 3.5a.5.5 0 0 1-.033.943l-3.444 1.068a1 1 0 0 0-.66.66l-1.067 3.443a.5.5 0 0 1-.943.033z" />
-              <path d="M5 3a2 2 0 0 0-2 2" /><path d="M19 3a2 2 0 0 1 2 2" /><path d="M5 21a2 2 0 0 1-2-2" />
-              <path d="M9 3h1" /><path d="M9 21h2" /><path d="M14 3h1" /><path d="M3 9v1" />
-              <path d="M21 9v2" /><path d="M3 14v1" />
-            </svg>
-          </button>
           {reply && (
             <details open className="ps-ai-reply">
               <summary>Creative direction</summary>

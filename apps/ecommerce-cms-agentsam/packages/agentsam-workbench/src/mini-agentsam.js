@@ -1,5 +1,11 @@
 import { attachCapabilityMenu } from './composer.js';
 
+// #NOTDONE: DUPLICATE SOURCE. This app-local copy is the one that SHIPS (bin/build-assets.mjs copies
+// packages/agentsam-workbench/src to /admin/workbench so a release never depends on the monorepo).
+// A second copy lives at packages/agentsam-workbench/src/mini-agentsam.js (used by repo tests).
+// Real fix: publish @inneranimalmedia/agentsam-workbench and consume it via installed(), like
+// revise-theme in build-assets. Until then keep both feature-aligned (tests/workbench-parity.test.mjs).
+// See docs/AGENTSAM_MERCH_AND_TOOLS_AUDIT_20261015.md (F9).
 export const miniAgentSamTokens = {
   accent: '#8b5cf6',
   icon: 'https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ac515729-af6b-4ea5-8b10-e581a4d02100/thumbnail',
@@ -85,6 +91,11 @@ export function createMiniAgentSam(host) {
     if (!r) {
       outline.hidden = true;
       return null;
+    }
+    // A zero-size anchor (e.g. a composer pinned to a screen edge) has nothing to outline.
+    if (!(r.width > 0 && r.height > 0)) {
+      outline.hidden = true;
+      return r;
     }
     Object.assign(outline.style, {
       left: `${r.left}px`,
@@ -345,6 +356,7 @@ export function createMiniAgentSam(host) {
       rect = null;
       outline.hidden = true;
     },
+    reposition: position,
     select(selection, bounds) {
       if (busy) close();
       resource = selection;
