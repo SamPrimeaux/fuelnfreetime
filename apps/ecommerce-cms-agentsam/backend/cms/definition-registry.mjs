@@ -17,7 +17,14 @@ function parseJson(value, fallback) {
 }
 
 export function normalizeCmsDefinition(row) {
-  const fields = parseJson(row.settings_schema_json, {});
+  // Historical D1 schemas predate the typed authoring vocabulary and omit
+  // display labels. Normalize at the read boundary; never discard saved keys.
+  const raw = parseJson(row.settings_schema_json, {});
+  const fields = Object.fromEntries(Object.entries(raw).map(([key, spec]) => [
+    key, spec && typeof spec === 'object' && !Array.isArray(spec)
+      ? { ...spec, label: spec.label || key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[._-]/g, ' ') }
+      : spec,
+  ]));
   return {
     id: row.id,
     key: row.definition_key,
