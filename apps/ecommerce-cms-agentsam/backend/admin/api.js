@@ -93,7 +93,7 @@ import {
 } from "./agentsam-github.js";
 import { onlineStoreOverview, getStorePreferences, postStorePreferences } from "./store.js";
 import { getStoreTheme, publishStoreTheme, setThemePublishReady, selectThemePreview } from "./themes.js";
-import { getThemePage, listThemePages, saveThemePage, renderThemePreview } from "./theme-workspace.js";
+// The second store_theme_pages editor is retired; Theme Studio uses CMS routes.
 import { retryAssetJob, runAdminCompaction } from "./ops.js";
 import { handleGrowthApi } from "./growth.js";
 import { handleDiscountsApi } from "./discounts.js";
@@ -739,41 +739,11 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
     return json(result, { status: result.status || 200 });
   }
 
-  let themePageMatch = path.match(/^\/api\/admin\/store\/themes\/([^/]+)\/pages$/);
-  if (themePageMatch && method === "GET") {
-    const result = await listThemePages(env, decodeURIComponent(themePageMatch[1]));
-    return result.ok ? json(result) : json(result, { status: result.status || 500 });
-  }
-
-  themePageMatch = path.match(/^\/api\/admin\/store\/themes\/([^/]+)\/pages\/([a-z0-9-]+)$/);
-  if (themePageMatch && method === "GET") {
-    const result = await getThemePage(env, decodeURIComponent(themePageMatch[1]), themePageMatch[2]);
-    return result.ok ? json(result) : json(result, { status: result.status || 500 });
-  }
-  if (themePageMatch && method === "PUT") {
-    let body = {};
-    try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
-    const result = await saveThemePage(env, decodeURIComponent(themePageMatch[1]), themePageMatch[2], body, user?.id || null);
-    return result.ok ? json(result) : json(result, { status: result.status || 500 });
-  }
-
-  themePageMatch = path.match(/^\/api\/admin\/store\/themes\/([^/]+)\/preview$/);
-  if (themePageMatch && (method === "GET" || method === "POST")) {
-    let overrideSections = null;
-    if (method === "POST") {
-      try {
-        const body = await request.json();
-        overrideSections = Array.isArray(body?.sections) ? body.sections : null;
-      } catch {
-        return json({ error: "Invalid JSON" }, { status: 400 });
-      }
-    }
-    return renderThemePreview(
-      env,
-      decodeURIComponent(themePageMatch[1]),
-      url.searchParams.get("slug") || "shop",
-      overrideSections,
-    );
+  // Retired: the old package workspace depended on store_theme_pages, a
+  // second and uninstalled CMS table family. Do not continue its write path.
+  if (/^\/api\/admin\/store\/themes\/[^/]+\/(?:pages(?:\/[a-z0-9-]+)?|preview)$/.test(path)) {
+    return json({ error: "Use the canonical CMS Theme Studio for page and theme editing.",
+      edit_href: "/admin/theme-editor?slug=shop", code: "retired_theme_workspace" }, { status: 410 });
   }
 
   let themeMatch = path.match(/^\/api\/admin\/store\/themes\/([^/]+)$/);
