@@ -1341,6 +1341,15 @@ export default function StudioWorkspace({
                   <option key={album.id} value={album.id}>{album.name} ({album.asset_count ?? 0})</option>
                 ))}
               </select>
+              <div className="ps-asset-scope" role="group" aria-label="Artwork source">
+                {([["studio", "Studio artwork"], ["library", "Whole library"]] as const).map(([value, label]) => (
+                  <button type="button" key={value} className={artworkScope === value ? "is-active" : ""}
+                    aria-pressed={artworkScope === value}
+                    onClick={() => { setArtworkScope(value); setMediaPage(1); setMedia([]); }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
               <label className="ps-asset-search">
                 <StudioIcon name="search" size={15} />
                 <input type="search" value={mediaSearch} onChange={(event) => setMediaSearch(event.target.value)}
