@@ -1102,12 +1102,13 @@ export default function StudioWorkspace({
     <div className="ps-workspace" data-agentsam-resource="product-design-workspace">
       <header className="ps-workspace-header">
         <button
-          className="ps-text-button"
+          className="ps-text-button ps-icon-action ps-icon-action--ghost"
+          data-tip="Back to product details"
           onClick={onBack}
           aria-label="Back to product details"
         >
           <StudioIcon name="back" />
-          <span>Product details</span>
+          <span className="ps-sr-only">Product details</span>
         </button>
         <nav className="ps-steps" aria-label="Product creation progress">
           <ol>
