@@ -21,14 +21,18 @@ test('Online Store publishes themes through theme lifecycle, never page publish'
   assert.match(source, /\/api\/admin\/store\/themes\/\$\{encodeURIComponent\(btn\.dataset\.themeId\)\}\/publish/);
 });
 
-test('package theme editor uses isolated workspace route', () => {
-  const themes = fs.readFileSync(new URL('../apps/ecommerce-cms-agentsam/backend/admin/themes.js', import.meta.url), 'utf8');
-  const routes = fs.readFileSync(new URL('../apps/ecommerce-cms-agentsam/backend/lib/admin-routes.js', import.meta.url), 'utf8');
-  assert.match(themes, /\/admin\/theme-workspace\?theme=/);
-  assert.match(routes, /"theme-workspace"/);
+test('installed themes use the existing CMS Theme Studio, not a second workspace', () => {
+  const canonical = fs.readFileSync(new URL('../apps/ecommerce-cms-agentsam/backend/cms/theme-authority.mjs', import.meta.url), 'utf8');
+  const admin = fs.readFileSync(new URL('../apps/ecommerce-cms-agentsam/backend/admin/api.js', import.meta.url), 'utf8');
+  assert.match(canonical, /cms_artifacts/);
+  assert.match(canonical, /cms_globals/);
+  assert.match(canonical, /\/admin\/theme-editor\?slug=shop/);
+  assert.doesNotMatch(canonical, /FROM store_themes|FROM store_theme_pages/);
+  assert.doesNotMatch(admin, /import \{ getThemePage, listThemePages/);
 });
 
-test('Revise publish remains fail-closed until review and runtime are both ready', () => {
-  const themes = fs.readFileSync(new URL('../apps/ecommerce-cms-agentsam/backend/admin/themes.js', import.meta.url), 'utf8');
-  assert.match(themes, /meta\.publishReady === 1 && meta\.runtimeReady === 1/);
+test('Revise installation stays a preview until its public runtime is verified', () => {
+  const canonical = fs.readFileSync(new URL('../apps/ecommerce-cms-agentsam/backend/cms/theme-authority.mjs', import.meta.url), 'utf8');
+  assert.match(canonical, /theme_runtime_not_verified/);
+  assert.match(canonical, /runtime_ready: slug === DEFAULT/);
 });

@@ -15,6 +15,7 @@
     f("subheadline", "Description", "textarea"),
     f("imageUrl", "Background / side image", "media"),
     f("ctaPrimary.label", "Button text"), f("ctaPrimary.href", "Button link", "link"),
+    f("ctaPrimary.openInNewTab", "Open in new tab", "boolean"),
   ];
   const cards = [
     f("title", "Heading"),
@@ -91,13 +92,14 @@
   function renderHero(entry) {
     const content = entry.content || {};
     const cta = content.ctaPrimary || {};
+    const target = cta.openInNewTab === true ? ' target="_blank" rel="noopener noreferrer"' : "";
     const photo = image(content.imageUrl);
     return '<div class="ps-hero-media">' + (photo ? '<img data-cms="imageUrl" src="' + photo + '" alt="" loading="lazy">' : "") + '</div>'
       + '<div class="ps-inner ps-hero-copy"><p class="ps-kicker" data-cms="eyebrow">' + esc(content.eyebrow || "") + '</p>'
       + '<h2 class="ps-display" data-cms="headline">' + esc(content.headline || "") + '</h2>'
       + '<p class="ps-description" data-cms="subheadline">' + esc(content.subheadline || "") + '</p>'
       + '<a class="ps-cta" data-cms="ctaPrimary.href" data-cms-attr="href" href="' + href(cta.href, "/shop")
-      + '"><span data-cms="ctaPrimary.label">' + esc(cta.label || "Explore") + '</span><span aria-hidden="true">→</span></a></div>';
+      + '"' + target + '><span data-cms="ctaPrimary.label">' + esc(cta.label || "Explore") + '</span><span aria-hidden="true">→</span></a></div>';
   }
   function renderCollections(entry) {
     const content = entry.content || {};
@@ -146,7 +148,7 @@
     features: renderDetails, newsletter: renderNewsletter,
   };
   const genericDefaults = {
-    hero: { eyebrow: "New collection", headline: "Your headline", subheadline: "Describe your story.", imageUrl: "", ctaPrimary: { label: "Explore", href: "/shop" } },
+    hero: { eyebrow: "New collection", headline: "Your headline", subheadline: "Describe your story.", imageUrl: "", ctaPrimary: { label: "Explore", href: "/shop", openInNewTab: false } },
     collections: { title: "Shop collections", card1: { name: "Collection one", imageUrl: "", href: "/shop" }, card2: { name: "Collection two", imageUrl: "", href: "/shop" } },
     story: { title: "Tell your story", body: "Introduce your point of view.", imageUrl: "" },
     faq: { title: "Frequently asked questions", card1: { question: "Question one", answer: "Add your answer." } },
@@ -215,6 +217,10 @@
       const parts = field.key.split(".");
       const value = parts.reduce((v, key) => v == null ? undefined : v[key], content);
       if (value == null || value === "") continue;
+      if (field.type === "boolean") {
+        if (typeof value !== "boolean") return { ok: false, error: "Invalid " + field.key };
+        continue;
+      }
       if (typeof value !== "string" || value.length > 12000)
         return { ok: false, error: "Invalid " + field.key };
       if (["link", "media"].includes(field.type) && !isSafeUrl(value))

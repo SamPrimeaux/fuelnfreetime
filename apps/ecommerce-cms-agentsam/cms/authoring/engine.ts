@@ -25,7 +25,9 @@ export type Insertion = { parentKey: string; childKey: string; existingChildKeys
 export type Eligibility = { allowed: boolean; reason?: string };
 
 const KEY = /^[a-z][a-z0-9-]{0,63}$/;
-const FIELD = /^[a-z][a-zA-Z0-9_-]{0,63}$/;
+// D1 schemas already contain nested settings such as action.label and
+// ctaPrimary.href. Preserve those paths without permitting prototype keys.
+const FIELD = /^[a-z][a-zA-Z0-9_-]{0,63}(?:\.[a-z][a-zA-Z0-9_-]{0,63})*$/;
 const TYPES = new Set<FieldType>([
   'text','textarea','rich_text','boolean','number','range','select',
   'color','link','media','video','product','collection','variant','url','json'

@@ -19,14 +19,21 @@ function parseJson(value, fallback) {
 }
 
 export function normalizeCmsDefinition(row) {
-  const fields = parseJson(row.settings_schema_json, {});
+  // Preserve the versioned settings from D1. Fill presentation labels only;
+  // source types and keys remain untouched for the typed inspector contracts.
+  const raw = parseJson(row.settings_schema_json, {});
+  const fields = Object.fromEntries(Object.entries(raw).map(([key, spec]) => [
+    key, spec && typeof spec === 'object' && !Array.isArray(spec)
+      ? { ...spec, label: spec.label || key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[._-]/g, ' ') }
+      : spec,
+  ]));
   const metadata = parseJson(row.metadata_json, {});
   const allowedBlocks = parseJson(row.allowed_blocks_json, []);
   const normalizedBlocks = Array.isArray(allowedBlocks)
     ? allowedBlocks.filter(item => typeof item === "string" && KEY.test(item))
     : [];
-  // cms_definitions is the authority; metadata is a typed projection rather
-  // than a second local section/preset registry. Fail closed on invalid data.
+  // Preserve PR #150: installed composition contracts are derived from D1,
+  // with explicit diagnostics rather than a parallel preset authority.
   let composition = null;
   let compositionError = null;
   try {

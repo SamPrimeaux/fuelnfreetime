@@ -8,7 +8,9 @@
   let pages = [];
   let activeSectionKey = null;
   let activeSectionOwner = slug;
-  let selectedTheme = localStorage.getItem('theme-studio:selected-theme') || 'heuristic';
+  let selectedTheme = 'heuristic';
+  let persistedThemeVersion = 0;
+  let installedThemeSlugs = new Set(['heuristic']);
   let previewBlobUrl = null;
   let siteDraftTouched = false;
   let liveUnimported = false;
@@ -475,10 +477,27 @@
     return [...native, ...portable];
   }
 
-  function setTheme(nextTheme) {
+  async function setTheme(nextTheme) {
     if (!nextTheme || nextTheme === selectedTheme) return;
+    if (!installedThemeSlugs.has(nextTheme)) {
+      setNote('This theme is a reference preview, not an installed CMS artifact.', 'error');
+      return;
+    }
+    if (!host) {
+      try {
+        const saved = await editorRequest('/api/admin/cms/theme-selection', {
+          method: 'PUT',
+          body: JSON.stringify({ slug: nextTheme, expected_version: persistedThemeVersion }),
+        });
+        if (!saved.ok) throw new Error(saved.code || saved.error || 'Theme selection could not be saved');
+        persistedThemeVersion = saved.content_version;
+      } catch (error) {
+        setNote('Theme selection was not saved: ' + error.message, 'error');
+        await loadThemeIdentity();
+        return;
+      }
+    }
     selectedTheme = nextTheme;
-    localStorage.setItem('theme-studio:selected-theme', selectedTheme);
     document.querySelectorAll('[data-theme-preview]').forEach(function(button) {
       const current = button.dataset.themePreview === selectedTheme;
       button.classList.toggle('is-active', current);
@@ -3261,11 +3280,24 @@
         applyThemeIdentity(await host.adapter.getThemeIdentity());
         return;
       }
-      const response = await fetch('/api/admin/store', { credentials: 'include' });
-      const data = await response.json();
-      const theme = data.active_theme || data.theme || null;
-      applyThemeIdentity({ name: theme && theme.name, status: theme && (theme.state || theme.status) });
+      const catalog = await editorRequest('/api/admin/cms/themes');
+      if (!catalog.ok) throw new Error(catalog.error || 'Installed theme catalog unavailable');
+      installedThemeSlugs = new Set((catalog.themes || []).map(function(theme) { return theme.slug; }));
+      persistedThemeVersion = Number(catalog.content_version || 0);
+      selectedTheme = catalog.preview_theme?.slug || catalog.active_theme?.slug || 'heuristic';
+      document.querySelectorAll('[data-theme-preview]').forEach(function(button) {
+        const installed = installedThemeSlugs.has(button.dataset.themePreview);
+        button.disabled = !installed;
+        button.title = installed ? 'Choose installed theme preview' : 'Theme artifact is not installed';
+        button.classList.toggle('is-active', button.dataset.themePreview === selectedTheme);
+        button.setAttribute('aria-pressed', String(button.dataset.themePreview === selectedTheme));
+      });
+      const theme = catalog.active_theme || null;
+      applyThemeIdentity({ name: theme?.name, status: theme?.state });
+      syncPublishCapability();
+      refreshPreview();
     } catch (error) {
+      setNote('Installed theme selection unavailable: ' + error.message, 'error');
       applyThemeIdentity({ name: '', status: '' });
     }
   }
