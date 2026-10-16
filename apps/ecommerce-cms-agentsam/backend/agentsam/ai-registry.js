@@ -139,6 +139,7 @@ export function resolveAIRouting(classification, message, context = {}) {
     message,
     image_url: context.attachment_url || context.image_url || attachmentImage?.url || null,
     image_base64: context.image_base64 || attachmentImage?.image_base64 || null,
+    image_mime_type: context.image_mime_type || attachmentImage?.mime_type || null,
   };
 
   if (/\b(moderation|unsafe|policy violation|content guard|llama guard)\b/.test(hay)) {

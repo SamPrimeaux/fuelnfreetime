@@ -52,6 +52,7 @@ test("chat hydration loads the account-owned R2 object and rejects missing IDs",
     assert.equal(attachments[0].attachment_id, "att_valid");
     assert.equal(attachments[0].image_base64, "iVBORw0KGgo=");
     assert.equal(context.has_image, true);
+    assert.equal(context.image_mime_type, "image/png");
     await assert.rejects(
       hydrateAttachmentsForChat(env, [{ attachment_id: "att_other_account" }],
         "https://example.com/admin/agentsam"),
