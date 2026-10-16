@@ -86,9 +86,57 @@ async function loadSectionRows(env, pageId, { publishedOnly = false } = {}) {
   return results;
 }
 
+// Canonical editor-owned rows take precedence over legacy __editor.blocks cache.
+// Never project draft block data into a published snapshot. Imported/unknown
+// trees stay untouched until they have an explicit, provenance-safe identity map.
+function applyCanonicalEditorRows(section, blockRows) {
+  if (!blockRows?.length || blockRows.some(row => {
+    try { return JSON.parse(row.metadata_json || '{}').source !== 'theme-studio-v1'; }
+    catch { return true; }
+  })) return section;
+  const content = structuredClone(section.content || {});
+  const oldKeys = new Set((content.__editor?.blocks || []).map(row => row.id));
+  const byId = new Map(blockRows.map(row => [row.id, row]));
+  const active = blockRows.filter(row => row.status !== 'archived');
+  for (const id of oldKeys) if (!active.some(row => row.block_key === id)) delete content[id];
+  for (const row of active) {
+    let settings;
+    try { settings = JSON.parse(row.content_json || '{}'); }
+    catch { throw new Error('cms_canonical_invalid_block_content:' + row.id); }
+    content[row.block_key] = settings;
+  }
+  content.__editor = {...(content.__editor || {}),blocks: active
+    .sort((a,b) => (a.parent_block_id || '').localeCompare(b.parent_block_id || '') ||
+      Number(a.sort_order) - Number(b.sort_order) || a.id.localeCompare(b.id))
+    .map(row => ({
+      id:row.block_key,templateKey:row.block_type,
+      enabled:row.status === 'active',
+      ...(row.parent_block_id ? {parentBlockId:byId.get(row.parent_block_id)?.block_key} : {}),
+    }))};
+  return {...section,content};
+}
+
+async function hydratePageCanonicalBlocks(env, pageId, sections) {
+  const {results=[]} = await env.DB.prepare(
+    `SELECT c.section_key,b.id,b.parent_block_id,b.block_key,b.block_type,b.sort_order,
+      b.status,b.content_json,b.metadata_json
+     FROM cms_pages p
+     JOIN cms_page_sections c ON c.page_id=p.id AND c.account_id=p.account_id
+     JOIN cms_section_blocks b ON b.section_id=c.id AND b.account_id=c.account_id
+     WHERE p.legacy_page_id=? ORDER BY c.section_key,b.sort_order,b.id`
+  ).bind(pageId).all();
+  const byKey=new Map();
+  for(const row of results) {
+    if(!byKey.has(row.section_key))byKey.set(row.section_key,[]);
+    byKey.get(row.section_key).push(row);
+  }
+  return sections.map(section=>applyCanonicalEditorRows(section,byKey.get(section.key)));
+}
+
 async function loadSectionsFromDb(env, slug, pageId, { publishedOnly = false } = {}) {
   const rows = await loadSectionRows(env, pageId, { publishedOnly });
-  return loadSectionsFromR2(env, slug, rows, { publishedOnly });
+  const sections = await loadSectionsFromR2(env, slug, rows, { publishedOnly });
+  return publishedOnly ? sections : hydratePageCanonicalBlocks(env, pageId, sections);
 }
 
 async function previewForPage(env, slug, pageId, previewJson) {
@@ -136,7 +184,7 @@ async function currentSectionVersion(env, pageId, sectionKey) {
  * invented from PAGE_REGISTRY. Unmanaged block rows are never overwritten. */
 async function syncCanonicalDraftPointer(env, legacySectionId, content, r2Meta) {
   let canonical = await env.DB.prepare(
-    `SELECT id,account_id FROM cms_page_sections WHERE legacy_section_id=? LIMIT 1`
+    `SELECT id,account_id,inline_content_json FROM cms_page_sections WHERE legacy_section_id=? LIMIT 1`
   ).bind(legacySectionId).first();
   if (!canonical) {
     // The AgentSam generated-section acceptance path owns its own canonical
@@ -165,7 +213,7 @@ async function syncCanonicalDraftPointer(env, legacySectionId, content, r2Meta) 
       throw error;
     }
     canonical = await env.DB.prepare(
-      `SELECT id,account_id FROM cms_page_sections WHERE legacy_section_id=? LIMIT 1`
+      `SELECT id,account_id,inline_content_json FROM cms_page_sections WHERE legacy_section_id=? LIMIT 1`
     ).bind(legacySectionId).first();
   }
   if (!canonical) return {status:'unlinked',reason:'canonical_page_missing'};
@@ -199,6 +247,7 @@ async function syncCanonicalDraftPointer(env, legacySectionId, content, r2Meta) 
   try {
     const blocks=await reconcileCanonicalBlocks(env.DB,{
       accountId:canonical.account_id,sectionId:canonical.id,content,
+      previousContent:parseContent(canonical.inline_content_json),
     });
     return {status:'linked',blocks};
   } catch (error) {
@@ -249,6 +298,24 @@ async function persistSectionDraft(
       };
     }
 
+    // Reject incompatible canonical identities BEFORE committing the R2 version
+    // or advancing the legacy pointer. A half-saved editor action is not success.
+    if (existing && !content?.__editor?.generated) {
+      const canonical = await env.DB.prepare(
+        `SELECT id,account_id,inline_content_json FROM cms_page_sections WHERE legacy_section_id=?`
+      ).bind(existing.id).first();
+      if (canonical) {
+        try {
+          await reconcileCanonicalBlocks(env.DB,{
+            accountId:canonical.account_id,sectionId:canonical.id,content,dryRun:true,
+            previousContent:parseContent(canonical.inline_content_json),
+          });
+        } catch(error) {
+          return {error:String(error?.code || error?.message),status:409,
+            code:'cms_canonical_block_write_rejected'};
+        }
+      }
+    }
     const r2Meta = await writeSectionDraft(env, slug, sectionKey, content, {
       version: currentVersion,
     });
@@ -275,6 +342,9 @@ async function persistSectionDraft(
 
       if (d1Changes(result) === 1) {
         const canonical = await syncCanonicalDraftPointer(env, existing.id, content, r2Meta);
+        if (canonical.status === 'blocked' || canonical.status === 'unlinked')
+          return {error:'Canonical CMS persistence incomplete: '+(canonical.reason || canonical.status),
+            code:'cms_canonical_block_write_failed',status:409,canonical};
         return {...r2Meta,canonical};
       }
 
@@ -883,7 +953,64 @@ async function sectionContentForRow(env, slug, row) {
   const doc = await readSectionContent(env, slug, row.section_key, {
     key: row.content_r2_key,
   });
-  return doc?.content || {};
+  const section = applyCanonicalEditorRows({key:row.section_key,content:doc?.content || {}},
+    (await env.DB.prepare(
+      `SELECT b.id,b.parent_block_id,b.block_key,b.block_type,b.sort_order,b.status,
+              b.content_json,b.metadata_json
+       FROM cms_page_sections c JOIN cms_section_blocks b
+         ON b.section_id=c.id AND b.account_id=c.account_id
+       WHERE c.legacy_section_id=? ORDER BY b.sort_order,b.id`
+    ).bind(row.id).all()).results || []);
+  return section.content;
+}
+
+/**
+ * Reapply a previously stored immutable section revision as a NEW draft.
+ * The normal save path updates canonical block IDs and revision receipts;
+ * the source revision object is never mutated or promoted to live content.
+ */
+export async function restoreSectionRevision(env, slug, sectionKey, accountId, body = {}) {
+  if (!accountId) return {error:'Account required',status:403};
+  const revisionNumber=Number(body.revision_number);
+  if (!Number.isSafeInteger(revisionNumber) || revisionNumber < 1)
+    return {error:'Valid revision_number required',status:400};
+  const canonical=await env.DB.prepare(
+    `SELECT s.id,s.legacy_section_id,s.account_id
+      FROM cms_page_sections s JOIN cms_pages p
+        ON p.id=s.page_id AND p.account_id=s.account_id
+      WHERE p.account_id=? AND p.slug=? AND s.section_key=? AND s.status!='removed'
+      LIMIT 1`
+  ).bind(accountId,slug,sectionKey).first();
+  if(!canonical?.legacy_section_id)return {error:'Canonical section not found',status:404};
+  const legacy=await env.DB.prepare(
+    `SELECT id,page_id,sort_order,content_version,status FROM page_sections WHERE id=?`
+  ).bind(canonical.legacy_section_id).first();
+  if(!legacy||legacy.status==='removed')return {error:'Source section unavailable',status:409};
+  if(body.expected_version!==undefined&&Number(body.expected_version)!==Number(legacy.content_version))
+    return {error:'Draft changed since the requested restore',status:409,code:'cms_version_conflict'};
+  const revision=await env.DB.prepare(
+    `SELECT content_r2_key FROM cms_revisions
+       WHERE account_id=? AND entity_type='section' AND entity_id=?
+         AND revision_number=? AND content_r2_key IS NOT NULL
+       ORDER BY CASE revision_kind WHEN 'draft' THEN 0 WHEN 'history' THEN 1 ELSE 2 END
+       LIMIT 1`
+  ).bind(accountId,canonical.id,revisionNumber).first();
+  if(!revision?.content_r2_key)return {error:'Revision not found',status:404};
+  const snapshot=await readR2Json(env,revision.content_r2_key);
+  if(snapshot?.section_key!==sectionKey || !snapshot.content ||
+     typeof snapshot.content!=='object' || Array.isArray(snapshot.content))
+    return {error:'Revision content unavailable or corrupt',status:409};
+  if(snapshot.content.__editor?.generated)
+    return {error:'Use generated-restore for generated sections',status:409};
+  const saved=await persistSectionDraft(env,slug,legacy.page_id,sectionKey,
+    structuredClone(snapshot.content),legacy.sort_order,
+    {expectedVersion:legacy.content_version});
+  if(saved.error)return saved;
+  if(saved.canonical?.status!=='linked')
+    return {error:'Canonical restore synchronization incomplete',status:409};
+  await markPageDraft(env,legacy.page_id,slug);
+  return {ok:true,section_key:sectionKey,restored_revision:revisionNumber,
+    version:saved.version,canonical:saved.canonical};
 }
 
 export async function insertSection(env, slug, body = {}) {
@@ -1754,6 +1881,15 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     const result = await setSectionVisibility(env, m[1], m[2], body);
     if (result.error) return json({ error: result.error }, { status: result.status });
     return json(result);
+  }
+
+  // Restore an immutable section revision through the same canonical writer.
+  m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections\/([a-z0-9-]+)\/restore$/);
+  if(m && method === 'POST'){
+    let body;
+    try{body=await request.json();}catch{return json({error:'Invalid JSON'},{status:400});}
+    const result=await restoreSectionRevision(env,m[1],m[2],context.accountId,body);
+    return json(result,{status:result.status||200});
   }
 
   m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections\/([a-z0-9-]+)\/blocks$/);
