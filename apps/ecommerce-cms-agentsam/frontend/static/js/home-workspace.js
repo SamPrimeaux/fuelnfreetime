@@ -97,7 +97,7 @@
     }
     async function launch(message, { focus = true } = {}) {
       const prompt = String(message || "").trim();
-      if (!prompt || active) return;
+      if ((!prompt && !window.AgentSamDraft?.attachments?.length) || active) return;
       active = true;
       pending(true);
       report("");
@@ -106,13 +106,13 @@
         window.openAgentsamDrawer?.();
         if (focus) window.focusAgentsamDrawer?.();
         const draft = window.AgentSamDraft || { attachments: [] };
+        const attachments = await window.AgentSamComposerMenu?.readyAttachments?.() || [];
         await window.sendAgentsamMessage(prompt, {
-          attachments: draft.attachments?.slice() || [],
+          attachments,
           context: draft.selected_resource ? { selected_resource: draft.selected_resource } : {},
           propagateError: true
         });
         if (input.value.trim() === prompt) input.value = "";
-        window.AgentSamComposerMenu?.clearFiles();
       } catch (error) {
         report(error.message || "Could not send the message; your draft is still here.");
       } finally {
