@@ -4,10 +4,15 @@ import { __setApplicationAccountId } from "../apps/ecommerce-cms-agentsam/backen
 import { runAgentSamAi } from "../apps/ecommerce-cms-agentsam/backend/agentsam/ai-run.js";
 
 const image64 = "iVBORw0KGgo=";
+const secondImage64 = "/9j/4AAQSkZJRg==";
 const accountId = "acct_vision_contract";
 const routing = {
   task_type: "image_to_text", lane: "vision", has_image: true,
   image_base64: image64, image_mime_type: "image/png",
+  image_attachments: [
+    { image_base64: image64, mime_type: "image/png" },
+    { image_base64: secondImage64, mime_type: "image/jpeg" },
+  ],
   message: "Describe the attached artwork.",
   workflow_key: "fnf_agentsam_chat",
 };
@@ -62,6 +67,7 @@ test("OpenAI Responses receives real PNG bytes and user text in one multimodal r
     assert.deepEqual(user.content, [
       { type: "input_text", text: "Describe the attached artwork." },
       { type: "input_image", image_url: "data:image/png;base64," + image64 },
+      { type: "input_image", image_url: "data:image/jpeg;base64," + secondImage64 },
     ]);
   } finally { globalThis.fetch = originalFetch; __setApplicationAccountId(null); }
 });
@@ -83,6 +89,7 @@ test("Workers AI vision keeps the same image and prompt in its native message sh
     assert.deepEqual(user.content, [
       { type: "text", text: "Describe the attached artwork." },
       { type: "image_url", image_url: { url: "data:image/png;base64," + image64 } },
+      { type: "image_url", image_url: { url: "data:image/jpeg;base64," + secondImage64 } },
     ]);
   } finally { __setApplicationAccountId(null); }
 });

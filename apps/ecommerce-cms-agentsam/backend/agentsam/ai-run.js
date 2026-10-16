@@ -98,8 +98,19 @@ function resolveImageDataUrl(routing) {
   return null;
 }
 
+function resolveVisionImages(routing) {
+  const list = Array.isArray(routing.image_attachments) ? routing.image_attachments : [];
+  const urls = list.slice(0, 6).map(item => resolveImageDataUrl({
+    image_base64: item?.image_base64,
+    image_url: item?.url || item?.image_url,
+    image_mime_type: item?.mime_type || item?.image_mime_type,
+  })).filter(Boolean);
+  const single = resolveImageDataUrl(routing);
+  return urls.length ? urls : (single ? [single] : []);
+}
+
 function hasVisionInput(routing) {
-  return Boolean(resolveImageDataUrl(routing));
+  return resolveVisionImages(routing).length > 0;
 }
 
 function isModelCompatible(model, taskType, routing) {
@@ -117,34 +128,17 @@ function isModelCompatible(model, taskType, routing) {
 
 function buildVisionPayload(model, systemPrompt, userMessage, routing, defaults) {
   const user = String(userMessage || "").slice(0, 4000);
-  const imageUrl = resolveImageDataUrl(routing);
-  if (!imageUrl) throw new Error("vision_requires_image");
-
+  const images = resolveVisionImages(routing);
+  if (!images.length) throw new Error("vision_requires_image");
   if (model.supports_vision === false) throw new Error("model_does_not_support_vision");
-  const useMessagesFormat = true;
-  if (useMessagesFormat) {
-    return {
-      messages: [
-        { role: "system", content: trimSystem(systemPrompt) },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: user },
-            { type: "image_url", image_url: { url: imageUrl } },
-          ],
-        },
-      ],
-      max_tokens: defaults.max_tokens || 1200,
-      ...defaults,
-    };
-  }
-
+  const content = [];
+  if (user) content.push({ type: "text", text: user });
+  for (const url of images) content.push({ type: "image_url", image_url: { url } });
   return {
     messages: [
       { role: "system", content: trimSystem(systemPrompt) },
-      { role: "user", content: user },
+      { role: "user", content },
     ],
-    image: imageUrl,
     max_tokens: defaults.max_tokens || 1200,
     ...defaults,
   };
@@ -194,12 +188,12 @@ async function executeModel(env, model, systemPrompt, userMessage, routing) {
       throw new Error('openai_task_not_implemented');
     if (taskType === 'image_to_text') {
       if (model.supports_vision === false) throw new Error('model_does_not_support_vision');
-      const imageUrl = resolveImageDataUrl(routing);
-      if (!imageUrl) throw new Error('vision_requires_image');
-      // OpenAI Responses uses input_image, not the Workers AI image_url message shape.
+      const images = resolveVisionImages(routing);
+      if (!images.length) throw new Error('vision_requires_image');
+      // OpenAI Responses uses input_image, not Workers AI's image_url shape.
       const parts = [];
       if (user) parts.push({ type: 'input_text', text: user });
-      parts.push({ type: 'input_image', image_url: imageUrl });
+      for (const url of images) parts.push({ type: 'input_image', image_url: url });
       return executeOpenAiChat(env, model, systemPrompt, userMessage, {
         ...routing,
         messages: [
