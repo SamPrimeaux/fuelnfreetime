@@ -45,7 +45,10 @@
     customers: "/admin/customers", collections: "/admin/collections", content: "/admin/content"
   };
   function escapeText(s) { return String(s == null ? "" : s); }
-  function notify() { for (const fn of controls) fn(); }
+  function notify() {
+    for (const fn of controls) fn();
+    document.dispatchEvent(new Event("agentsam:attachments-updated"));
+  }
   function release(item) {
     if (item?.localPreviewUrl) URL.revokeObjectURL(item.localPreviewUrl);
     fileHandles.delete(item);

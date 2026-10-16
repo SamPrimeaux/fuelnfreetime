@@ -318,8 +318,15 @@ function presentAgentsamProposal(options = {}) {
 function setBusy(busy) {
   const send = document.getElementById("agentsam-send");
   const input = document.getElementById("agentsam-input");
-  if (send) send.disabled = busy;
-  if (input) input.disabled = busy;
+  const hasDraft = Boolean(input?.value.trim() || window.AgentSamDraft?.attachments?.length);
+  if (send) {
+    send.disabled = busy || !hasDraft;
+    send.setAttribute("aria-busy", String(busy));
+  }
+  if (input) {
+    input.disabled = busy;
+    input.setAttribute("aria-busy", String(busy));
+  }
 }
 
 function buildAgentsamContext(extra = {}) {
@@ -478,6 +485,10 @@ function bindAgentsamStaticHandlers() {
       setAgentsamFocus(!document.body.classList.contains("agentsam-focus-mode"));
     }
   });
+
+  document.getElementById("agentsam-input")?.addEventListener("input", () => setBusy(drawerRequestActive));
+  document.addEventListener("agentsam:attachments-updated", () => setBusy(drawerRequestActive));
+  setBusy(false);
 
   document.getElementById("agentsam-input")?.addEventListener("keydown", event => {
     if (event.key !== "Enter" || event.shiftKey || event.isComposing || event.keyCode === 229 ||
