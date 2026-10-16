@@ -12,7 +12,7 @@ function fixture() {
     CREATE TABLE page_sections (id INTEGER PRIMARY KEY AUTOINCREMENT,page_id INTEGER REFERENCES pages(id),section_key TEXT NOT NULL,sort_order INTEGER NOT NULL DEFAULT 0,
       content_json TEXT NOT NULL DEFAULT '{}',content_r2_key TEXT,content_version INTEGER NOT NULL DEFAULT 0,content_hash TEXT,status TEXT DEFAULT 'draft',
       updated_at TEXT DEFAULT (datetime('now')),UNIQUE(page_id,section_key));
-    CREATE TABLE cms_pages (id TEXT PRIMARY KEY,account_id TEXT NOT NULL,slug TEXT NOT NULL,
+    CREATE TABLE cms_pages (id TEXT PRIMARY KEY,account_id TEXT NOT NULL,legacy_page_id INTEGER UNIQUE,slug TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'draft',updated_at TEXT DEFAULT (datetime('now')),UNIQUE(account_id,slug));
     CREATE TABLE cms_artifacts (id TEXT PRIMARY KEY,account_id TEXT NOT NULL,artifact_key TEXT NOT NULL,artifact_type TEXT NOT NULL,version TEXT NOT NULL,
       r2_prefix TEXT NOT NULL,manifest_r2_key TEXT NOT NULL,content_hash TEXT NOT NULL,content_mode TEXT NOT NULL,status TEXT NOT NULL,source_kind TEXT,source_ref TEXT,
@@ -27,8 +27,13 @@ function fixture() {
       updated_at TEXT DEFAULT (datetime('now')),UNIQUE(page_id,section_key));
     CREATE TABLE cms_revisions (id TEXT PRIMARY KEY DEFAULT ('cmsr_'||lower(hex(randomblob(8)))),account_id TEXT NOT NULL,entity_type TEXT NOT NULL,entity_id TEXT NOT NULL,
       revision_number INTEGER NOT NULL,revision_kind TEXT NOT NULL,content_r2_key TEXT,content_hash TEXT,snapshot_json TEXT NOT NULL,metadata_json TEXT NOT NULL,created_at TEXT DEFAULT (datetime('now')));
+    CREATE TABLE cms_section_blocks (id TEXT PRIMARY KEY,account_id TEXT NOT NULL,section_id TEXT NOT NULL,
+      parent_block_id TEXT,block_key TEXT NOT NULL,block_type TEXT NOT NULL,sort_order INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'active',content_json TEXT NOT NULL DEFAULT '{}',
+      metadata_json TEXT NOT NULL DEFAULT '{}',artifact_id TEXT,source_path TEXT,
+      updated_at TEXT DEFAULT (datetime('now')),UNIQUE(section_id,block_key));
     INSERT INTO pages (id,slug,title,status) VALUES (1,'shop','Shop','draft');
-    INSERT INTO cms_pages (id,account_id,slug) VALUES ('cmsp_shop','acct_alpha','shop');
+    INSERT INTO cms_pages (id,account_id,legacy_page_id,slug) VALUES ('cmsp_shop','acct_alpha',1,'shop');
   `);
   const objects = new Map();
   const cache = new Map();

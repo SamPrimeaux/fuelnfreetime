@@ -7,6 +7,8 @@ import { DatabaseSync } from "node:sqlite";
 import {
   duplicateBlock,
   getPageAdmin,
+  getPreviewPage,
+  restoreSectionRevision,
   getPublishedPage,
   importLivePageDraft,
   publishPage,
@@ -48,10 +50,25 @@ function fixture() {
     );
     -- Legacy fixtures carry empty canonical mirrors, matching the migrated
     -- production schema while legacy CMS paths remain compatible.
-    CREATE TABLE cms_pages (id TEXT PRIMARY KEY,account_id TEXT,slug TEXT,status TEXT DEFAULT 'draft',updated_at TEXT DEFAULT (datetime('now')));
-    CREATE TABLE cms_page_sections (id TEXT PRIMARY KEY,account_id TEXT,page_id TEXT,legacy_section_id INTEGER,section_key TEXT,
-      section_type TEXT,sort_order INTEGER DEFAULT 0,status TEXT DEFAULT 'draft',content_r2_key TEXT,
-      content_version INTEGER DEFAULT 0,content_hash TEXT,metadata_json TEXT DEFAULT '{}',updated_at TEXT DEFAULT (datetime('now')));
+    CREATE TABLE cms_pages (id TEXT PRIMARY KEY,account_id TEXT NOT NULL,legacy_page_id INTEGER UNIQUE,
+      slug TEXT,status TEXT DEFAULT 'draft',updated_at TEXT DEFAULT (datetime('now')));
+    CREATE TABLE cms_page_sections (id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      account_id TEXT NOT NULL,page_id TEXT,legacy_section_id INTEGER UNIQUE,section_key TEXT,
+      section_type TEXT,sort_order INTEGER DEFAULT 0,status TEXT DEFAULT 'draft',
+      inline_content_json TEXT DEFAULT '{}',content_r2_key TEXT,
+      content_version INTEGER DEFAULT 0,content_hash TEXT,metadata_json TEXT DEFAULT '{}',
+      updated_at TEXT DEFAULT (datetime('now')),UNIQUE(page_id,section_key));
+    CREATE TABLE cms_section_blocks (id TEXT PRIMARY KEY,account_id TEXT NOT NULL,section_id TEXT NOT NULL,
+      parent_block_id TEXT,block_key TEXT NOT NULL,block_type TEXT NOT NULL,sort_order INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',content_json TEXT DEFAULT '{}',metadata_json TEXT DEFAULT '{}',
+      artifact_id TEXT,source_path TEXT,updated_at TEXT DEFAULT (datetime('now')),UNIQUE(section_id,block_key));
+    CREATE TABLE cms_revisions (id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+      account_id TEXT,entity_type TEXT,entity_id TEXT,revision_number INTEGER,revision_kind TEXT,
+      content_r2_key TEXT,content_hash TEXT,snapshot_json TEXT,metadata_json TEXT);
+    CREATE TRIGGER seed_test_canonical_page AFTER INSERT ON pages
+      BEGIN INSERT INTO cms_pages (id,account_id,legacy_page_id,slug)
+      VALUES ('cmsp_legacy_' || NEW.id,'test-tenant',NEW.id,NEW.slug);
+      END;
     INSERT INTO pages (id, slug, title, status) VALUES (1, 'shop', 'Shop', 'published');
     INSERT INTO page_sections
       (page_id, section_key, sort_order, content_json, content_r2_key, content_version, status)
@@ -62,6 +79,11 @@ function fixture() {
   `);
 
   const adapter = {
+    async batch(statements) {
+      db.exec('BEGIN');
+      try { for (const statement of statements) await statement.run(); db.exec('COMMIT'); }
+      catch(error) { db.exec('ROLLBACK'); throw error; }
+    },
     prepare(sql) {
       let values = [];
       const statement = {
@@ -654,4 +676,123 @@ test("section-specific CSS is validated and versioned in the existing CMS sectio
    assert.equal(after.content.__editor.customCss,'.h-display { color: #123456; }');
    assert.equal(after.content.headline,original.headline,"original authored content survives CSS editing");
  } finally {fx.db.close();}
+});
+
+test("production-shaped Shop migration adopts three cards, inserts fourth, previews, edits, reorders and restores",async()=>{
+  const fx=fixture();
+  try{
+    const canonicalSection='cmss_legacy_14';
+    fx.db.prepare(`INSERT INTO cms_page_sections
+      (id,account_id,page_id,legacy_section_id,section_key,section_type,
+       sort_order,status,inline_content_json,content_r2_key,content_version)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
+      .run(canonicalSection,'test-tenant','cmsp_legacy_1',2,'collections','collections',10,'draft',
+        JSON.stringify(fx.readDraft('collections').content),
+        'cms/pages/shop/draft/collections.json',1);
+    const legacyMeta=JSON.stringify({legacy_source:'r2-section-content',
+      legacy_r2_key:'cms/pages/shop/draft/collections.json',family:'card'});
+    const insert=fx.db.prepare(`INSERT INTO cms_section_blocks
+      (id,account_id,section_id,block_key,block_type,sort_order,status,content_json,metadata_json)
+      VALUES (?,?,?,?,?,?,?,?,?)`);
+    for(let i=1;i<=3;i++)insert.run('cmsb_legacy_14_card'+i,'test-tenant',canonicalSection,
+      'card'+i,'collection-card',i*10,'active',
+      JSON.stringify({name:'Outdated card '+i}),legacyMeta);
+
+    const added=await insertBlock(fx.env,'shop','collections',
+      {templateKey:'collection-card',toIndex:3});
+    assert.equal(added.ok,true);
+    assert.equal(added.canonical.status,'linked');
+    assert.equal(added.canonical.blocks.inserted,1);
+    assert.equal(added.canonical.blocks.updated,3);
+    const rows=()=>fx.db.prepare(`SELECT * FROM cms_section_blocks
+      WHERE section_id=? AND status!='archived' ORDER BY sort_order,id`).all(canonicalSection);
+    assert.equal(rows().length,4);
+    assert.equal(rows().find(r=>r.block_key===added.block_id).block_type,'collection-card');
+    assert.equal(JSON.parse(rows()[0].metadata_json).source,'theme-studio-v1');
+    assert.equal(rows()[0].id,'cmsb_legacy_14_card1');
+
+    const initialPreview=await getPreviewPage(fx.env,'shop');
+    const collection=initialPreview.sections.find(s=>s.key==='collections');
+    assert.equal(collection.content.__editor.blocks.length,4);
+    assert.ok(collection.content.__editor.blocks.some(b=>b.id===added.block_id));
+
+    const renamed=structuredClone(collection.content);
+    renamed[added.block_id].name='Actually edited';
+    const edited=await updateSection(fx.env,'shop','collections',{content:renamed,expected_version:2});
+    assert.equal(edited.ok,true);
+    assert.equal(JSON.parse(rows().find(r=>r.block_key===added.block_id).content_json).name,'Actually edited');
+
+    const moved=await moveBlock(fx.env,'shop','collections',added.block_id,{toIndex:0});
+    assert.equal(moved.ok,true);
+    assert.equal(rows()[0].block_key,added.block_id);
+    assert.equal((await getPageAdmin(fx.env,'shop')).page.sections.find(s=>s.key==='collections')
+      .content.__editor.blocks[0].id,added.block_id);
+
+    const restored=await restoreSectionRevision(fx.env,'shop','collections',
+      'test-tenant',{revision_number:2,expected_version:4});
+    assert.equal(restored.ok,true);
+    assert.equal(restored.restored_revision,2);
+    assert.equal(rows()[3].block_key,added.block_id);
+    assert.equal(JSON.parse(rows()[3].content_json).name,'New collection');
+    assert.equal((await getPreviewPage(fx.env,'shop')).sections.find(s=>s.key==='collections')
+      .content.__editor.blocks[3].id,added.block_id);
+    assert.ok(fx.db.prepare(`SELECT COUNT(*) AS n FROM cms_revisions
+      WHERE entity_type='block' AND entity_id=?`).get(rows()[3].id).n>=3);
+    assert.ok(fx.db.prepare(`SELECT COUNT(*) AS n FROM cms_revisions
+      WHERE entity_type='section' AND entity_id=?`).get(canonicalSection).n>=4);
+  }finally{fx.db.close();}
+});
+
+test("native nested Revise block edits, reorder, reload and revision restoration use same canonical rows",async()=>{
+  const fx=fixture();
+  try{
+    fx.db.prepare(`INSERT INTO pages (slug,title,status) VALUES ('ideas','Ideas','draft')`).run();
+    const legacyPage=fx.db.prepare(`SELECT id FROM pages WHERE slug='ideas'`).get().id;
+    fx.db.prepare(`INSERT INTO page_sections
+      (page_id,section_key,sort_order,content_json,content_r2_key,content_version,status)
+      VALUES (?,?,0,'{}',?,1,'draft')`).run(legacyPage,'ideas-faq','cms/pages/ideas/draft/ideas-faq.json');
+    const sectionId=fx.db.prepare(`SELECT id FROM page_sections WHERE page_id=?`).get(legacyPage).id;
+    const canonicalId='cmss_revise_ideas_faq_test';
+    fx.db.prepare(`INSERT INTO cms_page_sections
+      (id,account_id,page_id,legacy_section_id,section_key,section_type,status,content_version)
+      VALUES (?,?,?,?,?,'faq','draft',1)`).run(canonicalId,'test-tenant',
+        'cmsp_legacy_'+legacyPage,sectionId,'ideas-faq');
+    const content=(order,answer)=>({
+      __editor:{templateKey:'faq',blocks:[
+        {id:'faq-root',templateKey:'group',enabled:true},
+        ...order.map(id=>({id,templateKey:'text',enabled:true,parentBlockId:'faq-root'}))
+      ]},
+      'faq-root':{title:'Ideas FAQ'},'faq-q':{text:'What is real?'},'faq-a':{text:answer}
+    });
+    fx.objects.set('cms/pages/ideas/draft/ideas-faq.json',JSON.stringify({
+      section_key:'ideas-faq',content:content(['faq-q','faq-a'],'Original'),
+      status:'draft',version:1
+    }));
+    const v2=await updateSection(fx.env,'ideas','ideas-faq',{
+      content:content(['faq-q','faq-a'],'Original'),expected_version:1});
+    assert.equal(v2.ok,true);
+    const rows=()=>fx.db.prepare(`SELECT * FROM cms_section_blocks
+      WHERE section_id=? ORDER BY sort_order,id`).all(canonicalId);
+    const parent=rows().find(r=>r.block_key==='faq-root');
+    const originalAnswer=rows().find(r=>r.block_key==='faq-a');
+    assert.equal(originalAnswer.parent_block_id,parent.id);
+    const v3=await updateSection(fx.env,'ideas','ideas-faq',{
+      content:content(['faq-a','faq-q'],'Changed'),expected_version:2});
+    assert.equal(v3.ok,true);
+    assert.equal(rows().find(r=>r.block_key==='faq-a').id,originalAnswer.id);
+    assert.equal(rows().find(r=>r.block_key==='faq-a').sort_order,0);
+    assert.equal(JSON.parse(rows().find(r=>r.block_key==='faq-a').content_json).text,'Changed');
+    const preview=await getPreviewPage(fx.env,'ideas');
+    assert.equal(preview.sections.find(s=>s.key==='ideas-faq').content.__editor.blocks[1].id,'faq-a');
+    const restore=await restoreSectionRevision(fx.env,'ideas','ideas-faq','test-tenant',
+      {revision_number:2,expected_version:3});
+    assert.equal(restore.ok,true);
+    assert.equal(JSON.parse(rows().find(r=>r.block_key==='faq-a').content_json).text,'Original');
+    assert.equal(rows().find(r=>r.block_key==='faq-a').sort_order,10);
+    assert.equal(rows().find(r=>r.block_key==='faq-a').parent_block_id,parent.id);
+    assert.equal((await getPreviewPage(fx.env,'ideas')).sections.find(s=>s.key==='ideas-faq').content.__editor.blocks[2].id,'faq-a');
+    const foreign=await restoreSectionRevision(fx.env,'ideas','ideas-faq','other-tenant',
+      {revision_number:2});
+    assert.equal(foreign.status,404);
+  }finally{fx.db.close();}
 });
