@@ -1,6 +1,7 @@
 import { ROUTE_MANIFEST } from "../lib/route-manifest.js";
 import { attachCmsDefinitions, listCmsDefinitions } from "./definition-registry.mjs";
 import { listStoreThemes, selectThemePreview } from "./theme-authority.mjs";
+import { readCanonicalComposition } from "./canonical-composition.mjs";
 import { createAuthoringEngine } from "../../cms/authoring/engine.ts";
 import { reconcileCanonicalBlocks } from "../../cms/authoring/block-projection.ts";
 import { validateThemeSettings, validateThemeCss } from "./theme-style-contract.mjs";
@@ -1608,6 +1609,19 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     if (!context.accountId) return json(registryForAdmin());
     const definitions = await listCmsDefinitions(env, context.accountId, { status: "active" });
     return json(attachCmsDefinitions(registryForAdmin(), definitions));
+  }
+
+  if (path === "/api/admin/cms/composition" && method === "GET") {
+    // Read-only preview of the canonical D1 authoring tree. This is not the
+    // public publication snapshot, which is separately signed/published to R2.
+    if (!context.accountId) return json({ error:"Account required" }, {status:403});
+    const requestedSlug = url.searchParams.get("slug") || "";
+    if (!/^[a-z0-9-]{1,100}$/.test(requestedSlug))
+      return json({error:"Invalid page slug"},{status:400});
+    const composition = await readCanonicalComposition(env,context.accountId,requestedSlug);
+    return composition
+      ? json({ok:true,composition})
+      : json({error:"Canonical page not found"},{status:404});
   }
 
   if (path === "/api/admin/cms/definitions" && method === "GET") {

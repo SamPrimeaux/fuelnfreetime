@@ -49,7 +49,14 @@ setTimeout(function () {
   const mutation=new MutationObserver(records=>{srcdocChanges+=records.filter(r=>r.attributeName==="srcdoc").length;});
   mutation.observe(iframe,{attributes:true});
   document.querySelector('[data-theme-preview="fnf"]')?.click();
-  document.getElementById("te-add-section")?.click();
+  // Theme selection is now an authorized, version-checked D1 write. Wait for
+  // the actual committed selection and final tree before opening its catalog.
+  // An immediate second click would target a tree about to be re-rendered.
+  const ready = setInterval(function () {
+    if (document.querySelector('[data-theme-preview="fnf"]')?.getAttribute('aria-pressed') !== 'true') return;
+    clearInterval(ready);
+    document.getElementById("te-add-section")?.click();
+  },50);
   setTimeout(function () {
     const doc=iframe.contentDocument;
     const value={
@@ -61,16 +68,51 @@ setTimeout(function () {
       hasReviseSection:document.getElementById("te-section-catalog")?.textContent.includes("Sticky curtain hero") || false,
       hasFnfSection:document.getElementById("te-section-catalog")?.textContent.includes("Image scene hero") || false,
       hasFakeVariant:document.getElementById("te-section-catalog")?.textContent.includes("Pinned media grid") || false,
+      catalogVisible:!!document.getElementById("te-section-menu")?.open,
+      catalogText:document.getElementById("te-section-catalog")?.textContent.slice(0,260) || null,
     };
     const p=document.createElement("pre");p.id="fnf-audit-result";p.textContent=JSON.stringify(value);document.body.appendChild(p);
+    clearInterval(ready);
     mutation.disconnect();
   },1800);
 },2300);
 </script>`;
 
+// The merchant fixture must expose the same persisted, installed-theme
+// contract used by the actual editor. A catch-all {ok:true} response hides
+// theme catalog failures and produces a misleading blank iframe regression.
+let themeVersion = 0;
+let previewTheme = "heuristic";
+const themeRows = ["heuristic", "revise", "fnf"].map(slug => ({
+  slug, id: "fixture:" + slug, name: slug,
+  state: slug === "heuristic" ? "active" : "draft",
+  runtime_ready: slug === "heuristic", preview_selected: slug === previewTheme,
+}));
 const server = http.createServer((req, res) => {
   const u = new URL(req.url, "http://localhost");
   const p = u.pathname;
+  if (p === "/api/admin/cms/themes" && req.method === "GET") {
+    const themes = themeRows.map(row => ({...row, preview_selected: row.slug === previewTheme}));
+    return json(res, {ok:true,source:"cms_artifacts+cms_globals",themes,
+      active_theme:themes[0],preview_theme:themes.find(row => row.preview_selected),
+      content_version:themeVersion});
+  }
+  if (p === "/api/admin/cms/theme-selection" && req.method === "PUT") {
+    let body = "";
+    req.on("data",chunk => {body += chunk;});
+    req.on("end",() => {
+      let input;
+      try {input = JSON.parse(body);} catch {res.writeHead(400).end("Invalid JSON");return;}
+      if (!themeRows.some(row => row.slug === input.slug) || input.expected_version !== themeVersion) {
+        res.writeHead(409,{"content-type":"application/json"})
+          .end(JSON.stringify({ok:false,code:"theme_version_conflict"}));return;
+      }
+      previewTheme = input.slug;
+      themeVersion++;
+      json(res,{ok:true,content_version:themeVersion});
+    });
+    return;
+  }
   if (p === "/api/admin/cms/registry") return json(res, registryForAdmin());
   if (p === "/api/admin/cms/pages/shop") return json(res, { ok: true, page: getRegistryPage("shop") });
   if (p === "/api/admin/cms/pages/site") return json(res, { ok: true, page: getRegistryPage("site") });

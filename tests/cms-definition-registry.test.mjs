@@ -111,7 +111,8 @@ test("active D1 schema overrides legacy editor fields without inventing any impl
   const result = attachCmsDefinitions(registered,[canonical]);
   const section = result.pages.shop.sections.collections;
   assert.deepEqual(section.fields.map(f=>f.key),["title","columns"]);
-  assert.equal(section.fields[0].type,"richtext");
+  // Typed D1 vocabulary normalizes legacy richtext to the shared rich_text type.
+  assert.equal(section.fields[0].type,"rich_text");
   assert.equal(section.fields[1].max,6);
   assert.equal(section.schemaAuthority,"cms_definitions");
   assert.equal(section.guardrails.maxBlocks,4);
