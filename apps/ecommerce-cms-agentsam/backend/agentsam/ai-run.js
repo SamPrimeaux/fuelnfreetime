@@ -107,8 +107,8 @@ function isModelCompatible(model, taskType, routing) {
   if (taskType === "image_generation") return modelTask === "image_generation";
   if (taskType === "image_to_text") {
     if (modelTask !== "image_to_text") return false;
-    if (!hasVisionInput(routing) && !model.supports_vision) return false;
-    return true;
+    // Never send an image through a text-only adapter and claim it was inspected.
+    return model.supports_vision !== false && hasVisionInput(routing);
   }
   if (modelTask === "image_generation" || modelTask === "image_to_text") return false;
   if (modelTask === "embedding" || modelTask === "rerank" || modelTask === "safety") return false;
@@ -120,7 +120,8 @@ function buildVisionPayload(model, systemPrompt, userMessage, routing, defaults)
   const imageUrl = resolveImageDataUrl(routing);
   if (!imageUrl) throw new Error("vision_requires_image");
 
-  const useMessagesFormat = model.supports_vision !== false;
+  if (model.supports_vision === false) throw new Error("model_does_not_support_vision");
+  const useMessagesFormat = true;
   if (useMessagesFormat) {
     return {
       messages: [
@@ -491,18 +492,8 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
     }
   }
 
-  if (normalized.task_type === "image_to_text") {
-    const downgrade = await runTextFallback(env, systemPrompt, userMessage, normalized, trackOpts);
-    if (downgrade?.ok) {
-      return {
-        ...downgrade,
-        input_tokens: estimateTokens(userMessage) + estimateTokens(systemPrompt),
-        output_tokens: estimateTokens(downgrade.reply),
-        ai_latency_ms: Date.now() - aiStarted,
-        estimated_cost_usd: 0,
-      };
-    }
-  }
+  // A real image request must never silently fall back to text-only inference.
+  // Fail with actionable vision diagnostics; the merchant may choose a compatible model.
 
   const userReply =
     normalized.task_type === "image_generation"

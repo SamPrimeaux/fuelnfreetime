@@ -360,7 +360,11 @@ async function sendAgentsamMessage(text, options = {}) {
     attachments = Array.isArray(options.attachments) && options.attachments.every(item => item.attachment_id)
       ? options.attachments
       : await (window.AgentSamComposerMenu?.readyAttachments?.() || Promise.resolve([]));
-    if (!message && !attachments.length) return;
+    if (!message && !attachments.length) {
+      drawerRequestActive = false;
+      setBusy(false);
+      return;
+    }
   } catch (error) {
     drawerRequestActive = false;
     setBusy(false);
