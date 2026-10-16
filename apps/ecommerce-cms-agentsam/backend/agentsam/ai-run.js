@@ -190,8 +190,24 @@ async function executeModel(env, model, systemPrompt, userMessage, routing) {
   }
 
   if (model.provider === 'openai' && taskType !== 'image_generation') {
-    if (!['text_generation','code_generation'].includes(taskType))
+    if (!['text_generation','code_generation','image_to_text'].includes(taskType))
       throw new Error('openai_task_not_implemented');
+    if (taskType === 'image_to_text') {
+      if (model.supports_vision === false) throw new Error('model_does_not_support_vision');
+      const imageUrl = resolveImageDataUrl(routing);
+      if (!imageUrl) throw new Error('vision_requires_image');
+      // OpenAI Responses uses input_image, not the Workers AI image_url message shape.
+      const parts = [];
+      if (user) parts.push({ type: 'input_text', text: user });
+      parts.push({ type: 'input_image', image_url: imageUrl });
+      return executeOpenAiChat(env, model, systemPrompt, userMessage, {
+        ...routing,
+        messages: [
+          { role: 'system', content: trimSystem(systemPrompt) },
+          { role: 'user', content: parts },
+        ],
+      }, defaults);
+    }
     return executeOpenAiChat(env,model,systemPrompt,userMessage,routing,defaults);
   }
   if (model.provider !== 'workers_ai' || !env.AGENTSAM_WAI?.run)
