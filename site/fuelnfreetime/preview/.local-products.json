@@ -1,0 +1,1731 @@
+[
+  {
+    "product": {
+      "id": 2,
+      "slug": "fuel-n-free-time-tee",
+      "title": "Fuel N Free Time Tee",
+      "description": "Earned-not-given energy on premium cotton. Front graphic with full back print. Built for those who fuel hard and live free.",
+      "collection": "essentials",
+      "price_cents": 3400,
+      "seo_title": null,
+      "seo_description": null,
+      "image_url": "/media/products/fuel-n-free-time-tee/f-ft-front-and-back-studio-tee.png",
+      "status": "active",
+      "images": [
+        {
+          "url": "/media/products/fuel-n-free-time-tee/f-ft-front-and-back-studio-tee.webp",
+          "filename": "f-ft-front-and-back-studio-tee.webp",
+          "alt_text": null,
+          "is_primary": 1,
+          "position": 2
+        },
+        {
+          "url": "/media/products/shirts/fft-tee-frontside.webp",
+          "filename": "fft-tee-frontside.webp",
+          "alt_text": null,
+          "is_primary": 0,
+          "position": 0
+        },
+        {
+          "url": "/media/products/shirts/earn-your-freetime-teeshirt-backside.webp",
+          "filename": "earn-your-freetime-teeshirt-backside.webp",
+          "alt_text": null,
+          "is_primary": 0,
+          "position": 1
+        }
+      ],
+      "color_images": [],
+      "primary_image": "/media/products/fuel-n-free-time-tee/f-ft-front-and-back-studio-tee.webp"
+    },
+    "variants": [
+      {
+        "id": 2,
+        "product_id": 2,
+        "size": "S",
+        "color": "Black",
+        "sku": "FNF-TEE-S",
+        "price_cents": 3400,
+        "inventory_qty": 7,
+        "available": true,
+        "fulfillment": "stock"
+      },
+      {
+        "id": 3,
+        "product_id": 2,
+        "size": "M",
+        "color": "Black",
+        "sku": "FNF-TEE-M",
+        "price_cents": 3400,
+        "inventory_qty": 9,
+        "available": true,
+        "fulfillment": "stock"
+      },
+      {
+        "id": 4,
+        "product_id": 2,
+        "size": "L",
+        "color": "Black",
+        "sku": "FNF-TEE-L",
+        "price_cents": 3400,
+        "inventory_qty": 7,
+        "available": true,
+        "fulfillment": "stock"
+      },
+      {
+        "id": 5,
+        "product_id": 2,
+        "size": "XL",
+        "color": "Black",
+        "sku": "FNF-TEE-XL",
+        "price_cents": 3400,
+        "inventory_qty": 6,
+        "available": true,
+        "fulfillment": "stock"
+      },
+      {
+        "id": 6,
+        "product_id": 2,
+        "size": "XXL",
+        "color": "Black",
+        "sku": "FNF-TEE-XXL",
+        "price_cents": 3400,
+        "inventory_qty": 5,
+        "available": true,
+        "fulfillment": "stock"
+      }
+    ]
+  },
+  {
+    "product": {
+      "id": 6,
+      "slug": "fuel-n-freetime-hat",
+      "title": "Fresh Till Death Hat",
+      "description": "Streetwear",
+      "collection": "Fuel n Free Time",
+      "price_cents": 3499,
+      "seo_title": null,
+      "seo_description": null,
+      "image_url": "/media/products/fuel-n-freetime-hat/548e298d-1553-4068-a707-dfe142471705.png",
+      "status": "active",
+      "images": [
+        {
+          "url": "/media/products/fuel-n-freetime-hat/548e298d-1553-4068-a707-dfe142471705.webp",
+          "filename": "548e298d-1553-4068-a707-dfe142471705.webp",
+          "alt_text": null,
+          "is_primary": 1,
+          "position": 2
+        }
+      ],
+      "color_images": [],
+      "primary_image": "/media/products/fuel-n-freetime-hat/548e298d-1553-4068-a707-dfe142471705.webp"
+    },
+    "variants": []
+  },
+  {
+    "product": {
+      "id": 10,
+      "slug": "f-ft-t-shirt-47d3afff-1618c9a0",
+      "title": "F&FT T-Shirt",
+      "description": "Custom Printed Comfort Colors T-Shirt\n\n-Premium Comfort: Made from ultra-soft, durable cotton for a relaxed fit and lasting wear.\n-Stylish Color Options: Choose from Black, Brick, Denim, Ivory, Moss, and Pepper.\n-Customizable Design: Add your logo, artwork, or text for a unique look.\n-Versatile Style: Perfect for casual wear, events, or team apparel.\n\nThese Comfort Colors T-shirts combine timeless style with ultimate comfort, making them a favorite for personalized clothing or everyday wear!",
+      "collection": null,
+      "price_cents": 2499,
+      "seo_title": null,
+      "seo_description": null,
+      "image_url": "/media/studio/previews/placement-47d3afff-f542b57d-f62389d7-b08.png",
+      "status": "active",
+      "images": [
+        {
+          "url": "/media/studio/previews/placement-47d3afff-f542b57d-f62389d7-b08.png",
+          "filename": "placement-47d3afff-f542b57d-f62389d7-b08.png",
+          "alt_text": null,
+          "is_primary": 1,
+          "position": 0
+        }
+      ],
+      "color_images": [
+        {
+          "url": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/mockups/47d3afff-3e4c-492a-8e8b-2dcfca38caa1/cd2ac198-80d2-4bfc-a584-c5ff8a501c28/preview.png",
+          "color": "Black",
+          "source": "supplier_reference"
+        },
+        {
+          "url": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/mockups/47d3afff-3e4c-492a-8e8b-2dcfca38caa1/95e50d76-43f6-45db-8e92-2eb91abcbb8b/preview.png",
+          "color": "Brick",
+          "source": "supplier_reference"
+        },
+        {
+          "url": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/mockups/47d3afff-3e4c-492a-8e8b-2dcfca38caa1/f4e2ffe3-a3a0-40c4-8fb0-c85dde8ae137/preview.png",
+          "color": "Denim",
+          "source": "supplier_reference"
+        },
+        {
+          "url": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/mockups/47d3afff-3e4c-492a-8e8b-2dcfca38caa1/d98823f4-3cc8-4bdc-9504-537c43c7d3b2/preview.png",
+          "color": "Ivory",
+          "source": "supplier_reference"
+        },
+        {
+          "url": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/mockups/47d3afff-3e4c-492a-8e8b-2dcfca38caa1/5af0fdcf-c319-4181-966f-393087587e6d/preview.png",
+          "color": "Moss",
+          "source": "supplier_reference"
+        },
+        {
+          "url": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/mockups/47d3afff-3e4c-492a-8e8b-2dcfca38caa1/c121dd35-658b-4719-80cf-a2a2ca8c77e6/preview.png",
+          "color": "Pepper",
+          "source": "supplier_reference"
+        }
+      ],
+      "primary_image": "/media/studio/previews/placement-47d3afff-f542b57d-f62389d7-b08.png"
+    },
+    "variants": [
+      {
+        "id": 107,
+        "product_id": 10,
+        "size": "2XL",
+        "color": "Black",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-0ba1f3ff",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 108,
+        "product_id": 10,
+        "size": "3XL",
+        "color": "Black",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-7cf512ae",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 109,
+        "product_id": 10,
+        "size": "L",
+        "color": "Black",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-3b76f344",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 110,
+        "product_id": 10,
+        "size": "M",
+        "color": "Black",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-dc4bc1c0",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 111,
+        "product_id": 10,
+        "size": "S",
+        "color": "Black",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-47d3afff",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 112,
+        "product_id": 10,
+        "size": "XL",
+        "color": "Black",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-93685b02",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 113,
+        "product_id": 10,
+        "size": "2XL",
+        "color": "Brick",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-771ff361",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 114,
+        "product_id": 10,
+        "size": "3XL",
+        "color": "Brick",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-a3423450",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 115,
+        "product_id": 10,
+        "size": "L",
+        "color": "Brick",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-29295b6f",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 116,
+        "product_id": 10,
+        "size": "M",
+        "color": "Brick",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-1b37525d",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 117,
+        "product_id": 10,
+        "size": "S",
+        "color": "Brick",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-a6e11e8e",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 118,
+        "product_id": 10,
+        "size": "XL",
+        "color": "Brick",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-ec2e9732",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 119,
+        "product_id": 10,
+        "size": "2XL",
+        "color": "Denim",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-7ea2b580",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 120,
+        "product_id": 10,
+        "size": "3XL",
+        "color": "Denim",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-11dfce7d",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 121,
+        "product_id": 10,
+        "size": "L",
+        "color": "Denim",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-212e7088",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 122,
+        "product_id": 10,
+        "size": "M",
+        "color": "Denim",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-dbe41ddb",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 123,
+        "product_id": 10,
+        "size": "S",
+        "color": "Denim",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-173cfc29",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 124,
+        "product_id": 10,
+        "size": "XL",
+        "color": "Denim",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-90af888c",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 125,
+        "product_id": 10,
+        "size": "2XL",
+        "color": "Ivory",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-9eec4f91",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 126,
+        "product_id": 10,
+        "size": "3XL",
+        "color": "Ivory",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-58710b43",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 127,
+        "product_id": 10,
+        "size": "L",
+        "color": "Ivory",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-f50069b1",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 128,
+        "product_id": 10,
+        "size": "M",
+        "color": "Ivory",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-1af75e19",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 129,
+        "product_id": 10,
+        "size": "S",
+        "color": "Ivory",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-1ab5d63e",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 130,
+        "product_id": 10,
+        "size": "XL",
+        "color": "Ivory",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-adf70020",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 131,
+        "product_id": 10,
+        "size": "2XL",
+        "color": "Moss",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-c789e685",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 132,
+        "product_id": 10,
+        "size": "3XL",
+        "color": "Moss",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-b7e0a4c4",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 133,
+        "product_id": 10,
+        "size": "L",
+        "color": "Moss",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-279d812c",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 134,
+        "product_id": 10,
+        "size": "M",
+        "color": "Moss",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-fd1a0518",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 135,
+        "product_id": 10,
+        "size": "S",
+        "color": "Moss",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-55ba3e81",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 136,
+        "product_id": 10,
+        "size": "XL",
+        "color": "Moss",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-ba059c9c",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 137,
+        "product_id": 10,
+        "size": "2XL",
+        "color": "Pepper",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-60fb4040",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 138,
+        "product_id": 10,
+        "size": "3XL",
+        "color": "Pepper",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-5f83eed9",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 139,
+        "product_id": 10,
+        "size": "L",
+        "color": "Pepper",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-f441b44e",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 140,
+        "product_id": 10,
+        "size": "M",
+        "color": "Pepper",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-7647c437",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 141,
+        "product_id": 10,
+        "size": "S",
+        "color": "Pepper",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-efb064cc",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 142,
+        "product_id": 10,
+        "size": "XL",
+        "color": "Pepper",
+        "sku": "f-ft-t-shirt-47d3afff-1618c9a0-3a5d6bc8",
+        "price_cents": 2499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      }
+    ]
+  },
+  {
+    "product": {
+      "id": 12,
+      "slug": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28",
+      "title": "Classic Hooded Sweatshirt",
+      "description": "This cozy hoodie is perfect for chilly days. Soft, warm, and stylish, it’s great for lounging or staying comfy on the go.\n\n-Soft and warm fabric for all-day comfort\n-Relaxed fit perfect for layering\n-Front pocket to keep your hands warm\n-Available in different colors to match your style\n\nStay cozy and stylish with this must-have hoodie!",
+      "collection": null,
+      "price_cents": 3499,
+      "seo_title": null,
+      "seo_description": null,
+      "image_url": "/media/studio/previews/placement-b525071d-42c42b83-89f02f52-2d4.png",
+      "status": "active",
+      "images": [
+        {
+          "url": "/media/studio/previews/placement-b525071d-42c42b83-89f02f52-2d4.png",
+          "filename": "placement-b525071d-42c42b83-89f02f52-2d4.png",
+          "alt_text": null,
+          "is_primary": 1,
+          "position": 0
+        }
+      ],
+      "color_images": [
+        {
+          "url": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/mockups/b525071d-825c-4800-aafc-db380bfedde1/b3d780a3-751e-4bd9-b22c-3742878bd536/preview.png",
+          "color": "Black",
+          "source": "supplier_reference"
+        },
+        {
+          "url": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/mockups/b525071d-825c-4800-aafc-db380bfedde1/c0aaeedb-bd5b-4b2d-8d9b-b0e5f7908400/preview.png",
+          "color": "Ash",
+          "source": "supplier_reference"
+        },
+        {
+          "url": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/mockups/b525071d-825c-4800-aafc-db380bfedde1/adf2002d-4fd3-44ec-896b-f7b2efd7eca6/preview.png",
+          "color": "Carolina Blue",
+          "source": "supplier_reference"
+        },
+        {
+          "url": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/mockups/b525071d-825c-4800-aafc-db380bfedde1/d5423b63-a800-4bbd-b875-346bf87a31ea/preview.png",
+          "color": "Charcoal",
+          "source": "supplier_reference"
+        },
+        {
+          "url": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/mockups/b525071d-825c-4800-aafc-db380bfedde1/5daed567-8379-4294-b4cd-26dfa2b9ddba/preview.png",
+          "color": "Dark Chocolate",
+          "source": "supplier_reference"
+        },
+        {
+          "url": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/mockups/b525071d-825c-4800-aafc-db380bfedde1/42cde923-ddc4-486c-8e1b-e095e0cf1dc0/preview.png",
+          "color": "Dark Heather",
+          "source": "supplier_reference"
+        },
+        {
+          "url": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/mockups/b525071d-825c-4800-aafc-db380bfedde1/94b7715f-bd20-4908-8bd2-5b34d97190b1/preview.png",
+          "color": "Forest Green",
+          "source": "supplier_reference"
+        },
+        {
+          "url": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/mockups/b525071d-825c-4800-aafc-db380bfedde1/9023beba-aa17-4edb-843d-ad2352ad2108/preview.png",
+          "color": "Heather Red",
+          "source": "supplier_reference"
+        },
+        {
+          "url": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/mockups/b525071d-825c-4800-aafc-db380bfedde1/b59fe561-ff80-4312-af61-e802a803b662/preview.png",
+          "color": "Kelly Green",
+          "source": "supplier_reference"
+        },
+        {
+          "url": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/mockups/b525071d-825c-4800-aafc-db380bfedde1/9b4603ff-d41d-4058-be36-cb027d3522d4/preview.png",
+          "color": "Maroon",
+          "source": "supplier_reference"
+        },
+        {
+          "url": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/mockups/b525071d-825c-4800-aafc-db380bfedde1/76619a4b-b2c2-4fdd-8ce3-599c813a5577/preview.png",
+          "color": "Navy Blue",
+          "source": "supplier_reference"
+        },
+        {
+          "url": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/mockups/b525071d-825c-4800-aafc-db380bfedde1/dc1004fd-312e-4e5a-91f0-c0b16e04bafe/preview.png",
+          "color": "Red",
+          "source": "supplier_reference"
+        },
+        {
+          "url": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/mockups/b525071d-825c-4800-aafc-db380bfedde1/aef8e664-a7a7-4ea8-b114-e7c8dbcd4b0e/preview.png",
+          "color": "Royal Blue",
+          "source": "supplier_reference"
+        },
+        {
+          "url": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/mockups/b525071d-825c-4800-aafc-db380bfedde1/7ae52e0a-c95e-4981-9cba-354ba07f4213/preview.png",
+          "color": "Sport Grey",
+          "source": "supplier_reference"
+        },
+        {
+          "url": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/mockups/b525071d-825c-4800-aafc-db380bfedde1/6753bc63-06ee-44a1-b1dd-899374ba7f46/preview.png",
+          "color": "White",
+          "source": "supplier_reference"
+        }
+      ],
+      "primary_image": "/media/studio/previews/placement-b525071d-42c42b83-89f02f52-2d4.png"
+    },
+    "variants": [
+      {
+        "id": 17,
+        "product_id": 12,
+        "size": "2XL",
+        "color": "Ash",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-31ae917e",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 18,
+        "product_id": 12,
+        "size": "3XL",
+        "color": "Ash",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-722db17d",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 19,
+        "product_id": 12,
+        "size": "L",
+        "color": "Ash",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-d62c0a6d",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 20,
+        "product_id": 12,
+        "size": "M",
+        "color": "Ash",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-e8fa136c",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 21,
+        "product_id": 12,
+        "size": "S",
+        "color": "Ash",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-42c138ab",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 22,
+        "product_id": 12,
+        "size": "XL",
+        "color": "Ash",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-fe19e4aa",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 23,
+        "product_id": 12,
+        "size": "2XL",
+        "color": "Black",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-46d347be",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 24,
+        "product_id": 12,
+        "size": "3XL",
+        "color": "Black",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-ef53f68d",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 25,
+        "product_id": 12,
+        "size": "L",
+        "color": "Black",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-ec1cdcee",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 26,
+        "product_id": 12,
+        "size": "M",
+        "color": "Black",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-ad867212",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 27,
+        "product_id": 12,
+        "size": "S",
+        "color": "Black",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-b525071d",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 28,
+        "product_id": 12,
+        "size": "XL",
+        "color": "Black",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-be351e35",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 29,
+        "product_id": 12,
+        "size": "2XL",
+        "color": "Carolina Blue",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-e11a7b33",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 30,
+        "product_id": 12,
+        "size": "3XL",
+        "color": "Carolina Blue",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-81045a13",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 31,
+        "product_id": 12,
+        "size": "L",
+        "color": "Carolina Blue",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-f848a0a6",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 32,
+        "product_id": 12,
+        "size": "M",
+        "color": "Carolina Blue",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-2cb03576",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 33,
+        "product_id": 12,
+        "size": "S",
+        "color": "Carolina Blue",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-5762893a",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 34,
+        "product_id": 12,
+        "size": "XL",
+        "color": "Carolina Blue",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-dc987ec6",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 35,
+        "product_id": 12,
+        "size": "2XL",
+        "color": "Charcoal",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-662e07e2",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 36,
+        "product_id": 12,
+        "size": "3XL",
+        "color": "Charcoal",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-fdc09875",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 37,
+        "product_id": 12,
+        "size": "L",
+        "color": "Charcoal",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-f7dd5abb",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 38,
+        "product_id": 12,
+        "size": "M",
+        "color": "Charcoal",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-9b60c0f8",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 39,
+        "product_id": 12,
+        "size": "S",
+        "color": "Charcoal",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-e1b3abb6",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 40,
+        "product_id": 12,
+        "size": "XL",
+        "color": "Charcoal",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-aaa25075",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 41,
+        "product_id": 12,
+        "size": "2XL",
+        "color": "Dark Chocolate",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-d5101e44",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 42,
+        "product_id": 12,
+        "size": "3XL",
+        "color": "Dark Chocolate",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-c8fa6dcd",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 43,
+        "product_id": 12,
+        "size": "L",
+        "color": "Dark Chocolate",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-e7dc9a56",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 44,
+        "product_id": 12,
+        "size": "M",
+        "color": "Dark Chocolate",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-1879dd96",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 45,
+        "product_id": 12,
+        "size": "S",
+        "color": "Dark Chocolate",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-9b46fec0",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 46,
+        "product_id": 12,
+        "size": "XL",
+        "color": "Dark Chocolate",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-f000c67c",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 47,
+        "product_id": 12,
+        "size": "2XL",
+        "color": "Dark Heather",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-e7f22c48",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 48,
+        "product_id": 12,
+        "size": "3XL",
+        "color": "Dark Heather",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-e61757bd",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 49,
+        "product_id": 12,
+        "size": "L",
+        "color": "Dark Heather",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-5497d448",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 50,
+        "product_id": 12,
+        "size": "M",
+        "color": "Dark Heather",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-ea405ef6",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 51,
+        "product_id": 12,
+        "size": "S",
+        "color": "Dark Heather",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-acc3522a",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 52,
+        "product_id": 12,
+        "size": "XL",
+        "color": "Dark Heather",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-29d351da",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 53,
+        "product_id": 12,
+        "size": "2XL",
+        "color": "Forest Green",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-27b5ed7b",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 54,
+        "product_id": 12,
+        "size": "3XL",
+        "color": "Forest Green",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-f9c6b677",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 55,
+        "product_id": 12,
+        "size": "L",
+        "color": "Forest Green",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-8c3b545d",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 56,
+        "product_id": 12,
+        "size": "M",
+        "color": "Forest Green",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-77609f32",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 57,
+        "product_id": 12,
+        "size": "S",
+        "color": "Forest Green",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-8f3ef490",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 58,
+        "product_id": 12,
+        "size": "XL",
+        "color": "Forest Green",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-f9a3a677",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 59,
+        "product_id": 12,
+        "size": "2XL",
+        "color": "Heather Red",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-1a905ebb",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 60,
+        "product_id": 12,
+        "size": "3XL",
+        "color": "Heather Red",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-77186456",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 61,
+        "product_id": 12,
+        "size": "L",
+        "color": "Heather Red",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-161f280f",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 62,
+        "product_id": 12,
+        "size": "M",
+        "color": "Heather Red",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-415b7283",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 63,
+        "product_id": 12,
+        "size": "S",
+        "color": "Heather Red",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-15deedf4",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 64,
+        "product_id": 12,
+        "size": "XL",
+        "color": "Heather Red",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-9daa09df",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 65,
+        "product_id": 12,
+        "size": "2XL",
+        "color": "Kelly Green",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-c56eac00",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 66,
+        "product_id": 12,
+        "size": "3XL",
+        "color": "Kelly Green",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-035cb220",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 67,
+        "product_id": 12,
+        "size": "L",
+        "color": "Kelly Green",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-ccc5e5b9",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 68,
+        "product_id": 12,
+        "size": "M",
+        "color": "Kelly Green",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-28633555",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 69,
+        "product_id": 12,
+        "size": "S",
+        "color": "Kelly Green",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-f8180e5f",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 70,
+        "product_id": 12,
+        "size": "XL",
+        "color": "Kelly Green",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-c3dc7b94",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 71,
+        "product_id": 12,
+        "size": "2XL",
+        "color": "Maroon",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-bfa55949",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 72,
+        "product_id": 12,
+        "size": "3XL",
+        "color": "Maroon",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-742441b0",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 73,
+        "product_id": 12,
+        "size": "L",
+        "color": "Maroon",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-c4abeee1",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 74,
+        "product_id": 12,
+        "size": "M",
+        "color": "Maroon",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-8d79b434",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 75,
+        "product_id": 12,
+        "size": "S",
+        "color": "Maroon",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-a9f531a3",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 76,
+        "product_id": 12,
+        "size": "XL",
+        "color": "Maroon",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-7e27ef5b",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 77,
+        "product_id": 12,
+        "size": "2XL",
+        "color": "Navy Blue",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-cf5475a6",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 78,
+        "product_id": 12,
+        "size": "3XL",
+        "color": "Navy Blue",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-763bfa09",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 79,
+        "product_id": 12,
+        "size": "L",
+        "color": "Navy Blue",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-fe89caf7",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 80,
+        "product_id": 12,
+        "size": "M",
+        "color": "Navy Blue",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-5d399759",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 81,
+        "product_id": 12,
+        "size": "S",
+        "color": "Navy Blue",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-a0c496b9",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 82,
+        "product_id": 12,
+        "size": "XL",
+        "color": "Navy Blue",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-28a6c20f",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 83,
+        "product_id": 12,
+        "size": "2XL",
+        "color": "Red",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-6a19ff21",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 84,
+        "product_id": 12,
+        "size": "3XL",
+        "color": "Red",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-1456cf6c",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 85,
+        "product_id": 12,
+        "size": "L",
+        "color": "Red",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-37c6cd37",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 86,
+        "product_id": 12,
+        "size": "M",
+        "color": "Red",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-f207ff9e",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 87,
+        "product_id": 12,
+        "size": "S",
+        "color": "Red",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-9e039f8d",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 88,
+        "product_id": 12,
+        "size": "XL",
+        "color": "Red",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-ff3c64e2",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 89,
+        "product_id": 12,
+        "size": "2XL",
+        "color": "Royal Blue",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-eebd7578",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 90,
+        "product_id": 12,
+        "size": "3XL",
+        "color": "Royal Blue",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-7f7dea74",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 91,
+        "product_id": 12,
+        "size": "L",
+        "color": "Royal Blue",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-8e4e7c96",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 92,
+        "product_id": 12,
+        "size": "M",
+        "color": "Royal Blue",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-417e143e",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 93,
+        "product_id": 12,
+        "size": "S",
+        "color": "Royal Blue",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-580d5e10",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 94,
+        "product_id": 12,
+        "size": "XL",
+        "color": "Royal Blue",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-62c3a0e7",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 95,
+        "product_id": 12,
+        "size": "2XL",
+        "color": "Sport Grey",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-7aa62d8b",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 96,
+        "product_id": 12,
+        "size": "3XL",
+        "color": "Sport Grey",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-b9d11609",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 97,
+        "product_id": 12,
+        "size": "L",
+        "color": "Sport Grey",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-06d65ff3",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 98,
+        "product_id": 12,
+        "size": "M",
+        "color": "Sport Grey",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-d14fd4e3",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 99,
+        "product_id": 12,
+        "size": "S",
+        "color": "Sport Grey",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-bd0f33f8",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 100,
+        "product_id": 12,
+        "size": "XL",
+        "color": "Sport Grey",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-4ef337d9",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 101,
+        "product_id": 12,
+        "size": "2XL",
+        "color": "White",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-aa5c5f78",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 102,
+        "product_id": 12,
+        "size": "3XL",
+        "color": "White",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-9fb64cd0",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 103,
+        "product_id": 12,
+        "size": "L",
+        "color": "White",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-2706785e",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 104,
+        "product_id": 12,
+        "size": "M",
+        "color": "White",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-8f3f6ec8",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 105,
+        "product_id": 12,
+        "size": "S",
+        "color": "White",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-e8c592a4",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 106,
+        "product_id": 12,
+        "size": "XL",
+        "color": "White",
+        "sku": "unisex-heavy-blend-hooded-sweatshirt-gildan-18500-b525071d-04d80a28-5118ac93",
+        "price_cents": 3499,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      }
+    ]
+  },
+  {
+    "product": {
+      "id": 16,
+      "slug": "engraved-lighter-4fdd6b2b-d35f2713",
+      "title": "Engraved Lighter",
+      "description": "Light up in style with our sleek refillable lighter. Perfect for candles, campfires, or everyday use, this lighter is both practical and stylish. Lighter Does not come prefilled.\n\n-Durable build: Made from strong materials to last.\n-Refillable: Easy to refill for long-term use.\n-Windproof flame: Works great even in the wind.\n-Compact size: Fits easily in your pocket or bag.\n\nAdd convenience and style to your life with our sleek refillable lighter!",
+      "collection": null,
+      "price_cents": 1999,
+      "seo_title": null,
+      "seo_description": null,
+      "image_url": "/media/studio/previews/placement-4fdd6b2b-86556c3a-0fcad23c-adb.png",
+      "status": "active",
+      "images": [
+        {
+          "url": "/media/studio/previews/placement-4fdd6b2b-86556c3a-0fcad23c-adb.png",
+          "filename": "placement-4fdd6b2b-86556c3a-0fcad23c-adb.png",
+          "alt_text": null,
+          "is_primary": 1,
+          "position": 0
+        }
+      ],
+      "color_images": [],
+      "primary_image": "/media/studio/previews/placement-4fdd6b2b-86556c3a-0fcad23c-adb.png"
+    },
+    "variants": [
+      {
+        "id": 146,
+        "product_id": 16,
+        "size": null,
+        "color": "Black",
+        "sku": "engraved-lighter-4fdd6b2b-d35f2713-4fdd6b2b",
+        "price_cents": 1999,
+        "inventory_qty": 1,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 147,
+        "product_id": 16,
+        "size": null,
+        "color": "Silver",
+        "sku": "engraved-lighter-4fdd6b2b-d35f2713-a24d80f5",
+        "price_cents": 1999,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      },
+      {
+        "id": 148,
+        "product_id": 16,
+        "size": null,
+        "color": "White",
+        "sku": "engraved-lighter-4fdd6b2b-d35f2713-231b4e34",
+        "price_cents": 1999,
+        "inventory_qty": 0,
+        "available": true,
+        "fulfillment": "supplier"
+      }
+    ]
+  }
+]
