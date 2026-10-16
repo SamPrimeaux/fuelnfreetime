@@ -59,6 +59,7 @@ export function normalizeAttachments(raw) {
       (mime_type.startsWith("image/") ? "image" : item.text_content != null ? "text" : "file");
 
     const entry = {
+      attachment_id: item.attachment_id ? String(item.attachment_id) : null,
       name,
       mime_type,
       kind,
