@@ -499,7 +499,7 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
     normalized.task_type === "image_generation"
       ? USER_REPLIES.image_gen_failed
       : normalized.task_type === "image_to_text"
-        ? USER_REPLIES.vision_failed
+        ? "I couldn't inspect the attached image. Choose a configured model with vision support and retry; your attachment has been retained."
         : USER_REPLIES.all_models_failed;
 
   await trackAgentSamEvent(

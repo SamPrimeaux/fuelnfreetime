@@ -2,6 +2,7 @@ import { ensureConversation } from "../agentsam/conversations.js";
 import { resolveSelectedResource } from "../agentsam/selected-resource.js";
 import { formatAttachmentsForPrompt } from "../agentsam/attachments.js";
 import { hydrateAttachmentsForChat } from "../agentsam/files.js";
+import { requireApplicationAccountId } from "../lib/account-context.js";
 import { buildAgentsamUiConfig } from "../agentsam/quick-actions.js";
 import {
   BLOCKED_FEATURE_MESSAGES,
@@ -226,11 +227,16 @@ export async function agentsamChat(request, env, executionCtx = null) {
     rawContext.annotation = normalizeAnnotation(rawContext.annotation);
   }
 
-  const hydrated = await hydrateAttachmentsForChat(
-    env,
-    body?.attachments || rawContext.attachments || [],
-    request.url
-  );
+  let hydrated;
+  try {
+    hydrated = await hydrateAttachmentsForChat(
+      env,
+      body?.attachments || rawContext.attachments || [],
+      request.url
+    );
+  } catch (error) {
+    return json({ error: error?.message || "Invalid or inaccessible attachment." }, { status: 400 });
+  }
   const attachments = hydrated.attachments;
   const context = {
     ...rawContext,
@@ -257,6 +263,20 @@ export async function agentsamChat(request, env, executionCtx = null) {
     workflowKey: context.workflow_key,
   });
   const conversationId = conversation?.id || body?.conversation_id || null;
+
+  // R2-backed attachments become immutable conversation references after first send.
+  // Never allow an attachment from a different conversation or account to be reused.
+  for (const item of attachments) {
+    if (!item.attachment_id || !conversationId) continue;
+    const update = await env.DB.prepare(
+      `UPDATE agentsam_attachments SET conversation_id = ?
+         WHERE id = ? AND account_id = ?
+           AND (conversation_id IS NULL OR conversation_id = ?)`
+    ).bind(conversationId, item.attachment_id, requireApplicationAccountId(), conversationId).run();
+    if (!update?.meta?.changes) {
+      return json({ error: "Attachment belongs to another conversation or is unavailable." }, { status: 400 });
+    }
+  }
 
   const ids = createAnalyticsIds(
     { ...body, conversation_id: conversationId },
@@ -1020,114 +1040,4 @@ export async function agentsamToolsCatalog(env) {
 }
 
 export async function agentsamAnalyticsSummary(env, url) {
-  const range = url.searchParams.get("range") || "24h";
-  const summary = await summarizeAgentSamAnalytics(env, { range });
-  return json(summary);
-}
-
-export async function agentsamPromptsList(env) {
-  const [prompts, fragments] = await Promise.all([
-    listPromptTemplates(env),
-    listPromptFragments(env),
-  ]);
-  return json({ ok: true, prompts, fragments });
-}
-
-export async function agentsamPromptCacheSummary(env, accountId = null) {
-  const [prompt_cache, context_cache] = await Promise.all([
-    summarizePromptCache(env),
-    summarizeContextCache(env),
-  ]);
-
-  let top_workflows = [];
-  let top_fragments = [];
-  try {
-    const wf = await env.DB.prepare(
-      `SELECT workflow_key, COUNT(*) AS n, SUM(saved_tokens_estimated) AS saved
-       FROM agentsam_prompt_usage WHERE account_id = ? AND created_at_unix >= ?
-       GROUP BY workflow_key ORDER BY n DESC LIMIT 5`
-    )
-      .bind(await resolveApplicationAccountId(env, accountId), Math.floor(Date.now() / 1000) - 86400)
-      .all();
-    top_workflows = wf.results || [];
-
-    top_fragments = await listPromptFragments(env);
-  } catch {
-    /* non-blocking */
-  }
-
-  return json({
-    ok: true,
-    prompt_cache,
-    context_cache,
-    top_fragments: (top_fragments || []).slice(0, 7).map((f) => f.fragment_key),
-    top_workflows,
-  });
-}
-
-export async function agentsamSemanticSearch(request, env) {
-  let body = {};
-  try {
-    body = (await request.json()) || {};
-  } catch {
-    body = {};
-  }
-  const query = String(body.query || body.q || "").trim();
-  if (!query) return json({ error: "query required" }, { status: 400 });
-
-  const { executeAgentSamTool } = await import("../agentsam/tool-handlers.js");
-  const result = await executeAgentSamTool(env, "fnf_semantic_search", {
-    query,
-    top_k: body.top_k || body.limit || 8,
-    source_type: body.source_type || null,
-  });
-  return json(result);
-}
-
-export async function agentsamPromptCacheInvalidate(request, env) {
-  let body = {};
-  try {
-    body = (await request.json()) || {};
-  } catch {
-    body = {};
-  }
-  const prompt = await invalidatePromptCache(env, {
-    reason: body.reason || "admin_invalidate",
-    workflow_key: body.workflow_key,
-    cache_key: body.cache_key,
-  });
-  const { invalidateContextCache } = await import("../agentsam/context-cache.js");
-  const context = await invalidateContextCache(env, {
-    reason: body.reason || "admin_invalidate",
-    workflow_key: body.workflow_key,
-    cache_key: body.context_cache_key,
-  });
-  return json({ ok: true, prompt, context });
-}
-
-export async function agentsamCompactionStatus(env) {
-  const status = await getCompactionStatus(env);
-  return json(status);
-}
-
-export async function agentsamCompactionRun(request, env, executionCtx = null) {
-  let body = {};
-  try {
-    body = (await request.json()) || {};
-  } catch {
-    body = {};
-  }
-
-  const result = await runAgentsamCompaction(env, {
-    date_key: body.date_key,
-    force: body.force === true,
-    skip_trim: body.skip_trim === true,
-    trigger_source: "admin",
-  });
-
-  if (executionCtx?.waitUntil && result.ok) {
-    executionCtx.waitUntil(Promise.resolve());
-  }
-
-  return json(result);
-}
+  con

@@ -113,6 +113,7 @@ export async function hydrateAttachmentsForChat(env, attachments, requestUrl) {
   const hydrated = [];
 
   for (const item of attachments) {
+    if (!item || typeof item !== "object") throw new Error("Malformed attachment reference.");
     if (item.attachment_id) {
       const row = await getAttachmentById(env, item.attachment_id);
       if (!row) throw new Error("Attachment not found or not authorized for this account.");
