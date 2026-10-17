@@ -24,11 +24,29 @@ renderShell('/admin/products', `
 
   <div class="admin-card">
     <table class="admin-table">
-      <thead><tr><th>Title</th><th>Collection</th><th>Price</th><th>Status</th><th>Variants</th><th>Inventory</th><th></th></tr></thead>
+      <thead><tr><th>Product</th><th>Collection</th><th>Price</th><th>Status</th><th>Variants</th><th>Inventory</th><th></th></tr></thead>
       <tbody id="products-body"><tr><td colspan="7" class="admin-empty">Loading…</td></tr></tbody>
     </table>
   </div>
 `);
+
+function escapeProductText(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[ch]);
+}
+
+function productImage(p) {
+  const url = p.primary_image || p.image_url;
+  if (!url) return '<span class="product-table-placeholder" aria-hidden="true"></span>';
+  try {
+    const parsed = new URL(url, location.origin);
+    if (!['https:', 'http:'].includes(parsed.protocol)) throw new Error('Invalid media URL');
+    return `<img class="product-table-thumb" src="${escapeProductText(parsed.href)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.hidden=true;this.parentNode.classList.add('product-image-empty')">`;
+  } catch {
+    return '<span class="product-table-placeholder" aria-hidden="true"></span>';
+  }
+}
 
 function badgeFor(status) {
   return `<span class="badge ${status}">${status}</span>`;
@@ -44,18 +62,24 @@ function badgeFor(status) {
     }
     body.innerHTML = d.products.map(p => `
       <tr>
-        <td><a href="/admin/product-edit?id=${p.id}">${p.title}</a></td>
-        <td>${p.collection || '—'}</td>
+        <td><div class="product-table-identity"><span class="product-table-image">${productImage(p)}</span><a href="/admin/product-edit?id=${encodeURIComponent(p.id)}">${escapeProductText(p.title)}</a></div></td>
+        <td>${escapeProductText(p.collection || '—')}</td>
         <td>${centsToDollars(p.price_cents)}</td>
         <td>${badgeFor(p.status)}</td>
         <td>${p.variant_count}</td>
         <td>${p.total_inventory}${p.total_inventory <= 3 && p.variant_count > 0 ? ' <span class="badge low">low</span>' : ''}</td>
-        <td><a href="/admin/product-edit?id=${p.id}" class="btn ghost small">Edit</a></td>
+        <td><a href="/admin/product-edit?id=${encodeURIComponent(p.id)}" class="btn ghost small">Edit</a></td>
       </tr>
     `).join('');
   } catch (err) {
-    document.getElementById('products-body').innerHTML =
-      `<tr><td colspan="7" class="admin-empty">${err.message}</td></tr>`;
+    document.getElementById('products-body').textContent = '';
+    const cell = document.createElement('td');
+    cell.colSpan = 7;
+    cell.className = 'admin-empty';
+    cell.textContent = err.message;
+    const tr = document.createElement('tr');
+    tr.append(cell);
+    document.getElementById('products-body').append(tr);
   }
 })();
 </script>

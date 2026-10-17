@@ -239,6 +239,13 @@ async function overview(request, env) {
 async function listProducts(request, env) {
   const { results } = await env.DB.prepare(
     `SELECT p.*,
+            COALESCE(
+              (SELECT m.url FROM product_images pi
+               JOIN media_assets m ON m.id = pi.media_asset_id
+               WHERE pi.product_id = p.id
+               ORDER BY pi.is_primary DESC, pi.position ASC LIMIT 1),
+              p.image_url
+            ) AS primary_image,
             COUNT(v.id) AS variant_count,
             COALESCE(SUM(v.inventory_qty), 0) AS total_inventory
      FROM products p

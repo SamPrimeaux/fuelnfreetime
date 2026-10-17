@@ -1937,3 +1937,15 @@ body.console-nav-collapsed .console-nav-ghost-toggle--persistent:hover::before {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+
+/* Product list imagery follows the existing media association; no supplier fetches. */
+.console-main .product-table-identity { display:flex; align-items:center; gap:12px; min-width:0; }
+.console-main .product-table-image { display:flex; align-items:center; justify-content:center; width:48px; height:48px; flex:0 0 48px; border:1px solid var(--c-line); background:#f7f7f7; border-radius:7px; overflow:hidden; }
+.console-main .product-table-thumb { width:100%; height:100%; object-fit:contain; display:block; }
+.console-main .product-table-placeholder { display:block; width:21px; height:21px; border:1px solid #dadada; border-radius:4px; }
+.console-main .product-table-identity a { min-width:0; overflow-wrap:anywhere; }
+@media (max-width:680px) {
+  .console-main .product-table-identity { gap:8px; }
+  .console-main .product-table-image { width:38px; height:38px; flex-basis:38px; }
+}
