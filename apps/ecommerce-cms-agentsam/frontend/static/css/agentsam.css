@@ -511,3 +511,16 @@ body.agentsam-focus-mode .agentsam-drawer{animation:asm-focus-enter .26s cubic-b
 .agentsam-msg-content li{padding-left:2px;margin:4px 0;white-space:normal}
 .agentsam-msg-content pre{box-sizing:border-box;max-width:100%;margin:6px 0 12px;padding:11px 12px;overflow-x:auto;white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #e8e5ed;border-radius:9px;background:#f8f7fa;color:#3f3846;font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .agentsam-msg-content :not(pre)>code{border-radius:4px;background:#f0eef4;padding:1px 4px;font:11px ui-monospace,SFMono-Regular,Menlo,monospace}
+
+/* AgentSam: shared compact send and attachment states for dock/focus composers. */
+.agentsam-compose .agentsam-send { border-radius: 999px; background: #7c3aed; color: #fff; }
+.agentsam-compose .agentsam-send:hover:not(:disabled) { background: #6d28d9; }
+.agentsam-compose .agentsam-send:focus-visible { outline: 2px solid #7c3aed; outline-offset: 3px; }
+.agentsam-send-arrow { display: block; font: 600 21px/1 system-ui; transform: translateY(-1px); }
+.asm-attachment-thumbnail { display: block; width: 34px; height: 34px; object-fit: cover; border-radius: 7px; flex: none; }
+.asm-attachment-chip { gap: 6px; max-width: 100%; }
+.asm-attachment-chip > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.asm-attachment-notice { grid-column: 1 / -1; color: #a22f1e; font-size: 12px; padding: 2px 4px; }
+.agentsam-message-attachments { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.agentsam-compose.is-attachment-drop-target,
+.fnf-home-composer.is-attachment-drop-target { outline: 2px dashed #8b5cf6; outline-offset: -3px; background: #f7f2ff; }

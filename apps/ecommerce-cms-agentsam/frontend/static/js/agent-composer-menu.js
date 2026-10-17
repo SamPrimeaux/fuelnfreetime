@@ -8,7 +8,10 @@
   const draft = window.AgentSamDraft || (window.AgentSamDraft = { attachments: [], selected_resource: null });
   const controls = new Set();
   const MAX_FILES = 6;
-  const MAX_TEXT = 12000;
+  const pendingUploads = new Set();
+  const fileHandles = new Map();
+  const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+  const MAX_TEXT_BYTES = 512 * 1024;
   const labels = { files: "Files", target: "Target", mention: "Mention", skills: "Skills", apps: "Apps" };
   const glyphs = {
     files: "files", upload: "upload", target: "target", mention: "mention", skills: "skills",
@@ -42,9 +45,17 @@
     customers: "/admin/customers", collections: "/admin/collections", content: "/admin/content"
   };
   function escapeText(s) { return String(s == null ? "" : s); }
-  function notify() { for (const fn of controls) fn(); }
+  function notify() {
+    for (const fn of controls) fn();
+    document.dispatchEvent(new Event("agentsam:attachments-updated"));
+  }
+  function release(item) {
+    if (item?.localPreviewUrl) URL.revokeObjectURL(item.localPreviewUrl);
+    fileHandles.delete(item);
+  }
   function removeAttachment(index) {
-    draft.attachments.splice(index, 1);
+    const [item] = draft.attachments.splice(index, 1);
+    release(item);
     notify();
   }
   function renderDrafts(root) {
@@ -53,23 +64,50 @@
     holder.replaceChildren();
     const chips = [];
     if (draft.selected_resource) chips.push({ text: draft.selected_resource.label, context: true });
-    draft.attachments.forEach((item, index) => chips.push({ text: item.name, index }));
-    chips.forEach((item) => {
+    draft.attachments.forEach((item, index) => chips.push({ text: item.name, index, item }));
+    for (const entry of chips) {
       const chip = document.createElement("span");
       chip.className = "asm-attachment-chip";
-      chip.textContent = item.text;
-      const button = document.createElement("button");
-      button.type = "button";
-      button.textContent = "×";
-      button.setAttribute("aria-label", "Remove " + item.text);
-      button.addEventListener("click", () => {
-        if (item.context) draft.selected_resource = null;
-        else removeAttachment(item.index);
+      if (entry.item?.localPreviewUrl) {
+        const image = document.createElement("img");
+        image.src = entry.item.localPreviewUrl;
+        image.alt = "";
+        image.className = "asm-attachment-thumbnail";
+        chip.append(image);
+      }
+      const caption = document.createElement("span");
+      caption.textContent = entry.text + (entry.item?.uploading ? " · Uploading…" : entry.item?.error ? " · Upload failed" : "");
+      chip.append(caption);
+      if (entry.item?.error && fileHandles.has(entry.item)) {
+        const retry = document.createElement("button");
+        retry.type = "button";
+        retry.textContent = "Retry";
+        retry.setAttribute("aria-label", "Retry upload of " + entry.text);
+        retry.addEventListener("click", () => { void uploadOne(entry.item, fileHandles.get(entry.item), message => showNotice(root, message)); });
+        chip.append(retry);
+      }
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.textContent = "×";
+      remove.setAttribute("aria-label", "Remove " + entry.text);
+      remove.addEventListener("click", () => {
+        if (entry.context) draft.selected_resource = null;
+        else removeAttachment(entry.index);
         notify();
       });
-      chip.append(button);
+      chip.append(remove);
       holder.append(chip);
-    });
+    }
+  }
+  function showNotice(root, message) {
+    let feedback = root.querySelector(".asm-attachment-notice");
+    if (!feedback) {
+      feedback = document.createElement("div");
+      feedback.className = "asm-attachment-notice";
+      feedback.setAttribute("role", "status");
+      root.append(feedback);
+    }
+    feedback.textContent = String(message);
   }
   function addMention(input, value) {
     const a = input.selectionStart ?? input.value.length;
@@ -79,38 +117,79 @@
     input.dispatchEvent(new Event("input", { bubbles: true }));
     input.focus();
   }
-  function fileReader(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ""));
-      reader.onerror = () => reject(new Error("Could not read " + file.name));
-      reader.readAsDataURL(file);
-    });
+  async function uploadOne(record, file, onNotice) {
+    if (!file || record.uploading) return;
+    record.uploading = true;
+    record.error = null;
+    notify();
+    const work = (async () => {
+      try {
+        const form = new FormData();
+        form.append("file", file);
+        const response = await fetch("/api/admin/agentsam/files/upload", {
+          method: "POST", credentials: "include", body: form,
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.ok || !payload.attachment_id) {
+          throw new Error(payload.error || "Upload failed");
+        }
+        record.attachment_id = payload.attachment_id;
+        record.preview_url = payload.preview_url;
+        record.mime_type = payload.mime_type;
+        record.size_bytes = payload.file_size_bytes;
+        fileHandles.delete(record);
+      } catch (error) {
+        record.error = error?.message || "Upload failed";
+        onNotice(record.name + ": " + record.error);
+      } finally {
+        record.uploading = false;
+        notify();
+      }
+    })();
+    pendingUploads.add(work);
+    try { await work; } finally { pendingUploads.delete(work); }
   }
   async function collectFiles(files, onNotice) {
+    const work = [];
     for (const file of Array.from(files || [])) {
       if (draft.attachments.length >= MAX_FILES) { onNotice("Up to 6 files per message."); break; }
       const image = /^image\/(png|jpeg|webp)$/.test(file.type);
       const text = /^(text\/(plain|csv|markdown)|application\/json)$/.test(file.type)
         || /\.(txt|md|json|csv)$/i.test(file.name);
       if (!image && !text) { onNotice("Use PNG, JPEG, WebP, TXT, MD, JSON or CSV files."); continue; }
-      if (image && file.size > 3 * 1024 * 1024) { onNotice(file.name + " exceeds the 3 MB image limit."); continue; }
-      if (text && file.size > 512 * 1024) { onNotice(file.name + " exceeds the 512 KB text limit."); continue; }
-      try {
-        const record = { name: file.name.slice(0, 255), size_bytes: file.size, mime_type: file.type || "text/plain", kind: image ? "image" : "text" };
-        if (image) record.image_base64 = (await fileReader(file)).split(",")[1];
-        else {
-          const contents = await file.text();
-          record.text_content = contents.slice(0, MAX_TEXT);
-          if (contents.length > MAX_TEXT) onNotice(file.name + " is limited to its first 12,000 characters.");
-        }
-        draft.attachments.push(record);
-      } catch (error) { onNotice(error.message); }
+      if (image && file.size > MAX_IMAGE_BYTES) { onNotice(file.name + " exceeds the 10 MB image limit."); continue; }
+      if (text && file.size > MAX_TEXT_BYTES) { onNotice(file.name + " exceeds the 512 KB text limit."); continue; }
+      const record = {
+        name: file.name.slice(0, 255), size_bytes: file.size,
+        mime_type: file.type || "text/plain", kind: image ? "image" : "text",
+        localPreviewUrl: image ? URL.createObjectURL(file) : null,
+        uploading: false, error: null, attachment_id: null,
+      };
+      fileHandles.set(record, file);
+      draft.attachments.push(record);
+      work.push(uploadOne(record, file, onNotice));
     }
     notify();
+    await Promise.all(work);
+  }
+  async function readyAttachments() {
+    await Promise.all([...pendingUploads]);
+    const failed = draft.attachments.find(item => !item.attachment_id);
+    if (failed) throw new Error(failed.name + ": " + (failed.error || "Upload is not ready. Retry or remove this file."));
+    return draft.attachments.map(({ attachment_id, name, mime_type, size_bytes, kind, preview_url }) =>
+      ({ attachment_id, name, mime_type, size_bytes, kind, preview_url }));
   }
   function context() { return draft.selected_resource ? { selected_resource: draft.selected_resource } : {}; }
-  function clearFiles() { draft.attachments = []; notify(); }
+  function clearFiles(sent = null) {
+    const sentIds = Array.isArray(sent) ? new Set(sent.map(item => item.attachment_id)) : null;
+    const keep = [];
+    for (const item of draft.attachments) {
+      if (sentIds && !sentIds.has(item.attachment_id)) keep.push(item);
+      else release(item);
+    }
+    draft.attachments = keep;
+    notify();
+  }
   function attach(root, button, input) {
     if (!root || !button || !input || button.dataset.agentMenuWired) return;
     button.dataset.agentMenuInitializing = "1";
@@ -147,8 +226,30 @@
       noticeTimeout = setTimeout(() => toast.remove(), 3500);
     }
     fileInput.addEventListener("change", async () => {
-      await collectFiles(fileInput.files, onNotice);
+      await collectFiles(fileInput.files, message => showNotice(root, message));
       fileInput.value = "";
+    });
+    input.addEventListener("paste", event => {
+      const files = [...(event.clipboardData?.items || [])]
+        .filter(item => item.kind === "file" && item.type.startsWith("image/"))
+        .map(item => item.getAsFile()).filter(Boolean);
+      if (!files.length) return; // Ordinary text paste remains untouched.
+      event.preventDefault();
+      void collectFiles(files.map((file, i) => new File([file], file.name || ("clipboard-" + (i + 1) + ".png"), { type: file.type })), message => showNotice(root, message));
+    });
+    root.addEventListener("dragover", event => {
+      if (!event.dataTransfer?.types?.includes("Files")) return;
+      event.preventDefault();
+      root.classList.add("is-attachment-drop-target");
+    });
+    root.addEventListener("dragleave", event => {
+      if (!root.contains(event.relatedTarget)) root.classList.remove("is-attachment-drop-target");
+    });
+    root.addEventListener("drop", event => {
+      root.classList.remove("is-attachment-drop-target");
+      if (!event.dataTransfer?.files?.length) return;
+      event.preventDefault();
+      void collectFiles(event.dataTransfer.files, message => showNotice(root, message));
     });
     function place() {
       if (menu.hidden) return;
@@ -329,7 +430,7 @@
     document.addEventListener("scroll", place, true);
     button.dataset.agentMenuWired = "1";
     delete button.dataset.agentMenuInitializing;
-    return { close, getAttachments: () => draft.attachments.slice(), context, clearFiles };
+    return { close, getAttachments: readyAttachments, context, clearFiles };
   }
-  window.AgentSamComposerMenu = { mount: attach, draft, context, clearFiles, notify };
+  window.AgentSamComposerMenu = { mount: attach, draft, context, clearFiles, readyAttachments, notify };
 })();

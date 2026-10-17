@@ -2,6 +2,7 @@ import { ensureConversation } from "../agentsam/conversations.js";
 import { resolveSelectedResource } from "../agentsam/selected-resource.js";
 import { formatAttachmentsForPrompt } from "../agentsam/attachments.js";
 import { hydrateAttachmentsForChat } from "../agentsam/files.js";
+import { requireApplicationAccountId } from "../lib/account-context.js";
 import { buildAgentsamUiConfig } from "../agentsam/quick-actions.js";
 import {
   BLOCKED_FEATURE_MESSAGES,
@@ -226,11 +227,16 @@ export async function agentsamChat(request, env, executionCtx = null) {
     rawContext.annotation = normalizeAnnotation(rawContext.annotation);
   }
 
-  const hydrated = await hydrateAttachmentsForChat(
-    env,
-    body?.attachments || rawContext.attachments || [],
-    request.url
-  );
+  let hydrated;
+  try {
+    hydrated = await hydrateAttachmentsForChat(
+      env,
+      body?.attachments || rawContext.attachments || [],
+      request.url
+    );
+  } catch (error) {
+    return json({ error: error?.message || "Invalid or inaccessible attachment." }, { status: 400 });
+  }
   const attachments = hydrated.attachments;
   const context = {
     ...rawContext,
@@ -257,6 +263,19 @@ export async function agentsamChat(request, env, executionCtx = null) {
     workflowKey: context.workflow_key,
   });
   const conversationId = conversation?.id || body?.conversation_id || null;
+
+  // Account-scoped uploaded assets bind to the actual conversation on first use.
+  for (const item of attachments) {
+    if (!item.attachment_id || !conversationId) continue;
+    const update = await env.DB.prepare(
+      `UPDATE agentsam_attachments SET conversation_id = ?
+         WHERE id = ? AND account_id = ?
+           AND (conversation_id IS NULL OR conversation_id = ?)`
+    ).bind(conversationId, item.attachment_id, requireApplicationAccountId(), conversationId).run();
+    if (!update?.meta?.changes) {
+      return json({ error: "Attachment belongs to another conversation or is unavailable." }, { status: 400 });
+    }
+  }
 
   const ids = createAnalyticsIds(
     { ...body, conversation_id: conversationId },

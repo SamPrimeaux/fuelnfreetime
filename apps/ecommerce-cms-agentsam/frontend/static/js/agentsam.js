@@ -78,7 +78,7 @@ function renderAgentsamShell() {
         <button type="button" class="agentsam-plus" id="agentsam-plus" aria-label="Add files, resources, skills or apps" aria-haspopup="menu" aria-expanded="false">+</button>
         <textarea id="agentsam-input" rows="2" placeholder="Work with AgentSam" autocomplete="off" aria-label="Message AgentSam"></textarea>
         <button type="submit" class="agentsam-send" id="agentsam-send" aria-label="Send">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h13M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span aria-hidden="true" class="agentsam-send-arrow">↑</span>
         </button>
         <div class="agentsam-attachment-list" aria-live="polite"></div>
       </form>
@@ -201,7 +201,7 @@ function renderAgentSamMarkdown(container, content) {
   }
 }
 
-function appendMessage(role, text, routing) {
+function appendMessage(role, text, routing, attachments = []) {
   const box = document.getElementById("agentsam-messages");
   if (!box) return;
   const el = document.createElement("div");
@@ -219,6 +219,26 @@ function appendMessage(role, text, routing) {
   if (role === "assistant") renderAgentSamMarkdown(body, text);
   else body.textContent = text;
   el.appendChild(body);
+  if (role === "user" && attachments.length) {
+    const files = document.createElement("div");
+    files.className = "agentsam-message-attachments";
+    for (const item of attachments) {
+      const chip = document.createElement("span");
+      chip.className = "asm-attachment-chip";
+      if (item.kind === "image" && typeof item.preview_url === "string" && item.preview_url.startsWith("/media/")) {
+        const image = document.createElement("img");
+        image.src = item.preview_url;
+        image.alt = "";
+        image.className = "asm-attachment-thumbnail";
+        chip.append(image);
+      }
+      const label = document.createElement("span");
+      label.textContent = item.name || "Attachment";
+      chip.append(label);
+      files.append(chip);
+    }
+    el.append(files);
+  }
   box.appendChild(el);
   box.scrollTop = box.scrollHeight;
 }
@@ -298,8 +318,15 @@ function presentAgentsamProposal(options = {}) {
 function setBusy(busy) {
   const send = document.getElementById("agentsam-send");
   const input = document.getElementById("agentsam-input");
-  if (send) send.disabled = busy;
-  if (input) input.disabled = busy;
+  const hasDraft = Boolean(input?.value.trim() || window.AgentSamDraft?.attachments?.length);
+  if (send) {
+    send.disabled = busy || !hasDraft;
+    send.setAttribute("aria-busy", String(busy));
+  }
+  if (input) {
+    input.disabled = busy;
+    input.setAttribute("aria-busy", String(busy));
+  }
 }
 
 function buildAgentsamContext(extra = {}) {
@@ -332,12 +359,25 @@ async function sendAgentsamMessage(text, options = {}) {
   if (drawerRequestActive) throw new Error("AgentSam is already responding");
   const message = (text || "").trim();
   const draft = window.AgentSamDraft || { attachments: [], selected_resource: null };
-  const attachments = Array.isArray(options.attachments) ? options.attachments : (draft.attachments || []).slice();
-  if (!message && !attachments.length) return;
-
+  if (!message && !draft.attachments?.length && !options.attachments?.length) return;
   drawerRequestActive = true;
-  appendMessage("user", message || "Attached " + attachments.length + " file(s)");
   setBusy(true);
+  let attachments;
+  try {
+    attachments = Array.isArray(options.attachments) && options.attachments.every(item => item.attachment_id)
+      ? options.attachments
+      : await (window.AgentSamComposerMenu?.readyAttachments?.() || Promise.resolve([]));
+    if (!message && !attachments.length) {
+      drawerRequestActive = false;
+      setBusy(false);
+      return;
+    }
+  } catch (error) {
+    drawerRequestActive = false;
+    setBusy(false);
+    throw error;
+  }
+  appendMessage("user", message || "Attached " + attachments.length + " file(s)", null, attachments);
 
   const typing = document.createElement("div");
   typing.className = "agentsam-msg agentsam-msg--assistant agentsam-msg--typing";
@@ -365,7 +405,7 @@ async function sendAgentsamMessage(text, options = {}) {
     if (!res.ok) throw new Error(data.error || "Request failed");
     drawerConversationId = data.conversation_id || drawerConversationId;
     appendMessage("assistant", data.reply, data.routing);
-    if (window.AgentSamComposerMenu && !options.preserveAttachments) window.AgentSamComposerMenu.clearFiles();
+    if (window.AgentSamComposerMenu && !options.preserveAttachments) window.AgentSamComposerMenu.clearFiles(attachments);
 
     if (data.routing?.workflow?.ui_label) {
       updateStatusLine(`${data.routing.workflow.ui_label} · ${data.routing.classification?.source || "routed"}`);
@@ -444,6 +484,17 @@ function bindAgentsamStaticHandlers() {
     } else if (action === "Expand" || action === "Collapse") {
       setAgentsamFocus(!document.body.classList.contains("agentsam-focus-mode"));
     }
+  });
+
+  document.getElementById("agentsam-input")?.addEventListener("input", () => setBusy(drawerRequestActive));
+  document.addEventListener("agentsam:attachments-updated", () => setBusy(drawerRequestActive));
+  setBusy(false);
+
+  document.getElementById("agentsam-input")?.addEventListener("keydown", event => {
+    if (event.key !== "Enter" || event.shiftKey || event.isComposing || event.keyCode === 229 ||
+        event.altKey || event.ctrlKey || event.metaKey || event.defaultPrevented) return;
+    event.preventDefault();
+    if (!drawerRequestActive) document.getElementById("agentsam-form")?.requestSubmit();
   });
 
   document.getElementById("agentsam-form")?.addEventListener("submit", async (e) => {

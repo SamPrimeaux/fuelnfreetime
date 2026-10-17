@@ -158,5 +158,14 @@ server.listen(0, "127.0.0.1", async () => {
     process.exitCode = 1;
   } finally {
     server.close();
+    // Run the actual keyboard/upload/vision-attachment interactions on the
+    // same healthy CI Chromium runner, without a second composer implementation.
+    await import("./agentsam-composer-p0-browser.test.mjs");
+    const checks = await runBrowser(process.execPath, [
+      "--test",
+      "tests/agentsam-attachment-identity.test.mjs",
+      "tests/agentsam-vision-provider-contract.test.mjs",
+    ], { cwd: root, encoding: "utf8", timeout: 30000, maxBuffer: 2 * 1024 * 1024 });
+    console.log(checks.stdout);
   }
 });

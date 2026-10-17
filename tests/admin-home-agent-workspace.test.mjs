@@ -36,8 +36,12 @@ test("capability menu is shared by home and chat and does not pretend plugins ar
   }
   assert.match(menu, /\/api\/admin\/agentsam\/skills/);
   assert.match(menu, /\/api\/admin\/agentsam\/status/);
-  assert.match(menu, /image_base64/);
-  assert.match(menu, /text_content/);
+  // Actual user files upload through the account-scoped R2/D1 attachment service.
+  // The composer sends a persisted attachment_id, not base64 prompt payloads.
+  assert.match(menu, /\/api\/admin\/agentsam\/files\/upload/);
+  assert.match(menu, /attachment_id/);
+  assert.match(menu, /readyAttachments/);
+  assert.doesNotMatch(menu, /record\.image_base64\s*=/);
   assert.match(menu, /connected/);
   assert.match(menu, /ChatGPT plugin authorization and FNF app authorization are separate/);
   assert.match(drawer, /mountAgentSamCapabilityMenu/);
