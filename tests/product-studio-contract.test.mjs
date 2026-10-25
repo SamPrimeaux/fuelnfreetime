@@ -139,7 +139,8 @@ test("AgentSam annotation never binds to the admin shell", async () => {
   assert.doesNotMatch(source, /watch\(document\)/);
   assert.match(source, /url\.origin === location\.origin/);
   assert.match(source, /!url\.pathname\.startsWith\('\/admin'\)/);
-  assert.match(source, /button\.disabled = !available/);
+  assert.match(source, /inspectable = available/);
+  assert.match(source, /if \(!inspectable\) \{\s*openPageComposer\(\);/);
 });
 
 test("product detail returns null when the catalog product does not exist", async () => {
@@ -182,7 +183,7 @@ test("Product Studio persistence and Completeful mutations are server-side contr
 
   assert.match(workspace, /\/api\/admin\/product-studio\/drafts/);
   assert.match(workspace, /Prepare for print/);
-  assert.match(workspace, /Render Completeful mockup/);
+  assert.match(workspace, /Render Completeful colorways/);
   assert.match(workspace, /Next step · Product details/);
   assert.match(workspace, /continueToProductDetails/);
   assert.doesNotMatch(workspace, /Storefront description/);
@@ -235,7 +236,7 @@ test("Product Studio canvas and Options share print-area selection without stand
   assert.match(workspace, /role="group" aria-label="Print location"/);
   assert.match(workspace, /choosePrintLocation\(candidate\.print_location_id\)/);
   assert.match(workspace, /style=\{\{ \.\.\.placementFrameStyle, aspectRatio: ratio \}\}/);
-  assert.match(workspace, /src="\/admin\/brand\/mini-agentsam-trigger\.svg"/);
+  assert.match(workspace, /window\.addEventListener\("agentsam:mini-open", claim\)/);
   assert.doesNotMatch(workspace, /Provider references \(/);
   assert.doesNotMatch(workspace, /POSITIONING GUIDE/);
 });

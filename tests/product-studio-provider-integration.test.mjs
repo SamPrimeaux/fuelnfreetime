@@ -90,12 +90,18 @@ test("miniAgentSam selected Product Studio resource is verified server-side befo
   }), /location unavailable/);
 });
 
-test("miniAgentSam trigger uses local icon and forwards actual product selection to the chat endpoint", async () => {
+test("miniAgentSam global trigger forwards the current Product Studio resource to chat", async () => {
   const src = await read("../apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx");
-  assert.match(src, /ref=\{miniTriggerRef\}/);
-  assert.match(src, /src="\/admin\/brand\/mini-agentsam-trigger.svg"/);
+  // Product Studio now claims the shared header's crosshair instead of rendering a second local trigger.
+  assert.match(src, /window\.addEventListener\("agentsam:mini-open", claim\)/);
+  assert.match(src, /event\.preventDefault\(\); openMiniRef\.current\(\)/);
+  assert.match(src, /miniRef\.current\.select\(/);
+  assert.match(src, /type: "product_artwork", surface: "product-studio"/);
+  assert.match(src, /productId: catalogId, variantId, locationId, assetId: asset\?\.id \|\| null/);
   assert.match(src, /selected_resource: selectedResource/);
   assert.match(src, /send: \(\{ prompt: text, signal, resource \}\) => miniSendRef\.current\(text, signal, resource\)/);
+  assert.match(src, /askAI\(generate, message, signal, resource\)/);
+  assert.match(src, /new CustomEvent\("agentsam:mini-state"/);
   assert.doesNotMatch(src, /Brainstorm three concise visual directions/);
   assert.doesNotMatch(src, /className="ps-studio-context"/);
 });

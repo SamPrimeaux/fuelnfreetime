@@ -28,7 +28,7 @@ test("artwork gallery has two substantial square tiles per row, including mobile
 test("canvas uses viewport height and provider artboard ratio without shading empty print bounds", async () => {
   const css = await read("../apps/ecommerce-cms-agentsam/frontend/src/styles/product-studio.css");
   const workspace = await read("../apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx");
-  assert.match(workspace, /width: `min\(100%, 880px, calc\(\(100dvh - 290px\) \* \$\{artboardAspectRatio\}\)\)`/);
+  assert.match(workspace, /width: `min\(100%, 880px, calc\(\(100dvh - 350px\) \* \$\{artboardAspectRatio\}\)\)`/);
   assert.match(css, /min-height: max\(510px, calc\(100dvh - 220px\)\)/);
   assert.match(css, /\.ps-design-print-area \.ps-placement-empty \{\s*background: transparent;/);
   assert.match(workspace, /const \[guides, setGuides\] = useState\(false\)/);
@@ -38,7 +38,7 @@ test("canvas uses viewport height and provider artboard ratio without shading em
 test("unverified Back views never impersonate a real garment through a generic silhouette", async () => {
   const workspace = await read("../apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx");
   const resolver = await read("../apps/ecommerce-cms-agentsam/frontend/src/pages/products/studio-side-image.ts");
-  assert.match(workspace, /No verified \{location\?\.name \|\| "side"\} mockup/);
+  assert.match(workspace, /A garment photo will appear when an exact-side render is available/);
   assert.match(workspace, /ps-mini-unverified/);
   assert.doesNotMatch(workspace, /NeutralGarmentSilhouette/);
   assert.match(resolver, /if \(isFront\) return frontVariantImage \|\| artboardImage \|\| null;/);

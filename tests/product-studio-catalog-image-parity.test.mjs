@@ -22,8 +22,9 @@ test("studio canvas and mini preview use catalog image proxy/error-fallback rend
 
 test("selected Front image can fall back by variant, but Back cannot fall back to Front", async () => {
   const canvas = await source("../apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx");
-  assert.match(canvas, /isFrontLocation \? \[designImage, variant\?\.cover_image_url, variant\?\.main_icon_url,/);
-  assert.match(canvas, /productImage\(detail\.product\)\] : \[designImage\]/);
+  assert.match(canvas, /const designImage = selectStudioSideImage\(/);
+  assert.match(canvas, /blankVariantSources\[0\], isFrontLocation, selectedAttributes,/);
+  assert.match(canvas, /: \[designImage\]\)/);
   const frontImage = "https://supplier.example/gildan-front.png";
   assert.equal(selectStudioSideImage([], "front", "black-s", "https://supplier.example/front-artboard.png",
     frontImage, true, { Color: "Black" }), frontImage);
