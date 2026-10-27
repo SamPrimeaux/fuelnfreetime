@@ -68,6 +68,7 @@ export const ADMIN_ROUTE_MANIFEST = [
   appAdmin("growth", { id: "admin.growth", path: "/admin/growth", handler: "admin-html", page: "growth", context: "growth.workspace", legacy: ["/admin/growth.html"] }),
   coreAdmin({ id: "admin.discounts", path: "/admin/discounts", handler: "admin-html", page: "discounts", context: "commerce.discounts", legacy: ["/admin/discounts.html"] }),
   coreAdmin({ id: "admin.scaffold", path: "/admin/scaffold", handler: "admin-html", page: "scaffold", context: "admin.scaffold", legacy: ["/admin/scaffold.html"] }),
+  coreAdmin({ id: "admin.brand-studio", path: "/admin/content/brand", handler: "admin-spa", context: "brand.studio" }),
   coreAdmin({
     id: "admin.content",
     path: "/admin/content",
