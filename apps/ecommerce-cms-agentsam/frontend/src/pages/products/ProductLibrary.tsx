@@ -96,7 +96,12 @@ export default function ProductLibrary() {
           <table className="pl-table">
             <thead><tr><th scope="col">Product</th><th scope="col">Collection</th><th scope="col">Price</th><th scope="col">Status</th><th scope="col">Variants</th><th scope="col">Inventory</th><th scope="col"><span className="pl-sr-only">Actions</span></th></tr></thead>
             <tbody>
-              {visible.map((p) => <tr key={p.id}>
+              {visible.map((p) => <tr key={p.id} onClick={(event) => {
+                // Navigate via the existing accessible product link; don't duplicate route configuration.
+                if ((event.target as HTMLElement).closest("a, button, input, select")) return;
+                const link = event.currentTarget.querySelector<HTMLAnchorElement>(".pl-name");
+                if (link?.href) window.location.assign(link.href);
+              }}>
                 <td className="pl-product-cell">
                   <div className="pl-product">
                     <div className="pl-thumb">{safeImage(p) ? <img src={safeImage(p)!} alt="" loading="lazy" /> : <StudioIcon name="image" size={22} />}</div>
