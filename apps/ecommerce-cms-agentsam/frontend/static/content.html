@@ -309,6 +309,12 @@ renderShell("/admin/content", `
         </select>
       </div>
 
+      <section class="media-inspector-card media-processing-recovery" id="media-drawer-recovery" aria-live="polite" hidden>
+        <strong>Processing needs attention</strong>
+        <p id="media-drawer-processing-error">This asset could not finish processing. Your uploaded source is still available.</p>
+        <button type="button" class="btn small" id="media-drawer-retry-processing">Retry processing</button>
+      </section>
+
       <div class="media-glb-placement" id="media-glb-placement" hidden>
         <div class="media-glb-placement-head">
           <strong>3D placement</strong>
