@@ -257,7 +257,7 @@ export default function StudioWorkspace({
         return [{
           mockup_id: String(meta.mockup_id), variant_color: String(meta.variant_color),
           print_location_id: id, render_id: String(meta.render_id || ""),
-          status: "succeeded", asset: { url: item.url },
+          status: "succeeded", asset: { id: item.id, url: item.url, alt_text: item.alt_text, is_primary: item.is_primary },
         }];
       });
       setSupplierMockups((current) => {
