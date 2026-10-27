@@ -26,6 +26,8 @@ test('all suppliers use the same merchant product ID and variant list',()=>{
   assert.equal(pod.source.provider,'completeful');
   assert.equal(pod.source.catalog_id,'catalog-002');
   assert.equal(pod.variants[0].sku,'POD-BLACK');
+  assert.equal(pod.source.manages_inventory,false);
+  assert.equal(pod.low_stock_count,0);
 });
 test('invalid rows and duplicate provider links cannot duplicate products',()=>{
   const groups=groupProductInventory([...rows,{id:'bad',product_id:2},rows[0]],[{

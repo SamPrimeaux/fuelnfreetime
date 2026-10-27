@@ -110,7 +110,9 @@ export default function ProductLibrary() {
                 <td data-label="Price" className="pl-price">{USD.format((Number(p.price_cents) || 0) / 100)}</td>
                 <td data-label="Status"><span className={`pl-badge pl-badge--${p.status === "active" ? "active" : p.status === "draft" ? "draft" : "muted"}`}>{p.status || "draft"}</span></td>
                 <td data-label="Variants">{p.variant_count ?? 0}</td>
-                <td data-label="Inventory">{p.total_inventory ?? 0}{(p.variant_count ?? 0) > 0 && (p.total_inventory ?? 0) <= 3 ? <span className="pl-low"> Low</span> : null}</td>
+                <td data-label="Inventory">{p.fulfillment_kind === "supplier"
+                  ? <span title="Supplier-linked variants do not use local warehouse stock">Supplier fulfilled</span>
+                  : <>{p.total_inventory ?? 0}{(p.variant_count ?? 0) > 0 && (p.total_inventory ?? 0) <= 3 ? <span className="pl-low"> Low</span> : null}</>}</td>
                 <td className="pl-action"><a href={`/admin/product-edit?id=${encodeURIComponent(p.id)}`} className="cs-button small">Edit</a></td>
               </tr>)}
             </tbody>

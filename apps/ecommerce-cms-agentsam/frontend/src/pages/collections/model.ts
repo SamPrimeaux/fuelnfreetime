@@ -73,6 +73,7 @@ export interface Product {
   variant_count?: number;
   price_cents?: number;
   total_inventory?: number;
+  fulfillment_kind?: "supplier" | "stock";
   collection?: string;
 }
 export interface MediaAsset { id: number; url: string; filename: string; content_type?: string }
