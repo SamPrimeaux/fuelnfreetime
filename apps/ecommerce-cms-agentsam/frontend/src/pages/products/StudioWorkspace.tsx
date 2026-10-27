@@ -1557,7 +1557,8 @@ export default function StudioWorkspace({
         const next = results.find((result) => result?.render_id === item.render_id);
         return next ? { ...item, status: next.status, asset: next.asset || item.asset } : item;
       }));
-      setNotice("Supplier render statuses refreshed. Completed images are saved in Media Library.");
+      const completed = results.filter((item) => item?.asset?.url).length;
+      if (completed) setNotice(`${completed} Completeful image${completed === 1 ? "" : "s"} saved to the product gallery.`);
     } finally {
       setBusy("");
     }
