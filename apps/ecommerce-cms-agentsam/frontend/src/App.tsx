@@ -12,6 +12,7 @@ const ProductLibrary = lazy(() => import("./pages/products/ProductLibrary"));
 const ProductStudioPage = lazy(() => import("./pages/products/ProductStudioPage"));
 const CollectionLibrary = lazy(() => import("./pages/collections/CollectionLibrary"));
 const CollectionEditor = lazy(() => import("./pages/collections/CollectionEditor"));
+const BrandStudioPage = lazy(() => import("./pages/brand/BrandStudioPage"));
 const ArtworkHelpPage = lazy(() => import("./pages/products/ArtworkHelpPage"));
 
 export type AnalyticsOutletContext = {
