@@ -17,7 +17,7 @@
 renderShell("/admin/content", `
   <div class="content-product-tabs" role="tablist" aria-label="Content views">
     <button type="button" class="content-product-tab is-active" id="content-tab-library" data-content-view="library" role="tab" aria-selected="true">Library</button>
-    <button type="button" class="content-product-tab" id="content-tab-brand" data-content-view="brand" role="tab" aria-selected="false">Brand</button>
+    <a class="content-product-tab" id="content-tab-brand" href="/admin/content/brand" aria-label="Open Brand Studio">Brand Studio ↗</a>
   </div>
 
   <section id="content-view-library" data-content-panel="library">
