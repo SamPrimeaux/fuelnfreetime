@@ -1689,6 +1689,8 @@ export default function StudioWorkspace({
       placed, frameStyle, previewIsCurrent };
   });
   const currentSideRenderedUrl = sideReviewCards.find((side) => side.id === locationId)?.verifiedRenderUrl || null;
+  const verifiedCurrentSupplierMockups = supplierMockups.filter((item) => item.asset?.url &&
+    sideReviewCards.some((side) => side.id === item.print_location_id && side.previewIsCurrent));
   // A completed render for the selected color/side supersedes the supplier
   // catalog sample. Switching to Edit artwork still shows the clean placement
   // canvas rather than baking the supplier's finished image into the editor.
