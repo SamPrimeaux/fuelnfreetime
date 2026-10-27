@@ -47,18 +47,46 @@ async function writeMediaMeta(env, mediaId, patch) {
 }
 
 /**
+ * Resolve an output key without ever overwriting an asset owned by another
+ * media_assets record or a pre-existing unregistered R2 object.
+ * The job-specific suffix is stable across retries.
+ */
+export async function chooseMediaOutputKey(env, proposedKey, mediaAssetId, jobId) {
+  const owner = await env.DB.prepare("SELECT id FROM media_assets WHERE r2_key = ?")
+    .bind(proposedKey).first();
+  const sameOwner = owner && Number(owner.id) === Number(mediaAssetId);
+  const occupiedR2 = !owner && typeof env.WEBSITE_ASSETS?.head === "function"
+    ? Boolean(await env.WEBSITE_ASSETS.head(proposedKey)) : false;
+  if (!owner && !occupiedR2 || sameOwner) return proposedKey;
+
+  const separator = proposedKey.lastIndexOf("/");
+  const dot = proposedKey.lastIndexOf(".");
+  const suffix = dot > separator ? dot : proposedKey.length;
+  const safeJobId = String(jobId).replace(/[^a-zA-Z0-9_-]/g, "");
+  if (!safeJobId) throw new Error("invalid_asset_job_id");
+  const uniqueKey = proposedKey.slice(0, suffix) + "-job-" + safeJobId + proposedKey.slice(suffix);
+  const uniqueOwner = await env.DB.prepare("SELECT id FROM media_assets WHERE r2_key = ?")
+    .bind(uniqueKey).first();
+  if (uniqueOwner && Number(uniqueOwner.id) !== Number(mediaAssetId)) {
+    throw new Error("canonical_destination_conflict");
+  }
+  return uniqueKey;
+}
+
+/**
  * Finalize media_assets row onto the canonical object.
  */
 export async function finalizeMediaAsset(env, mediaRow, result) {
   const canonicalKey = result.canonical_key;
   const urls = publicUrlsForKey(canonicalKey);
+  const previousMeta = parseJson(mediaRow.meta_json);
   const meta = {
-    ...parseJson(mediaRow.meta_json),
+    ...previousMeta,
     lifecycle: "ready",
-    asset_role: result.asset_role || meta.asset_role,
-    media_kind: result.media_kind || meta.media_kind,
-    media_role: result.media_role || meta.media_role,
-    pipeline: result.pipeline || meta.pipeline,
+    asset_role: result.asset_role || previousMeta.asset_role,
+    media_kind: result.media_kind || previousMeta.media_kind,
+    media_role: result.media_role || previousMeta.media_role,
+    pipeline: result.pipeline || previousMeta.pipeline,
     intake_key: result.intake_key || mediaRow.r2_key,
     canonical_key: canonicalKey,
     retain_master_reason: result.retain_master_reason || null,
@@ -197,9 +225,10 @@ export async function processAssetJobById(env, jobId, opts = {}) {
         intakeKey.replace(/\.[^.]+$/, "") + `.${out.ext}`;
       // Original objects are immutable. Even same-format output must not
       // overwrite intake bytes, and input cleanup requires separate reference GC.
-      const destKey = canonicalKey === intakeKey
+      const candidateKey = canonicalKey === intakeKey
         ? intakeKey.replace(/(\.[^.]+)?$/, "-optimized-" + jobId + "." + out.ext)
         : canonicalKey;
+      const destKey = await chooseMediaOutputKey(env, candidateKey, media?.id, jobId);
 
       await env.WEBSITE_ASSETS.put(destKey, out.bytes, {
         httpMetadata: { contentType: out.contentType },
