@@ -61,6 +61,76 @@ export function exactCatalogSideReference(
 }
 
 /**
+ * If Completeful supplies only an unscoped photo for a print location,
+ * it is still a useful SIDE reference (never a verified color or blank).
+ * Keep it separate from clean candidates and never overlay print artwork.
+ */
+export function unscopedCatalogSideReference(
+  mockups: readonly StudioSideMockup[],
+  locationId: string,
+): string | null {
+  return mockups.find((m) =>
+    m.active !== 0 &&
+    m.print_location_id === locationId &&
+    typeof m.preview_url === "string" && m.preview_url.length > 0 &&
+    (!m.variant_scope_json || m.variant_scope_json.trim() === "" ||
+      m.variant_scope_json.trim() === "{}" || m.variant_scope_json.trim() === "null")
+  )?.preview_url || null;
+}
+
+/**
+ * Product Studio blank-view registry. This is merchant curation (not provider
+ * catalog state), scoped by physical product + exact color + print side.
+ * A photo approved for one color or side must never be borrowed for another.
+ */
+export type ApprovedBlankView = {
+  color_key: string;
+  side_key: string;
+  image_url: string;
+  source_kind?: string;
+  media_asset_id?: number;
+};
+
+export function approvedBlankView(
+  entries: readonly ApprovedBlankView[] | null | undefined,
+  color: string,
+  side: string,
+): string | null {
+  const key = (value: string) => String(value || "").trim().toLowerCase();
+  return entries?.find((entry) =>
+    key(entry.color_key) === key(color) && key(entry.side_key) === key(side) &&
+    typeof entry.image_url === "string" && entry.image_url.length > 0
+  )?.image_url || null;
+}
+
+/**
+ * Completeful's mockup preview and the unprinted garment background are
+ * siblings. Only derive a candidate for an EXACT color + print location
+ * match. This is an unverified candidate until an image actually loads.
+ * The supplier sample remains a clearly labeled fallback if unavailable.
+ */
+export function exactCatalogBlankCandidate(
+  mockups: readonly StudioSideMockup[],
+  locationId: string,
+  variantId: string,
+  attributes: Record<string, string>,
+): string | null {
+  const reference = exactCatalogSideReference(mockups, locationId, variantId, attributes);
+  if (!reference) return null;
+  try {
+    const url = new URL(reference);
+    if (url.protocol !== "https:" ||
+        url.origin !== "https://jvkydnvdajcfnqysmuwt.supabase.co" ||
+        !/^\/storage\/v1\/object\/public\/product-images\/mockups\/[^/]+\/[^/]+\/preview\.png$/i.test(url.pathname) ||
+        url.search || url.hash) return null;
+    url.pathname = url.pathname.replace(/\/preview\.png$/i, "/background.png");
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Print placement is not a different artwork every time someone changes a
  * shirt color or size. For preview freshness only, compare every stored
  * placement input except variantId (slot 1). Supplier render lookup still

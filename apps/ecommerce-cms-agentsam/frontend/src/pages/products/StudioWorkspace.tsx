@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { createMiniAgentSam } from "../../../../packages/agentsam-workbench/src/mini-agentsam.js";
-import { exactCatalogSideReference, samePrintPlacementAcrossColors, selectStudioSideImage } from "./studio-side-image";
+import { approvedBlankView, exactCatalogBlankCandidate, exactCatalogSideReference, unscopedCatalogSideReference, samePrintPlacementAcrossColors, selectStudioSideImage, type ApprovedBlankView } from "./studio-side-image";
 import { blankGarmentImageSources } from "./studio-blank-image";
 import { updateSellingVariants, toggleSellingGroup } from "./studio-selling-variants";
 import { adminFetch, adminFormFetch } from "../../lib/api";
@@ -204,6 +204,9 @@ export default function StudioWorkspace({
   }, [fullPreviewOpen]);
   const [canvasZoom, setCanvasZoom] = useState(100);
   const [media, setMedia] = useState<MediaAsset[]>([]);
+  const [blankSelectionMode, setBlankSelectionMode] = useState(false);
+  const [localBlankViews, setLocalBlankViews] = useState<ApprovedBlankView[]>(detail.blank_views || []);
+  const [loadedSidePhoto, setLoadedSidePhoto] = useState<{ key: string; src: string } | null>(null);
   const [albums, setAlbums] = useState<Array<{ id: number; name: string; asset_count?: number }>>([]);
   const [albumId, setAlbumId] = useState(0);
   const [targetAlbumId, setTargetAlbumId] = useState(0);
@@ -423,24 +426,59 @@ export default function StudioWorkspace({
   // mockup catalog. Previously this branch deliberately set designImage=null
   // and displayed an empty stage. A reference photo must remain separate
   // from our editable print-artwork surface because it may include demo art.
-  const sampleView = Boolean(!isFrontLocation && exactSideCatalogReference && showSupplierSample);
+  const sideKey = isFrontLocation ? "front" : /back/i.test(location?.name || "") ? "back"
+    : /left/i.test(location?.name || "") ? "left" : "right";
+  const approvedBlankImage = approvedBlankView(localBlankViews, garmentColor, sideKey);
+  const supplierBlankCandidate = exactCatalogBlankCandidate(
+    detail.mockups || [], locationId, variantId, selectedAttributes);
+  const sideReferenceImage = exactSideCatalogReference ||
+    unscopedCatalogSideReference(detail.mockups || [], locationId) ||
+    (isFrontLocation ? variant?.cover_image_url || null : null);
   const placementBackground = selectStudioSideImage(
     [], locationId, variantId, location?.artboard_image_url,
     blankVariantSources[0], isFrontLocation, selectedAttributes,
     hasDistinctProviderSideArtboard,
   );
-  const designImage = sampleView ? exactSideCatalogReference : placementBackground;
-  const designImageSources = sampleView && exactSideCatalogReference
-    ? [exactSideCatalogReference, ...(garmentColor.toLowerCase() === "black" && placementBackground
-        ? [placementBackground] : [])]
-    : designImage
-      ? (isFrontLocation
-        ? [...new Set([...blankVariantSources, location?.artboard_image_url].filter(
-            (url): url is string => Boolean(url)))]
-        : [designImage])
-      : [];
-  // Never use a generic silhouette to impersonate a provider garment photo.
-  // Unverified side/color combinations keep their print geometry, but no garment claim.
+  // A side-specific unprinted supplier background is attempted before its
+  // decorated sample. The photo component reports which URL actually loaded:
+  // sample artwork must never be used as a writable garment base.
+  const cleanSideSources = [...new Set([
+    approvedBlankImage,
+    ...(isFrontLocation ? blankVariantSources : [supplierBlankCandidate]),
+  ].filter((url): url is string => Boolean(url)))];
+  const designImageSources = [...new Set([
+    ...cleanSideSources,
+    ...(isFrontLocation
+      ? [sideReferenceImage, placementBackground, location?.artboard_image_url]
+      : [sideReferenceImage, placementBackground]),
+  ].filter((url): url is string => Boolean(url)))];
+  const designImage = designImageSources[0] || null;
+  const sidePhotoKey = `${variantId}:${locationId}`;
+  const cleanSidePhotoLoaded = loadedSidePhoto?.key === sidePhotoKey &&
+    cleanSideSources.includes(loadedSidePhoto.src);
+
+  async function approveGarmentBlank(item: MediaAsset) {
+    if (!garmentColor) { setNotice("Select a real garment color before assigning its blank."); return; }
+    if (busy) return;
+    setBusy("blank-view");
+    try {
+      const response = await adminFetch<{ blank_view: ApprovedBlankView }>(
+        `/api/admin/completeful/catalog/${encodeURIComponent(detail.product.completeful_product_id || catalogProductId(detail.product))}/blank-views`,
+        { method: "POST", body: JSON.stringify({
+          color: garmentColor, side: sideKey, media_asset_id: item.id,
+          source_note: "Merchant-reviewed clean garment photo from Media Library",
+        }) },
+      );
+      setLocalBlankViews((current) => [...current.filter((view) =>
+        !(view.color_key === garmentColor.toLowerCase() && view.side_key === sideKey)), response.blank_view]);
+      setBlankSelectionMode(false);
+      setNotice(`${garmentColor} ${sideKey} photo approved for this garment. Other colors and sides remain independent.`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not approve blank garment view.");
+    } finally { setBusy(""); }
+  }
+  // A missing clean back image is never replaced with the Front of a different
+  // color. The exact supplier sample stays visible as a labeled reference.
   const artboardAspectRatio = location?.artboard_width && location?.artboard_height
     ? Number(location.artboard_width) / Number(location.artboard_height)
     : 4 / 5;
@@ -557,13 +595,17 @@ export default function StudioWorkspace({
         );
         // Exact-color supplier catalog references exist for Back on supported
         // garments. Never show the default black artboard as every back color.
-        const catalogReference = !isFrontLocation && value.trim().toLowerCase() !== "black"
+        const catalogReference = !isFrontLocation
           ? exactCatalogSideReference(detail.mockups || [], locationId,
-              catalogVariantId(sample), variantAttributes(sample))
+              catalogVariantId(sample), variantAttributes(sample)) ||
+            unscopedCatalogSideReference(detail.mockups || [], locationId)
           : null;
-        const sources = catalogReference ? [catalogReference]
-          : image ? (isFrontLocation && blank.length ? blank : [image]) : [];
-        return [{ value, sources, referenceOnly: Boolean(catalogReference) }];
+        const approved = approvedBlankView(localBlankViews, value, sideKey);
+        const candidate = !isFrontLocation ? exactCatalogBlankCandidate(
+          detail.mockups || [], locationId, catalogVariantId(sample), variantAttributes(sample)) : null;
+        const sources = [...new Set([approved, ...(isFrontLocation ? blank : [candidate]),
+          isFrontLocation ? null : catalogReference].filter((url): url is string => Boolean(url)))];
+        return [{ value, sources, referenceOnly: !isFrontLocation && !approved }];
       })
     : [];
   const printPixels = printPixelSize(location);
@@ -1565,19 +1607,27 @@ export default function StudioWorkspace({
     const verifiedRender = previewIsCurrent ? supplierMockups.find((mockup) =>
       mockup.print_location_id === id && Boolean(mockup.asset?.url) &&
       (!color || mockup.variant_color.trim().toLowerCase() === color.trim().toLowerCase())) : null;
-    const catalogReferenceUrl = exactCatalogSideReference(
+    const exactReference = exactCatalogSideReference(
       detail.mockups || [], id, variantId, selectedAttributes);
+    const catalogReferenceUrl = exactReference ||
+      unscopedCatalogSideReference(detail.mockups || [], id) ||
+      (front ? variant?.cover_image_url || null : null);
     // Back artboards are often the default black garment. For non-black
     // selections display the exact provider color reference, NOT a black
     // back with the merchant art composited over the wrong color.
-    const referenceOnly = !verifiedRender && !front && Boolean(color) &&
-      Boolean(catalogReferenceUrl);
+    const side = front ? "front" : /back/i.test(sideLocation.name || "") ? "back"
+      : /left/i.test(sideLocation.name || "") ? "left" : "right";
+    const approved = approvedBlankView(localBlankViews, String(color || ""), side);
+    const candidate = !front ? exactCatalogBlankCandidate(
+      detail.mockups || [], id, variantId, selectedAttributes) : null;
+    const blankSources = [approved, ...(front ? photoSources : [candidate])]
+      .filter((url): url is string => Boolean(url));
+    const referenceOnly = !verifiedRender && !approved && !(front && blankVariantSources.length > 0);
     return { id, label: sideLocation.name || (front ? 'Front' : 'Back'),
-      // Black has a genuine side-specific artboard if the provider sample
-      // URL is unavailable. Other colors must not silently fall back to Black.
-      photoSources: referenceOnly && String(color).trim().toLowerCase() !== "black"
-        ? [] : photoSources,
-      catalogReferenceUrl: referenceOnly ? catalogReferenceUrl : null,
+      photoSources: [...new Set([...blankSources,
+        ...(!front && !catalogReferenceUrl && String(color).trim().toLowerCase() === "black"
+          ? photoSources : [])])],
+      catalogReferenceUrl: catalogReferenceUrl,
       verifiedRenderUrl: verifiedRender?.asset?.url || null, referenceOnly,
       placed, frameStyle, previewIsCurrent };
   });
@@ -1587,7 +1637,8 @@ export default function StudioWorkspace({
   // canvas rather than baking the supplier's finished image into the editor.
   const displayedRenderedUrl = showSupplierSample
     ? currentSideRenderedUrl || currentRenderUrl : null;
-  const supplierPhotoOnly = sampleView && !displayedRenderedUrl;
+  const supplierPhotoOnly = !cleanSidePhotoLoaded &&
+    Boolean(designImage) && !displayedRenderedUrl;
   function renderSideReviewCards(size: "mini" | "expanded") {
     return (
       <div className={"ps-side-review-cards ps-side-review-cards--" + size}
@@ -1602,7 +1653,7 @@ export default function StudioWorkspace({
               {side.verifiedRenderUrl
                 ? <ProductImage sources={[side.verifiedRenderUrl]} alt="" />
                 : side.catalogReferenceUrl
-                  ? <ProductImage sources={[side.catalogReferenceUrl, ...side.photoSources]} alt="" />
+                  ? <ProductImage sources={[...side.photoSources, side.catalogReferenceUrl]} alt="" />
                   : side.photoSources.length
                     ? <ProductImage sources={side.photoSources} alt="" />
                     : <span className="ps-side-review-unverified">Garment view not available</span>}
@@ -1995,6 +2046,21 @@ export default function StudioWorkspace({
                   </button>
                 ))}
               </div>
+              {tab === "upload" && (
+                <div className="ps-asset-status" role="group" aria-label="Media Library selection purpose">
+                  <button type="button" aria-pressed={blankSelectionMode}
+                    className={blankSelectionMode ? "is-active" : ""}
+                    onClick={() => {
+                      setBlankSelectionMode((active) => !active);
+                      setArtworkScope("library"); setMediaPage(1); setMedia([]);
+                    }}>
+                    {blankSelectionMode ? "Selecting clean garment photo" : "Assign clean Front / Back photo"}
+                  </button>
+                  {blankSelectionMode && <p>Select a verified, unprinted {garmentColor || "color"}
+                    {" "}{sideKey} photograph. Images must match this garment, and you must have rights to use them.
+                    Selecting will not replace your print artwork.</p>}
+                </div>
+              )}
               {tab === "upload" && <label className="ps-asset-search">
                 <StudioIcon name="search" size={15} />
                 <input type="search" value={mediaSearch} onChange={(event) => setMediaSearch(event.target.value)}
@@ -2004,9 +2070,9 @@ export default function StudioWorkspace({
               <div className="ps-media-grid">
                 {filteredMedia.map((item) => (
                   <button type="button" key={item.id} title={item.filename}
-                    aria-label={`Place ${item.filename}`}
-                    aria-pressed={asset?.id === item.id}
-                    onClick={() => choose(item)}
+                    aria-label={blankSelectionMode ? `Approve ${item.filename} as ${garmentColor} ${sideKey} blank` : `Place ${item.filename}`}
+                    aria-pressed={!blankSelectionMode && asset?.id === item.id}
+                    onClick={() => { if (blankSelectionMode) void approveGarmentBlank(item); else choose(item); }}
                     className={asset?.id === item.id ? "is-active" : ""}>
                     <img src={item.url} alt="" loading="lazy" />
                     <span>{item.filename}</span>
@@ -2358,7 +2424,7 @@ export default function StudioWorkspace({
                 </div>
               )}
               <div className="ps-canvas-controls">
-                {(currentSideRenderedUrl || (!isFrontLocation && exactSideCatalogReference)) && (
+                {(currentSideRenderedUrl || (!isFrontLocation && sideReferenceImage)) && (
                   <div className="ps-sample-mode-toggle" role="group" aria-label="Garment view mode">
                     <button type="button" aria-pressed={Boolean(displayedRenderedUrl || supplierPhotoOnly)}
                       className={displayedRenderedUrl || supplierPhotoOnly ? "is-active" : ""}
@@ -2392,6 +2458,10 @@ export default function StudioWorkspace({
                       key={`${variantId}:${locationId}:${displayedRenderedUrl || designImage}`}
                       className={"ps-design-product-image" + (hasProviderPlacementFrame ? " is-geometry-mapped" : "")}
                       sources={displayedRenderedUrl ? [displayedRenderedUrl] : designImageSources}
+                      onResolvedSource={(src) => {
+                        if (!displayedRenderedUrl && (loadedSidePhoto?.key !== sidePhotoKey ||
+                          loadedSidePhoto.src !== src)) setLoadedSidePhoto({ key: sidePhotoKey, src });
+                      }}
                       lazy={false}
                       alt={`${location?.name || "Selected"} provider catalog reference`}
                     />
@@ -2407,7 +2477,9 @@ export default function StudioWorkspace({
                         `Completeful · ${garmentColor || "Selected color"} ${location?.name || "side"}`}</strong>
                       <span>{displayedRenderedUrl
                         ? "Verified completed preview for this color and print side."
-                        : "Supplier example photo. Its sample artwork is not your design."}</span>
+                        : exactSideCatalogReference
+                          ? "Exact-color supplier reference. Any demonstration artwork is not your design."
+                          : "Supplier back-view reference (color not verified). Assign a clean photo from Media Library for accurate placement."}</span>
                       <button type="button" onClick={() => setShowSupplierSample(false)}>
                         Edit your {location?.name || "side"} artwork
                       </button>
@@ -2567,10 +2639,9 @@ export default function StudioWorkspace({
                 </header>
                 <div className="ps-preview-dialog-body">
                 <div className="ps-preview-enlarged-image">
-                  {displayedRenderedUrl || (supplierPhotoOnly && exactSideCatalogReference) || designImage
+                  {displayedRenderedUrl || designImage
                     ? <ProductImage key={`expanded:${variantId}:${locationId}:${displayedRenderedUrl || designImage}`}
-                        sources={displayedRenderedUrl ? [displayedRenderedUrl]
-                          : supplierPhotoOnly && exactSideCatalogReference ? [exactSideCatalogReference] : designImageSources}
+                        sources={displayedRenderedUrl ? [displayedRenderedUrl] : designImageSources}
                         alt={`${variant?.variant_title || variant?.name || detail.product.name}, ${location?.name || "selected view"}`} lazy={false} />
                     : <div className="ps-mini-unverified">No verified photo is available for this side or variant.</div>}
                   {!displayedRenderedUrl && !supplierPhotoOnly && designImage && asset && showArtwork && (
@@ -2590,7 +2661,9 @@ export default function StudioWorkspace({
                 </aside>
                 </div>
                 <footer>{displayedRenderedUrl ? "Completeful provider render · selected color and print side"
-                  : supplierPhotoOnly && exactSideCatalogReference ? "Exact-color supplier sample; not a decorated product mockup"
+                  : cleanSidePhotoLoaded ? "Exact-color blank garment · local placement preview, not a final supplier render"
+                  : supplierPhotoOnly && exactSideCatalogReference ? "Exact-color supplier sample; demonstration artwork is not your design"
+                  : supplierPhotoOnly ? "Supplier side reference · color unverified; not a final product render"
                   : designImage ? "Supplier garment reference with local artwork placement — not a final render"
                   : "Preview unavailable"}</footer>
               </section>

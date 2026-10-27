@@ -138,6 +138,7 @@ export default function ProductStudioPage() {
             images: Array.isArray(d.images) ? d.images : [],
             image_pagination: d.image_pagination,
             mockups: Array.isArray(d.mockups) ? d.mockups : [],
+            blank_views: Array.isArray(d.blank_views) ? d.blank_views : [],
           };
           const initialVariant = normalized.variants[0];
           const initialImage =

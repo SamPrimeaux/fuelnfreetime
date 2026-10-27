@@ -32,11 +32,8 @@ export function blankGarmentImageSources(
   if (isCleanSupplierBackground(variant.realistic_image_url)) {
     return [variant.realistic_image_url];
   }
-  const candidates = [
-    variant.cover_image_url && variant.cover_image_url !== product.cover_image_url
-      ? variant.cover_image_url : null,
-    variant.main_icon_url && variant.main_icon_url !== product.main_icon_url
-      ? variant.main_icon_url : null,
-  ];
-  return [...new Set(candidates.filter((url): url is string => Boolean(url)))];
+  // A cover or main icon is never proven unprinted. It may still be shown
+  // separately as a supplier REFERENCE, not as a writable blank plate.
+  void product;
+  return [];
 }

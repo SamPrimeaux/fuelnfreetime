@@ -1,3 +1,5 @@
+import { providerPrintSizeIn } from "../../../../packages/agentsam-merch/src/index.js";
+
 /**
  * Product Studio catalog model — aligned to agentsam.commerce.catalog.v1.
  * Provider-specific ids (completeful_*) are optional aliases from the host adapter.
@@ -79,6 +81,7 @@ export type ProductDetail = {
     total: number;
     has_more: boolean;
   };
+  blank_views?: import("./studio-side-image").ApprovedBlankView[];
   mockups: {
     mockup_id: string;
     name: string;
@@ -289,31 +292,18 @@ export const productImage = (p: CatalogProduct) =>
   p.realistic_image_url || p.cover_image_url || p.main_icon_url;
 
 export function printPixelSize(location?: PrintLocation) {
-  if (
-    !location?.file_width ||
-    !location.file_height ||
-    location.file_width <= 0 ||
-    location.file_height <= 0
-  )
-    return null;
-  const unit = location.unit?.toLowerCase();
-  const dpi = location.dpi && location.dpi > 0 ? location.dpi : 300;
-  const factor =
-    unit === "px" || unit === "pixel" || unit === "pixels"
-      ? 1
-      : unit === "in" || unit === "inch" || unit === "inches"
-        ? dpi
-        : unit === "cm"
-          ? dpi / 2.54
-          : unit === "mm"
-            ? dpi / 25.4
-            : null;
-  return factor == null
-    ? null
-    : {
-        width: Math.round(location.file_width * factor),
-        height: Math.round(location.file_height * factor),
-      };
+  if (!location || !(Number(location.file_width) > 0 && Number(location.file_height) > 0)) return null;
+  const unit = String(location.unit || "").toLowerCase();
+  const dpi = Number(location.dpi) > 0 ? Number(location.dpi) : 300;
+  // Pixel dimensions are already exact raster geometry, even without
+  // supplier DPI metadata; print size in inches is NOT inferred from this.
+  if (["px", "pixel", "pixels"].includes(unit) && !(Number(location.dpi) > 0)) {
+    return { width: Math.round(Number(location.file_width)),
+      height: Math.round(Number(location.file_height)) };
+  }
+  const physical = providerPrintSizeIn(location);
+  return physical ? { width: Math.round(physical.width * dpi),
+    height: Math.round(physical.height * dpi) } : null;
 }
 
 export function printSizeLabel(location?: PrintLocation) {

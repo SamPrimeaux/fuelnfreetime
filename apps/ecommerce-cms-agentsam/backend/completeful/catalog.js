@@ -759,6 +759,22 @@ export async function getCompletefulCatalogProduct(env, productId) {
       .first(),
   ]);
 
+  // Merchant-approved blank views are deliberately separate from the
+  // Completeful sync mirror. Older installations can read catalog details
+  // safely until the additive migration is deployed.
+  const blankViews = await env.DB.prepare(
+    `SELECT b.color_key, b.side_key, b.media_asset_id, b.source_kind,
+            m.url AS image_url
+       FROM product_studio_blank_views b
+       JOIN media_assets m ON m.id = b.media_asset_id
+      WHERE b.completeful_catalog_product_id = ?
+      ORDER BY b.color_key, b.side_key`,
+  ).bind(resolvedProductId).all().then((rows) => rows.results || [])
+    .catch((error) => {
+      if (/no such table: product_studio_blank_views/i.test(String(error))) return [];
+      throw error;
+    });
+
   const imageTotal = Number(imageCount?.n || 0);
   const imageRows = images.results || [];
 
@@ -774,6 +790,7 @@ export async function getCompletefulCatalogProduct(env, productId) {
       has_more: imageRows.length < imageTotal,
     },
     mockups: (mockups.results || []).map(omitRaw),
+    blank_views: blankViews,
   };
 }
 

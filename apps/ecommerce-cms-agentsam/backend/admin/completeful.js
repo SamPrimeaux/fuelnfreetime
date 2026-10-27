@@ -15,6 +15,7 @@ import {
   syncCompletefulCatalog,
 } from "../completeful/catalog.js";
 import { planProductAssetOptimization } from "../assets/product-optimize.js";
+import { updateBlankGarmentView } from "../completeful/blank-views.js";
 import { completefulApi, COMPLETEFUL_CONTRACT } from "../completeful/api.js";
 
 function json(data, init = {}) {
@@ -143,6 +144,20 @@ export async function handleCompletefulAdminApi(request, env, url) {
     if (path === "/api/admin/completeful/api/capabilities" && method === "GET") {
       return json({ ok: true, contract: COMPLETEFUL_CONTRACT, transport: "server-side",
         auth: "Worker CAPP_KEY secret", generic_browser_proxy: false });
+    }
+
+    // A merchant-owned, exact color/side blank-photo override. All assets must
+    // already exist in the authenticated Media Library (never arbitrary URLs).
+    const blankMatch = path.match(/^\/api\/admin\/completeful\/catalog\/([^/]+)\/blank-views$/);
+    if (blankMatch && (method === "POST" || method === "DELETE")) {
+      try {
+        const result = await updateBlankGarmentView(
+          env, decodeURIComponent(blankMatch[1]), await readJson(request), method === "DELETE");
+        return json(result);
+      } catch (error) {
+        const detail = String(error?.message || "blank_view_update_failed");
+        return json({ ok: false, error: detail }, { status: 400 });
+      }
     }
 
     // Provider catalog read-through: these are actual Completeful API calls

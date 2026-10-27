@@ -35,7 +35,10 @@ test("edited placement never reuses prepared artwork or an older provider mockup
   assert.match(code, /preparedFor === currentPlacementKey \? preparedAsset : null/);
   assert.match(code, /preparedFor === currentPlacementKey \? previewAsset : null/);
   assert.match(code, /preparedIsCurrent \? providerRenderUrl : null/);
-  assert.match(code, /Prepare the current artwork before rendering supplier mockups/);
+  // The current UX prepares each active side automatically instead of showing
+  // the retired single-side prompt, while still guarding stale prepared files.
+  assert.match(code, /const preparedIsCurrent = Boolean\(preparedAsset && preparedFor === currentPlacementKey\)/);
+  assert.match(code, /const saved = needsPreparation \? await prepareArtwork\(\) : await saveDraft\(\)/);
   assert.match(code, /setPreparedFor\(placementKey\(asset\?\.id, variantId, locationId/);
 });
 

@@ -64,6 +64,7 @@ function createDb({ product = null, imageTotal = 0, images = [] } = {}) {
           if (sql.includes("FROM completeful_catalog_print_locations")) return { results: [] };
           if (sql.includes("FROM completeful_catalog_images")) return { results: images };
           if (sql.includes("FROM completeful_catalog_mockups")) return { results: [] };
+          if (sql.includes("FROM product_studio_blank_views b")) return { results: [] };
           throw new Error(`Unexpected all() query: ${sql}`);
         },
       };
@@ -93,6 +94,7 @@ for (const fixture of PRODUCT_FIXTURES) {
     assert.equal(detail.product.completeful_product_id, fixture.id);
     assert.equal("raw_json" in detail.product, false);
     assert.equal(detail.images.length, fixture.returned);
+    assert.deepEqual(detail.blank_views, []);
     assert.deepEqual(detail.image_pagination, {
       limit: 24,
       count: fixture.returned,

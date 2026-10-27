@@ -5,11 +5,13 @@ export default function ProductImage({
   alt = "",
   lazy = true,
   className,
+  onResolvedSource,
 }: {
   sources: (string | undefined)[];
   alt?: string;
   lazy?: boolean;
   className?: string;
+  onResolvedSource?: (source: string) => void;
 }) {
   const [failed, setFailed] = useState<string[]>([]);
   const [directAttempts, setDirectAttempts] = useState<string[]>([]);
@@ -26,6 +28,7 @@ export default function ProductImage({
       alt={alt}
       loading={lazy ? "lazy" : "eager"}
       decoding="async"
+      onLoad={() => { if (src) onResolvedSource?.(src); }}
       onError={() => {
         // Catalog proxy unavailable? Try the original public supplier source
         // once before reporting a missing garment image.
