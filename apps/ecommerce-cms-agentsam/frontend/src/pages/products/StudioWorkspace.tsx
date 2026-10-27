@@ -2723,7 +2723,7 @@ export default function StudioWorkspace({
             <section className="ps-merchant-render-strip" aria-label="Completeful product images">
               <div className="ps-merchant-render-header"><strong>Generated product images</strong><small>Exact supplier color and print side · click to inspect</small></div>
               <div className="ps-merchant-render-list">
-                {supplierMockups.filter((item) => item.asset?.url).map((item) => (
+                {verifiedCurrentSupplierMockups.map((item) => (
                   <button type="button" className="ps-merchant-render-thumb"
                     key={item.mockup_id + item.print_location_id + item.variant_color}
                     onClick={() => {
