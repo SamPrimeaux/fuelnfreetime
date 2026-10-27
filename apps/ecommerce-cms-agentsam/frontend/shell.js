@@ -117,7 +117,9 @@ const ADMIN_EXIT_ROUTES = [
   "/admin/email",
   "/admin/scaffold",
 ];
-const EDITOR_RETURN_KEY=[REDACTED] SHELL_MODES = {
+const EDITOR_RETURN_KEY = "agentsam.editorReturn";
+
+const SHELL_MODES = {
   admin: { id: "admin", hideAdminNav: false, shortcuts: [], exitFallback: "/admin/store", exitRoutes: ADMIN_EXIT_ROUTES },
   "theme-editor": {
     id: "theme-editor",
