@@ -2849,7 +2849,7 @@ export default function StudioWorkspace({
                           onChange={(event) => {
                             const nextText = event.target.value;
                             setSupplierMockups((current) => current.map((item) =>
-                              item.asset?.id === currentSupplierMedia.id ? {
+                              item.asset && item.asset.id === currentSupplierMedia.id ? {
                                 ...item, asset: { ...item.asset, alt_text: nextText },
                               } : item));
                           }} />
