@@ -478,15 +478,20 @@ async function saveDraft(request, env) {
       .run();
   }
 
-  // Attach a saved placement approximation to the draft product (not source art).
-  if (previewMediaId) {
-    const preview = await mediaById(env, previewMediaId);
+  // The product gallery must carry both prepared print sides, not just the
+  // currently selected canvas preview. The underlying assets are not copied.
+  const previewIds = [...new Set([previewMediaId, ...Object.values(sides)
+    .filter((side) => side.showArtwork && side.original_media_asset_id)
+    .map((side) => side.preview_media_asset_id)].filter(Boolean))];
+  for (const [position, assetId] of previewIds.entries()) {
+    const preview = await mediaById(env, assetId);
+    if (!preview) continue;
     const priorImage = await env.DB.prepare(
       "SELECT id FROM product_images WHERE product_id = ? LIMIT 1"
     ).bind(product.id).first();
     await env.DB.prepare(
-      "INSERT OR IGNORE INTO product_images (product_id, media_asset_id, position, is_primary) VALUES (?, ?, 0, ?)"
-    ).bind(product.id, previewMediaId, priorImage ? 0 : 1).run();
+      "INSERT OR IGNORE INTO product_images (product_id, media_asset_id, position, is_primary) VALUES (?, ?, ?, ?)"
+    ).bind(product.id, assetId, position, priorImage ? 0 : 1).run();
     await env.DB.prepare(
       "UPDATE products SET image_url = COALESCE(image_url, ?), updated_at = datetime('now') WHERE id = ?"
     ).bind(preview.url, product.id).run();

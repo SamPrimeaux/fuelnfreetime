@@ -24,7 +24,7 @@ test("Product Studio backend persists artwork flips as design revisions", async 
   assert.match(backend, /flipX: Boolean\(body\.placement\?\.flipX/);
   assert.match(backend, /flipY: Boolean\(body\.placement\?\.flipY/);
   assert.match(backend, /flipX: Boolean\(value\.placement\?\.flipX/);
-  assert.match(studio, /ctx\.scale\(flipX \? -1 : 1, flipY \? -1 : 1\)/);
+  assert.match(studio, /ctx\.scale\(targetSide\.flipX \? -1 : 1, targetSide\.flipY \? -1 : 1\)/);
   assert.match(studio, /scale\(\$\{flipX \? -1 : 1\}, \$\{flipY \? -1 : 1\}\)/);
 });
 
@@ -35,8 +35,8 @@ test("edited placement never reuses prepared artwork or an older provider mockup
   assert.match(code, /preparedFor === currentPlacementKey \? preparedAsset : null/);
   assert.match(code, /preparedFor === currentPlacementKey \? previewAsset : null/);
   assert.match(code, /preparedIsCurrent \? providerRenderUrl : null/);
-  assert.match(code, /Prepare the updated artwork before rendering the mockup/);
-  assert.match(code, /setPreparedFor\(currentPlacementKey\)/);
+  assert.match(code, /Prepare the current artwork before rendering supplier mockups/);
+  assert.match(code, /setPreparedFor\(placementKey\(asset\?\.id, variantId, locationId/);
 });
 
 test("canvas zoom 50/100/150 and rotation 0/90 do not change per-axis DPI", async () => {
@@ -132,5 +132,5 @@ test("Studio crop/trim settings persist and invalidate old production artwork", 
   assert.match(studio, /setPreparedFor\(placementKey\(/);
   assert.match(studio, /trimTransparent, removeFlatBackground\)/);
   assert.match(studio, /src=\{artworkPreviewUrl\}/);
-  assert.match(studio, /<label>Canvas zoom <input type="range" min="50" max="160"/);
+  assert.match(studio, /aria-label="Canvas zoom" onChange=\{\(event\) => setCanvasZoom/);
 });

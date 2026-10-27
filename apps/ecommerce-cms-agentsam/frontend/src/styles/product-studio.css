@@ -2363,6 +2363,45 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
 
 /* ===== Studio v3: color thumbnails, AI Tools panel, mobile-first CTAs ===== */
 
+/* Front and Back are views of one product design, not independent products. */
+.product-studio-shell .ps-side-review-rail { flex: 0 0 auto; padding: 6px 2px 2px; min-width: 0; }
+.product-studio-shell .ps-side-review-heading {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin-bottom: 6px;
+  color: var(--ps-ink); font-size: 11px;
+}
+.product-studio-shell .ps-side-review-heading > span { color: var(--ps-muted); font-size: 10px; }
+.product-studio-shell .ps-side-review-cards {
+  display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 5px;
+  scrollbar-width: thin; -webkit-overflow-scrolling: touch;
+}
+.product-studio-shell .ps-side-review-card {
+  flex: 0 0 92px; min-width: 0; display: grid; justify-items: center; gap: 2px;
+  padding: 4px; background: #fff; border: 1px solid var(--ps-line);
+  border-radius: 10px; cursor: pointer; color: var(--ps-ink);
+}
+.product-studio-shell .ps-side-review-card.is-active {
+  border-color: var(--ps-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--ps-accent) 25%, transparent);
+}
+.product-studio-shell .ps-side-review-card:focus-visible { outline: 2px solid var(--ps-accent); outline-offset: 2px; }
+.product-studio-shell .ps-side-review-image {
+  position: relative; display: block; width: 100%; height: 78px; overflow: hidden;
+  background: #eeedf0; border-radius: 6px;
+}
+.product-studio-shell .ps-side-review-image > img,
+.product-studio-shell .ps-side-review-image > .ps-image-fallback {
+  width: 100%; height: 100%; object-fit: contain;
+}
+.product-studio-shell .ps-side-review-unverified {
+  display: grid; place-items: center; width: 100%; height: 100%;
+  padding: 5px; font-size: 9px; line-height: 1.2; color: var(--ps-muted); text-align: center;
+}
+.product-studio-shell .ps-side-review-title { font-weight: 700; font-size: 11px; }
+.product-studio-shell .ps-side-review-status { font-size: 9px; color: var(--ps-muted); white-space: nowrap; }
+@media (max-width: 760px) {
+  .product-studio-shell .ps-side-review-card { flex-basis: 80px; }
+  .product-studio-shell .ps-side-review-image { height: 68px; }
+}
+
 /* Color thumbnail rail: one thumbnail per color being sold; the main image stays the focus. */
 .product-studio-shell .ps-colorway-rail {
   flex: 0 0 auto; display: flex; gap: 8px; overflow-x: auto; padding: 8px 2px 4px;

@@ -44,3 +44,15 @@ test("unverified Back views never impersonate a real garment through a generic s
   assert.match(resolver, /if \(isFront\) return frontVariantImage \|\| artboardImage \|\| null;/);
   assert.match(resolver, /return null;\s*\}/);
 });
+
+test("Front and Back preview cards retain their own placement and refuse stale supplier renders", async () => {
+  const workspace = await read("../apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx");
+  const backend = await read("../apps/ecommerce-cms-agentsam/backend/admin/product-studio.js");
+  assert.match(workspace, /sideReviewCards = enabledLocations\.map/);
+  assert.match(workspace, /sidePlacements\[id\]/);
+  assert.match(workspace, /onClick=\{\(\) => choosePrintLocation\(side\.id\)\}/);
+  assert.match(workspace, /const verifiedRender = previewIsCurrent \? supplierMockups\.find/);
+  assert.match(workspace, /const preview = sideBaseImage \? await persistPlacementPreview\(uploaded, area, sideBaseImage\)/);
+  assert.match(backend, /Object\.values\(sides\)[\s\S]*?side\.preview_media_asset_id/);
+  assert.match(backend, /INSERT OR IGNORE INTO product_images/);
+});

@@ -1240,12 +1240,11 @@ export default function StudioWorkspace({
     );
   }
 
-  async function persistPlacementPreview(prepared: MediaAsset) {
+  async function persistPlacementPreview(prepared: MediaAsset, targetLocation = location, backgroundUrl = designImage) {
     // A provider print-area URL can point at the FRONT even for the Back.
     // Only produce a draft composite when the exact side/variant photo is verified.
     // Otherwise leave preview_media_asset_id empty rather than persist a false mockup.
-    const backgroundUrl = designImage;
-    if (!backgroundUrl || !location) return null;
+    if (!backgroundUrl || !targetLocation) return null;
     try {
       const background = new Image();
       background.crossOrigin = "anonymous";
@@ -1256,19 +1255,21 @@ export default function StudioWorkspace({
       artwork.src = prepared.url;
       await artwork.decode();
       const canvas = document.createElement("canvas");
-      canvas.width = Math.max(1, Number(location.artboard_width) || background.naturalWidth || 1500);
-      canvas.height = Math.max(1, Number(location.artboard_height) || background.naturalHeight || 1500);
+      canvas.width = Math.max(1, Number(targetLocation.artboard_width) || background.naturalWidth || 1500);
+      canvas.height = Math.max(1, Number(targetLocation.artboard_height) || background.naturalHeight || 1500);
       const ctx = canvas.getContext("2d");
       if (!ctx) return null;
       ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
-      const frame = hasProviderPlacementFrame
-        ? { x: Number(location.x), y: Number(location.y), width: Number(location.width), height: Number(location.height) }
+      const targetHasFrame = Boolean(targetLocation.artboard_width && targetLocation.artboard_height &&
+        targetLocation.width && targetLocation.height && targetLocation.x != null && targetLocation.y != null);
+      const frame = targetHasFrame
+        ? { x: Number(targetLocation.x), y: Number(targetLocation.y), width: Number(targetLocation.width), height: Number(targetLocation.height) }
         : { x: canvas.width * 0.33, y: canvas.height * 0.3, width: canvas.width * 0.34, height: canvas.height * 0.4 };
       ctx.drawImage(artwork, frame.x, frame.y, frame.width, frame.height);
       const blob = await new Promise<Blob>((resolve, reject) =>
         canvas.toBlob((value) => (value ? resolve(value) : reject(new Error("Preview export failed"))), "image/png"),
       );
-      const filename = `placement-${catalogId.slice(0, 8)}-${locationId.slice(0, 8)}-${crypto.randomUUID().slice(0, 12)}.png`;
+      const filename = `placement-${catalogId.slice(0, 8)}-${targetLocation.print_location_id.slice(0, 8)}-${crypto.randomUUID().slice(0, 12)}.png`;
       return (await uploadMediaFile(
         new File([blob], filename, { type: "image/png" }), "studio/previews",
         { derivativeRole: "mockup", transformPolicy: "preserve", sourceAsset: prepared },
@@ -1341,8 +1342,9 @@ export default function StudioWorkspace({
         if (!side.original_media_asset_id || !side.showArtwork) continue;
         const area = detail.print_locations.find((item) => item.print_location_id === id);
         if (!area || !printPixelSize(area)) throw new Error(`Missing supplier print dimensions for ${id}`);
-        // The current side was prepared by prepareArtwork() immediately above.
-        if (id === locationId && side.prepared_media_asset_id) continue;
+        // The active side may already have a prepared print file but still
+        // lack a preview; repair that without making another print derivative.
+        if (id === locationId && side.prepared_media_asset_id && side.preview_media_asset_id) continue;
         let stored = updatedSides[id];
         if (!stored?.asset || stored.asset.id !== side.original_media_asset_id) {
           const response = await adminFetch<{ asset: MediaAsset }>(
@@ -1354,8 +1356,22 @@ export default function StudioWorkspace({
         const expected = placementKey(stored.asset?.id, variantId, id, side.x, side.y,
           side.scale, side.rotation, side.flipX, side.flipY,
           side.trimTransparent, side.removeFlatBackground);
-        if (side.prepared_media_asset_id && stored.preparedAsset?.id === side.prepared_media_asset_id
-          && stored.preparedFor === expected) continue;
+        const matchingPrepared = side.prepared_media_asset_id && stored.preparedAsset?.id === side.prepared_media_asset_id
+          && stored.preparedFor === expected;
+        const sideBaseImage = sideReviewCards.find((candidate) => candidate.id === id)?.photoSources[0] || null;
+        // Existing prepared Back art must not need a new print file just to
+        // repair a missing preview (such as the saved shirt's rear view).
+        if (matchingPrepared) {
+          if (!side.preview_media_asset_id && stored.preparedAsset && sideBaseImage) {
+            const preview = await persistPlacementPreview(stored.preparedAsset, area, sideBaseImage);
+            if (preview) {
+              sides[id] = { ...side, preview_media_asset_id: preview.id };
+              updatedSides[id] = { ...stored, previewAsset: preview };
+              changed = true;
+            }
+          }
+          continue;
+        }
         setBusy("prepare");
         setNotice(`Preparing ${area.name} artwork for print…`);
         const placed = { ...stored, ...side, asset: stored.asset };
@@ -1365,8 +1381,9 @@ export default function StudioWorkspace({
           new File([blob], filename, { type: "image/png" }), "studio/prepared",
           { derivativeRole: "manufacturing", transformPolicy: "preserve", sourceAsset: stored.asset });
         if (!uploaded) throw new Error(`The ${area.name} print file could not be saved`);
-        sides[id] = { ...side, prepared_media_asset_id: uploaded.id, preview_media_asset_id: null };
-        updatedSides[id] = { ...placed, preparedAsset: uploaded, previewAsset: null, preparedFor: expected };
+        const preview = sideBaseImage ? await persistPlacementPreview(uploaded, area, sideBaseImage) : null;
+        sides[id] = { ...side, prepared_media_asset_id: uploaded.id, preview_media_asset_id: preview?.id || null };
+        updatedSides[id] = { ...placed, preparedAsset: uploaded, previewAsset: preview, preparedFor: expected };
         changed = true;
       }
       if (!changed) { setNotice(""); return saved; }
@@ -1469,6 +1486,43 @@ export default function StudioWorkspace({
   const currentPlacementKey = placementKey(asset?.id, variantId, locationId, x, y, scale, rotation, flipX, flipY, trimTransparent, removeFlatBackground);
   const preparedIsCurrent = Boolean(preparedAsset && preparedFor === currentPlacementKey);
   const currentRenderUrl = preparedIsCurrent ? providerRenderUrl : null;
+  // Both print locations belong to the same design. Preview each using its own
+  // recorded artwork and supplier image, never a guessed mirrored Front view.
+  const sideReviewCards = enabledLocations.map((sideLocation) => {
+    const id = sideLocation.print_location_id;
+    const front = /(?:^|[_\s-])front(?:$|[_\s-])/i.test(sideLocation.name || id);
+    const distinctArtboard = Boolean(!front && sideLocation.artboard_image_url &&
+      enabledLocations.every((candidate) => candidate.print_location_id === id ||
+        (candidate.artboard_image_url && candidate.artboard_image_url !== sideLocation.artboard_image_url)));
+    const image = selectStudioSideImage([], id, variantId, sideLocation.artboard_image_url,
+      blankVariantSources[0], front, selectedAttributes, distinctArtboard);
+    const photoSources = image
+      ? (front ? [...new Set([...blankVariantSources, sideLocation.artboard_image_url].filter(
+          (url): url is string => Boolean(url)))] : [image])
+      : [];
+    const placed = id === locationId ? snapshotActiveSide() : sidePlacements[id];
+    const areaHasFrame = Boolean(sideLocation.artboard_width && sideLocation.artboard_height &&
+      sideLocation.width && sideLocation.height && sideLocation.x != null && sideLocation.y != null);
+    const frameStyle = areaHasFrame ? {
+      left: `${(Number(sideLocation.x) / Number(sideLocation.artboard_width)) * 100}%`,
+      top: `${(Number(sideLocation.y) / Number(sideLocation.artboard_height)) * 100}%`,
+      width: `${(Number(sideLocation.width) / Number(sideLocation.artboard_width)) * 100}%`,
+      height: `${(Number(sideLocation.height) / Number(sideLocation.artboard_height)) * 100}%`,
+      transform: 'none',
+    } : { aspectRatio: sideLocation.file_width && sideLocation.file_height
+      ? sideLocation.file_width / sideLocation.file_height : 1 };
+    const color = colorAxis ? selectedAttributes[colorAxis] : null;
+    const previewIsCurrent = placed?.preparedAsset && placed.preparedFor === placementKey(
+      placed.asset?.id, variantId, id, placed.x, placed.y, placed.scale, placed.rotation,
+      placed.flipX, placed.flipY, placed.trimTransparent, placed.removeFlatBackground);
+    // A render of a prior artwork placement must never masquerade as current.
+    const verifiedRender = previewIsCurrent ? supplierMockups.find((mockup) =>
+      mockup.print_location_id === id && Boolean(mockup.asset?.url) &&
+      (!color || mockup.variant_color.trim().toLowerCase() === color.trim().toLowerCase())) : null;
+    return { id, label: sideLocation.name || (front ? 'Front' : 'Back'),
+      photoSources, verifiedRenderUrl: verifiedRender?.asset?.url || null,
+      placed, frameStyle, previewIsCurrent: Boolean(previewIsCurrent) };
+  });
   const manufacturingPreflight = dimensions && !cropPending && printPixels && asset && location
     ? evaluateManufacturingCompatibility(
         { format: asset.filename?.split(".").pop(),
@@ -2323,6 +2377,43 @@ export default function StudioWorkspace({
                     {" · "}{variant?.variant_title || variant?.name || "Selected color"}</small>
                 </>
               )}
+            </div>
+          </div>
+          <div className="ps-side-review-rail" role="group" aria-label="Front and back design previews">
+            <div className="ps-side-review-heading">
+              <strong>Design views</strong>
+              <span>{colorAxis ? selectedAttributes[colorAxis] : variant?.variant_title || 'Selected garment'} · Select to edit</span>
+            </div>
+            <div className="ps-side-review-cards">
+              {sideReviewCards.map((side) => (
+                <button type="button" key={side.id}
+                  className={'ps-side-review-card' + (locationId === side.id ? ' is-active' : '')}
+                  aria-pressed={locationId === side.id}
+                  aria-label={`Edit ${side.label} design`}
+                  onClick={() => choosePrintLocation(side.id)}>
+                  <span className="ps-side-review-image">
+                    {side.verifiedRenderUrl
+                      ? <ProductImage sources={[side.verifiedRenderUrl]} alt="" />
+                      : side.photoSources.length
+                        ? <ProductImage sources={side.photoSources} alt="" />
+                        : <span className="ps-side-review-unverified">No verified garment view</span>}
+                    {!side.verifiedRenderUrl && side.photoSources.length > 0 &&
+                      side.placed?.asset && side.placed.showArtwork && (
+                        <span className="ps-mini-placement" style={side.frameStyle}>
+                          <img src={side.id === locationId ? artworkPreviewUrl : side.placed.asset.url}
+                            alt="" style={{
+                              width: `${side.placed.scale}%`, left: `${side.placed.x}%`,
+                              top: `${side.placed.y}%`,
+                              transform: `translate(-50%, -50%) rotate(${side.placed.rotation}deg) scale(${side.placed.flipX ? -1 : 1}, ${side.placed.flipY ? -1 : 1})`,
+                            }} />
+                        </span>
+                      )}
+                  </span>
+                  <span className="ps-side-review-title">{side.label}</span>
+                  <span className="ps-side-review-status">{side.verifiedRenderUrl ? 'Supplier render'
+                    : side.previewIsCurrent ? 'Print prepared' : side.placed?.asset ? 'Artwork placed' : 'Add artwork'}</span>
+                </button>
+              ))}
             </div>
           </div>
           {colorways.length > 1 && colorAxis && (
