@@ -60,6 +60,26 @@ export function exactCatalogSideReference(
   )?.preview_url || null;
 }
 
+/**
+ * Print placement is not a different artwork every time someone changes a
+ * shirt color or size. For preview freshness only, compare every stored
+ * placement input except variantId (slot 1). Supplier render lookup still
+ * requires the exact variant color and print location.
+ */
+export function samePrintPlacementAcrossColors(stored: string | null | undefined, current: string): boolean {
+  if (!stored) return false;
+  if (stored === current) return true;
+  try {
+    const left: unknown = JSON.parse(stored);
+    const right: unknown = JSON.parse(current);
+    return Array.isArray(left) && Array.isArray(right) &&
+      left.length === 11 && right.length === 11 &&
+      left.every((value, index) => index === 1 || value === right[index]);
+  } catch {
+    return false;
+  }
+}
+
 export function selectStudioSideImage(
   mockups: readonly StudioSideMockup[],
   locationId: string,

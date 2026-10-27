@@ -67,7 +67,12 @@ test("Front/Back previews share the minimap and enlarged preview, without invent
   assert.match(component.slice(start, colorRail), /renderSideReviewCards\("mini"\)/);
   assert.match(component.slice(enlarged), /renderSideReviewCards\("expanded"\)/);
   assert.match(component, /exactCatalogSideReference\(detail\.mockups/);
-  assert.match(component, /const designImage = exactBackColorReference \? null : selectStudioSideImage/);
+  assert.match(component, /const exactSideCatalogReference = exactCatalogSideReference/);
+  assert.match(component, /const sampleView = Boolean\(!isFrontLocation && exactSideCatalogReference && showSupplierSample\)/);
+  assert.match(component, /const designImage = sampleView \? exactSideCatalogReference : placementBackground/);
+  assert.match(component, /!displayedRenderedUrl && !supplierPhotoOnly && <div className=\{"ps-design-print-area"/);
+  assert.match(component, /Supplier example photo\. Its sample artwork is not your design\./);
+  assert.match(component, /onClick=\{\(\) => setShowSupplierSample\(false\)\}/);
   assert.match(component, /Supplier color sample only; your saved artwork is shown separately/);
   assert.match(component, /side\.referenceOnly && side\.placed\?\.asset/);
   assert.match(styles, /ps-preview-dialog-body/);
@@ -82,4 +87,20 @@ test("one action prepares both print sides before Completeful render submission"
   assert.match(component, /Generate Front \+ Back previews/);
   assert.match(imageComponent, /setDirectAttempts/);
   assert.match(imageComponent, /setFailed/);
+});
+
+
+test("exact color Back samples and completed merchant renders remain separately identified", async () => {
+  const workspace = await read("../apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx");
+  const styles = await read("../apps/ecommerce-cms-agentsam/frontend/src/styles/product-studio.css");
+  assert.match(workspace, /const exactSideCatalogReference = exactCatalogSideReference/);
+  assert.match(workspace, /const sampleView = Boolean\(!isFrontLocation && exactSideCatalogReference && showSupplierSample\)/);
+  assert.match(workspace, /const displayedRenderedUrl = showSupplierSample[\s\S]*?currentSideRenderedUrl \|\| currentRenderUrl/);
+  assert.match(workspace, /supplierPhotoOnly = sampleView && !displayedRenderedUrl/);
+  assert.match(workspace, /const verifiedRender = previewIsCurrent \? supplierMockups\.find/);
+  assert.match(workspace, /samePrintPlacementAcrossColors/);
+  assert.match(workspace, /!displayedRenderedUrl && !supplierPhotoOnly && <div className=\{"ps-design-print-area"/);
+  assert.match(workspace, /Supplier example photo\. Its sample artwork is not your design/);
+  assert.match(workspace, /Verified completed preview for this color and print side/);
+  assert.match(styles, /ps-catalog-sample-note/);
 });

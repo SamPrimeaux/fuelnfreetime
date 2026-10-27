@@ -11,10 +11,12 @@ test("studio canvas and mini preview use catalog image proxy/error-fallback rend
     source("../apps/ecommerce-cms-agentsam/frontend/src/pages/products/ProductImage.tsx"),
   ]);
   assert.match(image, /\/catalog-image\?src=/, "existing catalog proxy preserved");
-  assert.match(image, /onError=\{\(\) => setFailed/, "catalog renderer tries other images after load errors");
+  assert.match(image, /onError=\{\(\) => \{/, "catalog renderer handles image load errors");
+  assert.match(image, /setDirectAttempts/, "failed image proxies retry the actual public supplier URL");
+  assert.match(image, /setFailed/, "exhausted source URLs advance to the next image");
   assert.match(image, /className=\{className\}/, "canvas can style a shared image");
   assert.match(canvas, /className=\{"ps-design-product-image" \+ \(hasProviderPlacementFrame/);
-  assert.match(canvas, /sources=\{designImageSources\}/);
+  assert.match(canvas, /sources=\{displayedRenderedUrl \? \[displayedRenderedUrl\] : designImageSources\}/);
   assert.match(canvas, /lazy=\{false\}/);
   assert.doesNotMatch(canvas, /<img className=\{"ps-design-product-image"/,
     "a raw supplier image URL may not bypass the same working catalog image proxy");
@@ -22,7 +24,9 @@ test("studio canvas and mini preview use catalog image proxy/error-fallback rend
 
 test("selected Front image can fall back by variant, but Back cannot fall back to Front", async () => {
   const canvas = await source("../apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx");
-  assert.match(canvas, /const designImage = selectStudioSideImage\(/);
+  assert.match(canvas, /const placementBackground = selectStudioSideImage\(/);
+  assert.match(canvas, /const exactSideCatalogReference = exactCatalogSideReference\(/);
+  assert.match(canvas, /const designImage = sampleView \? exactSideCatalogReference : placementBackground/);
   assert.match(canvas, /blankVariantSources\[0\], isFrontLocation, selectedAttributes,/);
   assert.match(canvas, /: \[designImage\]\)/);
   const frontImage = "https://supplier.example/gildan-front.png";

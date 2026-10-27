@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { createMiniAgentSam } from "../../../../packages/agentsam-workbench/src/mini-agentsam.js";
-import { exactCatalogSideReference, selectStudioSideImage } from "./studio-side-image";
+import { exactCatalogSideReference, samePrintPlacementAcrossColors, selectStudioSideImage } from "./studio-side-image";
 import { blankGarmentImageSources } from "./studio-blank-image";
 import { updateSellingVariants, toggleSellingGroup } from "./studio-selling-variants";
 import { adminFetch, adminFormFetch } from "../../lib/api";
@@ -187,6 +187,9 @@ export default function StudioWorkspace({
   const [manageVariants, setManageVariants] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [miniMapOpen, setMiniMapOpen] = useState(true);
+  // Catalog samples may already contain another example design. Show them as
+  // genuine garment references, never as completed merchant artwork.
+  const [showSupplierSample, setShowSupplierSample] = useState(true);
   const [fullPreviewOpen, setFullPreviewOpen] = useState(false);
   useEffect(() => {
     if (!fullPreviewOpen) return;
@@ -395,6 +398,7 @@ export default function StudioWorkspace({
     detail.variants.find((v) => catalogVariantId(v) === variantId) ||
     detail.variants[0];
   const selectedAttributes = variantAttributes(variant);
+  useEffect(() => setShowSupplierSample(true), [variantId, locationId]);
   const optionAxes = variantAxes(detail.variants);
   // Blank garment source is NOT the supplier's decorated demonstration mockup.
   // "realistic_image_url" and the generic mockup gallery can already contain
@@ -411,23 +415,28 @@ export default function StudioWorkspace({
     enabledLocations.every((candidate) => candidate.print_location_id === locationId ||
       (candidate.artboard_image_url && candidate.artboard_image_url !== location.artboard_image_url)),
   );
-  const exactBackColorReference = !isFrontLocation && garmentColor &&
-    garmentColor.toLowerCase() !== "black"
-    ? exactCatalogSideReference(detail.mockups || [], locationId, variantId, selectedAttributes)
-    : null;
-  const designImage = exactBackColorReference ? null : selectStudioSideImage(
-    // Supplier mockups and their "realistic" pictures may embed stock artwork.
-    // Do not treat those as blank manufacturer base images.
+  const exactSideCatalogReference = exactCatalogSideReference(
+    detail.mockups || [], locationId, variantId, selectedAttributes);
+  // Back stock photos are available in the provider's exact color/side
+  // mockup catalog. Previously this branch deliberately set designImage=null
+  // and displayed an empty stage. A reference photo must remain separate
+  // from our editable print-artwork surface because it may include demo art.
+  const sampleView = Boolean(!isFrontLocation && exactSideCatalogReference && showSupplierSample);
+  const placementBackground = selectStudioSideImage(
     [], locationId, variantId, location?.artboard_image_url,
     blankVariantSources[0], isFrontLocation, selectedAttributes,
     hasDistinctProviderSideArtboard,
   );
-  const designImageSources = designImage
-    ? (isFrontLocation
-      ? [...new Set([...blankVariantSources, location?.artboard_image_url].filter(
-          (url): url is string => Boolean(url)))]
-      : [designImage])
-    : [];
+  const designImage = sampleView ? exactSideCatalogReference : placementBackground;
+  const designImageSources = sampleView && exactSideCatalogReference
+    ? [exactSideCatalogReference, ...(garmentColor.toLowerCase() === "black" && placementBackground
+        ? [placementBackground] : [])]
+    : designImage
+      ? (isFrontLocation
+        ? [...new Set([...blankVariantSources, location?.artboard_image_url].filter(
+            (url): url is string => Boolean(url)))]
+        : [designImage])
+      : [];
   // Never use a generic silhouette to impersonate a provider garment photo.
   // Unverified side/color combinations keep their print geometry, but no garment claim.
   const artboardAspectRatio = location?.artboard_width && location?.artboard_height
@@ -1534,9 +1543,10 @@ export default function StudioWorkspace({
     } : { aspectRatio: sideLocation.file_width && sideLocation.file_height
       ? sideLocation.file_width / sideLocation.file_height : 1 };
     const color = colorAxis ? selectedAttributes[colorAxis] : null;
-    const previewIsCurrent = Boolean(placed?.preparedAsset && placed.preparedFor === placementKey(
-      placed.asset?.id, variantId, id, placed.x, placed.y, placed.scale, placed.rotation,
-      placed.flipX, placed.flipY, placed.trimTransparent, placed.removeFlatBackground));
+    const previewIsCurrent = Boolean(placed?.preparedAsset && samePrintPlacementAcrossColors(
+      placed.preparedFor, placementKey(
+        placed.asset?.id, variantId, id, placed.x, placed.y, placed.scale, placed.rotation,
+        placed.flipX, placed.flipY, placed.trimTransparent, placed.removeFlatBackground)));
     // A render of a prior artwork placement must never masquerade as current.
     const verifiedRender = previewIsCurrent ? supplierMockups.find((mockup) =>
       mockup.print_location_id === id && Boolean(mockup.asset?.url) &&
@@ -1547,16 +1557,23 @@ export default function StudioWorkspace({
     // selections display the exact provider color reference, NOT a black
     // back with the merchant art composited over the wrong color.
     const referenceOnly = !verifiedRender && !front && Boolean(color) &&
-      String(color).trim().toLowerCase() !== "black" && Boolean(catalogReferenceUrl);
+      Boolean(catalogReferenceUrl);
     return { id, label: sideLocation.name || (front ? 'Front' : 'Back'),
-      photoSources: referenceOnly ? [] : photoSources,
+      // Black has a genuine side-specific artboard if the provider sample
+      // URL is unavailable. Other colors must not silently fall back to Black.
+      photoSources: referenceOnly && String(color).trim().toLowerCase() !== "black"
+        ? [] : photoSources,
       catalogReferenceUrl: referenceOnly ? catalogReferenceUrl : null,
       verifiedRenderUrl: verifiedRender?.asset?.url || null, referenceOnly,
       placed, frameStyle, previewIsCurrent };
   });
-  const activeSideReview = sideReviewCards.find((side) => side.id === locationId);
-  const activeCatalogReferenceUrl = activeSideReview?.referenceOnly
-    ? activeSideReview.catalogReferenceUrl : null;
+  const currentSideRenderedUrl = sideReviewCards.find((side) => side.id === locationId)?.verifiedRenderUrl || null;
+  // A completed render for the selected color/side supersedes the supplier
+  // catalog sample. Switching to Edit artwork still shows the clean placement
+  // canvas rather than baking the supplier's finished image into the editor.
+  const displayedRenderedUrl = showSupplierSample
+    ? currentSideRenderedUrl || currentRenderUrl : null;
+  const supplierPhotoOnly = sampleView && !displayedRenderedUrl;
   function renderSideReviewCards(size: "mini" | "expanded") {
     return (
       <div className={"ps-side-review-cards ps-side-review-cards--" + size}
@@ -1571,7 +1588,7 @@ export default function StudioWorkspace({
               {side.verifiedRenderUrl
                 ? <ProductImage sources={[side.verifiedRenderUrl]} alt="" />
                 : side.catalogReferenceUrl
-                  ? <ProductImage sources={[side.catalogReferenceUrl]} alt="" />
+                  ? <ProductImage sources={[side.catalogReferenceUrl, ...side.photoSources]} alt="" />
                   : side.photoSources.length
                     ? <ProductImage sources={side.photoSources} alt="" />
                     : <span className="ps-side-review-unverified">Garment view not available</span>}
@@ -2327,6 +2344,18 @@ export default function StudioWorkspace({
                 </div>
               )}
               <div className="ps-canvas-controls">
+                {(currentSideRenderedUrl || (!isFrontLocation && exactSideCatalogReference)) && (
+                  <div className="ps-sample-mode-toggle" role="group" aria-label="Garment view mode">
+                    <button type="button" aria-pressed={Boolean(displayedRenderedUrl || supplierPhotoOnly)}
+                      className={displayedRenderedUrl || supplierPhotoOnly ? "is-active" : ""}
+                      onClick={() => setShowSupplierSample(true)}>
+                      {currentSideRenderedUrl ? "Finished mockup" : "Supplier photo"}
+                    </button>
+                    <button type="button" aria-pressed={!displayedRenderedUrl && !supplierPhotoOnly}
+                      className={!displayedRenderedUrl && !supplierPhotoOnly ? "is-active" : ""}
+                      onClick={() => setShowSupplierSample(false)}>Edit artwork</button>
+                  </div>
+                )}
                 <button type="button" onClick={() => setCanvasZoom(100)}>Fit</button>
                 <label><span className="ps-sr-only">Canvas zoom</span>
                   <input type="range" min="50" max="160" step="5" value={canvasZoom}
@@ -2344,11 +2373,11 @@ export default function StudioWorkspace({
               <div className="ps-product-design-image">
                 <div className="ps-design-guide" style={{ aspectRatio: artboardAspectRatio }}
                   aria-label={`${location?.name || "Selected"} garment design view`}>
-                  {designImage ? (
+                  {displayedRenderedUrl || designImage ? (
                     <ProductImage
-                      key={`${variantId}:${locationId}:${designImage}`}
+                      key={`${variantId}:${locationId}:${displayedRenderedUrl || designImage}`}
                       className={"ps-design-product-image" + (hasProviderPlacementFrame ? " is-geometry-mapped" : "")}
-                      sources={designImageSources}
+                      sources={displayedRenderedUrl ? [displayedRenderedUrl] : designImageSources}
                       lazy={false}
                       alt={`${location?.name || "Selected"} provider catalog reference`}
                     />
@@ -2358,7 +2387,19 @@ export default function StudioWorkspace({
                       <span>Position your design inside the supplier print area. Use the Front / Back panel for the exact garment color. A decorated photo requires a Completeful render.</span>
                     </div>
                   )}
-                  <div className={"ps-design-print-area" + (guides ? " is-gridded" : "")} style={{ ...placementFrameStyle, aspectRatio: ratio }}
+                  {(displayedRenderedUrl || supplierPhotoOnly) && (
+                    <div className="ps-catalog-sample-note" role="status">
+                      <strong>{displayedRenderedUrl ? "Your Completeful mockup" :
+                        `Completeful · ${garmentColor || "Selected color"} ${location?.name || "side"}`}</strong>
+                      <span>{displayedRenderedUrl
+                        ? "Verified completed preview for this color and print side."
+                        : "Supplier example photo. Its sample artwork is not your design."}</span>
+                      <button type="button" onClick={() => setShowSupplierSample(false)}>
+                        Edit your {location?.name || "side"} artwork
+                      </button>
+                    </div>
+                  )}
+                  {!displayedRenderedUrl && !supplierPhotoOnly && <div className={"ps-design-print-area" + (guides ? " is-gridded" : "")} style={{ ...placementFrameStyle, aspectRatio: ratio }}
                     onPointerDown={(event) => {
                       const target = event.target as HTMLElement;
                       const cornerHandle = target.closest(".ps-selection-handle");
@@ -2419,7 +2460,7 @@ export default function StudioWorkspace({
                         <span className="ps-selection-handle ps-selection-handle--br" />
                       </div>
                     )}
-                  </div>
+                  </div>}
                 </div>
               </div>
               <div className="ps-product-design-caption">
@@ -2512,13 +2553,13 @@ export default function StudioWorkspace({
                 </header>
                 <div className="ps-preview-dialog-body">
                 <div className="ps-preview-enlarged-image">
-                  {currentRenderUrl || activeCatalogReferenceUrl || designImage
-                    ? <ProductImage key={`expanded:${variantId}:${locationId}`}
-                        sources={currentRenderUrl ? [currentRenderUrl]
-                          : activeCatalogReferenceUrl ? [activeCatalogReferenceUrl] : designImageSources}
+                  {displayedRenderedUrl || (supplierPhotoOnly && exactSideCatalogReference) || designImage
+                    ? <ProductImage key={`expanded:${variantId}:${locationId}:${displayedRenderedUrl || designImage}`}
+                        sources={displayedRenderedUrl ? [displayedRenderedUrl]
+                          : supplierPhotoOnly && exactSideCatalogReference ? [exactSideCatalogReference] : designImageSources}
                         alt={`${variant?.variant_title || variant?.name || detail.product.name}, ${location?.name || "selected view"}`} lazy={false} />
                     : <div className="ps-mini-unverified">No verified photo is available for this side or variant.</div>}
-                  {!currentRenderUrl && !activeCatalogReferenceUrl && designImage && asset && showArtwork && (
+                  {!displayedRenderedUrl && !supplierPhotoOnly && designImage && asset && showArtwork && (
                     <div className="ps-mini-placement" style={placementFrameStyle}>
                       <img src={artworkPreviewUrl} alt="" style={{ width: `${scale}%`, left: `${x}%`, top: `${y}%`,
                         transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})` }} />
@@ -2529,13 +2570,13 @@ export default function StudioWorkspace({
                   <strong>Design views</strong>
                   {renderSideReviewCards("expanded")}
                   <p>Choose Front or Back to compare the selected color. Artwork stays attached to its own print location.</p>
-                  {!currentRenderUrl && activeCatalogReferenceUrl && (
+                  {!displayedRenderedUrl && supplierPhotoOnly && exactSideCatalogReference && (
                     <p>Supplier color sample only; your saved artwork is shown separately until a Completeful render is available.</p>
                   )}
                 </aside>
                 </div>
-                <footer>{currentRenderUrl ? "Completeful provider render"
-                  : activeCatalogReferenceUrl ? "Exact-color supplier sample; not a decorated product mockup"
+                <footer>{displayedRenderedUrl ? "Completeful provider render · selected color and print side"
+                  : supplierPhotoOnly && exactSideCatalogReference ? "Exact-color supplier sample; not a decorated product mockup"
                   : designImage ? "Supplier garment reference with local artwork placement — not a final render"
                   : "Preview unavailable"}</footer>
               </section>

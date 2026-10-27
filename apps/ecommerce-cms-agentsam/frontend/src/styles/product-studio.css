@@ -2709,3 +2709,34 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
 .product-studio-shell .ps-mini-render-link:disabled {
   opacity: .55; cursor: not-allowed;
 }
+
+/* Exact provider garment reference vs editable print-area view. The provider
+   sample may already have demo art; do not composite merchant art over it. */
+.product-studio-shell .ps-sample-mode-toggle {
+  display: inline-flex; gap: 2px; align-items: center; border: 1px solid var(--ps-line);
+  padding: 2px; border-radius: 8px; background: var(--ps-paper);
+}
+.product-studio-shell .ps-sample-mode-toggle button {
+  min-height: 34px; padding: 4px 9px; border-radius: 6px;
+  font-size: 11px; white-space: nowrap;
+}
+.product-studio-shell .ps-sample-mode-toggle button.is-active {
+  color: var(--ps-ink); background: var(--ps-paper-2, #eae8f0);
+  box-shadow: 0 0 0 1px var(--ps-line);
+}
+.product-studio-shell .ps-catalog-sample-note {
+  position: absolute; z-index: 3; bottom: 12px; left: 12px;
+  max-width: min(340px, calc(100% - 24px)); padding: 10px 12px;
+  background: rgba(255,255,255,.96); border: 1px solid var(--ps-line);
+  border-radius: 10px; box-shadow: 0 2px 12px #0002;
+  display: grid; gap: 4px; font-size: 11px; line-height: 1.4;
+}
+.product-studio-shell .ps-catalog-sample-note span { color: var(--ps-muted); }
+.product-studio-shell .ps-catalog-sample-note button {
+  background: var(--ps-ink); color: var(--ps-paper); border: 0; border-radius: 6px;
+  cursor: pointer; min-height: 34px; padding: 6px 9px; font-weight: 650;
+}
+@media (max-width:760px) {
+  .product-studio-shell .ps-sample-mode-toggle button { min-height: 40px; }
+  .product-studio-shell .ps-catalog-sample-note { bottom: 8px; left: 8px; padding: 8px; }
+}

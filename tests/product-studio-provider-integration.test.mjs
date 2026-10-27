@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
-import { exactCatalogSideReference, selectStudioSideImage } from "../apps/ecommerce-cms-agentsam/frontend/src/pages/products/studio-side-image.ts";
+import { exactCatalogSideReference, samePrintPlacementAcrossColors, selectStudioSideImage } from "../apps/ecommerce-cms-agentsam/frontend/src/pages/products/studio-side-image.ts";
 import { resolveSelectedResource } from "../apps/ecommerce-cms-agentsam/backend/agentsam/selected-resource.js";
 
 const read = (relative) => readFile(new URL(relative, import.meta.url), "utf8");
@@ -132,4 +132,18 @@ test("catalog side references require exact color and print location", () => {
   assert.equal(exactCatalogSideReference(source, "back", "denim-2xl", { Color: "Denim" }), null);
   assert.equal(exactCatalogSideReference(source, "back", "moss-2xl", { Color: "Moss" }), "back-moss");
   assert.equal(selectStudioSideImage([], "back", "moss-2xl", "black-shirt", null, false, {Color:"Moss"}, false), null);
+});
+
+
+test("prepared print artwork remains current across colors but not changed artwork or placement", () => {
+  const original = JSON.stringify([31, "black-xl", "back", 50, 50, 40, 0, false, false, false, false]);
+  const brick = JSON.stringify([31, "brick-2xl", "back", 50, 50, 40, 0, false, false, false, false]);
+  const wrongAsset = JSON.stringify([32, "brick-2xl", "back", 50, 50, 40, 0, false, false, false, false]);
+  const moved = JSON.stringify([31, "brick-2xl", "back", 55, 50, 40, 0, false, false, false, false]);
+  assert.equal(samePrintPlacementAcrossColors(original, original), true);
+  assert.equal(samePrintPlacementAcrossColors(original, brick), true);
+  assert.equal(samePrintPlacementAcrossColors(original, wrongAsset), false);
+  assert.equal(samePrintPlacementAcrossColors(original, moved), false);
+  assert.equal(samePrintPlacementAcrossColors(null, brick), false);
+  assert.equal(samePrintPlacementAcrossColors("broken", brick), false);
 });
