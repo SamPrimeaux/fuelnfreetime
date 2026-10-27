@@ -45,6 +45,7 @@ export default function App() {
             <Route path="health" element={<AnalyticsRoute page={HealthPage} title="Health" />} />
           </Route>
           <Route path="account" element={<AccountRoute />} />
+          <Route path="content/brand" element={<BrandStudioPage />} />
           <Route path="collections" element={<CollectionLibrary />} />
           <Route path="collections/new" element={<CollectionEditor />} />
           <Route path="collections/:id" element={<CollectionEditor />} />
