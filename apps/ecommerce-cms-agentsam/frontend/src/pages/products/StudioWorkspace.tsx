@@ -1583,7 +1583,7 @@ export default function StudioWorkspace({
       const results = await Promise.all(pending.map(async (item) => {
         try {
           return await adminFetch<{
-            status: string; render_id: string; asset?: { url: string } | null;
+            status: string; render_id: string; asset?: { id?: number; url: string; alt_text?: string | null; is_primary?: number } | null;
           }>(`/api/admin/product-studio/renders/${encodeURIComponent(item.render_id!)}/batch`);
         } catch {
           return null;
