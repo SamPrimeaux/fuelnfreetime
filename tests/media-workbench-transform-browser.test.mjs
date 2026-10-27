@@ -122,7 +122,13 @@ test("browser crop + rotate + flip + PNG save + removal controls run without JS 
   }finally{
     try {socket?.close();}catch{}
     browser.kill("SIGTERM");
+    await Promise.race([
+      new Promise(resolve=>browser.once("exit",resolve)),
+      new Promise(resolve=>setTimeout(resolve,1500)),
+    ]);
     await new Promise(resolve=>server.close(resolve));
-    rmSync(dataDir,{recursive:true,force:true});
+    // Chrome sometimes writes to the profile during SIGTERM; cleanup is
+    // best-effort and must never mask a real browser assertion failure.
+    try { rmSync(dataDir,{recursive:true,force:true,maxRetries:8,retryDelay:150}); } catch {}
   }
 });
