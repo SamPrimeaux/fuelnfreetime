@@ -37,6 +37,11 @@ export interface SourceAssetDescriptor {
   format?: string;
   extension?: string;
   mimeType?: string;
+  content_type?: string;
+  contentType?: string;
+  filename?: string;
+  r2_key?: string;
+  r2Key?: string;
   mediaKind?: MediaKind;
   widthPx?: number;
   heightPx?: number;
