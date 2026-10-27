@@ -1,12 +1,12 @@
 import {
   CompletefulApiError,
   assertCompletefulMutationAllowed,
-  completefulRequest,
 } from "../completeful/client.js";
 import {
   planCompletefulMockupMatrix, renderCompletefulMockupMatrix, pollCompletefulMockupRender,
 } from "../completeful/mockup-renderer.js";
 import { completefulDesigns } from "../completeful/designs.js";
+import { completefulApi } from "../completeful/api.js";
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -679,7 +679,7 @@ async function renderDraft(request, env, id) {
     }
 
     try {
-      const { data, meta } = await completefulRequest(env, "POST", "/mockups/renders", {
+      const { data, meta } = await completefulApi.mockups.render(env, {
         idempotencyKey,
         body: {
           mockup_id: mockup.mockup_id,
@@ -728,7 +728,7 @@ async function renderDraft(request, env, id) {
 
 async function pollRender(request, env, renderId, url) {
   try {
-    const { data, meta } = await completefulRequest(env, "GET", `/mockups/renders/${encodeURIComponent(renderId)}`);
+    const { data, meta } = await completefulApi.mockups.getRender(env, { path: { renderId } });
     const renderUrl = data?.mockups?.[0]?.url || null;
     const draftId = url.searchParams.get("draft_id");
     if (draftId) {
@@ -976,11 +976,8 @@ async function createProductFromDraft(request, env, id) {
     let providerData = null;
     if (!operation.reused || !providerProductId) {
       try {
-        const { data, meta } = await completefulRequest(
-          env,
-          "POST",
-          `/shops/${encodeURIComponent(shopId)}/products`,
-          {
+        const { data, meta } = await completefulApi.products.create(env, {
+            path: { shopId },
             idempotencyKey,
             body: {
               catalog_product_id: selection.resolvedProductId,
@@ -991,8 +988,7 @@ async function createProductFromDraft(request, env, id) {
               preview_url: draft.completeful_render_url || null,
               variants: providerSelection,
             },
-          },
-        );
+        });
         providerData = data;
         providerProductId = data?.product?.id || data?.store_product?.id || data?.id;
         requestId = meta?.request_id || null;

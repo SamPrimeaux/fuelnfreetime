@@ -1,4 +1,4 @@
-import { completefulRequest } from "./client.js";
+import { completefulApi } from "./api.js";
 
 const DEFAULT_INCLUDE = "variants,print_locations,images,mockups,shipping";
 const DEFAULT_PAGE_LIMIT = 3;
@@ -99,7 +99,7 @@ export async function getCompletefulCounts(env) {
 }
 
 export async function refreshCompletefulShops(env) {
-  const { data, meta } = await completefulRequest(env, "GET", "/shops");
+  const { data, meta } = await completefulApi.shops.list(env);
   const shops = normalizeShops(data);
   const statements = shops.map((shop) =>
     env.DB.prepare(
@@ -478,7 +478,7 @@ export async function syncCompletefulCatalog(env, options = {}) {
 
   try {
     while (pages < maxPages) {
-      const { data, meta } = await completefulRequest(env, "GET", "/catalog/products", {
+      const { data, meta } = await completefulApi.catalog.products(env, {
         query: {
           limit,
           cursor,

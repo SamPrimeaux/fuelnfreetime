@@ -178,9 +178,9 @@ test("Product Studio persistence and Completeful mutations are server-side contr
   const provider = await readFile(
     new URL("../apps/ecommerce-cms-agentsam/backend/completeful/designs.js", import.meta.url), "utf8",
   );
-  assert.match(provider, /completefulRequest\(env, "POST", "\/designs"/);
-  assert.match(backend, /completefulRequest\(env, "POST", "\/mockups\/renders"/);
-  assert.match(backend, /`\/shops\/\$\{encodeURIComponent\(shopId\)\}\/products`/);
+  assert.match(provider, /completefulApi\.designs\.create\(env/);
+  assert.match(backend, /completefulApi\.mockups\.render\(env/);
+  assert.match(backend, /completefulApi\.products\.create\(env/);
   assert.match(backend, /completeful_operations/);
   assert.match(backend, /completeful_product_links/);
   assert.match(backend, /completeful_variant_links/);
@@ -189,7 +189,7 @@ test("Product Studio persistence and Completeful mutations are server-side contr
 
   assert.match(workspace, /\/api\/admin\/product-studio\/drafts/);
   assert.match(workspace, /Prepare for print/);
-  assert.match(workspace, /Render Completeful colorways/);
+  assert.match(workspace, /Prepare sides \+ render all selected colors/);
   assert.match(workspace, /Next step · Product details/);
   assert.match(workspace, /continueToProductDetails/);
   assert.doesNotMatch(workspace, /Storefront description/);

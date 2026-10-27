@@ -208,7 +208,7 @@ test("provider design sync in test mode validates first and never stores a ficti
 test("live mutation gate refuses Completeful writes without explicit operator enablement", async () => {
   const env = fixture();
   env.CAPP_KEY = "capp_live_mock";
-  assert.throws(() => completefulDesigns.create(env, { name: "Nope" }, "idempotent-test"),
+  await assert.rejects(completefulDesigns.create(env, { name: "Nope" }, "idempotent-test"),
     { code: "completeful_live_writes_disabled" });
   env.DB.close();
 });

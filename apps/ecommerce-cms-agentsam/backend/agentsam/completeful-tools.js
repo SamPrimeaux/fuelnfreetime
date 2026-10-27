@@ -9,8 +9,8 @@ import {
   completefulApiBase,
   completefulKeyMode,
   completefulLiveWritesAllowed,
-  completefulRequest,
 } from "../completeful/client.js";
+import { completefulApi } from "../completeful/api.js";
 import {
   getCompletefulCatalogProduct,
   getCompletefulCounts,
@@ -60,12 +60,7 @@ async function semanticCatalogSearch(env, params = {}) {
 
   const limit = Math.min(Math.max(1, Number(params.limit || 20)), 50);
   const include = params.include || "all";
-  const { data, meta } = await completefulRequest(
-    env,
-    "GET",
-    "/catalog/products/semantic",
-    { query: { q, limit, include } },
-  );
+  const { data, meta } = await completefulApi.catalog.semantic(env, { query: { q, limit, include } });
 
   return {
     ok: true,

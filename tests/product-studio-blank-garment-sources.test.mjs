@@ -69,6 +69,7 @@ test("design canvas uses only selected variant candidates; never mockup gallery"
     new URL("../apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx", import.meta.url), "utf8");
   assert.match(source, /blankGarmentImageSources\(variant, detail\.product\)/);
   assert.match(source, /\[\], locationId, variantId, location\?\.artboard_image_url/);
-  assert.match(source, /sources=\{designImageSources\}/);
+  assert.match(source, /sources=\{displayedRenderedUrl \? \[displayedRenderedUrl\] : designImageSources\}/);
+  assert.match(source, /Your Completeful mockup/);
   assert.doesNotMatch(source, /variantImage\(variant\) \|\| baseImage/);
 });

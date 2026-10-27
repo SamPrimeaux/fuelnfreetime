@@ -3,7 +3,8 @@
  * Provider images and render receipts become immutable Media Library derivatives.
  * Never replace a missing supplier photo with an unrelated garment silhouette.
  */
-import { assertCompletefulMutationAllowed, completefulRequest } from "./client.js";
+import { assertCompletefulMutationAllowed } from "./client.js";
+import { completefulApi } from "./api.js";
 import { mediaPathForKey } from "../assets/config.js";
 
 function parse(value, fallback) {
@@ -233,7 +234,7 @@ export async function renderCompletefulMockupMatrix(env, input = {}) {
        VALUES (?,'mockup_render','product_studio_draft',?,'pending',1,?)`,
     ).bind(operation_key, target.draft_id, operation_key).run();
     try {
-      const { data, meta } = await completefulRequest(env, "POST", "/mockups/renders", {
+      const { data, meta } = await completefulApi.mockups.render(env, {
         idempotencyKey: operation_key,
         body: {
           mockup_id: target.mockup_id, art_url: preparedUrl,
@@ -269,7 +270,7 @@ export async function pollCompletefulMockupRender(env, renderId) {
     throw new Error("mockup_render_receipt_not_found");
   }
   const receipt = parseOperationKey(operation.operation_key);
-  const { data } = await completefulRequest(env, "GET", `/mockups/renders/${encodeURIComponent(renderId)}`);
+  const { data } = await completefulApi.mockups.getRender(env, { path: { renderId } });
   const status = String(data?.status || "running");
   let asset = null;
   if (status === "succeeded" && data?.mockups?.[0]?.url) {

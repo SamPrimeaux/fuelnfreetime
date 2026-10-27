@@ -3,7 +3,6 @@ import {
   completefulApiBase,
   completefulKeyMode,
   completefulLiveWritesAllowed,
-  completefulRequest,
 } from "../completeful/client.js";
 import {
   getCompletefulCatalogProduct,
@@ -16,6 +15,7 @@ import {
   syncCompletefulCatalog,
 } from "../completeful/catalog.js";
 import { planProductAssetOptimization } from "../assets/product-optimize.js";
+import { completefulApi, COMPLETEFUL_CONTRACT } from "../completeful/api.js";
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -61,8 +61,8 @@ function providerErrorResponse(error) {
  * Keep legacy D1 shape for the existing Product Studio UI.
  */
 export async function liveCatalogDetail(env, catalogId, mirrored) {
-  const { data } = await completefulRequest(env, "GET",
-    `/catalog/products/${encodeURIComponent(catalogId)}`, {
+  const { data } = await completefulApi.catalog.product(env, {
+      path: { productId: catalogId },
       query: { include: "variants,print_locations,images,mockups,shipping" },
     });
   const provider = data?.product || data?.item || data?.data?.product || data;
@@ -137,6 +137,30 @@ export async function handleCompletefulAdminApi(request, env, url) {
   try {
     if (path === "/api/admin/completeful/status" && method === "GET") {
       return status(env);
+    }
+
+    // Inspect the actual callable server-side provider, not a documentation URL.
+    if (path === "/api/admin/completeful/api/capabilities" && method === "GET") {
+      return json({ ok: true, contract: COMPLETEFUL_CONTRACT, transport: "server-side",
+        auth: "Worker CAPP_KEY secret", generic_browser_proxy: false });
+    }
+
+    // Provider catalog read-through: these are actual Completeful API calls
+    // (not the cached D1 catalog mockup mirror).
+    const supplierMatch = path.match(/^\/api\/admin\/completeful\/catalog\/([^/]+)\/(mockups|assets|variants|print-locations|shipping)$/);
+    if (supplierMatch && method === "GET") {
+      const productId = decodeURIComponent(supplierMatch[1]);
+      const section = supplierMatch[2];
+      const operations = {
+        mockups: "mockups", assets: "assets", variants: "variants",
+        "print-locations": "printLocations", shipping: "shipping",
+      };
+      const query = section === "mockups" && url.searchParams.has("print_location_id")
+        ? { print_location_id: url.searchParams.get("print_location_id") } : {};
+      const { data, meta } = await completefulApi.catalog[operations[section]](env, {
+        path: { productId }, query,
+      });
+      return json({ ok: true, data, provider_meta: meta, catalog_source: "completeful_live" });
     }
 
     if (path === "/api/admin/completeful/shops" && method === "GET") {
