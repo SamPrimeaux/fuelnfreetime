@@ -1662,6 +1662,18 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     els.drawerPreview.innerHTML = previewHtml(asset);
     if (els.drawerTitle) els.drawerTitle.textContent = asset.filename || "Asset";
     if (els.drawerStatus) els.drawerStatus.textContent = statusLabel(asset).replace("…", "");
+    const recovery = document.getElementById("media-drawer-recovery");
+    const recoveryError = document.getElementById("media-drawer-processing-error");
+    const recoveryButton = document.getElementById("media-drawer-retry-processing");
+    if (recovery) recovery.hidden = asset.status !== "failed";
+    if (recoveryError) recoveryError.textContent = asset.status === "failed"
+      ? (asset.processing_error || "Image processing failed. The original upload has not been deleted.")
+      : "";
+    if (recoveryButton) {
+      recoveryButton.hidden = asset.status !== "failed";
+      recoveryButton.disabled = asset.status !== "failed" || !asset.processing_job_id;
+      recoveryButton.textContent = "Retry processing";
+    }
     applyPreviewPreset('original');
     setInspectorTab("details");
     els.fieldFilename.value = asset.filename || "";
@@ -1816,6 +1828,40 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     document.title = 'Content — Fuel & Free Time Admin';
     if (updateHistory) updateDetailUrl(null, 'replace');
     closeCardMenu();
+  }
+
+  async function retrySelectedProcessing() {
+    const asset = selected;
+    if (!asset || asset.status !== "failed" || !asset.processing_job_id) return;
+    const button = document.getElementById("media-drawer-retry-processing");
+    const message = document.getElementById("media-drawer-processing-error");
+    if (button) { button.disabled = true; button.textContent = "Requesting retry…"; }
+    try {
+      const result = await adminFetch("/api/admin/assets/jobs/" + encodeURIComponent(asset.processing_job_id) + "/retry", {
+        method: "POST",
+      });
+      // Queue acceptance is not job success; show the actual next status after refresh.
+      if (message) message.textContent = result.mode === "enqueued"
+        ? "Retry accepted by the image processor. Refresh the asset to check the result."
+        : "Processor completed the retry. Reload the asset to review its current status.";
+      const response = await adminFetch("/api/admin/media/" + encodeURIComponent(asset.id));
+      const refreshed = response?.asset;
+      if (refreshed && selected && Number(selected.id) === Number(asset.id)) {
+        openDrawer(refreshed, { updateHistory: false });
+        if (result.mode === "enqueued") {
+          const statusText = document.getElementById("media-drawer-processing-error");
+          if (statusText && refreshed.status === "failed") statusText.textContent =
+            "Retry accepted; the previous error stays visible until processing finishes. Reload to check again.";
+        }
+      }
+    } catch (error) {
+      if (message) message.textContent = error?.message || "The processor could not retry this image.";
+    } finally {
+      if (button && selected?.status === "failed") {
+        button.disabled = false;
+        button.textContent = "Retry processing";
+      }
+    }
   }
 
   async function saveDrawer() {
@@ -2175,6 +2221,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     const drawerPrev = document.getElementById("media-drawer-prev");
     const drawerNext = document.getElementById("media-drawer-next");
     const drawerOptimize = document.getElementById("media-drawer-optimize");
+    const drawerRetryProcessing = document.getElementById("media-drawer-retry-processing");
     const drawerApplySeo = document.getElementById("media-drawer-apply-seo");
     if (drawerClose) mountListener(drawerClose, "click", closeDrawer);
     if (drawerOpen) mountListener(drawerOpen, "click", () => openSelectedOriginal(false));
@@ -2184,6 +2231,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     if (drawerPrev) mountListener(drawerPrev, "click", () => navigateDrawer(-1));
     if (drawerNext) mountListener(drawerNext, "click", () => navigateDrawer(1));
     if (drawerOptimize) mountListener(drawerOptimize, "click", () => void runSelectedAssetAction("optimize"));
+    if (drawerRetryProcessing) mountListener(drawerRetryProcessing, "click", () => void retrySelectedProcessing());
     if (drawerApplySeo) mountListener(drawerApplySeo, "click", () => void applyApprovedSeo());
     mountListener(els.drawer, "click", (event) => {
       const preview = event.target.closest("[data-media-preview-preset]");
