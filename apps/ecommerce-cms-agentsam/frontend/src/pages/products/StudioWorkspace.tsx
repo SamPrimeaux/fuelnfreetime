@@ -2719,7 +2719,7 @@ export default function StudioWorkspace({
               ))}
             </div>
           )}
-          {supplierMockups.some((item) => item.asset?.url) && (
+          {verifiedCurrentSupplierMockups.length > 0 && (
             <section className="ps-merchant-render-strip" aria-label="Completeful product images">
               <div className="ps-merchant-render-header"><strong>Generated product images</strong><small>Exact supplier color and print side · click to inspect</small></div>
               <div className="ps-merchant-render-list">
