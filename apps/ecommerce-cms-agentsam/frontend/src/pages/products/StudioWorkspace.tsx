@@ -2552,6 +2552,7 @@ export default function StudioWorkspace({
                     <ProductImage
                       key={`${variantId}:${locationId}:${displayedRenderedUrl || designImage}`}
                       className={"ps-design-product-image" + (hasProviderPlacementFrame ? " is-geometry-mapped" : "")}
+                      onClick={() => setFullPreviewOpen(true)}
                       sources={displayedRenderedUrl ? [displayedRenderedUrl] : designImageSources}
                       onResolvedSource={(src) => {
                         if (!displayedRenderedUrl && (loadedSidePhoto?.key !== sidePhotoKey ||
@@ -2580,7 +2581,9 @@ export default function StudioWorkspace({
                       </button>
                     </div>
                   )}
-                  {!displayedRenderedUrl && !supplierPhotoOnly && <div className={"ps-design-print-area" + (guides ? " is-gridded" : "")} style={{ ...placementFrameStyle, aspectRatio: ratio }}
+                  {!displayedRenderedUrl && !supplierPhotoOnly &&
+                    (mappedArtboardLoaded || !location?.artboard_image_url) &&
+                    <div className={"ps-design-print-area" + (guides ? " is-gridded" : "")} style={{ ...placementFrameStyle, aspectRatio: ratio }}
                     onPointerDown={(event) => {
                       const target = event.target as HTMLElement;
                       const cornerHandle = target.closest(".ps-selection-handle");
@@ -2762,7 +2765,9 @@ export default function StudioWorkspace({
                         sources={displayedRenderedUrl ? [displayedRenderedUrl] : designImageSources}
                         alt={`${variant?.variant_title || variant?.name || detail.product.name}, ${location?.name || "selected view"}`} lazy={false} />
                     : <div className="ps-mini-unverified">No verified photo is available for this side or variant.</div>}
-                  {!displayedRenderedUrl && !supplierPhotoOnly && designImage && asset && showArtwork && (
+                  {!displayedRenderedUrl && !supplierPhotoOnly &&
+                    (mappedArtboardLoaded || !location?.artboard_image_url) &&
+                    designImage && asset && showArtwork && (
                     <div className="ps-mini-placement" style={placementFrameStyle}>
                       <img src={artworkPreviewUrl} alt="" style={{ width: `${scale}%`, left: `${x}%`, top: `${y}%`,
                         transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})` }} />

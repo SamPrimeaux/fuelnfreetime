@@ -6,12 +6,14 @@ export default function ProductImage({
   lazy = true,
   className,
   onResolvedSource,
+  onClick,
 }: {
   sources: (string | undefined)[];
   alt?: string;
   lazy?: boolean;
   className?: string;
   onResolvedSource?: (source: string) => void;
+  onClick?: () => void;
 }) {
   const [failed, setFailed] = useState<string[]>([]);
   const [directAttempts, setDirectAttempts] = useState<string[]>([]);
@@ -22,6 +24,15 @@ export default function ProductImage({
   return src ? (
     <img
       className={className}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onClick();
+        }
+      } : undefined}
       src={useProxy ? proxy + "&w=640" : src}
       srcSet={useProxy ? [320, 640, 1200].map(w => proxy + "&w=" + w + " " + w + "w").join(", ") : undefined}
       sizes="(max-width: 760px) 50vw, (max-width: 1200px) 25vw, 320px"
