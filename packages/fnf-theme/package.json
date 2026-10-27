@@ -12,6 +12,8 @@
     "./layout.css": "./src/layout/layout.css",
     "./theme.json": "./src/theme/theme.json",
     "./sections/scene-hero": "./src/sections/scene-hero/scene-hero.js",
+    "./sections/merch-hero": "./src/sections/merch-hero/merch-hero.js",
+    "./sections/merch-hero.css": "./src/sections/merch-hero/merch-hero.css",
     "./sections/countdown-banner": "./src/sections/countdown-banner/countdown-banner.js",
     "./templates/home": "./src/templates/home.json",
     "./sites/demo": "./src/sites/demo.json",

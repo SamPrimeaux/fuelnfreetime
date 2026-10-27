@@ -1,3 +1,4 @@
+import { normalizeMerchHero } from "../../../../packages/fnf-theme/src/sections/merch-hero/merch-hero.js";
 import { removeMediaBackground } from "./media-background.js";
 import { editImageWithPrompt, resampleImage, listEditableImageModels } from "../media/image-operations.js";
 import {
@@ -269,6 +270,51 @@ export async function listAdminCollections(request, env) {
   return json({ ok: true, collections: results || [] });
 }
 
+function heroJsonFromRequest(body, fallback) {
+  const supplied = body?.hero_settings_json ?? body?.hero_settings ?? {};
+  const value = typeof supplied === "string" ? JSON.parse(supplied) : supplied;
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Hero settings must be a section object");
+  if (JSON.stringify(value).length > 8000)
+    throw new Error("Hero settings exceed the allowed length");
+  return JSON.stringify(normalizeMerchHero(value, fallback));
+}
+
+async function validateProductPlan(body, env) {
+  const raw = body?.product_plan_json ?? "[]";
+  const value = typeof raw === "string" ? JSON.parse(raw) : raw;
+  if (!Array.isArray(value) || value.length > 24) throw new Error("Invalid lineup");
+  const ids = value.map((entry) => String(entry?.catalog_product_id || "").trim());
+  if (ids.some((id) => !id || id.length > 180) || new Set(ids).size !== ids.length)
+    throw new Error("Invalid or duplicate supplier blanks");
+  if (ids.length) {
+    const { results } = await env.DB.prepare(
+      "SELECT completeful_product_id, catalog_product_id FROM completeful_catalog_products WHERE " +
+      "completeful_product_id IN (" + ids.map(() => "?").join(",") + ") OR " +
+      "catalog_product_id IN (" + ids.map(() => "?").join(",") + ")"
+    ).bind(...ids, ...ids).all();
+    if (ids.some((id) => !(results || []).some((r) =>
+      r.completeful_product_id === id || r.catalog_product_id === id)))
+      throw new Error("Some selected blanks are missing from your Completeful catalog");
+  }
+  return JSON.stringify(ids.map((catalog_product_id) => ({ catalog_product_id })));
+}
+
+export async function addAdminCollectionProduct(request, env, id) {
+  const record = await env.DB.prepare("SELECT id FROM store_collections WHERE id = ?").bind(id).first();
+  if (!record) return json({ error: "Collection not found" }, { status: 404 });
+  const body = await readJson(request);
+  const pid = Number(body?.product_id);
+  if (!Number.isSafeInteger(pid) || pid < 1) return json({ error: "Invalid product ID" }, { status: 400 });
+  const product = await env.DB.prepare("SELECT id FROM products WHERE id = ?").bind(pid).first();
+  if (!product) return json({ error: "Product does not exist" }, { status: 404 });
+  await env.DB.prepare(
+    "INSERT OR IGNORE INTO store_collection_products(collection_id, product_id, sort_order) " +
+    "VALUES (?, ?, (SELECT COUNT(*) FROM store_collection_products WHERE collection_id = ?))"
+  ).bind(id, pid, id).run();
+  return json({ ok: true, collection_id: Number(id), product_id: pid });
+}
+
 export async function createAdminCollection(request, env) {
   const body = await readJson(request);
   const title = String(body?.title || "").trim();
@@ -289,12 +335,17 @@ export async function createAdminCollection(request, env) {
       image.length > 2000 || (image && !image.startsWith("/") && !/^https:\/\//i.test(image)) ||
       image.startsWith("//") || image.includes(String.fromCharCode(92)))
     return json({ error: "Invalid collection metadata" }, { status: 400 });
+  let heroJson, productPlanJson;
+  try {
+    heroJson = heroJsonFromRequest(body, { title, description, eyebrow, image_url: image, accent_color: accent });
+    productPlanJson = await validateProductPlan(body, env);
+  } catch { return json({ error: "Invalid hero or supplier lineup settings" }, { status: 400 }); }
   try {
     const result = await env.DB.prepare(
-      "INSERT INTO store_collections(slug,title,description,eyebrow,image_url,accent_color,sort_order,seo_title,seo_description,status,updated_at) " +
-      "VALUES (?,?,?,?,?,?,?,?,?,?,datetime('now'))"
+      "INSERT INTO store_collections(slug,title,description,eyebrow,image_url,accent_color,sort_order,seo_title,seo_description,status,hero_settings_json,product_plan_json,updated_at) " +
+      "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))"
     ).bind(slug, title, description, eyebrow, image || null, accent, sort,
-      seoTitle || null, seoDescription || null, status).run();
+      seoTitle || null, seoDescription || null, status, heroJson, productPlanJson).run();
     const collection = await env.DB.prepare("SELECT * FROM store_collections WHERE id = ?")
       .bind(result.meta.last_row_id).first();
     return json({ ok: true, collection }, { status: 201 });
@@ -319,7 +370,7 @@ export async function getAdminCollection(request, env, id) {
 }
 
 export async function updateAdminCollection(request, env, id) {
-  const existing = await env.DB.prepare("SELECT id FROM store_collections WHERE id = ?")
+  const existing = await env.DB.prepare("SELECT id, hero_settings_json, product_plan_json FROM store_collections WHERE id = ?")
     .bind(id).first();
   if (!existing) return json({ error: "Collection not found" }, { status: 404 });
   const body = await readJson(request);
@@ -347,12 +398,20 @@ export async function updateAdminCollection(request, env, id) {
   const sort = Number(body?.sort_order ?? 0);
   if (!Number.isSafeInteger(sort) || sort < 0 || sort > 100000)
     return json({ error: "Invalid collection position" }, { status: 400 });
+  let heroJson, productPlanJson;
+  try {
+    heroJson = body.hero_settings_json === undefined && body.hero_settings === undefined
+      ? existing.hero_settings_json
+      : heroJsonFromRequest(body, { title, description, eyebrow, image_url: image, accent_color: accent });
+    productPlanJson = body.product_plan_json === undefined
+      ? existing.product_plan_json : await validateProductPlan(body, env);
+  } catch { return json({ error: "Invalid hero or supplier lineup settings" }, { status: 400 }); }
   try {
     await env.DB.prepare(
       "UPDATE store_collections SET slug=?, title=?, description=?, eyebrow=?, image_url=?, accent_color=?, " +
-      "status=?, sort_order=?, seo_title=?, seo_description=?, updated_at=datetime('now') WHERE id=?"
+      "status=?, sort_order=?, seo_title=?, seo_description=?, hero_settings_json=?, product_plan_json=?, updated_at=datetime('now') WHERE id=?"
     ).bind(slug, title, description, eyebrow, image || null, accent,
-      body.status, sort, seoTitle || null, seoDescription || null, id).run();
+      body.status, sort, seoTitle || null, seoDescription || null, heroJson, productPlanJson, id).run();
     const collection = await env.DB.prepare("SELECT * FROM store_collections WHERE id=?")
       .bind(id).first();
     return json({ ok: true, collection });
@@ -896,6 +955,8 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   if (m && method === "PUT") return updateAdminCollection(request, env, m[1]);
   m = path.match(/^\/api\/admin\/collections\/(\d+)\/products$/);
   if (m && method === "PUT") return updateAdminCollectionProducts(request, env, m[1]);
+  m = path.match(/^\/api\/admin\/collections\/(\d+)\/products\/add$/);
+  if (m && method === "POST") return addAdminCollectionProduct(request, env, m[1]);
 
   if (path === "/api/admin/products" && method === "GET") return listProducts(request, env);
   if (path === "/api/admin/products" && method === "POST") return createProduct(request, env);

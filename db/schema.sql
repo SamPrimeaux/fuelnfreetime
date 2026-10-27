@@ -134,6 +134,8 @@ CREATE TABLE IF NOT EXISTS store_collections (
   eyebrow         TEXT NOT NULL DEFAULT '',
   image_url       TEXT,
   accent_color    TEXT NOT NULL DEFAULT '#ff4d00',
+  hero_settings_json TEXT NOT NULL DEFAULT '{}',
+  product_plan_json TEXT NOT NULL DEFAULT '[]',
   status          TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','active','archived')),
   sort_order      INTEGER NOT NULL DEFAULT 0,
   seo_title       TEXT,

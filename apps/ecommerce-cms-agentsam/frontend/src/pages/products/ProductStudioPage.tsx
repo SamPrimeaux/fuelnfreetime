@@ -39,7 +39,11 @@ export default function ProductStudioPage() {
   const navigate = useNavigate();
   const { productId } = useParams();
   const location = useLocation();
-  const resumeDraftId = new URLSearchParams(location.search).get("resume");
+  const studioParams = new URLSearchParams(location.search);
+  const resumeDraftId = studioParams.get("resume");
+  const collectionCandidate = Number(studioParams.get("collection_id"));
+  const collectionId = Number.isSafeInteger(collectionCandidate) && collectionCandidate > 0
+    ? collectionCandidate : null;
   const surface = useRef<HTMLElement>(null);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
@@ -253,6 +257,7 @@ export default function ProductStudioPage() {
             detail={detail}
             initialVariantId={selectedVariantId}
             resumeDraftId={resumeDraftId}
+            collectionId={collectionId}
             catalogWarning={catalogWarning}
             onBack={() => setDesigning(false)}
           />
@@ -261,6 +266,9 @@ export default function ProductStudioPage() {
         <div className="ps-container">
           <div className="ps-topline">
             <span className="ps-eyebrow">THE CREATIVE STUDIO</span>
+            {collectionId && <a className="ps-button" href={`/admin/collections?id=${collectionId}`}>
+              ← Back to collection lineup
+            </a>}
             {syncing && <button className="ps-button" onClick={() => { stopSync.current = true; }}>Pause refresh</button>}
             <div className="ps-topline-links">
               <a href="/admin/products/help/artwork">
@@ -449,7 +457,8 @@ export default function ProductStudioPage() {
                         key={catalogProductId(p)}
                         onClick={() =>
                           navigate(
-                            `/products/create/${encodeURIComponent(catalogProductId(p))}`,
+                            `/products/create/${encodeURIComponent(catalogProductId(p))}` +
+                              (collectionId ? `?collection_id=${collectionId}` : ""),
                           )
                         }
                       >

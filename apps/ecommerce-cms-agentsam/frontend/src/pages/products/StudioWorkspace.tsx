@@ -174,12 +174,14 @@ export default function StudioWorkspace({
   detail,
   initialVariantId = "",
   resumeDraftId = null,
+  collectionId = null,
   catalogWarning = "",
   onBack,
 }: {
   detail: ProductDetail;
   initialVariantId?: string;
   resumeDraftId?: string | null;
+  collectionId?: number | null;
   catalogWarning?: string;
   onBack: () => void;
 }) {
@@ -1195,8 +1197,20 @@ export default function StudioWorkspace({
       setError("The design was saved, but no storefront draft product was returned. Reopen the design before continuing.");
       return;
     }
-    // Local draft product, NOT a fulfillment-provider product or public listing.
-    window.location.assign("/admin/product-edit?id=" + encodeURIComponent(String(productId)));
+    // Attach saved local draft without creating a supplier listing or publishing it.
+    if (collectionId) {
+      try {
+        await adminFetch(`/api/admin/collections/${collectionId}/products/add`, {
+          method: "POST", body: JSON.stringify({ product_id: productId }),
+        });
+      } catch (caught) {
+        setError("The design is saved, but its collection assignment failed: " +
+          (caught instanceof Error ? caught.message : "Unknown error") + ". Retry Next.");
+        return;
+      }
+    }
+    window.location.assign("/admin/product-edit?id=" + encodeURIComponent(String(productId)) +
+      (collectionId ? "&collection_id=" + encodeURIComponent(String(collectionId)) : ""));
   }
 
   async function buildPreparedArtworkBlob(

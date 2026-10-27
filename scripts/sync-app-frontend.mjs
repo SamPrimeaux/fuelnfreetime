@@ -43,6 +43,19 @@ for (const ext of ['js', 'css']) {
   await cp(src, path.join(output, `js/portable-sections.${ext}`));
   await cp(src, path.join(output, `admin/js/portable-sections.${ext}`));
 }
+// Merchandise hero generator: one renderer for admin preview and storefront.
+const merchHero = await bundle({
+  entryPoints: [path.join(root, 'packages/fnf-theme/src/sections/merch-hero/merch-hero.js')],
+  bundle: true, platform: 'browser', format: 'iife',
+  globalName: 'AgentSamMerchHero', target: 'es2022', write: false,
+});
+for (const dest of ['js/merch-hero.js', 'admin/js/merch-hero.js']) {
+  await writeFile(path.join(output, dest), merchHero.outputFiles[0].contents);
+}
+for (const dest of ['css/merch-hero.css', 'admin/css/merch-hero.css']) {
+  await cp(path.join(root, 'packages/fnf-theme/src/sections/merch-hero/merch-hero.css'),
+    path.join(output, dest));
+}
 // Build ONE renderer-backed section runtime from the published Revise/section
 // packages. The same semantic source is imported directly by the Worker.
 const atlasBundle = await bundle({
