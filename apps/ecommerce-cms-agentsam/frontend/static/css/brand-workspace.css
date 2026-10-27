@@ -10,6 +10,9 @@
 }
 
 .content-product-tab {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
   border: 0;
   border-radius: 7px;
   background: transparent;
