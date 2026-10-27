@@ -2013,3 +2013,23 @@ body.console-nav-collapsed .console-nav-ghost-toggle--persistent:hover::before {
 .console-sidenav .console-nav-children[hidden] {display:none!important}
 body.console-nav-collapsed .console-sidenav-search {display:none}
 @media(max-width:900px){.admin-nav--drawer .console-sidenav-search{margin:10px 8px 8px}}
+
+/* One native admin shell. The sidebar spans the screen, without a competing global search. */
+.console-content-column{display:flex;flex:1;min-width:0;min-height:0;flex-direction:column;overflow:hidden}
+.console-content-column>.console-main{flex:1;min-height:0;height:auto}
+.console-content-column>.console-topbar{height:42px;min-height:42px;padding:0 15px;justify-content:space-between;background:#fff;border-bottom:1px solid var(--c-line-2);z-index:20}
+.console-content-column>.console-topbar .console-icon-btn{color:var(--c-ink-2)}
+.console-content-column>.console-topbar .console-icon-btn:hover{background:#f2f3f5}
+.console-sidebar-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 10px 3px;min-height:42px}
+.console-sidebar-heading strong{font:700 12px Inter,system-ui,sans-serif;color:var(--c-ink-2)}
+.console-sidebar-heading .console-nav-collapse{display:grid;place-items:center;width:30px;height:30px;border:1px solid var(--c-line-2);border-radius:8px;background:transparent;color:var(--c-ink-2);cursor:pointer}
+.console-content-column .console-nav-ghost-toggle--persistent{position:static;top:auto;left:auto;z-index:auto;width:34px;height:34px;min-height:34px;display:none;border:1px solid var(--c-line-2);border-radius:8px;background:#fff;color:var(--c-ink-2);box-shadow:none;backdrop-filter:none}
+body.console-nav-collapsed .console-content-column .console-nav-ghost-toggle--persistent{display:inline-flex}
+body.console-theme.console-body-bleed .console-content-column>.console-main--bleed{height:auto;min-height:0}
+@media(max-width:900px){
+  .console-sidebar-heading{display:none}
+  .console-content-column .console-nav-ghost-toggle--persistent{display:inline-flex!important}
+  .console-sidenav.admin-sidebar{top:0;background:#fff;z-index:160}
+  .console-nav-backdrop{inset:0!important}
+  .console-content-column>.console-topbar{padding:0 10px}
+}

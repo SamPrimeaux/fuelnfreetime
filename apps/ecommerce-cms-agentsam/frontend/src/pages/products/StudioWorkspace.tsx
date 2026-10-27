@@ -2435,7 +2435,7 @@ export default function StudioWorkspace({
         </aside>
         <div className="ps-stage-column" ref={stage}>
           <div className="ps-stage-toolbar">
-            <h1 className="ps-stage-title" title={detail.product.name}>{detail.product.name}</h1>
+            <div className="ps-product-title-edit"><label htmlFor="ps-product-title">Product name</label><input id="ps-product-title" aria-label="Product name" type="text" maxLength={160} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Name this product" /><small title={detail.product.name}>Blank: {detail.product.name}</small></div>
             <div className="ps-stage-toolbar__controls">
               {enabledLocations.length > 1 && (
                 <div className="ps-print-side-toggle" role="group" aria-label="Print location">
