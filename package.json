@@ -122,7 +122,7 @@
     "test:publish-denylist": "node --test tests/publish-denylist.test.mjs",
     "test:cms-warm": "node tests/cms-warm.mjs",
     "test:cms-r2": "node --test tests/cms-r2-store.test.mjs",
-    "test:storefront-collections": "node --test tests/storefront-collections.test.mjs",
+    "test:storefront-collections": "node --test tests/storefront-collections.test.mjs tests/admin-storefront-collections-manager.test.mjs",
     "db:migrate:account-analytics-normalization": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-account-analytics-normalization-20260923.sql",
     "db:migrate:account-analytics-stage": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-account-analytics-stage-20260923.sql",
     "db:migrate:account-ownership-stage": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-account-ownership-stage-20260923.sql",

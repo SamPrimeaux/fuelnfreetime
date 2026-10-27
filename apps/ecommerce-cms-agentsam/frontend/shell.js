@@ -38,7 +38,7 @@ const NAV = {
         { href: "/admin/products/create", label: "Create product" },
         { href: "/admin/products/help/artwork", label: "Artwork help" },
         { href: "/admin/products", label: "All products" },
-        { href: "/admin/products", label: "Collections" },
+        { href: "/admin/collections", label: "Collections" },
         { href: "/admin/inventory", label: "Inventory" },
       ],
     },
@@ -102,6 +102,7 @@ const ADMIN_EXIT_ROUTES = [
   "/admin/content",
   "/admin/orders",
   "/admin/products",
+  "/admin/collections",
   "/admin/product-edit",
   "/admin/inventory",
   "/admin/preferences",
@@ -116,9 +117,7 @@ const ADMIN_EXIT_ROUTES = [
   "/admin/email",
   "/admin/scaffold",
 ];
-const EDITOR_RETURN_KEY = "agentsam.editorReturn";
-
-const SHELL_MODES = {
+const EDITOR_RETURN_KEY=[REDACTED] SHELL_MODES = {
   admin: { id: "admin", hideAdminNav: false, shortcuts: [], exitFallback: "/admin/store", exitRoutes: ADMIN_EXIT_ROUTES },
   "theme-editor": {
     id: "theme-editor",

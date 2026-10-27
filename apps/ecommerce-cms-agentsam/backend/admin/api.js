@@ -276,12 +276,25 @@ export async function createAdminCollection(request, env) {
   const slug = slugify(body?.slug || title);
   if (!slug || slug.length > 180) return json({ error: "Invalid collection URL handle" }, { status: 400 });
   const status = body?.status === "active" ? "active" : "draft";
+  const image = String(body?.image_url || "").trim();
+  const accent = String(body?.accent_color || "#ff4d00");
+  const sort = Number(body?.sort_order ?? 0);
+  const description = String(body?.description || "");
+  const eyebrow = String(body?.eyebrow || "");
+  const seoTitle = String(body?.seo_title || "");
+  const seoDescription = String(body?.seo_description || "");
+  if (!/^#[0-9a-f]{6}$/i.test(accent) || !Number.isSafeInteger(sort) ||
+      sort < 0 || sort > 100000 || description.length > 6000 ||
+      eyebrow.length > 120 || seoTitle.length > 180 || seoDescription.length > 400 ||
+      image.length > 2000 || (image && !image.startsWith("/") && !/^https:\/\//i.test(image)) ||
+      image.startsWith("//") || image.includes(String.fromCharCode(92)))
+    return json({ error: "Invalid collection metadata" }, { status: 400 });
   try {
     const result = await env.DB.prepare(
-      "INSERT INTO store_collections(slug,title,description,image_url,seo_title,seo_description,status,updated_at) " +
-      "VALUES (?,?,?,?,?,?,?,datetime('now'))"
-    ).bind(slug, title, String(body.description || ""), body.image_url || null,
-      body.seo_title || null, body.seo_description || null, status).run();
+      "INSERT INTO store_collections(slug,title,description,eyebrow,image_url,accent_color,sort_order,seo_title,seo_description,status,updated_at) " +
+      "VALUES (?,?,?,?,?,?,?,?,?,?,datetime('now'))"
+    ).bind(slug, title, description, eyebrow, image || null, accent, sort,
+      seoTitle || null, seoDescription || null, status).run();
     const collection = await env.DB.prepare("SELECT * FROM store_collections WHERE id = ?")
       .bind(result.meta.last_row_id).first();
     return json({ ok: true, collection }, { status: 201 });
@@ -290,6 +303,91 @@ export async function createAdminCollection(request, env) {
       ? "A collection with that URL handle already exists" : "Could not create collection";
     return json({ error: message }, { status: 409 });
   }
+}
+
+// Storefront collections have one canonical D1 identity. The manager edits
+// that existing record and its membership, rather than creating another
+// collection type that cannot reach the storefront.
+export async function getAdminCollection(request, env, id) {
+  const collection = await env.DB.prepare("SELECT * FROM store_collections WHERE id = ?")
+    .bind(id).first();
+  if (!collection) return json({ error: "Collection not found" }, { status: 404 });
+  const { results } = await env.DB.prepare(
+    "SELECT product_id FROM store_collection_products WHERE collection_id = ? ORDER BY sort_order, product_id"
+  ).bind(id).all();
+  return json({ ok: true, collection, product_ids: (results || []).map((row) => Number(row.product_id)) });
+}
+
+export async function updateAdminCollection(request, env, id) {
+  const existing = await env.DB.prepare("SELECT id FROM store_collections WHERE id = ?")
+    .bind(id).first();
+  if (!existing) return json({ error: "Collection not found" }, { status: 404 });
+  const body = await readJson(request);
+  const title = String(body?.title || "").trim();
+  const slug = slugify(body?.slug || title);
+  if (!title || title.length > 120 || !slug || slug.length > 180)
+    return json({ error: "Enter a collection title and valid URL handle" }, { status: 400 });
+  if (!["active", "draft", "archived"].includes(body?.status))
+    return json({ error: "Select a valid collection status" }, { status: 400 });
+  const accent = String(body?.accent_color || "#ff4d00");
+  if (!/^#[0-9a-f]{6}$/i.test(accent))
+    return json({ error: "Accent color must be a six-digit hex value" }, { status: 400 });
+  const image = String(body?.image_url || "").trim();
+  if (image && !image.startsWith("/") && !/^https:\/\//i.test(image))
+    return json({ error: "Image must use HTTPS or a site-relative path" }, { status: 400 });
+  if (image.startsWith("//") || image.includes(String.fromCharCode(92)))
+    return json({ error: "Invalid image path" }, { status: 400 });
+  const description = String(body?.description || "");
+  const eyebrow = String(body?.eyebrow || "");
+  const seoTitle = String(body?.seo_title || "");
+  const seoDescription = String(body?.seo_description || "");
+  if (description.length > 6000 || eyebrow.length > 120 ||
+      seoTitle.length > 180 || seoDescription.length > 400 || image.length > 2000)
+    return json({ error: "Collection text exceeds its allowed length" }, { status: 400 });
+  const sort = Number(body?.sort_order ?? 0);
+  if (!Number.isSafeInteger(sort) || sort < 0 || sort > 100000)
+    return json({ error: "Invalid collection position" }, { status: 400 });
+  try {
+    await env.DB.prepare(
+      "UPDATE store_collections SET slug=?, title=?, description=?, eyebrow=?, image_url=?, accent_color=?, " +
+      "status=?, sort_order=?, seo_title=?, seo_description=?, updated_at=datetime('now') WHERE id=?"
+    ).bind(slug, title, description, eyebrow, image || null, accent,
+      body.status, sort, seoTitle || null, seoDescription || null, id).run();
+    const collection = await env.DB.prepare("SELECT * FROM store_collections WHERE id=?")
+      .bind(id).first();
+    return json({ ok: true, collection });
+  } catch (error) {
+    return json({ error: /unique|constraint/i.test(String(error?.message || error))
+      ? "Another collection uses this URL handle" : "Could not save collection" }, { status: 409 });
+  }
+}
+
+export async function updateAdminCollectionProducts(request, env, id) {
+  const collection = await env.DB.prepare("SELECT id FROM store_collections WHERE id = ?")
+    .bind(id).first();
+  if (!collection) return json({ error: "Collection not found" }, { status: 404 });
+  const body = await readJson(request);
+  if (!Array.isArray(body?.product_ids) || body.product_ids.length > 500)
+    return json({ error: "Select up to 500 catalog products" }, { status: 400 });
+  const ids = body.product_ids.map(Number);
+  if (new Set(ids).size !== ids.length || ids.some((item) => !Number.isSafeInteger(item) || item <= 0))
+    return json({ error: "Product selection contains an invalid or duplicate ID" }, { status: 400 });
+  if (ids.length) {
+    const { results } = await env.DB.prepare(
+      "SELECT id FROM products WHERE id IN (" + ids.map(() => "?").join(",") + ")"
+    ).bind(...ids).all();
+    if ((results || []).length !== ids.length)
+      return json({ error: "One or more products no longer exist. Refresh the catalog." }, { status: 409 });
+  }
+  const statements = [
+    env.DB.prepare("DELETE FROM store_collection_products WHERE collection_id = ?").bind(id),
+    ...ids.map((productId, position) => env.DB.prepare(
+      "INSERT INTO store_collection_products (collection_id, product_id, sort_order) VALUES (?, ?, ?)"
+    ).bind(id, productId, position)),
+    env.DB.prepare("UPDATE store_collections SET updated_at=datetime('now') WHERE id=?").bind(id),
+  ];
+  await env.DB.batch(statements);
+  return json({ ok: true, collection_id: Number(id), product_ids: ids });
 }
 
 export async function getProduct(request, env, id) {
@@ -793,6 +891,11 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
 
   if (path === "/api/admin/collections" && method === "GET") return listAdminCollections(request, env);
   if (path === "/api/admin/collections" && method === "POST") return createAdminCollection(request, env);
+  m = path.match(/^\/api\/admin\/collections\/(\d+)$/);
+  if (m && method === "GET") return getAdminCollection(request, env, m[1]);
+  if (m && method === "PUT") return updateAdminCollection(request, env, m[1]);
+  m = path.match(/^\/api\/admin\/collections\/(\d+)\/products$/);
+  if (m && method === "PUT") return updateAdminCollectionProducts(request, env, m[1]);
 
   if (path === "/api/admin/products" && method === "GET") return listProducts(request, env);
   if (path === "/api/admin/products" && method === "POST") return createProduct(request, env);
