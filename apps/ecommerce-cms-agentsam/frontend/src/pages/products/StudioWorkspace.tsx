@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { createMiniAgentSam } from "../../../../packages/agentsam-workbench/src/mini-agentsam.js";
-import { selectStudioSideImage } from "./studio-side-image";
+import { exactCatalogSideReference, selectStudioSideImage } from "./studio-side-image";
 import { blankGarmentImageSources } from "./studio-blank-image";
 import { updateSellingVariants, toggleSellingGroup } from "./studio-selling-variants";
 import { adminFetch, adminFormFetch } from "../../lib/api";
@@ -401,6 +401,8 @@ export default function StudioWorkspace({
   // another customer's artwork. Never position merchant artwork over those.
   // Choose images scoped to the selected variant, never another color.
   const blankVariantSources = blankGarmentImageSources(variant, detail.product);
+  const garmentColor = Object.entries(selectedAttributes)
+    .find(([key]) => /^colou?r$/i.test(key))?.[1]?.trim() || "";
   const enabledLocations = detail.print_locations.filter((candidate) => candidate.enabled);
   const isFrontLocation = /(?:^|[_\s-])front(?:$|[_\s-])/i.test(location?.name || locationId);
   const hasDistinctProviderSideArtboard = Boolean(
@@ -409,7 +411,11 @@ export default function StudioWorkspace({
     enabledLocations.every((candidate) => candidate.print_location_id === locationId ||
       (candidate.artboard_image_url && candidate.artboard_image_url !== location.artboard_image_url)),
   );
-  const designImage = selectStudioSideImage(
+  const exactBackColorReference = !isFrontLocation && garmentColor &&
+    garmentColor.toLowerCase() !== "black"
+    ? exactCatalogSideReference(detail.mockups || [], locationId, variantId, selectedAttributes)
+    : null;
+  const designImage = exactBackColorReference ? null : selectStudioSideImage(
     // Supplier mockups and their "realistic" pictures may embed stock artwork.
     // Do not treat those as blank manufacturer base images.
     [], locationId, variantId, location?.artboard_image_url,
@@ -538,8 +544,15 @@ export default function StudioWorkspace({
           [], locationId, catalogVariantId(sample), location?.artboard_image_url,
           blank[0], isFrontLocation, variantAttributes(sample), hasDistinctProviderSideArtboard,
         );
-        const sources = image ? (isFrontLocation && blank.length ? blank : [image]) : [];
-        return [{ value, sources }];
+        // Exact-color supplier catalog references exist for Back on supported
+        // garments. Never show the default black artboard as every back color.
+        const catalogReference = !isFrontLocation && value.trim().toLowerCase() !== "black"
+          ? exactCatalogSideReference(detail.mockups || [], locationId,
+              catalogVariantId(sample), variantAttributes(sample))
+          : null;
+        const sources = catalogReference ? [catalogReference]
+          : image ? (isFrontLocation && blank.length ? blank : [image]) : [];
+        return [{ value, sources, referenceOnly: Boolean(catalogReference) }];
       })
     : [];
   const printPixels = printPixelSize(location);
@@ -1512,17 +1525,74 @@ export default function StudioWorkspace({
     } : { aspectRatio: sideLocation.file_width && sideLocation.file_height
       ? sideLocation.file_width / sideLocation.file_height : 1 };
     const color = colorAxis ? selectedAttributes[colorAxis] : null;
-    const previewIsCurrent = placed?.preparedAsset && placed.preparedFor === placementKey(
+    const previewIsCurrent = Boolean(placed?.preparedAsset && placed.preparedFor === placementKey(
       placed.asset?.id, variantId, id, placed.x, placed.y, placed.scale, placed.rotation,
-      placed.flipX, placed.flipY, placed.trimTransparent, placed.removeFlatBackground);
+      placed.flipX, placed.flipY, placed.trimTransparent, placed.removeFlatBackground));
     // A render of a prior artwork placement must never masquerade as current.
     const verifiedRender = previewIsCurrent ? supplierMockups.find((mockup) =>
       mockup.print_location_id === id && Boolean(mockup.asset?.url) &&
       (!color || mockup.variant_color.trim().toLowerCase() === color.trim().toLowerCase())) : null;
+    const catalogReferenceUrl = exactCatalogSideReference(
+      detail.mockups || [], id, variantId, selectedAttributes);
+    // Back artboards are often the default black garment. For non-black
+    // selections display the exact provider color reference, NOT a black
+    // back with the merchant art composited over the wrong color.
+    const referenceOnly = !verifiedRender && !front && Boolean(color) &&
+      String(color).trim().toLowerCase() !== "black" && Boolean(catalogReferenceUrl);
     return { id, label: sideLocation.name || (front ? 'Front' : 'Back'),
-      photoSources, verifiedRenderUrl: verifiedRender?.asset?.url || null,
-      placed, frameStyle, previewIsCurrent: Boolean(previewIsCurrent) };
+      photoSources: referenceOnly ? [] : photoSources,
+      catalogReferenceUrl: referenceOnly ? catalogReferenceUrl : null,
+      verifiedRenderUrl: verifiedRender?.asset?.url || null, referenceOnly,
+      placed, frameStyle, previewIsCurrent };
   });
+  const activeSideReview = sideReviewCards.find((side) => side.id === locationId);
+  const activeCatalogReferenceUrl = activeSideReview?.referenceOnly
+    ? activeSideReview.catalogReferenceUrl : null;
+  function renderSideReviewCards(size: "mini" | "expanded") {
+    return (
+      <div className={"ps-side-review-cards ps-side-review-cards--" + size}
+        role="group" aria-label="Front and back design previews">
+        {sideReviewCards.map((side) => (
+          <button type="button" key={side.id}
+            className={"ps-side-review-card" + (locationId === side.id ? " is-active" : "")}
+            aria-pressed={locationId === side.id}
+            aria-label={`View and edit ${side.label} for ${colorAxis ? selectedAttributes[colorAxis] : "selected color"}`}
+            onClick={() => choosePrintLocation(side.id)}>
+            <span className="ps-side-review-image">
+              {side.verifiedRenderUrl
+                ? <ProductImage sources={[side.verifiedRenderUrl]} alt="" />
+                : side.catalogReferenceUrl
+                  ? <ProductImage sources={[side.catalogReferenceUrl]} alt="" />
+                  : side.photoSources.length
+                    ? <ProductImage sources={side.photoSources} alt="" />
+                    : <span className="ps-side-review-unverified">Garment view not available</span>}
+              {!side.verifiedRenderUrl && !side.referenceOnly && side.photoSources.length > 0 &&
+                side.placed?.asset && side.placed.showArtwork && (
+                  <span className="ps-mini-placement" style={side.frameStyle}>
+                    <img src={side.id === locationId ? artworkPreviewUrl : side.placed.asset.url}
+                      alt="" style={{
+                        width: `${side.placed.scale}%`, left: `${side.placed.x}%`,
+                        top: `${side.placed.y}%`,
+                        transform: `translate(-50%, -50%) rotate(${side.placed.rotation}deg) scale(${side.placed.flipX ? -1 : 1}, ${side.placed.flipY ? -1 : 1})`,
+                      }} />
+                  </span>
+                )}
+              {side.referenceOnly && side.placed?.asset && (
+                <span className="ps-side-artwork-inset" title="Saved artwork shown separately from supplier sample">
+                  <img src={side.placed.asset.url} alt="" />
+                </span>
+              )}
+            </span>
+            <span className="ps-side-review-title">{side.label}</span>
+            <span className="ps-side-review-status">{side.verifiedRenderUrl ? "Supplier render"
+              : side.referenceOnly ? "Color sample · art separate"
+              : side.previewIsCurrent ? "Prepared · local preview"
+              : side.placed?.asset ? "Artwork placed" : "Add artwork"}</span>
+          </button>
+        ))}
+      </div>
+    );
+  }
   const manufacturingPreflight = dimensions && !cropPending && printPixels && asset && location
     ? evaluateManufacturingCompatibility(
         { format: asset.filename?.split(".").pop(),
@@ -2275,8 +2345,8 @@ export default function StudioWorkspace({
                     />
                   ) : (
                     <div className="ps-unverified-garment" role="status">
-                      <strong>{location?.name || "Print"} artwork placement</strong>
-                      <span>Position your design inside the supplier print area. A garment photo will appear when an exact-side render is available.</span>
+                      <strong>{garmentColor ? garmentColor + " · " : ""}{location?.name || "Print"} artwork placement</strong>
+                      <span>Position your design inside the supplier print area. Use the Front / Back panel for the exact garment color. A decorated photo requires a Completeful render.</span>
                     </div>
                   )}
                   <div className={"ps-design-print-area" + (guides ? " is-gridded" : "")} style={{ ...placementFrameStyle, aspectRatio: ratio }}
@@ -2352,73 +2422,37 @@ export default function StudioWorkspace({
                 </span>
               </div>
             </div>
-            <div className="ps-mini-map">
+            <div className="ps-mini-map" role="region" aria-label="Design preview panel">
               <div className="ps-mini-head">
-                <strong>Product preview</strong>
-                <button type="button" onClick={() => setMiniMapOpen((value) => !value)} aria-expanded={miniMapOpen} aria-label={miniMapOpen ? "Hide product preview" : "Show product preview"}>{miniMapOpen ? "Hide" : "Show"}</button>
+                <strong>Front / Back</strong>
+                <div className="ps-mini-head-actions">
+                  <button type="button" onClick={() => setFullPreviewOpen(true)}
+                    aria-label="Enlarge both design views">Expand</button>
+                  <button type="button" onClick={() => setMiniMapOpen((value) => !value)}
+                    aria-expanded={miniMapOpen} aria-label={miniMapOpen ? "Hide design previews" : "Show design previews"}>
+                    {miniMapOpen ? "Hide" : "Show"}
+                  </button>
+                </div>
               </div>
               {miniMapOpen && (
                 <>
-                  <div className="ps-mini-image">
-                    {currentRenderUrl || designImage
-                      ? <ProductImage key={`${variantId}:${locationId}`} sources={currentRenderUrl ? [currentRenderUrl] : designImageSources} alt={`${location?.name || "Selected"} garment variant: ${variant?.variant_title || variant?.name || detail.product.name}`} />
-                      : <div className="ps-mini-unverified">{location?.name || "Selected"} print placement · garment image pending</div>}
-                    {!currentRenderUrl && asset && showArtwork && (
-                      <div className="ps-mini-placement" style={placementFrameStyle}>
-                        <img src={artworkPreviewUrl} alt="" style={{ width: `${scale}%`, left: `${x}%`, top: `${y}%`, transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})` }} />
-                      </div>
-                    )}
-                    <button type="button" className="ps-mini-expand-hitarea" aria-label="Enlarge product preview" title="Enlarge product preview"
-                      onClick={() => setFullPreviewOpen(true)} />
-                  </div>
-                  <small>{currentRenderUrl ? "Completeful render" : designImage
-                    ? hasDistinctProviderSideArtboard ? `${location?.name || "Selected"} · supplier print-area reference` : location?.name || "Selected view"
-                    : `${location?.name || "Selected"} · preview unavailable`}
-                    {" · "}{variant?.variant_title || variant?.name || "Selected color"}</small>
+                  {renderSideReviewCards("mini")}
+                  <small className="ps-side-review-hint">
+                    {colorAxis ? selectedAttributes[colorAxis] : "Selected color"} · Tap a side to edit.
+                    Color samples are not finished product images.
+                  </small>
+                  {sideReviewCards.some((side) => side.referenceOnly) && (
+                    <button className="ps-mini-render-link" type="button" onClick={() => openTab("tools")}>
+                      Prepare and render decorated views
+                    </button>
+                  )}
                 </>
               )}
             </div>
           </div>
-          <div className="ps-side-review-rail" role="group" aria-label="Front and back design previews">
-            <div className="ps-side-review-heading">
-              <strong>Design views</strong>
-              <span>{colorAxis ? selectedAttributes[colorAxis] : variant?.variant_title || 'Selected garment'} · Select to edit</span>
-            </div>
-            <div className="ps-side-review-cards">
-              {sideReviewCards.map((side) => (
-                <button type="button" key={side.id}
-                  className={'ps-side-review-card' + (locationId === side.id ? ' is-active' : '')}
-                  aria-pressed={locationId === side.id}
-                  aria-label={`Edit ${side.label} design`}
-                  onClick={() => choosePrintLocation(side.id)}>
-                  <span className="ps-side-review-image">
-                    {side.verifiedRenderUrl
-                      ? <ProductImage sources={[side.verifiedRenderUrl]} alt="" />
-                      : side.photoSources.length
-                        ? <ProductImage sources={side.photoSources} alt="" />
-                        : <span className="ps-side-review-unverified">No verified garment view</span>}
-                    {!side.verifiedRenderUrl && side.photoSources.length > 0 &&
-                      side.placed?.asset && side.placed.showArtwork && (
-                        <span className="ps-mini-placement" style={side.frameStyle}>
-                          <img src={side.id === locationId ? artworkPreviewUrl : side.placed.asset.url}
-                            alt="" style={{
-                              width: `${side.placed.scale}%`, left: `${side.placed.x}%`,
-                              top: `${side.placed.y}%`,
-                              transform: `translate(-50%, -50%) rotate(${side.placed.rotation}deg) scale(${side.placed.flipX ? -1 : 1}, ${side.placed.flipY ? -1 : 1})`,
-                            }} />
-                        </span>
-                      )}
-                  </span>
-                  <span className="ps-side-review-title">{side.label}</span>
-                  <span className="ps-side-review-status">{side.verifiedRenderUrl ? 'Supplier render'
-                    : side.previewIsCurrent ? 'Print prepared' : side.placed?.asset ? 'Artwork placed' : 'Add artwork'}</span>
-                </button>
-              ))}
-            </div>
-          </div>
           {colorways.length > 1 && colorAxis && (
             <div className="ps-colorway-rail" role="group" aria-label="Preview color">
-              {colorways.map(({ value, sources }) => (
+              {colorways.map(({ value, sources, referenceOnly }) => (
                 <button type="button" key={value}
                   className={"ps-colorway" + (selectedAttributes[colorAxis] === value ? " is-active" : "")}
                   aria-pressed={selectedAttributes[colorAxis] === value}
@@ -2428,7 +2462,7 @@ export default function StudioWorkspace({
                     {sources.length
                       ? <ProductImage sources={sources} alt="" />
                       : <span className="ps-colorway__empty" aria-hidden="true" />}
-                    {sources.length > 0 && asset && showArtwork && (
+                    {sources.length > 0 && !referenceOnly && asset && showArtwork && (
                       <span className="ps-mini-placement" style={placementFrameStyle}>
                         <img src={artworkPreviewUrl} alt="" style={{
                           width: `${scale}%`, left: `${x}%`, top: `${y}%`,
@@ -2437,6 +2471,9 @@ export default function StudioWorkspace({
                       </span>
                     )}
                   </span>
+                  {referenceOnly && asset && (
+                    <span className="ps-colorway__reference" title="Supplier color sample; saved artwork is separate">Sample</span>
+                  )}
                   <span className="ps-colorway__label">{value}</span>
                 </button>
               ))}
@@ -2455,19 +2492,34 @@ export default function StudioWorkspace({
                   <button ref={fullPreviewCloseRef} type="button" aria-label="Close enlarged product preview"
                     onClick={() => setFullPreviewOpen(false)}>Close ×</button>
                 </header>
+                <div className="ps-preview-dialog-body">
                 <div className="ps-preview-enlarged-image">
-                  {currentRenderUrl || designImage
-                    ? <ProductImage key={`expanded:${variantId}:${locationId}`} sources={currentRenderUrl ? [currentRenderUrl] : designImageSources}
+                  {currentRenderUrl || activeCatalogReferenceUrl || designImage
+                    ? <ProductImage key={`expanded:${variantId}:${locationId}`}
+                        sources={currentRenderUrl ? [currentRenderUrl]
+                          : activeCatalogReferenceUrl ? [activeCatalogReferenceUrl] : designImageSources}
                         alt={`${variant?.variant_title || variant?.name || detail.product.name}, ${location?.name || "selected view"}`} lazy={false} />
                     : <div className="ps-mini-unverified">No verified photo is available for this side or variant.</div>}
-                  {!currentRenderUrl && designImage && asset && showArtwork && (
+                  {!currentRenderUrl && !activeCatalogReferenceUrl && designImage && asset && showArtwork && (
                     <div className="ps-mini-placement" style={placementFrameStyle}>
                       <img src={artworkPreviewUrl} alt="" style={{ width: `${scale}%`, left: `${x}%`, top: `${y}%`,
                         transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})` }} />
                     </div>
                   )}
                 </div>
-                <footer>{currentRenderUrl ? "Completeful provider render" : designImage ? "Supplier garment reference with local artwork placement — not a final render" : "Preview unavailable"}</footer>
+                <aside className="ps-preview-views">
+                  <strong>Design views</strong>
+                  {renderSideReviewCards("expanded")}
+                  <p>Choose Front or Back to compare the selected color. Artwork stays attached to its own print location.</p>
+                  {!currentRenderUrl && activeCatalogReferenceUrl && (
+                    <p>Supplier color sample only; your saved artwork is shown separately until a Completeful render is available.</p>
+                  )}
+                </aside>
+                </div>
+                <footer>{currentRenderUrl ? "Completeful provider render"
+                  : activeCatalogReferenceUrl ? "Exact-color supplier sample; not a decorated product mockup"
+                  : designImage ? "Supplier garment reference with local artwork placement — not a final render"
+                  : "Preview unavailable"}</footer>
               </section>
             </div>
           )}

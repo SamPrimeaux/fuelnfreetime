@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
-import { selectStudioSideImage } from "../apps/ecommerce-cms-agentsam/frontend/src/pages/products/studio-side-image.ts";
+import { exactCatalogSideReference, selectStudioSideImage } from "../apps/ecommerce-cms-agentsam/frontend/src/pages/products/studio-side-image.ts";
 import { resolveSelectedResource } from "../apps/ecommerce-cms-agentsam/backend/agentsam/selected-resource.js";
 
 const read = (relative) => readFile(new URL(relative, import.meta.url), "utf8");
@@ -118,4 +118,18 @@ test("product details never calls provider product creation 'connecting the API'
   assert.match(backend, /already_linked: true/);
   assert.match(backend, /return rows\.find\(\(row\) => \{/);
   assert.doesNotMatch(backend, /\|\| rows\[0\]/);
+});
+
+test("catalog side references require exact color and print location", () => {
+  const source = [
+    { active: 1, preview_url: "back-black", print_location_id: "back", variant_scope_json: '{"Color":"Black"}' },
+    { active: 1, preview_url: "back-moss", print_location_id: "back", variant_scope_json: '{"Color":"Moss"}' },
+    { active: 1, preview_url: "front-moss", print_location_id: "front", variant_scope_json: '{"Color":"Moss"}' },
+    { active: 1, preview_url: "back-generic", print_location_id: "back", variant_scope_json: null },
+  ];
+  assert.equal(exactCatalogSideReference(source, "back", "moss-2xl", { Size: "2XL", Color: "Moss" }), "back-moss");
+  assert.equal(exactCatalogSideReference(source, "front", "moss-2xl", { Color: "Moss" }), "front-moss");
+  assert.equal(exactCatalogSideReference(source, "back", "denim-2xl", { Color: "Denim" }), null);
+  assert.equal(exactCatalogSideReference(source, "back", "moss-2xl", { Color: "Moss" }), "back-moss");
+  assert.equal(selectStudioSideImage([], "back", "moss-2xl", "black-shirt", null, false, {Color:"Moss"}, false), null);
 });

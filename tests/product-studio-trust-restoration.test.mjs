@@ -32,8 +32,8 @@ test("Gildan 2400 cannot display or save a made-up Back product photo", async ()
   const front = "front-longsleeve.jpg";
   const back = selectStudioSideImage([], "back-location", "black-s", "front-location.jpg", front, false, { Color: "Black", Size: "S" });
   assert.equal(back, null, `${product} has no verified Back mockup`);
-  assert.match(src, /A garment photo will appear when an exact-side render is available/);
-  assert.match(src, /const backgroundUrl = designImage/);
+  assert.match(src, /A decorated photo requires a Completeful render/);
+  assert.match(src, /backgroundUrl = designImage/);
   assert.doesNotMatch(src, /NeutralGarmentSilhouette/);
   assert.doesNotMatch(src, /const backgroundUrl = location\?\.artboard_image_url \|\| baseImage/);
 });

@@ -2595,3 +2595,104 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
 @media(max-width:760px) {
   .product-studio-shell .ps-designs-rename button { min-height: 44px; }
 }
+
+/* Design review v4: put both print sides in the existing minimap lane.
+   This is one product with two artwork placements, not two new products. */
+.product-studio-shell .ps-mini-map {
+  max-width: 208px;
+  align-self: start;
+  position: sticky;
+  top: 10px;
+}
+.product-studio-shell .ps-mini-head { gap: 5px; }
+.product-studio-shell .ps-mini-head-actions { display: flex; gap: 4px; align-items: center; }
+.product-studio-shell .ps-mini-head-actions button { min-height: 32px; padding: 4px 6px; }
+.product-studio-shell .ps-mini-map .ps-side-review-cards--mini {
+  display: grid; grid-template-columns: repeat(2, minmax(0,1fr));
+  overflow: visible; gap: 5px; padding: 6px;
+}
+.product-studio-shell .ps-mini-map .ps-side-review-card {
+  min-width: 0; width: 100%; padding: 3px; gap: 2px;
+}
+.product-studio-shell .ps-mini-map .ps-side-review-image {
+  height: auto; aspect-ratio: 4 / 5; min-height: 64px; width: 100%;
+}
+.product-studio-shell .ps-side-review-image { isolation: isolate; }
+.product-studio-shell .ps-side-review-status {
+  display: block; max-width: 100%; white-space: normal;
+  text-align: center; font-size: 9px; line-height: 1.2;
+}
+.product-studio-shell .ps-side-artwork-inset {
+  display: grid; place-items: center; position: absolute;
+  bottom: 3px; right: 3px; width: 28%; aspect-ratio: 1;
+  overflow: hidden; border: 1px solid #fff; border-radius: 4px;
+  background: #ececee; box-shadow: 0 1px 4px #0004;
+}
+.product-studio-shell .ps-side-artwork-inset img {
+  display: block; width: 100%; height: 100%; object-fit: contain;
+}
+.product-studio-shell .ps-side-review-hint {
+  display: block; padding: 3px 8px 8px;
+  color: var(--ps-muted); font-size: 10px; line-height: 1.3;
+}
+.ps-preview-dialog { width: min(96vw, 920px); }
+.ps-preview-dialog-body {
+  display: grid; grid-template-columns: minmax(0,1fr) 212px;
+  min-height: 0; overflow: auto;
+}
+.ps-preview-dialog-body > .ps-preview-enlarged-image {
+  width: 100%; min-height: 0; max-height: calc(94dvh - 130px);
+}
+.ps-preview-views {
+  border-left: 1px solid #e5e3e9; padding: 12px;
+  overflow-y: auto; min-width: 0; font-size: 12px;
+}
+.ps-preview-views > strong { display: block; margin-bottom: 10px; }
+.ps-preview-views > p { font-size: 11px; line-height: 1.4; color: #746f7b; }
+.ps-preview-views .ps-side-review-cards--expanded {
+  display: grid; grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 7px; overflow: visible;
+}
+.ps-preview-views .ps-side-review-card {
+  width: 100%; min-width: 0; flex-basis: auto;
+}
+.ps-preview-views .ps-side-review-image { height: auto; aspect-ratio: 4 / 5; }
+@media (min-width: 1081px) {
+  .product-studio-shell .ps-stage {
+    grid-template-columns: minmax(0,1fr) clamp(178px,16vw,208px);
+  }
+}
+@media (min-width: 761px) and (max-width:1080px) {
+  .product-studio-shell .ps-mini-map { width: min(100%,176px); max-width:176px; }
+}
+@media (max-width:760px) {
+  .product-studio-shell .ps-mini-map {
+    position: relative; top: auto; width: min(100%,340px);
+    max-width:340px; margin: 0 auto;
+  }
+  .product-studio-shell .ps-mini-map .ps-side-review-image { min-height: 85px; }
+  .ps-preview-dialog-body { grid-template-columns: minmax(0,1fr); }
+  .ps-preview-dialog-body > .ps-preview-enlarged-image {
+    aspect-ratio: 4/4; max-height: min(50dvh,500px);
+  }
+  .ps-preview-views { border-left:0; border-top:1px solid #e5e3e9; padding:8px 12px; }
+  .ps-preview-views .ps-side-review-cards--expanded {
+    display:flex; flex-direction:row; flex-wrap:nowrap; overflow-x:auto;
+  }
+  .ps-preview-views .ps-side-review-card { flex: 0 0 100px; }
+  .ps-preview-views > p { margin:6px 0; }
+}
+.product-studio-shell .ps-mini-render-link {
+  width: calc(100% - 12px); margin: 0 6px 8px; min-height: 34px;
+  padding: 6px 8px; border: 1px solid var(--ps-line);
+  background: var(--ps-paper); border-radius: 8px;
+  color: var(--ps-ink); font-size: 10px; font-weight: 650;
+  cursor: pointer; text-align: center;
+}
+.product-studio-shell .ps-mini-render-link:focus-visible {
+  outline: 2px solid var(--ps-accent); outline-offset: 2px;
+}
+.product-studio-shell .ps-colorway__reference {
+  display: block; font-size: 9px; color: var(--ps-muted);
+  text-align: center; line-height: 1.15;
+}

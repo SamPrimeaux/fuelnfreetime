@@ -38,7 +38,7 @@ test("canvas uses viewport height and provider artboard ratio without shading em
 test("unverified Back views never impersonate a real garment through a generic silhouette", async () => {
   const workspace = await read("../apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx");
   const resolver = await read("../apps/ecommerce-cms-agentsam/frontend/src/pages/products/studio-side-image.ts");
-  assert.match(workspace, /A garment photo will appear when an exact-side render is available/);
+  assert.match(workspace, /A decorated photo requires a Completeful render/);
   assert.match(workspace, /ps-mini-unverified/);
   assert.doesNotMatch(workspace, /NeutralGarmentSilhouette/);
   assert.match(resolver, /if \(isFront\) return frontVariantImage \|\| artboardImage \|\| null;/);
@@ -55,4 +55,21 @@ test("Front and Back preview cards retain their own placement and refuse stale s
   assert.match(workspace, /const preview = sideBaseImage \? await persistPlacementPreview\(uploaded, area, sideBaseImage\)/);
   assert.match(backend, /Object\.values\(sides\)[\s\S]*?side\.preview_media_asset_id/);
   assert.match(backend, /INSERT OR IGNORE INTO product_images/);
+});
+
+test("Front/Back previews share the minimap and enlarged preview, without inventing colored garments", async () => {
+  const component = await read("../apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx");
+  const styles = await read("../apps/ecommerce-cms-agentsam/frontend/src/styles/product-studio.css");
+  const start = component.indexOf('<div className="ps-mini-map"');
+  const enlarged = component.indexOf('className="ps-preview-dialog"', start);
+  const colorRail = component.indexOf('className="ps-colorway-rail"', start);
+  assert.ok(start > -1 && enlarged > start && colorRail > start);
+  assert.match(component.slice(start, colorRail), /renderSideReviewCards\("mini"\)/);
+  assert.match(component.slice(enlarged), /renderSideReviewCards\("expanded"\)/);
+  assert.match(component, /exactCatalogSideReference\(detail\.mockups/);
+  assert.match(component, /const designImage = exactBackColorReference \? null : selectStudioSideImage/);
+  assert.match(component, /Supplier color sample only; your saved artwork is shown separately/);
+  assert.match(component, /side\.referenceOnly && side\.placed\?\.asset/);
+  assert.match(styles, /ps-preview-dialog-body/);
+  assert.match(styles, /ps-mini-map \.ps-side-review-cards--mini/);
 });

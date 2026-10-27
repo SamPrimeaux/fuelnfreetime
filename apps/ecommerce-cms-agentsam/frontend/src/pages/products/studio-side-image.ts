@@ -41,6 +41,25 @@ function scopeMatchesVariant(scope: string | null | undefined, variantId: string
   return false;
 }
 
+/**
+ * An exact supplier color/side catalog picture is a REFERENCE, not an empty
+ * garment plate and not a completed decorated merchant mockup.
+ */
+export function exactCatalogSideReference(
+  mockups: readonly StudioSideMockup[],
+  locationId: string,
+  variantId: string,
+  attributes: Record<string, string>,
+): string | null {
+  return mockups.find((mockup) =>
+    mockup.active !== 0 &&
+    mockup.print_location_id === locationId &&
+    Boolean(mockup.preview_url) &&
+    Boolean(mockup.variant_scope_json?.trim()) &&
+    scopeMatchesVariant(mockup.variant_scope_json, variantId, attributes)
+  )?.preview_url || null;
+}
+
 export function selectStudioSideImage(
   mockups: readonly StudioSideMockup[],
   locationId: string,
