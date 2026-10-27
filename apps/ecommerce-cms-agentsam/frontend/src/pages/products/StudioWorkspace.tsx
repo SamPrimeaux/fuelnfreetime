@@ -233,6 +233,42 @@ export default function StudioWorkspace({
     render_id?: string; status: string; error?: string;
     asset?: { url: string } | null;
   }>>([]);
+  // Reopen saved supplier renders instead of forcing a fresh render every time
+  // an existing product is edited. Only current, supplier-verified derivatives
+  // for this exact saved draft and prepared side are eligible for review.
+  useEffect(() => {
+    if (!draft?.id || !(Number(draft.product_id) > 0)) return;
+    const controller = new AbortController();
+    adminFetch<{ images?: Array<{ url: string; meta_json?: string | null }> }>(
+      `/api/admin/products/${encodeURIComponent(draft.product_id)}/images`,
+      { signal: controller.signal },
+    ).then((response) => {
+      if (controller.signal.aborted) return;
+      const completed = (response.images || []).flatMap((item) => {
+        let meta: Record<string, unknown> = {};
+        try { meta = JSON.parse(item.meta_json || "{}"); } catch { return []; }
+        if (meta.source !== "completeful_provider_render" || meta.draft_id !== draft.id ||
+            !meta.mockup_id || !meta.variant_color || !meta.print_location_id ||
+            !item.url) return [];
+        const id = String(meta.print_location_id);
+        const preparedId = draft.placement?.sides?.[id]?.prepared_media_asset_id ||
+          (draft.print_location_ids?.[0] === id ? draft.prepared_media_asset_id : null);
+        if (!preparedId || Number(meta.source_media_asset_id) !== Number(preparedId)) return [];
+        return [{
+          mockup_id: String(meta.mockup_id), variant_color: String(meta.variant_color),
+          print_location_id: id, render_id: String(meta.render_id || ""),
+          status: "succeeded", asset: { url: item.url },
+        }];
+      });
+      setSupplierMockups((current) => {
+        const currentKeys = new Set(current.map((m) =>
+          [m.mockup_id, m.print_location_id, m.variant_color].join("|")));
+        return [...current, ...completed.filter((m) =>
+          !currentKeys.has([m.mockup_id, m.print_location_id, m.variant_color].join("|")))];
+      });
+    }).catch(() => { /* A missing gallery must not invalidate a saved design. */ });
+    return () => controller.abort();
+  }, [draft?.id, draft?.product_id, draft?.version]);
 
   const [trimTransparent, setTrimTransparent] = useState(false);
   const [croppedPreview, setCroppedPreview] = useState<{
