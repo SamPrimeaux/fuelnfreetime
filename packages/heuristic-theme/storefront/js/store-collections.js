@@ -31,14 +31,21 @@
       const collection = data.collection;
       document.title = `${collection.title} — Fuel & Free Time`;
       document.querySelector('meta[name="description"]').content = collection.seo_description || collection.description;
-      root.innerHTML = `
-        \${window.AgentSamMerchHero
-          ? window.AgentSamMerchHero.renderMerchHero(
-              window.AgentSamMerchHero.parseMerchHero(collection.hero_settings_json, collection),
-              collection)
-          : '<section class="collection-hero"><div class="h-container"><h1>' + esc(collection.title) +
-            '</h1><a href="#collection-products">Shop this collection</a></div></section>'}
-        <section class="collection-products h-container" id="collection-products" data-h-section="products.grid" data-h-section-id="collection-products" data-h-motion="none" data-h-header="glass-dark"><header class="collection-products__head"><div><p class="h-eyebrow">The edit</p><h2>${esc(collection.title)} gear</h2></div><p>${Number(data.products?.length || 0)} ${data.products?.length === 1 ? "piece" : "pieces"}</p></header><div class="collection-products__grid">${(data.products || []).map((product) => `<a class="collection-product" data-h-product="${esc(product.slug)}" href="/products/${encodeURIComponent(product.slug)}"><div class="collection-product__media"><img src="${esc(product.primary_image || product.image_url || "")}" alt="${esc(product.title)}" loading="lazy"></div><div class="collection-product__meta"><strong>${esc(product.title)}</strong><span>${money(product.price_cents)}</span></div></a>`).join("") || '<div class="collection-empty"><h3>The collection is staged.</h3><p>Products will appear here as they are assigned from the catalog.</p><a class="h-button" href="/shop">Shop all gear</a></div>'}</div></section>`;
+      const heroHtml = window.AgentSamMerchHero
+        ? window.AgentSamMerchHero.renderMerchHero(
+            window.AgentSamMerchHero.parseMerchHero(collection.hero_settings_json, collection),
+            collection)
+        : '<section class="collection-hero"><div class="h-container"><h1>' + esc(collection.title) +
+          '</h1><a href="#collection-products">Shop this collection</a></div></section>';
+      const hero = window.AgentSamMerchHero
+        ? window.AgentSamMerchHero.parseMerchHero(collection.hero_settings_json, collection) : {};
+      const showcaseHtml = window.AgentSamMerchShowcase
+        ? window.AgentSamMerchShowcase.renderMerchCollectionShowcase({
+            ...collection, hero, products: data.products || [],
+            links: {productBase: "/products", shop: "/shop"},
+          })
+        : '<section class="collection-products h-container" id="collection-products"><h2>' + esc(collection.title) + '</h2><p>Product gallery is temporarily unavailable.</p></section>';
+      root.innerHTML = heroHtml + showcaseHtml;
       document.dispatchEvent(new CustomEvent("heuristic:refresh"));
     } catch (error) { root.innerHTML = `<div class="collection-error"><div><p class="h-eyebrow">Collection unavailable</p><h1>${esc(error.message)}</h1><a class="h-button" href="/shop/collections">Browse collections</a></div></div>`; }
   }

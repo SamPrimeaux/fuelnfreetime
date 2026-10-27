@@ -31,3 +31,12 @@ export {
 } from "./adapters-completeful.js";
 
 export { PRODUCT_SOURCE_KINDS, resolveProductSource, groupProductInventory, validateInventoryAdjustment } from "./product-spine.js";
+
+export {
+  MERCH_ASSORTMENT_RECIPES, assortmentSearchTerms, DEFAULT_COLLECTION_RULES,
+  normalizeCollectionRules, matchesCollectionRules, resolveCollectionMembers,
+} from "./collection-planning.js";
+
+export { normalizeMerchHero, parseMerchHero, renderMerchHero, serializeMerchHero, safeMerchUrl } from "./merch-hero.js";
+
+export { collectionShowcaseStyle, renderMerchCollectionShowcase } from "./collection-showcase.js";

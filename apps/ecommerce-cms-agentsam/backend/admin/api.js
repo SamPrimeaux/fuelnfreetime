@@ -1,3 +1,4 @@
+import { loadCollectionRules, normalizeCollectionRules, withDynamicCollectionCounts } from "../store/collection-rules.js";
 import { normalizeMerchHero } from "../../../../packages/fnf-theme/src/sections/merch-hero/merch-hero.js";
 import { removeMediaBackground } from "./media-background.js";
 import { editImageWithPrompt, resampleImage, listEditableImageModels } from "../media/image-operations.js";
@@ -267,7 +268,7 @@ export async function listAdminCollections(request, env) {
     "LEFT JOIN store_collection_products cp ON cp.collection_id = c.id " +
     "GROUP BY c.id ORDER BY c.sort_order ASC, lower(c.title) ASC"
   ).all();
-  return json({ ok: true, collections: results || [] });
+  return json({ ok: true, collections: await withDynamicCollectionCounts(env, results || []) });
 }
 
 function heroJsonFromRequest(body, fallback) {
@@ -366,7 +367,8 @@ export async function getAdminCollection(request, env, id) {
   const { results } = await env.DB.prepare(
     "SELECT product_id FROM store_collection_products WHERE collection_id = ? ORDER BY sort_order, product_id"
   ).bind(id).all();
-  return json({ ok: true, collection, product_ids: (results || []).map((row) => Number(row.product_id)) });
+  const rules = await loadCollectionRules(env, id);
+  return json({ ok: true, collection, rules, product_ids: (results || []).map((row) => Number(row.product_id)) });
 }
 
 export async function updateAdminCollection(request, env, id) {
@@ -418,6 +420,30 @@ export async function updateAdminCollection(request, env, id) {
   } catch (error) {
     return json({ error: /unique|constraint/i.test(String(error?.message || error))
       ? "Another collection uses this URL handle" : "Could not save collection" }, { status: 409 });
+  }
+}
+
+export async function updateAdminCollectionRules(request, env, id) {
+  const collection = await env.DB.prepare("SELECT id FROM store_collections WHERE id = ?").bind(id).first();
+  if (!collection) return json({ error: "Collection not found" }, { status: 404 });
+  let config;
+  try {
+    config = normalizeCollectionRules(await readJson(request));
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : "Invalid collection rules" }, { status: 400 });
+  }
+  try {
+    await env.DB.prepare(
+      "INSERT INTO store_collection_rules(collection_id,mode,config_json,updated_at) " +
+      "VALUES (?,?,?,datetime('now')) ON CONFLICT(collection_id) DO UPDATE SET " +
+      "mode=excluded.mode,config_json=excluded.config_json,updated_at=datetime('now')"
+    ).bind(id, config.mode, JSON.stringify(config)).run();
+    return json({ ok: true, rules: config });
+  } catch (error) {
+    if (/no such table/i.test(String(error?.message || error))) {
+      return json({ error: "Collection rule storage is not migrated yet" }, { status: 409 });
+    }
+    return json({ error: "Could not save collection rules" }, { status: 500 });
   }
 }
 
@@ -953,6 +979,8 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   m = path.match(/^\/api\/admin\/collections\/(\d+)$/);
   if (m && method === "GET") return getAdminCollection(request, env, m[1]);
   if (m && method === "PUT") return updateAdminCollection(request, env, m[1]);
+  m = path.match(/^\/api\/admin\/collections\/(\d+)\/rules$/);
+  if (m && method === "PUT") return updateAdminCollectionRules(request, env, m[1]);
   m = path.match(/^\/api\/admin\/collections\/(\d+)\/products$/);
   if (m && method === "PUT") return updateAdminCollectionProducts(request, env, m[1]);
   m = path.match(/^\/api\/admin\/collections\/(\d+)\/products\/add$/);

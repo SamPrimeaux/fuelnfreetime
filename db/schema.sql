@@ -155,6 +155,14 @@ CREATE TABLE IF NOT EXISTS store_collection_products (
 CREATE INDEX IF NOT EXISTS idx_store_collections_status_sort ON store_collections(status, sort_order);
 CREATE INDEX IF NOT EXISTS idx_store_collection_products_product ON store_collection_products(product_id);
 
+-- Conditional collection memberships; manual records are preserved separately.
+CREATE TABLE IF NOT EXISTS store_collection_rules (
+  collection_id INTEGER PRIMARY KEY REFERENCES store_collections(id) ON DELETE CASCADE,
+  mode TEXT NOT NULL DEFAULT 'manual' CHECK(mode IN ('manual','automatic','hybrid')),
+  config_json TEXT NOT NULL DEFAULT '{}',
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- ===== Orders (schema ready; no checkout wired yet) =====
 
 CREATE TABLE IF NOT EXISTS orders (

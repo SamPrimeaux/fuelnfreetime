@@ -7,7 +7,8 @@ import {
   updateAdminCollection, updateAdminCollectionProducts, addAdminCollectionProduct
 } from "../apps/ecommerce-cms-agentsam/backend/admin/api.js";
 import { getStoreCollection } from "../apps/ecommerce-cms-agentsam/backend/store/collections.js";
-import { adminHtmlFile } from "../apps/ecommerce-cms-agentsam/backend/lib/admin-routes.js";
+import { adminHtmlFile, ADMIN_HTML_TO_CLEAN } from "../apps/ecommerce-cms-agentsam/backend/lib/admin-routes.js";
+import { adminRouteForPath } from "../apps/ecommerce-cms-agentsam/backend/lib/route-manifest.js";
 
 function fixture() {
   const db = new DatabaseSync(":memory:");
@@ -53,13 +54,17 @@ function request(body, method = "POST") {
     method, headers: { "content-type": "application/json" }, body: JSON.stringify(body)
   });
 }
-test("canonical route points at collections HTML and navigation", () => {
-  assert.equal(adminHtmlFile("/admin/collections"), "/admin/collections.html");
+test("Collections Studio uses the canonical React routes and keeps the old .html URL redirected", () => {
+  for (const path of ["/admin/collections","/admin/collections/new","/admin/collections/42"]) {
+    assert.equal(adminRouteForPath(path)?.handler, "admin-spa", path);
+    assert.equal(adminHtmlFile(path), null);
+  }
+  assert.equal(ADMIN_HTML_TO_CLEAN["/admin/collections.html"], "/admin/collections");
   const shell = readFileSync(new URL("../apps/ecommerce-cms-agentsam/frontend/shell.js", import.meta.url), "utf8");
-  const html = readFileSync(new URL("../apps/ecommerce-cms-agentsam/frontend/static/collections.html", import.meta.url), "utf8");
+  const router = readFileSync(new URL("../apps/ecommerce-cms-agentsam/frontend/src/App.tsx", import.meta.url), "utf8");
   assert.match(shell, /href: "\/admin\/collections", label: "Collections"/);
-  assert.match(html, /id="cm-save-members"/);
-  assert.match(html, /\/admin\/js\/collection-manager\.js/);
+  assert.match(router, /path="collections\/new" element={<CollectionEditor/);
+  assert.match(router, /path="collections\/:id" element={<CollectionEditor/);
 });
 test("create, edit, assign and storefront reflect canonical collections", async () => {
   const { db, env } = fixture();

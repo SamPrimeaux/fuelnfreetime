@@ -1,7 +1,5 @@
 // Brand asset path for the side-assistant trigger (served from the app's /admin/brand folder).
 const AGENT_TRIGGER_ICON = "/admin/brand/mini-agentsam-trigger.svg";
-const LOGO_URL =
-  "https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ad23b2d9-e2e4-4ad6-eb81-9e4c983df000/thumbnail";
 
 const ICONS = {
   home: '<path d="M4 11 12 4l8 7M6 9.5V20h12V9.5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
@@ -359,6 +357,7 @@ function navActive(href, activeHref) {
     "/admin/home": ["/admin/dashboard", "/admin/dashboard.html"],
     "/admin/store": ["/admin/pages", "/admin/page-edit", "/admin/theme-editor", "/admin/preferences"],
     "/admin/products": ["/admin/product-edit", "/admin/products/create"],
+    "/admin/collections": ["/admin/collections/"],
     "/admin/content": ["/admin/media", "/admin/media.html"],
     "/admin/pages": ["/admin/page-edit", "/admin/theme-editor"],
     "/admin/theme-editor": ["/admin/page-edit"],
@@ -459,9 +458,10 @@ function renderSideNav(activeHref, userNav, options = {}) {
     <div class="console-sidenav-profile${drawer ? " console-sidenav-profile--drawer" : ""}" data-profile-popup-root>
       <div class="console-sidenav-profile-row">
         <button type="button" class="console-profile-card console-profile-store" data-profile-menu-toggle aria-expanded="false" aria-haspopup="true">
-          <img class="console-profile-store-logo" src="${LOGO_URL}" alt="">
+          <span class="console-profile-store-monogram" data-shell-brand-fallback aria-hidden="true">S</span>
+          <img class="console-profile-store-logo" data-shell-brand-logo alt="" hidden>
           <span class="console-profile-meta">
-            <strong>Fuel &amp; Free Time</strong>
+            <strong data-shell-brand-name>Store</strong>
             <span data-admin-email>Loading…</span>
           </span>
           ${icon("chev", 15, "console-profile-chevron")}
@@ -526,6 +526,38 @@ function safeAvatarUrl(value) {
   return "";
 }
 
+let shellCompany = null;
+function hydrateShellCompany(company) {
+  if (!company) return;
+  const name = String(company.name || "Store").trim() || "Store";
+  const image = safeAvatarUrl(company.logoUrl || "");
+  document.querySelectorAll("[data-shell-brand-name]").forEach(el => { el.textContent = name; });
+  document.querySelectorAll("[data-shell-brand-fallback]").forEach(el => {
+    el.textContent = name.slice(0, 1).toUpperCase();
+    el.hidden = Boolean(image);
+  });
+  document.querySelectorAll("[data-shell-brand-logo]").forEach(el => {
+    if (image) {
+      el.src = image;el.hidden = false;
+      el.onerror = () => { el.hidden=true;el.previousElementSibling.hidden=false; };
+    } else {
+      el.removeAttribute("src");el.hidden = true;
+    }
+  });
+}
+async function loadShellCompany() {
+  if (shellCompany) { hydrateShellCompany(shellCompany); return; }
+  try {
+    const response = await fetch("/api/company", { credentials:"omit" });
+    if (!response.ok) return;
+    const data = await response.json();
+    if (data.ok && data.company) {
+      shellCompany = data.company;
+      hydrateShellCompany(shellCompany);
+    }
+  } catch { /* Fallback store monogram stays visible when branding endpoint is offline. */ }
+}
+
 function hydrateShellProfile(user) {
   if (!user) return;
   const name = user.display_name || user.email || "Account";
@@ -560,7 +592,93 @@ function hydrateShellProfile(user) {
   });
 }
 
+function shellRouteLabel(activeHref) {
+  const path = String(activeHref || "/admin/home").split("?")[0];
+  if (path === "/admin/collections/new") return "New collection";
+  if (path.startsWith("/admin/collections/")) return "Edit collection";
+  const flatten = (items) => items.flatMap((item) => item.children
+    ? [{ ...item }, ...flatten(item.children)] : [item]);
+  const route = flatten([...NAV.main, ...NAV.channels, ...NAV.apps])
+    .find((item) => item.href && item.href.split("?")[0] === path);
+  return route?.label || (path.includes("product") ? "Product Studio" : "Admin workspace");
+}
+
+function hydrateTopbarContext(activeHref) {
+  const label = document.getElementById("console-route-title");
+  if (label) label.textContent = shellRouteLabel(activeHref);
+}
+
+function installCommandPalette() {
+  const trigger = document.getElementById("console-command-trigger");
+  if (!trigger || trigger.dataset.bound) return;
+  trigger.dataset.bound = "true";
+  const destinations = [
+    {label:"Create collection",href:"/admin/collections/new"},
+    {label:"Collections library",href:"/admin/collections"},
+    ...[...NAV.main,...NAV.channels,...NAV.apps].flatMap(item => {
+      const child = item.children || [];
+      return [...(item.href ? [{label:item.label,href:item.href}] : []),
+        ...child.filter(c=>c.href).map(c=>({label:c.label,href:c.href}))];
+    }),
+    {label:"Create product",href:"/admin/products/create"},
+    {label:"Media library",href:"/admin/content"},
+  ].filter((item, idx, all)=>all.findIndex(other=>other.href===item.href)===idx);
+  let overlay = null;
+  const close = () => { if (overlay) { overlay.remove(); overlay = null; trigger.focus(); } };
+  const open = () => {
+    if (overlay) return;
+    overlay = document.createElement("div");
+    overlay.className = "console-command-overlay";
+    overlay.innerHTML = '<div class="console-command-box" role="dialog" aria-modal="true" aria-label="Search admin pages">' +
+      '<div class="console-command-input-row"><span aria-hidden="true">⌕</span><input aria-label="Search admin pages" placeholder="Search pages and tools..." autocomplete="off"/><kbd>ESC</kbd></div>' +
+      '<div class="console-command-results" role="listbox"></div><p>Navigate directly to a tool or admin page</p></div>';
+    const input = overlay.querySelector("input");
+    const results = overlay.querySelector(".console-command-results");
+    function draw() {
+      const term = input.value.toLowerCase().trim();
+      const matches = destinations.filter(item => item.label.toLowerCase().includes(term)).slice(0,14);
+      results.replaceChildren();
+      if (!matches.length) { const p=document.createElement("p"); p.textContent="No matching pages";results.append(p);return; }
+      matches.forEach((item,index)=>{
+        const link = document.createElement("a");
+        link.href = item.href;link.className="console-command-result";
+        if (index===0) link.classList.add("is-highlighted");
+        const name=document.createElement("span"); name.textContent=item.label;link.append(name);
+        const hint=document.createElement("small");hint.textContent="↵";link.append(hint);
+        results.append(link);
+      });
+    }
+    overlay.addEventListener("mousedown",e=>{if(e.target===overlay)close();});
+    overlay.addEventListener("keydown",e=>{
+      if (e.key==="Escape"){e.preventDefault();close();return;}
+      const options=[...results.querySelectorAll("a")];
+      const current=options.findIndex(el=>el.classList.contains("is-highlighted"));
+      if(e.key==="ArrowDown"||e.key==="ArrowUp"){
+        e.preventDefault();const next=(current+(e.key==="ArrowDown"?1:-1)+options.length)%options.length;
+        options.forEach((el,i)=>el.classList.toggle("is-highlighted",i===next));
+      }
+      if(e.key==="Enter"&&e.target===input&&options.length){
+        const item=options.find(el=>el.classList.contains("is-highlighted"))||options[0];
+        if(item){e.preventDefault();window.location.assign(item.href);}
+      }
+    });
+    input.addEventListener("input",draw);
+    document.body.append(overlay);draw();input.focus();
+  };
+  trigger.addEventListener("click",open);
+  if (!window.__consoleCommandKeyboardBound) {
+    window.__consoleCommandKeyboardBound = true;
+    window.addEventListener("keydown",(event)=>{
+      if ((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==="k"){
+        event.preventDefault();
+        if(document.querySelector(".console-command-overlay"))close(); else open();
+      }
+    });
+  }
+}
+
 function hydrateShellNav(user, activeHref) {
+  hydrateTopbarContext(activeHref);
   hydrateShellProfile(user);
   const navHtml = renderSideNav(activeHref, buildUserNav(user));
   const drawerNavHtml = renderSideNav(activeHref, buildUserNav(user), { drawer: true });
@@ -585,6 +703,7 @@ function hydrateShellNav(user, activeHref) {
   // already wired from the initial static render in renderShell(), which
   // is what caused the double-toggle race / stuck chevron. navToggleState
   // plus the delegated listener now survive this innerHTML swap untouched.
+  hydrateShellCompany(shellCompany);
 }
 
 function ensureConsoleLayout() {
@@ -641,13 +760,16 @@ function renderShell(activeHref, mainHtml, options = {}) {
         </button>` : "";
   const adminChrome = shellMode.hideAdminNav ? "" : `
       <header class="console-topbar">
-        <div class="console-topbar-spacer" aria-hidden="true"></div>
+        <div class="console-topbar-context" id="console-topbar-context" aria-live="polite">
+          <span class="console-topbar-context-overline">ADMIN / MERCHANDISING</span>
+          <strong id="console-route-title">Workspace</strong>
+        </div>
         <div class="console-search-wrap">
-          <div class="console-search" role="search">
+          <button class="console-search" type="button" id="console-command-trigger" aria-keyshortcuts="Meta+K Control+K" aria-label="Search pages and tools">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#9b9b9b" stroke-width="1.8"/><path d="m20 20-3.2-3.2" stroke="#9b9b9b" stroke-width="1.8" stroke-linecap="round"/></svg>
             <span>Search</span>
             <kbd>⌘K</kbd>
-          </div>
+          </button>
         </div>
         <div class="console-topbar-actions">
           <button type="button" class="console-icon-btn" id="agentsam-toggle" aria-label="Agent Sam" aria-expanded="false" title="Agent Sam">
@@ -681,7 +803,10 @@ function renderShell(activeHref, mainHtml, options = {}) {
   // Full-bleed tool pages own the whole viewport and have not reserved dock clearance; hide the dock there.
   document.body.classList.toggle("admin-dock-off", fullBleed);
 
+  hydrateTopbarContext(activeHref);
+  installCommandPalette();
   bindConsoleGlobalHandlers();
+  void loadShellCompany();
   import('/admin/profile-popup/index.js')
     .then(({ mountProfilePopups }) => mountProfilePopups(document))
     .catch(() => {});

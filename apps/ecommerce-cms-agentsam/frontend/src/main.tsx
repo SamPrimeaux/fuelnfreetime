@@ -5,6 +5,7 @@ import App from "./App";
 import "./styles/analytics.css";
 import "./styles/analytics-shell.css";
 import "./index.css";
+import "./pages/collections/collections-studio.css";
 
 window.renderShell(
   window.location.pathname,

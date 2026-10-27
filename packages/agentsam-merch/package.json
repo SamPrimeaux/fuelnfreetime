@@ -19,7 +19,12 @@
     "./derivatives": "./src/derivatives.js",
     "./collection-lab": "./src/collection-lab.js",
     "./adapters/completeful": "./src/adapters-completeful.js",
-    "./profiles/*": "./profiles/*"
+    "./profiles/*": "./profiles/*",
+    "./collection-planning": "./src/collection-planning.js",
+    "./merch-hero": "./src/merch-hero.js",
+    "./merch-hero.css": "./src/merch-hero.css",
+    "./collection-showcase": "./src/collection-showcase.js",
+    "./collection-showcase.css": "./src/collection-showcase.css"
   },
   "bin": {
     "agentsam-merch": "./bin/agentsam-merch.mjs"

@@ -18,6 +18,9 @@ export default function AdminLayout() {
   useEffect(() => {
     document.body.classList.remove("admin-nav-open");
     document.body.classList.toggle("product-studio-focused", location.pathname.startsWith("/products/create"));
+    // Collection Studio reserves its own mobile dock clearance. Product Studio
+    // and analytics continue using their existing focused/full-bleed contracts.
+    document.body.classList.toggle("admin-dock-off", !location.pathname.startsWith("/collections"));
     if (window.__shellUser) {
       window.hydrateShellNav(window.__shellUser, "/admin" + location.pathname);
     }

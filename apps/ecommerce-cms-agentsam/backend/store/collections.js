@@ -1,3 +1,4 @@
+import { loadCollectionRules, resolveCollectionMembers, withDynamicCollectionCounts } from "./collection-rules.js";
 const PRESETS = [
   {
     slug: "high-octane-performance-gear",
@@ -87,7 +88,7 @@ async function collectionRows(env) {
        GROUP BY c.id
        ORDER BY c.sort_order, c.title`
     ).all();
-    if (results?.length) return results.map((row) => ({ ...row, product_count: Number(row.product_count || 0) }));
+    if (results?.length) return withDynamicCollectionCounts(env, results.map((row) => ({ ...row, product_count: Number(row.product_count || 0) })));
   } catch (error) {
     if (!/no such table/i.test(String(error?.message || error))) throw error;
   }
@@ -122,13 +123,27 @@ export async function getStoreCollection(env, requestedSlug) {
       `SELECT * FROM store_collections WHERE slug = ? AND status = 'active' LIMIT 1`
     ).bind(canonicalSlug).first();
     if (collection) {
-      const { results } = await env.DB.prepare(
-        productSelect(
-          `AND p.id IN (SELECT product_id FROM store_collection_products WHERE collection_id = ?)`,
-          `(SELECT sort_order FROM store_collection_products WHERE collection_id = ? AND product_id = p.id), p.updated_at DESC`
-        )
-      ).bind(collection.id, collection.id).all();
-      products = results || [];
+      const rules = await loadCollectionRules(env, collection.id);
+      if (rules.mode === "manual") {
+        const { results } = await env.DB.prepare(
+          productSelect(
+            `AND p.id IN (SELECT product_id FROM store_collection_products WHERE collection_id = ?)`,
+            `(SELECT sort_order FROM store_collection_products WHERE collection_id = ? AND product_id = p.id), p.updated_at DESC`
+          )
+        ).bind(collection.id, collection.id).all();
+        products = results || [];
+      } else {
+        // Rules run on actual live catalog rows, not cached preview/manufacturer blanks.
+        const [{results: active}, {results: stored}] = await Promise.all([
+          env.DB.prepare(productSelect()).all(),
+          env.DB.prepare("SELECT product_id FROM store_collection_products WHERE collection_id = ? ORDER BY sort_order,product_id")
+            .bind(collection.id).all(),
+        ]);
+        const rows = active || [];
+        const ids = resolveCollectionMembers(rows,(stored || []).map(row => Number(row.product_id)),rules);
+        const byId = new Map(rows.map(row => [Number(row.id),row]));
+        products = ids.map(id => byId.get(id)).filter(Boolean);
+      }
     }
   } catch (error) {
     if (!/no such table/i.test(String(error?.message || error))) throw error;

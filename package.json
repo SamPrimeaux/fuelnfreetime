@@ -104,6 +104,8 @@
     "db:migrate:completeful": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-completeful.sql",
     "db:migrate:discounts": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-discounts.sql",
     "db:migrate:storefront-collections": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-storefront-collections-20260925.sql",
+    "db:migrate:collection-rules": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/migrate-store-collection-rules-20261027.sql",
+    "db:migrate:collection-rules:local": "npx wrangler d1 execute fuelnfreetime --local --file=db/migrate-store-collection-rules-20261027.sql",
     "db:seed:mail-mailboxes": "./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/seed-mail-mailboxes.sql",
     "mail:provision": "node scripts/provision-mailboxes.mjs",
     "mail:e2e": "node scripts/send-mail-e2e.mjs",

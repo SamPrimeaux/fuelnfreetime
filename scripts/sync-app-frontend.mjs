@@ -45,7 +45,7 @@ for (const ext of ['js', 'css']) {
 }
 // Merchandise hero generator: one renderer for admin preview and storefront.
 const merchHero = await bundle({
-  entryPoints: [path.join(root, 'packages/fnf-theme/src/sections/merch-hero/merch-hero.js')],
+  entryPoints: [path.join(root, 'packages/agentsam-merch/src/merch-hero.js')],
   bundle: true, platform: 'browser', format: 'iife',
   globalName: 'AgentSamMerchHero', target: 'es2022', write: false,
 });
@@ -53,7 +53,20 @@ for (const dest of ['js/merch-hero.js', 'admin/js/merch-hero.js']) {
   await writeFile(path.join(output, dest), merchHero.outputFiles[0].contents);
 }
 for (const dest of ['css/merch-hero.css', 'admin/css/merch-hero.css']) {
-  await cp(path.join(root, 'packages/fnf-theme/src/sections/merch-hero/merch-hero.css'),
+  await cp(path.join(root, 'packages/agentsam-merch/src/merch-hero.css'),
+    path.join(output, dest));
+}
+// Reusable collection showcase: identical production and admin preview contract.
+const merchShowcase = await bundle({
+  entryPoints: [path.join(root, 'packages/agentsam-merch/src/collection-showcase.js')],
+  bundle: true, platform: 'browser', format: 'iife',
+  globalName: 'AgentSamMerchShowcase', target: 'es2022', write: false,
+});
+for (const dest of ['js/merch-showcase.js', 'admin/js/merch-showcase.js']) {
+  await writeFile(path.join(output, dest), merchShowcase.outputFiles[0].contents);
+}
+for (const dest of ['css/merch-showcase.css', 'admin/css/merch-showcase.css']) {
+  await cp(path.join(root, 'packages/agentsam-merch/src/collection-showcase.css'),
     path.join(output, dest));
 }
 // Build ONE renderer-backed section runtime from the published Revise/section

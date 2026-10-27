@@ -74,7 +74,9 @@
           "/admin/products",
           "/admin/products/*",
           "/admin/product-edit",
-          "/admin/inventory"
+          "/admin/inventory",
+          "/admin/collections",
+          "/admin/collections/*"
         ]
       },
       {
@@ -134,6 +136,18 @@
             "label": "Product ideas",
             "prompt": "Suggest product ideas that fit the current catalog and brand."
           }
+        ]
+      },
+      {
+        "id": "collections",
+        "label": "Collections Studio",
+        "match": [
+          "/admin/collections",
+          "/admin/collections/*"
+        ],
+        "chips": [
+          { "label": "Collection ideas", "prompt": "Suggest coordinated merch collection concepts using my current catalog, existing artwork and brand." },
+          { "label": "Review readiness", "prompt": "Review this collection's products, media, and publishing readiness. Identify any missing pieces without publishing." }
         ]
       },
       {
