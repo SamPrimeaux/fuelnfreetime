@@ -2841,6 +2841,31 @@ export default function StudioWorkspace({
                   <button type="button" className="ps-button ps-wide" disabled={Boolean(busy)}
                     onClick={() => void saveDraft()}>{busy === "save" ? "Saving…" : "Save design changes"}</button>
                   <small>Placement edits invalidate old print files and mockups. Accurate print-safe geometry is shown in Print map mode.</small>
+                  {currentSupplierMedia?.id && (
+                    <section className="ps-preview-media-editor" aria-label="Generated product image metadata">
+                      <strong>Generated image settings</strong>
+                      <label className="ps-preview-field">Image description (alt text)
+                        <input type="text" maxLength={500} value={currentSupplierMedia.alt_text || ""}
+                          onChange={(event) => {
+                            const nextText = event.target.value;
+                            setSupplierMockups((current) => current.map((item) =>
+                              item.asset?.id === currentSupplierMedia.id ? {
+                                ...item, asset: { ...item.asset, alt_text: nextText },
+                              } : item));
+                          }} />
+                      </label>
+                      <button type="button" className="ps-button ps-wide" disabled={Boolean(busy)}
+                        onClick={() => void saveSupplierMediaDescription(currentSupplierMedia.id!, currentSupplierMedia.alt_text || "")}>
+                        {busy === "media-update" ? "Saving…" : "Save image description"}
+                      </button>
+                      <button type="button" className="ps-button ps-wide"
+                        disabled={Boolean(busy) || Boolean(currentSupplierMedia.is_primary)}
+                        onClick={() => void setPrimarySupplierMedia(currentSupplierMedia.id!)}>
+                        {currentSupplierMedia.is_primary ? "Primary product photo" : "Make primary product photo"}
+                      </button>
+                      <small>These fields update the actual Media Library and product gallery records—not just the preview.</small>
+                    </section>
+                  )}
                   <strong>Print sides</strong>
                   {renderSideReviewCards("expanded")}
                   <p>Choose Front or Back to compare the selected color. Artwork stays attached to its own print location.</p>
