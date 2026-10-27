@@ -1527,6 +1527,7 @@ export default function StudioWorkspace({
       if (!result.ok || !result.rendered?.length) {
         throw new Error(result.error || "No color-verified supplier mockups were available.");
       }
+      mockupPollCount.current = 0;
       setSupplierMockups(result.rendered);
       const missing = result.skipped?.length || 0;
       setNotice(`Submitted ${result.rendered.length} exact-color supplier mockups.` +
