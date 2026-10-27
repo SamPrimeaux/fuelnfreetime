@@ -27,6 +27,11 @@ export function prepareWorkerCodecs() {
     initWebpDec(webpDecWasm), initWebpEnc(webpEncWasm),
     initPngDec(pngWasm), initPngEnc(pngWasm),
     initResize(resizeWasm),
-  ]).then(() => undefined);
+  ]).then(() => undefined).catch((error) => {
+    // A failed isolate startup must not poison every subsequent retry.
+    // The worker always passes deploy-time compiled WASM modules to jSquash.
+    ready = undefined;
+    throw new Error("image_codec_initialization_failed: " + (error?.message || String(error)), { cause: error });
+  });
   return ready;
 }
