@@ -1626,18 +1626,22 @@
 .media-agent-editor-content { display: grid; grid-template-columns: minmax(0, 1fr) 245px; min-height: 0; flex: 1; }
 .media-agent-editor-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 17px; background: #e8ebe5; }
 .media-agent-canvas-wrap { display: grid; place-items: center; position: relative; min-height: 210px; min-width: 0; flex: 1; overflow: auto; border-radius: 12px; background-color: #f8f8f6; background-image: linear-gradient(45deg,#ddd 25%,transparent 25%),linear-gradient(-45deg,#ddd 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ddd 75%),linear-gradient(-45deg,transparent 75%,#ddd 75%); background-size: 22px 22px; background-position: 0 0,0 11px,11px -11px,-11px 0; }
+.media-agent-crop-selection { position: absolute; box-sizing: border-box; border: 2px solid #7ae2bd; background: rgba(50, 166, 139, .14); outline: 1px solid rgba(3, 37, 27, .7); outline-offset: -4px; box-shadow: 0 0 0 9999px rgba(16, 29, 23, .16); z-index: 1; pointer-events: none; }
 .media-agent-canvas-wrap canvas { display: block; width: auto; height: auto; max-width: 100%; max-height: min(60dvh, 650px); object-fit: contain; touch-action: none; box-shadow: 0 8px 35px rgba(0,0,0,.16); }
 .media-agent-canvas-note { font-size: 12px; color: #4c5b4b; margin: 9px 1px 0; }
 .media-agent-editor-rail { min-width: 0; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding: 16px; border-left: 1px solid #d8ddd6; background: #fff; }
 .media-agent-editor-modes { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 6px; }
 .media-agent-editor-modes button { padding: 9px 4px; }
 .media-agent-editor-modes button[aria-pressed="true"] { color: white; background: #2e482b; border-color: #2e482b; }
-.media-agent-draw-controls, .media-agent-resize-form, .media-agent-comment-form { display: flex; flex-direction: column; gap: 11px; }
+.media-agent-draw-controls, .media-agent-resize-form, .media-agent-crop-form, .media-agent-comment-form { display: flex; flex-direction: column; gap: 11px; }
+.media-agent-crop-fields, .media-agent-transform-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.media-agent-transform-buttons button { min-width: 0; white-space: normal; }
+.media-agent-crop-form > p { color: #566452; font-size: 12px; line-height: 1.5; margin: 0; }
 .media-agent-editor-rail label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 650; }
 .media-agent-editor-rail input:not([type="checkbox"]), .media-agent-editor-rail textarea { box-sizing: border-box; width: 100%; min-height: 34px; border: 1px solid #cbd3c8; border-radius: 8px; padding: 6px; font: inherit; font-size: 13px; background: white; color: #192b20; }
 .media-agent-editor-rail input[type="range"] { padding: 0; }
 .media-agent-editor-rail .media-agent-aspect { flex-direction: row; align-items: center; }
-.media-agent-comment-form p, .media-agent-resize-form p, .media-agent-editor-info small { margin: 0; color: #667367; font-size: 11px; line-height: 1.45; }
+.media-agent-comment-form p, .media-agent-resize-form p, .media-agent-crop-form p, .media-agent-editor-info small { margin: 0; color: #667367; font-size: 11px; line-height: 1.45; }
 .media-agent-editor-info { margin-top: auto; display: grid; gap: 5px; padding-top: 13px; border-top: 1px solid #e0e6dc; }
 .media-agent-comments { display: grid; gap: 6px; max-height: 180px; overflow-y: auto; }
 .media-agent-comments p { margin: 0; padding: 8px; border: 1px solid #e0e6dc; border-radius: 7px; font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
@@ -1651,7 +1655,7 @@
   .media-agent-editor-main { padding: 9px; }
   .media-agent-canvas-wrap canvas { max-height: 40dvh; }
   .media-agent-editor-rail { border-left: 0; border-top: 1px solid #d8ddd6; padding: 12px; }
-  .media-agent-editor-modes { grid-template-columns: repeat(4,minmax(0,1fr)); }
+  .media-agent-editor-modes { grid-template-columns: repeat(3,minmax(0,1fr)); }
   .media-agent-editor-head { padding: 10px 14px; }
   .media-agent-editor-foot { flex-wrap: wrap; padding: 9px 10px max(9px, env(safe-area-inset-bottom)); }
   .media-agent-editor-foot button { padding: 9px 7px; }
