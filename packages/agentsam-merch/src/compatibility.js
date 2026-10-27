@@ -25,8 +25,18 @@ function addIssue(issues, status, code, message, action = null) {
 }
 
 function normalizeAsset(input = {}) {
-  const mimeFormat = input.mimeType?.split("/").pop();
-  const format = normalizeFormat(input.format || input.extension || mimeFormat);
+  // Media Library filenames may be human-friendly design names without extensions.
+  // Prefer stored MIME metadata, then fall back to declared formats and real path suffixes.
+  // Never treat an arbitrary display name as a production file format.
+  const mimeType = String(input.mimeType || input.content_type || input.contentType || "")
+    .split(";")[0].trim().toLowerCase();
+  const mimeFormat = mimeType === "image/svg+xml" ? "svg" : mimeType.split("/").pop();
+  const pathExtension = (value) =>
+    String(value || "").split(/[?#]/)[0].match(/\.([a-z0-9]+)$/i)?.[1] || null;
+  const format = [
+    mimeFormat, input.format, input.extension,
+    pathExtension(input.filename), pathExtension(input.r2_key || input.r2Key),
+  ].map(normalizeFormat).find((candidate) => mediaKindForFormat(candidate) !== "unknown") || null;
   return Object.freeze({
     ...input,
     format,
