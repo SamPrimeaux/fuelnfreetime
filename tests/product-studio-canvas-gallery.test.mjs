@@ -73,3 +73,13 @@ test("Front/Back previews share the minimap and enlarged preview, without invent
   assert.match(styles, /ps-preview-dialog-body/);
   assert.match(styles, /ps-mini-map \.ps-side-review-cards--mini/);
 });
+
+test("one action prepares both print sides before Completeful render submission", async () => {
+  const component = await read("../apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx");
+  const imageComponent = await read("../apps/ecommerce-cms-agentsam/frontend/src/pages/products/ProductImage.tsx");
+  assert.match(component, /async function renderSupplierMockups\(\)[\s\S]*?const readyDraft = await prepareRemainingSides\(saved\)/);
+  assert.match(component, /onClick=\{\(\) => void renderSupplierMockups\(\)\}/);
+  assert.match(component, /Generate Front \+ Back previews/);
+  assert.match(imageComponent, /setDirectAttempts/);
+  assert.match(imageComponent, /setFailed/);
+});

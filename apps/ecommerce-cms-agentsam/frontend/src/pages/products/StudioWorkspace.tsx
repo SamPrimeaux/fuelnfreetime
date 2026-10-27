@@ -1426,12 +1426,21 @@ export default function StudioWorkspace({
   }
 
   async function renderSupplierMockups() {
-    if (!preparedAsset || preparedFor !== currentPlacementKey) {
-      setError("Prepare the current artwork before rendering supplier mockups.");
+    if (!asset || !showArtwork) {
+      setError("Select artwork on at least one print side before generating product previews.");
+      openTab("designs");
       return;
     }
-    const saved = await saveDraft();
+    // One merchant action prepares the active side, repairs any other selected
+    // print side, and submits the verified supplier color x side matrix.
+    // Provider rendering remains an explicit merchant action, never triggered
+    // automatically by variant switching or publishing.
+    const saved = preparedAsset && preparedFor === currentPlacementKey
+      ? await saveDraft()
+      : await prepareArtwork();
     if (!saved) return;
+    const readyDraft = await prepareRemainingSides(saved);
+    if (!readyDraft) return;
     setBusy("render-batch");
     setError("");
     try {
@@ -1441,7 +1450,7 @@ export default function StudioWorkspace({
           mockup_id: string; variant_color: string; print_location_id: string;
           render_id?: string; status: string; error?: string; asset?: { url: string } | null;
         }>;
-      }>(`/api/admin/product-studio/drafts/${encodeURIComponent(saved.id)}/render-batch`, {
+      }>(`/api/admin/product-studio/drafts/${encodeURIComponent(readyDraft.id)}/render-batch`, {
         method: "POST",
         body: JSON.stringify({}),
       });
@@ -2255,9 +2264,9 @@ export default function StudioWorkspace({
                     {busy === "prepare" ? "Preparing…" : preparedIsCurrent ? "Print file ready" : "Prepare for print"}
                   </button>
                   <button type="button" className="ps-button ps-wide"
-                    disabled={!preparedIsCurrent || Boolean(busy)}
+                    disabled={!asset || Boolean(busy)}
                     onClick={() => void renderSupplierMockups()}>
-                    {busy === "render-batch" ? "Submitting supplier renders…" : "Render Completeful colorways"}
+                    {busy === "render-batch" ? "Submitting supplier renders…" : "Prepare sides + render all selected colors"}
                   </button>
                   <small>Uses exact supplier color and print-area mockups. Missing color matches are not fabricated.</small>
                   {supplierMockups.length > 0 && (
@@ -2441,10 +2450,19 @@ export default function StudioWorkspace({
                     {colorAxis ? selectedAttributes[colorAxis] : "Selected color"} · Tap a side to edit.
                     Color samples are not finished product images.
                   </small>
-                  {sideReviewCards.some((side) => side.referenceOnly) && (
-                    <button className="ps-mini-render-link" type="button" onClick={() => openTab("tools")}>
-                      Prepare and render decorated views
-                    </button>
+                  {sideReviewCards.some((side) => side.placed?.asset) && (
+                    <div className="ps-mini-render-actions">
+                      <button className="ps-mini-render-link" type="button"
+                        disabled={Boolean(busy)} onClick={() => void renderSupplierMockups()}>
+                        {busy === "render-batch" ? "Submitting supplier previews…" : "Generate Front + Back previews"}
+                      </button>
+                      {supplierMockups.some((item) => item.render_id && !item.asset && item.status !== "failed") && (
+                        <button className="ps-mini-render-link" type="button"
+                          disabled={Boolean(busy)} onClick={() => void refreshSupplierMockups()}>
+                          {busy === "refresh-mockups" ? "Checking renders…" : "Refresh completed previews"}
+                        </button>
+                      )}
+                    </div>
                   )}
                 </>
               )}

@@ -143,6 +143,27 @@ function mimeAndExtension(bytes) {
     return { mime: "image/webp", ext: "webp" };
   throw new Error("invalid_provider_mockup_file");
 }
+/**
+ * Attach completed provider renders to the merchant's existing product gallery.
+ * Color + print side stay in media metadata; this never changes the primary
+ * image or creates another media file for a previously persisted render.
+ */
+export async function attachVerifiedMockupToProduct(env, productId, mediaAssetId) {
+  const product = Number(productId);
+  const media = Number(mediaAssetId);
+  if (!Number.isSafeInteger(product) || product < 1 ||
+      !Number.isSafeInteger(media) || media < 1) return false;
+  await env.DB.prepare(
+    `INSERT OR IGNORE INTO product_images
+      (product_id, media_asset_id, position, is_primary)
+     SELECT ?, ?, COALESCE(
+       (SELECT MAX(position) FROM product_images WHERE product_id = ?), 0
+     ) + 1, 0
+     WHERE EXISTS (SELECT 1 FROM products WHERE id = ?)`
+  ).bind(product, media, product, product).run();
+  return true;
+}
+
 export async function persistCompletefulMockup(env, receipt, renderUrl, renderId) {
   const source = await env.DB.prepare("SELECT * FROM product_studio_drafts WHERE id = ?")
     .bind(receipt.draft_id).first();
@@ -156,7 +177,10 @@ export async function persistCompletefulMockup(env, receipt, renderUrl, renderId
   const { mime, ext } = mimeAndExtension(bytes);
   const key = `products/${slug(source.product_id)}/mockups/${slug(receipt.draft_id)}/${slug(receipt.variant_color)}-${slug(receipt.print_location_id)}-${slug(renderId)}.${ext}`;
   const existing = await env.DB.prepare("SELECT * FROM media_assets WHERE r2_key = ?").bind(key).first();
-  if (existing) return existing;
+  if (existing) {
+    await attachVerifiedMockupToProduct(env, source.product_id, existing.id);
+    return existing;
+  }
   const metadata = {
     lifecycle: "ready", media_role: "mockup",
     provider: "completeful", render_id: renderId, mockup_id: receipt.mockup_id,
@@ -174,7 +198,13 @@ export async function persistCompletefulMockup(env, receipt, renderUrl, renderId
        (r2_key,url,filename,content_type,size_bytes,category,folder,display_order,meta_json,updated_at)
        VALUES (?,?,?,?,?,'completeful_mockup','products',0,?,datetime('now'))`,
     ).bind(key,mediaPathForKey(key),key.split("/").pop(),mime,bytes.length,JSON.stringify(metadata)).run();
-    return await env.DB.prepare("SELECT * FROM media_assets WHERE id = ?").bind(inserted.meta.last_row_id).first();
+    const media = await env.DB.prepare("SELECT * FROM media_assets WHERE id = ?")
+      .bind(inserted.meta.last_row_id).first();
+    // The file is already safely persisted. A gallery-link failure must not
+    // delete R2 bytes or cause a repeated provider render.
+    if (media) await attachVerifiedMockupToProduct(env, source.product_id, media.id)
+      .catch(() => null);
+    return media;
   } catch {
     await env.WEBSITE_ASSETS.delete(key).catch(() => null);
     throw new Error("mockup_persist_failed");

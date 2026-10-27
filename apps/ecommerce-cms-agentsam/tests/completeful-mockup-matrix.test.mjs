@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { planCompletefulMockupMatrix, renderCompletefulMockupMatrix } from "../backend/completeful/mockup-renderer.js";
+import { attachVerifiedMockupToProduct, planCompletefulMockupMatrix, renderCompletefulMockupMatrix } from "../backend/completeful/mockup-renderer.js";
 
 const draft = {
   id: "draft-1", version: 5, product_id: 12,
@@ -71,4 +71,19 @@ test("color filters and invalid supplier state fail before provider dispatch", a
   });
   assert.equal(empty.error, "no_exact_supplier_mockup_targets");
   assert.deepEqual(empty.rendered, []);
+});
+
+test("verified provider render attaches to existing product gallery without replacing primary or duplicating media", async () => {
+  const calls = [];
+  const env = { DB: { prepare(sql) {
+    return { bind(...params) { return { async run() { calls.push({ sql, params }); return { meta: { changes: 1 } }; } }; } };
+  } } };
+  assert.equal(await attachVerifiedMockupToProduct(env, 23, 808), true);
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0].params, [23, 808, 23, 23]);
+  assert.match(calls[0].sql, /INSERT OR IGNORE INTO product_images/);
+  assert.match(calls[0].sql, /is_primary/);
+  assert.match(calls[0].sql, /SELECT MAX\(position\)/);
+  assert.equal(await attachVerifiedMockupToProduct(env, null, 808), false);
+  assert.equal(calls.length, 1, "no product exists yet; keep the render in Media Library");
 });

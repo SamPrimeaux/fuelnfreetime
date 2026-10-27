@@ -2696,3 +2696,16 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
   display: block; font-size: 9px; color: var(--ps-muted);
   text-align: center; line-height: 1.15;
 }
+
+
+/* Product preview generation is one explicit action available beside both
+   print-side thumbnails on desktop, tablet, and mobile. */
+.product-studio-shell .ps-mini-render-actions {
+  display: grid; gap: 4px; padding: 0 6px 8px;
+}
+.product-studio-shell .ps-mini-render-actions .ps-mini-render-link {
+  width: 100%; margin: 0; min-height: 38px;
+}
+.product-studio-shell .ps-mini-render-link:disabled {
+  opacity: .55; cursor: not-allowed;
+}
