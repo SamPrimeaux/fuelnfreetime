@@ -471,7 +471,7 @@ export async function uploadMedia(request, env, executionCtx = null) {
     if (browserEdit) {
       try { editOperations = JSON.parse(String(editParam)); }
       catch { return json({ error: "Invalid image edit history" }, { status: 400 }); }
-      const allowed = new Set(["markup", "erase", "resize", "undo"]);
+      const allowed = new Set(["markup", "erase", "resize", "crop", "rotate", "flip", "undo"]);
       if (!Array.isArray(editOperations) || editOperations.length > 40 ||
           editOperations.some((op) => !op || !allowed.has(op.type) || JSON.stringify(op).length > 300)) {
         return json({ error: "Unsupported image edit operations" }, { status: 400 });

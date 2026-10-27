@@ -1,0 +1,32 @@
+name: Media workbench real crop and transform
+on:
+  pull_request:
+    paths:
+      - apps/ecommerce-cms-agentsam/packages/agentsam-workbench/**
+      - packages/agentsam-workbench/**
+      - apps/ecommerce-cms-agentsam/frontend/static/css/media-library.css
+      - apps/ecommerce-cms-agentsam/backend/admin/media.js
+      - tests/media-workbench-transform.test.mjs
+      - tests/media-workbench-transform-browser.test.mjs
+      - .github/workflows/media-workbench-transform.yml
+permissions:
+  contents: read
+jobs:
+  media-workbench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Crop validation and editing-contract tests
+        run: node --test tests/media-workbench-transform.test.mjs tests/media-asset-workbench.test.mjs
+      - name: Browser crop rotate flip save and remove-background smoke
+        run: node --test tests/media-workbench-transform-browser.test.mjs
+      - name: Install build dependencies
+        run: |
+          npm ci --ignore-scripts
+          npm ci --prefix apps/ecommerce-cms-agentsam --ignore-scripts
+      - name: Build actual admin delivery
+        run: npm run build:admin
