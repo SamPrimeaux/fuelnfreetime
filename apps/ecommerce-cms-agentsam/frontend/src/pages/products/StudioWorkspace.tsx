@@ -231,7 +231,7 @@ export default function StudioWorkspace({
   const [supplierMockups, setSupplierMockups] = useState<Array<{
     mockup_id: string; variant_color: string; print_location_id: string;
     render_id?: string; status: string; error?: string;
-    asset?: { url: string } | null;
+    asset?: { id?: number; url: string; alt_text?: string | null; is_primary?: number } | null;
   }>>([]);
   // Reopen saved supplier renders instead of forcing a fresh render every time
   // an existing product is edited. Only current, supplier-verified derivatives
