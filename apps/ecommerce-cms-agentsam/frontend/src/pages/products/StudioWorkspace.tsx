@@ -1611,6 +1611,48 @@ export default function StudioWorkspace({
     return () => window.clearTimeout(timer);
   }, [busy, supplierMockups]);
 
+  async function saveSupplierMediaDescription(mediaId: number, altText: string) {
+    if (busy) return;
+    setBusy("media-update");
+    setError("");
+    try {
+      const result = await adminFetch<{ asset?: { alt_text?: string | null } }>(
+        `/api/admin/media/${encodeURIComponent(mediaId)}`, {
+          method: "PATCH", body: JSON.stringify({ alt_text: altText }),
+        },
+      );
+      setSupplierMockups((current) => current.map((mockup) =>
+        mockup.asset?.id === mediaId ? {
+          ...mockup, asset: { ...mockup.asset, alt_text: result.asset?.alt_text ?? altText },
+        } : mockup));
+      setNotice("Image description saved to Media Library.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not update image description.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function setPrimarySupplierMedia(mediaId: number) {
+    if (busy || !draft?.product_id) return;
+    setBusy("media-primary");
+    setError("");
+    try {
+      await adminFetch(
+        `/api/admin/products/${encodeURIComponent(draft.product_id)}/images/${encodeURIComponent(mediaId)}/primary`,
+        { method: "POST" },
+      );
+      setSupplierMockups((current) => current.map((mockup) =>
+        mockup.asset ? { ...mockup, asset: { ...mockup.asset,
+          is_primary: mockup.asset.id === mediaId ? 1 : 0 } } : mockup));
+      setNotice("Primary product photo updated.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not set primary product image.");
+    } finally {
+      setBusy("");
+    }
+  }
+
   const cropKey = asset ? JSON.stringify([asset.id, asset.url, trimTransparent, removeFlatBackground]) : "";
   const cropPending = Boolean(asset && (trimTransparent || removeFlatBackground) &&
     croppedPreview?.key !== cropKey);
