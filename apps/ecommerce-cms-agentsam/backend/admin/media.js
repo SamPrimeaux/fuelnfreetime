@@ -296,6 +296,7 @@ function rowToAsset(row) {
           ? "failed"
           : "ready",
     processing_error: row.processing_error || null,
+    processing_job_id: row.processing_job_id || null,
     display: opt
       ? {
           format: (opt.output_format || contentType || "").replace(/^image\//, "").toUpperCase() || null,
@@ -320,6 +321,7 @@ function rowToAsset(row) {
 const MEDIA_SELECT = `SELECT m.*,
   (SELECT j.status FROM media_asset_jobs j WHERE j.media_asset_id = m.id ORDER BY j.updated_at DESC LIMIT 1) AS processing_status,
   (SELECT j.last_error FROM media_asset_jobs j WHERE j.media_asset_id = m.id ORDER BY j.updated_at DESC LIMIT 1) AS processing_error,
+  (SELECT j.id FROM media_asset_jobs j WHERE j.media_asset_id = m.id ORDER BY j.updated_at DESC LIMIT 1) AS processing_job_id,
   (SELECT j.result_json FROM media_asset_jobs j WHERE j.media_asset_id = m.id AND j.status = 'succeeded' ORDER BY j.updated_at DESC LIMIT 1) AS processing_result
   FROM media_assets m`;
 
