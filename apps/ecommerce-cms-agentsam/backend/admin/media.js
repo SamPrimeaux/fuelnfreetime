@@ -1353,23 +1353,20 @@ export async function detachProductImage(request, env, productId, mediaAssetId) 
 }
 
 export async function setPrimaryProductImage(request, env, productId, mediaAssetId) {
-  await env.DB.prepare(`UPDATE product_images SET is_primary = 0 WHERE product_id = ?`)
-    .bind(productId)
-    .run();
-  await env.DB.prepare(
-    `UPDATE product_images SET is_primary = 1 WHERE product_id = ? AND media_asset_id = ?`
-  )
-    .bind(productId, mediaAssetId)
-    .run();
+  // Never unset an existing primary when the requested file is not linked
+  // to this exact product (for example, a render whose gallery-link failed).
+  const linked = await env.DB.prepare(
+    `SELECT m.url FROM product_images pi JOIN media_assets m ON m.id = pi.media_asset_id
+     WHERE pi.product_id = ? AND pi.media_asset_id = ?`
+  ).bind(productId, mediaAssetId).first();
+  if (!linked) return json({ error: "Product image is not attached to this product" }, { status: 404 });
 
-  const asset = await env.DB.prepare(`SELECT url FROM media_assets WHERE id = ?`)
-    .bind(mediaAssetId)
-    .first();
-  if (asset) {
-    await env.DB.prepare(`UPDATE products SET image_url = ? WHERE id = ?`)
-      .bind(asset.url, productId)
-      .run();
-  }
-
+  await env.DB.batch([
+    env.DB.prepare(`UPDATE product_images SET is_primary = 0 WHERE product_id = ?`).bind(productId),
+    env.DB.prepare(
+      `UPDATE product_images SET is_primary = 1 WHERE product_id = ? AND media_asset_id = ?`
+    ).bind(productId, mediaAssetId),
+    env.DB.prepare(`UPDATE products SET image_url = ? WHERE id = ?`).bind(linked.url, productId),
+  ]);
   return json({ ok: true });
 }
