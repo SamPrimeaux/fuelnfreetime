@@ -2,6 +2,27 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { effectiveArtworkDpi, providerPrintSizeIn } from "../apps/ecommerce-cms-agentsam/packages/agentsam-merch/src/effective-dpi.js";
 
+test("Product Studio classifies extensionless media-library PNGs using MIME metadata", async () => {
+  const { evaluateManufacturingCompatibility } = await import(
+    "../apps/ecommerce-cms-agentsam/packages/agentsam-merch/src/index.js"
+  );
+  const checked = evaluateManufacturingCompatibility(
+    { filename: "Diesel front logo", mimeType: "image/png", widthPx: 4200, heightPx: 4800 },
+    { id: "studio.dtg", manufacturer: "completeful", process: "dtg", format: "png",
+      allowRaster: true, ppi: 300 },
+    { printWidthIn: 14, printHeightIn: 16 },
+  );
+  assert.equal(checked.status, "ready");
+  assert.equal(checked.issues.some((issue) => issue.code === "unknown_source_format"), false);
+  const { readFile } = await import("node:fs/promises");
+  const studio = await readFile(
+    new URL("../apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(studio, /filename: asset\.filename, mimeType: asset\.content_type/);
+  assert.doesNotMatch(studio, /format: asset\.filename\?\.split/);
+});
+
 test("effective DPI uses original pixels at actual printed physical width", () => {
   const printArea = { printWidthIn: 14, printHeightIn: 16 };
   assert.equal(effectiveArtworkDpi({ sourceWidthPx: 600, sourceHeightPx: 600, ...printArea, placementWidthPercent: 60 }).dpi, 71);

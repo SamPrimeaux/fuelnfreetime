@@ -1686,7 +1686,7 @@ export default function StudioWorkspace({
   }
   const manufacturingPreflight = dimensions && !cropPending && printPixels && asset && location
     ? evaluateManufacturingCompatibility(
-        { format: asset.filename?.split(".").pop(),
+        { filename: asset.filename, mimeType: asset.content_type,
           widthPx: artworkCrop?.width ?? dimensions.width,
           heightPx: artworkCrop?.height ?? dimensions.height, bytes: asset.size_bytes },
         { id: "fnf.catalog-raster", manufacturer: "completeful",
