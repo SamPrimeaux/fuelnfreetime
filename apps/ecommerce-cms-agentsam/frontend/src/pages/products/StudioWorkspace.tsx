@@ -193,6 +193,7 @@ export default function StudioWorkspace({
   // genuine garment references, never as completed merchant artwork.
   const [showSupplierSample, setShowSupplierSample] = useState(true);
   const [showPrintMap, setShowPrintMap] = useState(true);
+  const mockupPollCount = useRef(0);
   const [fullPreviewOpen, setFullPreviewOpen] = useState(false);
   useEffect(() => {
     if (!fullPreviewOpen) return;
