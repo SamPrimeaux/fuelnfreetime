@@ -1554,7 +1554,7 @@ export default function StudioWorkspace({
         ok: boolean; error?: string; skipped?: Array<{ reason: string }>;
         rendered?: Array<{
           mockup_id: string; variant_color: string; print_location_id: string;
-          render_id?: string; status: string; error?: string; asset?: { url: string } | null;
+          render_id?: string; status: string; error?: string; asset?: { id?: number; url: string; alt_text?: string | null; is_primary?: number } | null;
         }>;
       }>(`/api/admin/product-studio/drafts/${encodeURIComponent(readyDraft.id)}/render-batch`, {
         method: "POST",
