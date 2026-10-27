@@ -2681,6 +2681,29 @@ export default function StudioWorkspace({
               ))}
             </div>
           )}
+          {supplierMockups.some((item) => item.asset?.url) && (
+            <section className="ps-merchant-render-strip" aria-label="Completeful product images">
+              <div className="ps-merchant-render-header"><strong>Generated product images</strong><small>Exact supplier color and print side · click to inspect</small></div>
+              <div className="ps-merchant-render-list">
+                {supplierMockups.filter((item) => item.asset?.url).map((item) => (
+                  <button type="button" className="ps-merchant-render-thumb"
+                    key={item.mockup_id + item.print_location_id + item.variant_color}
+                    onClick={() => {
+                      const matching = colorAxis ? detail.variants.find((v) =>
+                        String(variantAttributes(v)[colorAxis]).toLowerCase() === item.variant_color.toLowerCase()) : null;
+                      if (matching) setVariantId(catalogVariantId(matching));
+                      if (item.print_location_id !== locationId) choosePrintLocation(item.print_location_id);
+                      setShowSupplierSample(true);
+                      setFullPreviewOpen(true);
+                    }}
+                    aria-label={`Inspect ${item.variant_color} ${detail.print_locations.find((area) => area.print_location_id === item.print_location_id)?.name || "print side"} render`}>
+                    <img src={item.asset!.url} alt="" loading="lazy" />
+                    <span>{item.variant_color} · {detail.print_locations.find((area) => area.print_location_id === item.print_location_id)?.name || "Print"}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
           {fullPreviewOpen && (
             <div className="ps-preview-overlay" onMouseDown={(event) => {
               if (event.target === event.currentTarget) setFullPreviewOpen(false);
