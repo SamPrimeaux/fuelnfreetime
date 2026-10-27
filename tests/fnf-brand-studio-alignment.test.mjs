@@ -28,7 +28,7 @@ test("Product Studio canvas starts expanded and is variant-aware", () => {
   assert.match(studio, /setPanelOpen\] = useState\(false\)/);
   assert.match(studio, /ps-mini-map/);
   assert.match(studio, /ps-artwork-toolbar/);
-  assert.match(studio, /variantImage\(variant\) \|\| location\?\.artboard_image_url/);
+  assert.match(studio, /selectStudioSideImage\(/);
   assert.match(studio, /setProviderRenderUrl\(null\);[^\n]*\n\s*setPreviewAsset\(null\)/);
   assert.match(css, /ps-workspace-body\.is-panel-collapsed/);
   assert.match(css, /@media \(max-width: 760px\)/);
@@ -36,7 +36,10 @@ test("Product Studio canvas starts expanded and is variant-aware", () => {
 
 test("media deletion actions and upload error responses are exposed in existing library", () => {
   const media = read("apps/ecommerce-cms-agentsam/frontend/static/js/media-library.js");
-  assert.match(media, /data-media-album-delete/);
+  const content = read("apps/ecommerce-cms-agentsam/frontend/static/content.html");
+  assert.match(media, /data-media-album-edit/);
+  assert.match(content, /id="media-album-delete"/);
+  assert.match(media, /method: editing \? "PATCH" : "POST"/);
   assert.match(media, /async function deleteAlbum/);
   assert.match(media, /async function deleteSelection/);
   assert.match(media, /data-media-batch="delete"/);

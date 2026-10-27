@@ -5,6 +5,8 @@ import { DatabaseSync } from "node:sqlite";
 import {
   batchMedia,
   createMediaAlbum,
+  updateMediaAlbum,
+  deleteMediaAlbum,
   listMedia,
   listMediaAlbums,
   reorderMedia,
@@ -570,4 +572,37 @@ test("AgentSam single media asset context is server-verified", async () => {
       }),
     /does not belong/
   );
+});
+
+test("album rename, description, cover, and deletion preserve original media records", async () => {
+  const { env, db } = fixture(3);
+  const request = (url, method, data) => new Request("https://example.test" + url, {
+    method, headers: { "content-type": "application/json" }, body: JSON.stringify(data || {}),
+  });
+  const created = await responseJson(await createMediaAlbum(request("/api/admin/media/albums", "POST", {
+    name: "Original title", description: "Starter",
+  }), env));
+  const albumId = Number(created.album.id);
+  assert.ok(albumId);
+  const noMembership = await updateMediaAlbum(request("/api/admin/media/albums/" + albumId, "PATCH", {
+    cover_media_asset_id: 1,
+  }), env, albumId);
+  assert.equal(noMembership.status, 400, "cover may not reference an asset outside the album");
+
+  await responseJson(await batchMedia(request("/api/admin/media/batch", "POST", {
+    ids: [1, 2], action: "album_add", album_id: albumId,
+  }), env));
+  const updated = await responseJson(await updateMediaAlbum(request("/api/admin/media/albums/" + albumId, "PATCH", {
+    name: "Summer collection", description: "Front and back logo selects", cover_media_asset_id: 1,
+  }), env, albumId));
+  assert.equal(updated.album.name, "Summer collection");
+  assert.equal(updated.album.description, "Front and back logo selects");
+  assert.equal(Number(updated.album.cover_media_asset_id), 1);
+  assert.equal(updated.album.cover_url, "/media/images/campaign-1.jpg");
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM media_assets").get().n, 3);
+  const deleted = await responseJson(await deleteMediaAlbum(
+    request("/api/admin/media/albums/" + albumId, "DELETE"), env, albumId));
+  assert.equal(deleted.ok, true);
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM media_assets").get().n, 3);
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM media_albums").get().n, 0);
 });

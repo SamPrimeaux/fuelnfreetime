@@ -664,6 +664,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
       ${adminChrome}
       <div class="console-body">
         ${shellMode.hideAdminNav ? "" : `<aside class="console-sidenav admin-sidebar" data-nav-package="persistent-frosted-rail">${renderSideNav(activeHref)}</aside>`}
+        ${shellMode.hideAdminNav ? "" : '<button type="button" class="console-nav-backdrop" data-console-nav-dismiss aria-label="Close navigation" tabindex="-1"></button>'}
         ${shellMode.hideAdminNav ? "" : mobileDrawerTrigger}
         ${shellMode.hideAdminNav ? "" : `<button type="button" class="console-nav-ghost-toggle console-nav-ghost-toggle--persistent" data-console-nav-toggle aria-label="Show sidebar" title="Show sidebar">${icon("textAlignStart", 21, "console-nav-ghost-icon")}</button>`}
         ${shellMode.hideAdminNav ? "" : mobileDrawerMarkup}
@@ -802,15 +803,65 @@ function syncPersistentNavState() {
 }
 
 function setPersistentNav(open) {
+  const mobile = window.matchMedia("(max-width: 900px)").matches;
   document.body.classList.toggle("console-nav-collapsed", !open);
-  try { localStorage.setItem("fnf-console-nav", open ? "open" : "collapsed"); } catch {}
+  document.body.classList.toggle("console-nav-mobile-open", mobile && open);
+  // Mobile opening is temporary; do not make the desktop rail permanently open.
+  if (!mobile) {
+    try { localStorage.setItem("fnf-console-nav", open ? "open" : "collapsed"); } catch {}
+  }
+  const sidebar = document.querySelector(".console-sidenav.admin-sidebar");
+  if (sidebar) sidebar.inert = !open;
+  if (!open && sidebar?.contains(document.activeElement)) {
+    document.querySelector(".console-nav-ghost-toggle--persistent")?.focus();
+  }
   syncPersistentNavState();
 }
 
+let persistentNavAbort;
 function initPersistentNav() {
-  let open = true;
-  try { open = localStorage.getItem("fnf-console-nav") !== "collapsed"; } catch {}
-  setPersistentNav(open);
+  persistentNavAbort?.abort();
+  persistentNavAbort = new AbortController();
+  const signal = persistentNavAbort.signal;
+  const mq = window.matchMedia("(max-width: 900px)");
+  const savedDesktopOpen = () => {
+    try { return localStorage.getItem("fnf-console-nav") !== "collapsed"; }
+    catch { return true; }
+  };
+  // Navigation is a transient sheet on phones and tablets, not a permanently
+  // opened rail inherited from the desktop preference.
+  setPersistentNav(mq.matches ? false : savedDesktopOpen());
+  const dismiss = () => {
+    if (mq.matches && !document.body.classList.contains("console-nav-collapsed")) setPersistentNav(false);
+  };
+  document.querySelector("[data-console-nav-dismiss]")?.addEventListener("click", dismiss, { signal });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") dismiss();
+  }, { signal });
+  mq.addEventListener("change", () => setPersistentNav(mq.matches ? false : savedDesktopOpen()), { signal });
+  const sidebar = document.querySelector(".console-sidenav.admin-sidebar");
+  if (sidebar) {
+    let swipe = null;
+    sidebar.addEventListener("touchstart", (event) => {
+      if (!mq.matches || event.touches.length !== 1) return;
+      const point = event.touches[0];
+      swipe = { x: point.clientX, y: point.clientY };
+    }, { passive: true, signal });
+    sidebar.addEventListener("touchend", (event) => {
+      if (!swipe || event.changedTouches.length !== 1) return;
+      const point = event.changedTouches[0];
+      const dx = point.clientX - swipe.x;
+      const dy = point.clientY - swipe.y;
+      swipe = null;
+      // Don't eat vertical scrolling inside the navigation.
+      if (dx < -65 && Math.abs(dx) > Math.abs(dy) * 1.4) dismiss();
+    }, { passive: true, signal });
+    sidebar.addEventListener("touchcancel", () => { swipe = null; }, { signal });
+    // Delegation survives hydrateShellNav() replacing the inner navigation links.
+    sidebar.addEventListener("click", (event) => {
+      if (event.target.closest("a.console-nav-item, a.console-nav-child")) dismiss();
+    }, { signal });
+  }
 }
 
 /** Safe-area insets only resolve when the viewport opts in to full-bleed. Idempotent. */

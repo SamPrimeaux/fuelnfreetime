@@ -51,14 +51,14 @@ renderShell("/admin/content", `
           <option value="largest">Largest</option>
           <option value="manual">Manual order</option>
         </select>
-          </div>
-        </div>
         <label class="media-upload-intent-label" for="media-upload-intent">Upload as
           <select id="media-upload-intent" class="media-lib-filter" aria-label="Choose whether files are photos or editable artwork masters">
             <option value="photo">Photo / web media</option>
             <option value="master">Artwork master (no resizing)</option>
           </select>
         </label>
+          </div>
+        </div>
         <input type="file" id="media-file-input" multiple accept="image/*,video/*,.glb,.usdz">
         <button type="button" class="btn small" id="media-upload-btn">Upload</button>
         <button type="button" class="btn primary small" id="media-gallery-new"><span class="media-label-desktop">+ Create gallery</span><span class="media-label-mobile">+ Gallery</span></button>
@@ -80,8 +80,8 @@ renderShell("/admin/content", `
       <form method="dialog" class="media-album-form" id="media-album-form">
         <div>
           <p class="media-album-kicker">Content organization</p>
-          <h2>Create album</h2>
-          <p>Albums group existing media without copying or moving the source asset.</p>
+          <h2 id="media-album-title">Create album</h2>
+          <p id="media-album-help">Albums group existing media without copying or moving the source asset.</p>
         </div>
         <label>
           Album name
@@ -92,6 +92,7 @@ renderShell("/admin/content", `
           <textarea id="media-album-description" rows="3" maxlength="1000" placeholder="Launch campaign selects, hero candidates, gallery images..."></textarea>
         </label>
         <div class="media-album-form-actions">
+          <button type="button" class="btn danger small" id="media-album-delete" hidden>Delete album</button>
           <button type="button" class="btn small" id="media-album-cancel">Cancel</button>
           <button type="button" class="btn primary small" id="media-album-create">Create album</button>
         </div>

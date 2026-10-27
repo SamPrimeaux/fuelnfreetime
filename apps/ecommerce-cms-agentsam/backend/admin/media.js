@@ -663,9 +663,11 @@ async function availableAlbumSlug(env, name, excludeId = null) {
 async function listMediaAlbumRows(env) {
   const sql =
     "SELECT a.id,a.slug,a.name,a.description,a.cover_media_asset_id,a.meta_json,a.created_at,a.updated_at," +
+    " cover.url AS cover_url," +
     " COUNT(maa.media_asset_id) AS asset_count," +
     " COALESCE(a.cover_media_asset_id, MIN(maa.media_asset_id)) AS resolved_cover_media_asset_id" +
     " FROM media_albums a" +
+    " LEFT JOIN media_assets cover ON cover.id = a.cover_media_asset_id" +
     " LEFT JOIN media_album_assets maa ON maa.album_id = a.id" +
     " GROUP BY a.id" +
     " ORDER BY lower(a.name), a.id";

@@ -46,6 +46,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
   let sortMode = "newest";
   let albums = [];
   let activeAlbumId = null;
+  let editingAlbumId = null;
   let previewPresetId = "original";
   let inspectorTab = "details";
   let page = 1;
@@ -338,9 +339,9 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
         openAlbumDialog();
         return;
       }
-      const deleteButton = event.target.closest("[data-media-album-delete]");
-      if (deleteButton && els.albums.contains(deleteButton)) {
-        void deleteAlbum(Number(deleteButton.dataset.mediaAlbumDelete));
+      const editButton = event.target.closest("[data-media-album-edit]");
+      if (editButton && els.albums.contains(editButton)) {
+        openAlbumDialog(Number(editButton.dataset.mediaAlbumEdit));
         return;
       }
       const button = event.target.closest("[data-media-album]");
@@ -484,6 +485,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
       else if (action === "delete") void deleteSelection();
       else if (action === "new-album") openAlbumDialog();
       else if (action === "remove-album" && activeAlbumId) void runBatchAction("album_remove", { album_id: activeAlbumId });
+      else if (action === "album-cover" && activeAlbumId && selectedIds.size === 1) void setAlbumCover([...selectedIds][0]);
     });
     mountListener(els.batchBar, "change", (event) => {
       const albumSelect = event.target.closest("[data-media-batch-album]");
@@ -556,12 +558,14 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
       ...albums.map((album) =>
         '<div class="media-album-item"><button type="button" class="media-album-chip' +
         (Number(activeAlbumId) === Number(album.id) ? ' is-active' : '') +
+        (album.cover_url ? ' has-cover' : '') +
         '" data-media-album="' + Number(album.id) + '">' +
+        (album.cover_url ? '<img class="media-album-cover" src="' + escapeHtml(album.cover_url) + '" alt="" loading="lazy">' : '') +
         '<span>' + escapeHtml(album.name) + '</span>' +
         '<small>' + (album.meta?.kind === "gallery" ? 'Gallery · ' : '') + Number(album.asset_count || 0) + ' asset' +
         (Number(album.asset_count || 0) === 1 ? '' : 's') +
-        '</small></button><button type="button" class="media-album-delete" data-media-album-delete="' + Number(album.id) +
-        '" aria-label="Delete album ' + escapeHtml(album.name) + '" title="Delete album without deleting its assets">×</button></div>'
+        '</small></button><button type="button" class="media-album-edit" data-media-album-edit="' + Number(album.id) +
+        '" aria-label="Edit album ' + escapeHtml(album.name) + '" title="Edit album name, description or delete it">⋯</button></div>'
       ),
     ];
     els.albums.innerHTML = buttons.join("");
@@ -569,10 +573,20 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
 
   }
 
-  function openAlbumDialog() {
+  function openAlbumDialog(id = null) {
     if (!els.albumDialog) return;
-    if (els.albumName) els.albumName.value = "";
-    if (els.albumDescription) els.albumDescription.value = "";
+    const album = Number.isSafeInteger(id) && id > 0
+      ? albums.find((item) => Number(item.id) === id) : null;
+    if (Number.isSafeInteger(id) && id > 0 && !album) return;
+    editingAlbumId = album ? Number(album.id) : null;
+    if (els.albumName) els.albumName.value = album?.name || "";
+    if (els.albumDescription) els.albumDescription.value = album?.description || "";
+    if (els.albumTitle) els.albumTitle.textContent = album ? "Edit album" : "Create album";
+    if (els.albumHelp) els.albumHelp.textContent = album
+      ? "Rename or describe this collection. The original assets remain in the library."
+      : "Albums group existing media without copying or moving the source asset.";
+    if (els.albumCreate) els.albumCreate.textContent = album ? "Save changes" : "Create album";
+    if (els.albumDelete) els.albumDelete.hidden = !album;
     if (typeof els.albumDialog.showModal === "function") els.albumDialog.showModal();
     else els.albumDialog.setAttribute("open", "");
     setTimeout(() => els.albumName?.focus(), 0);
@@ -582,6 +596,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     if (!els.albumDialog) return;
     if (typeof els.albumDialog.close === "function") els.albumDialog.close();
     else els.albumDialog.removeAttribute("open");
+    editingAlbumId = null;
   }
 
   function openGalleryDialog() {
@@ -678,12 +693,16 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     }
     if (els.albumCreate) els.albumCreate.disabled = true;
     try {
-      const result = await adminFetch("/api/admin/media/albums", {
-        method: "POST",
-        body: JSON.stringify({ name, description, kind: "album", status: "draft" }),
+      const editing = editingAlbumId;
+      const result = await adminFetch(editing
+        ? "/api/admin/media/albums/" + encodeURIComponent(editing)
+        : "/api/admin/media/albums", {
+        method: editing ? "PATCH" : "POST",
+        body: JSON.stringify(editing ? { name, description }
+          : { name, description, kind: "album", status: "draft" }),
       });
-      const albumId = Number(result.album?.id || 0);
-      if (albumId && selectedIds.size) {
+      const albumId = Number(result.album?.id || editing || 0);
+      if (!editing && albumId && selectedIds.size) {
         await runBatchAction("album_add", { album_id: albumId }, { reload: false });
       }
       activeAlbumId = albumId || null;
@@ -758,12 +777,36 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     emitSelection();
   }
 
+  async function setAlbumCover(assetId) {
+    if (!activeAlbumId) return;
+    try {
+      await adminFetch("/api/admin/media/albums/" + encodeURIComponent(activeAlbumId), {
+        method: "PATCH",
+        body: JSON.stringify({ cover_media_asset_id: Number(assetId) }),
+      });
+      clearSelection();
+      await load();
+      if (els.note) {
+        els.note.className = "admin-note";
+        els.note.textContent = "Album cover updated. Your original image is unchanged.";
+        els.note.style.display = "block";
+      }
+    } catch (error) {
+      if (els.note) {
+        els.note.className = "admin-note error";
+        els.note.textContent = error.message || "Could not set album cover. The image must belong to the album.";
+        els.note.style.display = "block";
+      }
+    }
+  }
+
   async function deleteAlbum(albumId) {
     const album = albums.find((item) => Number(item.id) === albumId);
-    if (!album || !confirm('Delete album "' + album.name + '"? Its media assets will remain in the library.')) return;
+    if (!album || !confirm('Delete album "' + album.name + '"? Only this album and its membership links will be removed. Your images and original files remain in the library.')) return;
     try {
       await adminFetch('/api/admin/media/albums/' + encodeURIComponent(albumId), { method: 'DELETE' });
       if (Number(activeAlbumId) === albumId) activeAlbumId = null;
+      closeAlbumDialog();
       page = 1;
       await load();
     } catch (err) {
@@ -889,6 +932,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
       mediaCapabilities.can_materialize_derivatives ? '<button type="button" data-media-batch="optimize">Optimize selected</button>' : '',
       '<button type="button" data-media-batch="new-album">New album</button>',
       '<button type="button" class="media-batch-danger" data-media-batch="delete">Delete selected assets…</button>',
+      activeAlbumId && count === 1 ? '<button type="button" data-media-batch="album-cover">Set as album cover</button>' : '',
       activeAlbumId ? '<button type="button" data-media-batch="remove-album">Remove from current album</button>' : '',
       '<label class="media-batch-menu-label">Move to folder',
       '<select class="media-lib-filter" data-media-batch-move>',
@@ -1972,6 +2016,9 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     els.albumDialog = document.getElementById("media-album-dialog");
     els.albumForm = document.getElementById("media-album-form");
     els.albumName = document.getElementById("media-album-name");
+    els.albumTitle = document.getElementById("media-album-title");
+    els.albumHelp = document.getElementById("media-album-help");
+    els.albumDelete = document.getElementById("media-album-delete");
     els.albumDescription = document.getElementById("media-album-description");
     els.albumCancel = document.getElementById("media-album-cancel");
     els.albumCreate = document.getElementById("media-album-create");
@@ -2050,7 +2097,10 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     setupMediaWorkbench();
 
     // Core controls mount before optional 3D behavior.
-    if (els.albumNew) mountListener(els.albumNew, "click", openAlbumDialog);
+    if (els.albumNew) mountListener(els.albumNew, "click", () => openAlbumDialog());
+    if (els.albumDelete) mountListener(els.albumDelete, "click", () => {
+      if (editingAlbumId) void deleteAlbum(editingAlbumId);
+    });
     if (els.albumCancel) mountListener(els.albumCancel, "click", closeAlbumDialog);
     if (els.albumCreate) mountListener(els.albumCreate, "click", () => void createAlbumFromDialog());
     if (els.albumForm) mountListener(els.albumForm, "submit", (event) => {

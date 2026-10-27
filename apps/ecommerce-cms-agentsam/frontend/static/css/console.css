@@ -1692,6 +1692,27 @@ body.console-nav-collapsed .console-nav-ghost-toggle--persistent:hover::before {
   body.console-nav-collapsed .console-nav-ghost-toggle--persistent { display: inline-flex !important; }
 }
 
+/* Transient mobile rail backdrop: one tap outside or left swipe dismisses. */
+.console-nav-backdrop { display: none; }
+@media (max-width: 900px) {
+  .console-nav-backdrop {
+    display: block; position: fixed; z-index: 159;
+    inset: var(--c-topbar-h, 56px) 0 0; width: 100%; border: 0;
+    background: rgba(14, 18, 25, .32); cursor: default;
+    opacity: 0; visibility: hidden; pointer-events: none;
+    transition: opacity .2s ease, visibility .2s ease;
+  }
+  body.console-nav-mobile-open .console-nav-backdrop {
+    opacity: 1; visibility: visible; pointer-events: auto;
+  }
+  body.console-nav-mobile-open .console-sidenav.admin-sidebar {
+    overscroll-behavior: contain; touch-action: pan-y;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .console-nav-backdrop { transition: none; }
+}
+
 /* --- Closable sidenav (admin-ui React shell) --- */
 .console-nav-toggle-btn {
   display: inline-flex;
