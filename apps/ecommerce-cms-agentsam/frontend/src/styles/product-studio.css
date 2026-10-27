@@ -2740,3 +2740,25 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
   .product-studio-shell .ps-sample-mode-toggle button { min-height: 40px; }
   .product-studio-shell .ps-catalog-sample-note { bottom: 8px; left: 8px; padding: 8px; }
 }
+
+
+/* Measured source quality, before creating supplier print derivatives. */
+.product-studio-shell .ps-print-quality-guidance{
+  display:flex;align-items:center;justify-content:space-between;gap:15px;
+  padding:10px 17px;background:#fff8eb;border-block:1px solid #efddb9;
+  color:#5f411a;font:500 12px/1.45 Inter,system-ui,sans-serif;min-width:0;
+}
+.product-studio-shell .ps-print-quality-guidance__copy{display:grid;gap:3px;min-width:0}
+.product-studio-shell .ps-print-quality-guidance__copy strong{font-size:12px;font-weight:750}
+.product-studio-shell .ps-print-quality-guidance__copy span{color:#866941}
+.product-studio-shell .ps-print-quality-guidance__actions{display:flex;gap:7px;flex:none;flex-wrap:wrap}
+.product-studio-shell .ps-print-quality-guidance__actions button{
+  min-height:36px;background:#fff;border:1px solid #deb976;border-radius:8px;
+  color:#664819;font-weight:700;padding:7px 11px;font-size:11px;cursor:pointer;
+}
+.product-studio-shell .ps-print-quality-guidance__actions button:hover{background:#ffedcc}
+@media(max-width:850px){
+  .product-studio-shell .ps-print-quality-guidance{flex-direction:column;align-items:stretch}
+  .product-studio-shell .ps-print-quality-guidance__actions{width:100%}
+  .product-studio-shell .ps-print-quality-guidance__actions button{flex:1}
+}

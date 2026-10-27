@@ -23,3 +23,33 @@ export function suggestPrintScale(input: {
       recommended >= currentScale) return null;
   return recommended;
 }
+
+
+// A preflight explanation, not a quality-enhancing transform. The source pixel
+// dimensions always remain authoritative; we never certify resampled pixels.
+export function printSourceRecommendation(input: {
+  currentPpi: number | null | undefined;
+  targetPpi: number | null | undefined;
+  providerPpi: number | null | undefined;
+  printedWidthIn: number | null | undefined;
+  printedHeightIn: number | null | undefined;
+  sourceWidthPx: number | null | undefined;
+  sourceHeightPx: number | null | undefined;
+}) {
+  const { currentPpi, targetPpi, printedWidthIn, printedHeightIn, sourceWidthPx, sourceHeightPx } = input;
+  if (![currentPpi, targetPpi, printedWidthIn, printedHeightIn, sourceWidthPx, sourceHeightPx]
+    .every((n) => typeof n === "number" && Number.isFinite(n) && n > 0)) return null;
+  const target = Number(targetPpi);
+  const current = Number(currentPpi);
+  return {
+    targetPpi: target,
+    source: typeof input.providerPpi === "number" && Number.isFinite(input.providerPpi) && input.providerPpi > 0
+      ? "provider" as const : "studio_guideline" as const,
+    needsSharperSource: current < target,
+    requiredWidthPx: Math.ceil(Number(printedWidthIn) * target),
+    requiredHeightPx: Math.ceil(Number(printedHeightIn) * target),
+    pixelDensityMultiplier: Math.round((target / current) * 10) / 10,
+    sourceWidthPx: Math.round(Number(sourceWidthPx)),
+    sourceHeightPx: Math.round(Number(sourceHeightPx)),
+  };
+}

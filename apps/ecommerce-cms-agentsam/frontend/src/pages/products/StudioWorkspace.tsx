@@ -6,7 +6,7 @@ import { updateSellingVariants, toggleSellingGroup } from "./studio-selling-vari
 import { adminFetch, adminFormFetch } from "../../lib/api";
 import { evaluateManufacturingCompatibility } from "../../../../packages/agentsam-merch/src/index.js";
 import { studioArtworkQuality, type ArtworkCrop } from "./studio-artwork-quality";
-import { suggestPrintScale } from "./studio-print-fit";
+import { suggestPrintScale, printSourceRecommendation } from "./studio-print-fit";
 import { alphaBounds } from "./studio-alpha-bounds";
 import StudioIcon from "./StudioIcon";
 import ProductImage from "./ProductImage";
@@ -1706,6 +1706,15 @@ export default function StudioWorkspace({
     issue.status === "needs_variant" || issue.status === "unsupported") || [];
   const autoFitAvailable = resolutionFit !== null && resolutionBlockers.length > 0 &&
     resolutionBlockers.every((issue) => issue.code === "insufficient_resolution");
+  const printSource = printSourceRecommendation({
+    currentPpi: manufacturingPreflight?.effectivePpi,
+    targetPpi: manufacturingPreflight?.target.ppi,
+    providerPpi: location?.dpi,
+    printedWidthIn: quality.result?.printedWidthIn,
+    printedHeightIn: quality.result?.printedHeightIn,
+    sourceWidthPx: artworkCrop?.width ?? dimensions?.width,
+    sourceHeightPx: artworkCrop?.height ?? dimensions?.height,
+  });
   return (
     <div className="ps-workspace" data-agentsam-resource="product-design-workspace">
       <header className="ps-workspace-header">
@@ -1789,6 +1798,23 @@ export default function StudioWorkspace({
             )}
         </div>
       </header>
+      {printSource?.needsSharperSource && (
+        <section className="ps-print-quality-guidance" aria-label="Print quality preflight">
+          <div className="ps-print-quality-guidance__copy">
+            <strong>{Math.round(manufacturingPreflight?.effectivePpi ?? 0)} PPI source · {printSource.targetPpi} PPI {printSource.source === "provider" ? "supplier requirement" : "studio quality goal"}</strong>
+            <span>At this size, use artwork with at least {printSource.requiredWidthPx.toLocaleString()} × {printSource.requiredHeightPx.toLocaleString()} active pixels.
+              Current crop: {printSource.sourceWidthPx.toLocaleString()} × {printSource.sourceHeightPx.toLocaleString()}.
+              {printSource.source === "studio_guideline" && " Completeful has not supplied a verified DPI requirement."}
+              {" "}Resampling pixels won't recover missing detail.</span>
+          </div>
+          <div className="ps-print-quality-guidance__actions">
+            {autoFitAvailable && resolutionFit != null
+              ? <button type="button" onClick={() => { setScale(resolutionFit); setError(""); }}>Fit safely to {resolutionFit}%</button>
+              : <button type="button" onClick={() => { setTab("upload"); setPanelOpen(true); }}>Choose sharper original</button>}
+            <button type="button" onClick={() => { setTab("tools"); setPanelOpen(true); }}>Review background / crop</button>
+          </div>
+        </section>
+      )}
       {catalogWarning && <p className="ps-restore-notice" role="alert">{catalogWarning}</p>}
       {restoringDraft && <p className="ps-restore-notice" role="status">Restoring saved design and artwork…</p>}
       <div className={`ps-workspace-body ${panelOpen ? "" : "is-panel-collapsed"}`}>
