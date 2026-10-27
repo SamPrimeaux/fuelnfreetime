@@ -26,7 +26,7 @@ test("deployed and reusable media workbenches both expose real transform operati
     assert.match(source, /data-media-tool="crop"/);
     assert.match(source, /data-editor-transform="rotate-left"/);
     assert.match(source, /data-editor-transform="flip-horizontal"/);
-    assert.match(source, /form\.addEventListener\('submit'/);
+    assert.match(source, /cropForm\.addEventListener\('submit'/);
     assert.match(source, /operations\.push\(\{ type: 'crop'/);
     assert.doesNotMatch(source, /\bform\.querySelector\('button'\)\.disabled/, "undefined form must not break save and comment");
   }
