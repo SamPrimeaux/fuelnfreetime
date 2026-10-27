@@ -6,6 +6,7 @@ export default function StudioIcon({
   size?: number;
 }) {
   const paths: Record<string, React.ReactNode> = {
+    plus: <path d="M12 4v16M4 12h16" />,
     search: (
       <>
         <circle cx="10.5" cy="10.5" r="6.5" />

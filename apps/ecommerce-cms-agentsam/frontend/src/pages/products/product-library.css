@@ -1,0 +1,62 @@
+/* Store-product library. The existing React admin shell and shared collection tokens own layout. */
+.pl-workspace{padding-bottom:calc(116px + env(safe-area-inset-bottom,0px))}
+.pl-header p{margin-top:10px;color:var(--cs-sub);font-size:13px}
+.pl-header-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.pl-panel{background:#fff;border:1px solid var(--cs-line);border-radius:15px;min-width:0;overflow:hidden}
+.pl-controls{padding:16px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--cs-line)}
+.pl-search{display:flex;align-items:center;gap:10px;padding:0 13px;flex:1 1 240px;max-width:470px;min-height:42px;border:1px solid var(--cs-line);border-radius:9px;color:#7a8791}
+.pl-search input{background:transparent;border:0;outline:0;width:100%;min-width:0;color:var(--cs-ink);font-size:13px}
+.pl-status select{min-height:42px;min-width:144px;border:1px solid var(--cs-line);border-radius:9px;background:#fff;color:var(--cs-ink);padding:0 12px}
+.pl-count{margin-left:auto;font-size:12px;color:var(--cs-sub);white-space:nowrap}
+.pl-table-scroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.pl-table{width:100%;border-collapse:collapse;font-size:12px;text-align:left;table-layout:auto}
+.pl-table th{font-size:10px;color:#78838c;letter-spacing:.07em;text-transform:uppercase;font-weight:750;background:#fafbfc;white-space:nowrap}
+.pl-table th,.pl-table td{padding:15px 18px;border-bottom:1px solid var(--cs-line);vertical-align:middle}
+.pl-table tbody tr:last-child td{border-bottom:0}
+.pl-table tbody tr:hover{background:#fafbfc}
+.pl-table th:first-child{min-width:220px}
+.pl-table .pl-product{display:flex;align-items:center;gap:13px;min-width:0}
+.pl-thumb{width:55px;height:55px;flex:0 0 55px;background:#f2f4f5;border:1px solid #e5e8ea;border-radius:9px;display:grid;place-items:center;overflow:hidden;color:#8d9ca8}
+.pl-thumb img{display:block;width:100%;height:100%;object-fit:contain}
+.pl-product-info{display:grid;gap:5px;min-width:0}
+.pl-name{font-size:13px;color:var(--cs-ink);font-weight:700;text-decoration:none;overflow-wrap:normal;word-break:normal;line-height:1.4}
+.pl-name:hover{text-decoration:underline}
+.pl-product-info>span{font-size:10px;color:#8b959d;overflow:hidden;text-overflow:ellipsis;max-width:380px;white-space:nowrap}
+.pl-price{font-weight:680;white-space:nowrap}
+.pl-badge{display:inline-flex;font-size:10px;font-weight:780;letter-spacing:.035em;text-transform:uppercase;border-radius:999px;padding:5px 9px;background:#eef0f2;color:#67727a}
+.pl-badge--active{background:#e1f5e9;color:#176c44}
+.pl-badge--draft{background:#fff2d5;color:#895700}
+.pl-low{color:#ac5321;font-size:10px;white-space:nowrap}
+.pl-action{text-align:right;white-space:nowrap}
+.pl-alert{padding:23px;color:#a42d2d;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.pl-alert button{background:transparent;border:0;text-decoration:underline;color:inherit;cursor:pointer}
+.pl-empty{min-height:260px;padding:50px 22px;display:grid;align-content:center;justify-items:center;text-align:center;gap:12px;color:#76818a}
+.pl-empty strong{color:var(--cs-ink);font-size:16px}
+.pl-empty p{margin:0;max-width:330px}
+.pl-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+@media(max-width:700px){
+  .pl-workspace{padding:18px 14px calc(110px + env(safe-area-inset-bottom,0px))}
+  .pl-header{flex-direction:column;gap:16px}
+  .pl-header-actions{width:100%}
+  .pl-header-actions .cs-button{flex:1;justify-content:center;min-width:0}
+  .pl-controls{padding:14px;gap:10px}
+  .pl-search{max-width:none;flex-basis:100%}
+  .pl-status{flex:1}
+  .pl-status select{width:100%}
+  .pl-count{font-size:11px}
+  .pl-table-scroll{overflow:visible}
+  .pl-table,.pl-table tbody,.pl-table tr,.pl-table td{display:block;width:100%}
+  .pl-table thead{display:none}
+  .pl-table tbody{display:grid;gap:10px;padding:10px;background:#f8f9fa}
+  .pl-table tbody tr{display:grid;grid-template-columns:1fr 1fr;gap:11px 15px;background:#fff;border:1px solid var(--cs-line);border-radius:12px;padding:14px;min-width:0}
+  .pl-table tbody tr:hover{background:#fff}
+  .pl-table td{border:0;padding:0;min-width:0;font-size:12px}
+  .pl-table td:not(.pl-product-cell):not(.pl-action)::before{content:attr(data-label);display:block;font-size:10px;color:#8a949c;margin-bottom:4px;font-weight:680}
+  .pl-table td.pl-product-cell{grid-column:1/-1;min-width:0;padding-bottom:12px;border-bottom:1px solid var(--cs-line)}
+  .pl-product-info{min-width:0}
+  .pl-name{font-size:13px;overflow-wrap:break-word}
+  .pl-product-info>span{max-width:210px}
+  .pl-table td.pl-action{grid-column:1/-1;display:flex;justify-content:flex-end;padding-top:3px}
+  .pl-table .pl-action .cs-button{min-height:36px}
+}
+@media(max-width:360px){.pl-count{width:100%;margin-left:0}.pl-header-actions{flex-direction:column;align-items:stretch}}

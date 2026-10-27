@@ -20,6 +20,9 @@ test("canonical route manifest covers every clean admin document", () => {
 });
 
 test("SPA route ownership resolves Product Studio without hardcoded Worker regexes", () => {
+  const products = adminRouteForPath("/admin/products");
+  assert.equal(products?.handler, "admin-spa");
+  assert.equal(products?.context, "commerce.products");
   const create = adminRouteForPath("/admin/products/create");
   const edit = adminRouteForPath("/admin/products/create/prod_123");
   const artwork = adminRouteForPath("/admin/products/help/artwork");

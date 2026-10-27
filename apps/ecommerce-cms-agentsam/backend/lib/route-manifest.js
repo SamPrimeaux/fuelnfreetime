@@ -58,7 +58,7 @@ export const ADMIN_ROUTE_MANIFEST = [
     legacy: ["/admin/home.html", "/admin/dashboard.html"],
   }),
   coreAdmin({ id: "admin.orders", path: "/admin/orders", handler: "admin-html", page: "orders", context: "commerce.orders", legacy: ["/admin/orders.html"] }),
-  coreAdmin({ id: "admin.products", path: "/admin/products", handler: "admin-html", page: "products", context: "commerce.products", legacy: ["/admin/products.html"] }),
+  coreAdmin({ id: "admin.products", path: "/admin/products", handler: "admin-spa", context: "commerce.products", legacy: ["/admin/products.html"] }),
   coreAdmin({ id: "admin.collections", path: "/admin/collections", handler: "admin-spa", context: "commerce.collections", legacy: ["/admin/collections.html"] }),
   coreAdmin({ id: "admin.collections.new", path: "/admin/collections/new", handler: "admin-spa", context: "commerce.collection-new" }),
   coreAdmin({ id: "admin.collections.edit", path: "/admin/collections/:collectionId", handler: "admin-spa", context: "commerce.collection" }),
