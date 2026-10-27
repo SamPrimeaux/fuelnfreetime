@@ -2732,7 +2732,28 @@ export default function StudioWorkspace({
                   )}
                 </div>
                 <aside className="ps-preview-views">
-                  <strong>Design views</strong>
+                  <strong>Product image & design details</strong>
+                  <label className="ps-preview-field">Product title
+                    <input type="text" maxLength={160} value={title} onChange={(event) => setTitle(event.target.value)} />
+                  </label>
+                  <div className="ps-preview-numeric-fields">
+                    <label className="ps-preview-field">X position (%)
+                      <input type="number" min="0" max="100" value={x}
+                        onChange={(event) => setX(Math.max(0, Math.min(100, Number(event.target.value) || 0)))} />
+                    </label>
+                    <label className="ps-preview-field">Y position (%)
+                      <input type="number" min="0" max="100" value={y}
+                        onChange={(event) => setY(Math.max(0, Math.min(100, Number(event.target.value) || 0)))} />
+                    </label>
+                    <label className="ps-preview-field">Artwork scale (%)
+                      <input type="number" min="5" max="150" value={scale}
+                        onChange={(event) => setScale(Math.max(5, Math.min(150, Number(event.target.value) || 5)))} />
+                    </label>
+                  </div>
+                  <button type="button" className="ps-button ps-wide" disabled={Boolean(busy)}
+                    onClick={() => void saveDraft()}>{busy === "save" ? "Saving…" : "Save design changes"}</button>
+                  <small>Placement edits invalidate old print files and mockups. Accurate print-safe geometry is shown in Print map mode.</small>
+                  <strong>Print sides</strong>
                   {renderSideReviewCards("expanded")}
                   <p>Choose Front or Back to compare the selected color. Artwork stays attached to its own print location.</p>
                   {!displayedRenderedUrl && supplierPhotoOnly && exactSideCatalogReference && (
