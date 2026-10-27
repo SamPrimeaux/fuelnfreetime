@@ -192,6 +192,7 @@ export default function StudioWorkspace({
   // Catalog samples may already contain another example design. Show them as
   // genuine garment references, never as completed merchant artwork.
   const [showSupplierSample, setShowSupplierSample] = useState(true);
+  const [showPrintMap, setShowPrintMap] = useState(true);
   const [fullPreviewOpen, setFullPreviewOpen] = useState(false);
   useEffect(() => {
     if (!fullPreviewOpen) return;
@@ -447,6 +448,7 @@ export default function StudioWorkspace({
     ...(isFrontLocation ? blankVariantSources : [supplierBlankCandidate]),
   ].filter((url): url is string => Boolean(url)))];
   const designImageSources = [...new Set([
+    ...(showPrintMap ? [location?.artboard_image_url] : []),
     ...cleanSideSources,
     ...(isFrontLocation
       ? [sideReferenceImage, placementBackground, location?.artboard_image_url]
@@ -456,6 +458,8 @@ export default function StudioWorkspace({
   const sidePhotoKey = `${variantId}:${locationId}`;
   const cleanSidePhotoLoaded = loadedSidePhoto?.key === sidePhotoKey &&
     cleanSideSources.includes(loadedSidePhoto.src);
+  const mappedArtboardLoaded = Boolean(showPrintMap && loadedSidePhoto?.key === sidePhotoKey &&
+    location?.artboard_image_url && loadedSidePhoto.src === location.artboard_image_url);
 
   async function approveGarmentBlank(item: MediaAsset) {
     if (!garmentColor) { setNotice("Select a real garment color before assigning its blank."); return; }
@@ -479,7 +483,7 @@ export default function StudioWorkspace({
   }
   // A missing clean back image is never replaced with the Front of a different
   // color. The exact supplier sample stays visible as a labeled reference.
-  const artboardAspectRatio = location?.artboard_width && location?.artboard_height
+  const artboardAspectRatio = showPrintMap && location?.artboard_width && location?.artboard_height
     ? Number(location.artboard_width) / Number(location.artboard_height)
     : 4 / 5;
   // Switching a print location must never carry the previous side's artwork.
@@ -614,7 +618,7 @@ export default function StudioWorkspace({
       ? location.file_width / location.file_height
       : 1;
   const hasProviderPlacementFrame = Boolean(
-    location?.artboard_width &&
+    mappedArtboardLoaded && location?.artboard_width &&
       location?.artboard_height &&
       location?.width &&
       location?.height &&
@@ -1491,7 +1495,7 @@ export default function StudioWorkspace({
   }
 
   async function renderSupplierMockups() {
-    if (!asset || !showArtwork) {
+    if (!(asset && showArtwork) && !Object.values(sidePlacements).some((side) => side.asset && side.showArtwork)) {
       setError("Select artwork on at least one print side before generating product previews.");
       openTab("designs");
       return;
@@ -1500,7 +1504,7 @@ export default function StudioWorkspace({
     // print side, and submits the verified supplier color x side matrix.
     // Provider rendering remains an explicit merchant action, never triggered
     // automatically by variant switching or publishing.
-    const saved = preparedAsset && preparedFor === currentPlacementKey
+    const saved = !(asset && showArtwork) || (preparedAsset && preparedFor === currentPlacementKey)
       ? await saveDraft()
       : await prepareArtwork();
     if (!saved) return;
@@ -1623,7 +1627,10 @@ export default function StudioWorkspace({
     const blankSources = [approved, ...(front ? photoSources : [candidate])]
       .filter((url): url is string => Boolean(url));
     const referenceOnly = !verifiedRender && !approved && !(front && blankVariantSources.length > 0);
-    return { id, label: sideLocation.name || (front ? 'Front' : 'Back'),
+    // Accessory Back artboards can exist even without any Back mockup templates.
+    // Show them as unverified side references, never as finished product photos.
+    const artboardReferenceUrl = !front && distinctArtboard ? sideLocation.artboard_image_url || null : null;
+    return { id, label: sideLocation.name || (front ? 'Front' : 'Back'), artboardReferenceUrl,
       photoSources: [...new Set([...blankSources,
         ...(!front && !catalogReferenceUrl && String(color).trim().toLowerCase() === "black"
           ? photoSources : [])])],
@@ -1637,7 +1644,7 @@ export default function StudioWorkspace({
   // canvas rather than baking the supplier's finished image into the editor.
   const displayedRenderedUrl = showSupplierSample
     ? currentSideRenderedUrl || currentRenderUrl : null;
-  const supplierPhotoOnly = !cleanSidePhotoLoaded &&
+  const supplierPhotoOnly = !cleanSidePhotoLoaded && !mappedArtboardLoaded &&
     Boolean(designImage) && !displayedRenderedUrl;
   function renderSideReviewCards(size: "mini" | "expanded") {
     return (
@@ -1654,6 +1661,8 @@ export default function StudioWorkspace({
                 ? <ProductImage sources={[side.verifiedRenderUrl]} alt="" />
                 : side.catalogReferenceUrl
                   ? <ProductImage sources={[...side.photoSources, side.catalogReferenceUrl]} alt="" />
+                  : side.artboardReferenceUrl
+                    ? <ProductImage sources={[side.artboardReferenceUrl]} alt="" />
                   : side.photoSources.length
                     ? <ProductImage sources={side.photoSources} alt="" />
                     : <span className="ps-side-review-unverified">Garment view not available</span>}
@@ -1676,7 +1685,7 @@ export default function StudioWorkspace({
             </span>
             <span className="ps-side-review-title">{side.label}</span>
             <span className="ps-side-review-status">{side.verifiedRenderUrl ? "Supplier render"
-              : side.referenceOnly ? "Color sample · art separate"
+              : side.referenceOnly ? (side.artboardReferenceUrl ? "Provider artboard · color unverified" : "Color sample · art separate")
               : side.previewIsCurrent ? "Prepared · local preview"
               : side.placed?.asset ? "Artwork placed" : "Add artwork"}</span>
           </button>
