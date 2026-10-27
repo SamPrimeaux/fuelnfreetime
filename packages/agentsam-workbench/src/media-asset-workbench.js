@@ -261,6 +261,8 @@ export function createMediaAssetWorkbench({ mount, addComment, saveDerivative, i
         operations.push({ type: 'undo' });
         cropRect = null;
         syncCropFields();
+        resizeForm.elements.width.value = canvas.width;
+        resizeForm.elements.height.value = canvas.height;
         refreshState();
         renderPins();
         renderCropSelection();
@@ -383,6 +385,8 @@ export function createMediaAssetWorkbench({ mount, addComment, saveDerivative, i
     changed = true;
     cropRect = null;
     syncCropFields();
+    resizeForm.elements.width.value = canvas.width;
+    resizeForm.elements.height.value = canvas.height;
     refreshState();
     renderPins();
     renderCropSelection();
@@ -413,6 +417,8 @@ export function createMediaAssetWorkbench({ mount, addComment, saveDerivative, i
     changed = true;
     cropRect = null;
     syncCropFields();
+    resizeForm.elements.width.value = canvas.width;
+    resizeForm.elements.height.value = canvas.height;
     refreshState();
     renderPins();
     renderCropSelection();
