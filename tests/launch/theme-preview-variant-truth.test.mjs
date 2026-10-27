@@ -12,13 +12,19 @@ import { fileURLToPath } from "node:url";
 
 const here=path.dirname(fileURLToPath(import.meta.url));
 const sourceRoot=path.resolve(process.env.FNF_THEME_SOURCE_ROOT || path.join(here,"../.."));
-const runtimePath=path.join(sourceRoot,"apps/ecommerce-cms-agentsam/frontend/static/js/theme-preview-runtime.js");
+const rendererPath=path.join(sourceRoot,"packages/fnf-theme/src/editor/preview-adapter.js");
+const registryPath=path.join(sourceRoot,"packages/theme-contract/runtime/theme-preview-registry.js");
+const portablePath=path.join(sourceRoot,"packages/theme-contract/runtime/portable-sections.js");
 
 test("all advertised theme section presets represent distinct renderer behavior", () => {
-  assert.ok(fs.existsSync(runtimePath),"Theme Studio runtime must exist for visual theme proof");
+  for (const file of [portablePath,registryPath,rendererPath]) {
+    assert.ok(fs.existsSync(file),"Canonical Theme Studio source must exist: "+file);
+  }
   const context={window:{}};
-  vm.runInNewContext(fs.readFileSync(runtimePath,"utf8"),context,{filename:runtimePath});
-  const runtime=context.window.FNF_THEME_PREVIEW;
+  context.globalThis=context.window;
+  for (const file of [portablePath,registryPath,rendererPath])
+    vm.runInNewContext(fs.readFileSync(file,"utf8"),context,{filename:file});
+  const runtime=context.window.ThemeStudioPreview;
   assert.ok(runtime?.render && runtime?.catalog);
 
   const collisions=[];
@@ -45,7 +51,7 @@ test("all advertised theme section presets represent distinct renderer behavior"
             card1:{name:"Collection one",href:"/shop"},
             __editor:{
               templateKey,
-              themePreset:variant.preset,
+              themePreset:variant.id,
               visibility:{enabled:true},
               blocks:[{id:"card1",templateKey:"collection-card",enabled:true}],
             },

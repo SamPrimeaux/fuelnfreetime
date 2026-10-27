@@ -1993,3 +1993,23 @@ body.console-nav-collapsed .console-nav-ghost-toggle--persistent:hover::before {
 @media(max-width:680px){ .console-topbar-context{display:none}.console-search-wrap{max-width:calc(100% - 172px);left:43%}.console-search kbd{display:none} }
 .console-profile-store-monogram{width:30px;height:30px;flex:none;display:grid;place-items:center;background:#d7e4e9;color:#304e5c;border-radius:8px;font-size:13px;font-weight:800}
 .console-profile-store-monogram[hidden],.console-profile-store-logo[hidden]{display:none!important}
+
+
+/* A compact native navigation filter inside the open sidebar, including the
+   mobile drawer. Navigation groups remain mounted; the search is not a modal. */
+.console-sidenav-search {
+  display:flex;align-items:center;gap:8px;margin:10px 10px 6px;
+  padding:0 11px;min-height:36px;border:1px solid #dce1e5;
+  border-radius:9px;background:#fff;color:#77828c;flex-shrink:0;
+}
+.console-sidenav-search:focus-within { border-color:#8995aa;box-shadow:0 0 0 2px #586b851c; }
+.console-sidenav-search input { flex:1;min-width:0;border:0;outline:0;background:transparent;color:#23313b;font:500 12px Inter,system-ui,sans-serif; }
+.console-sidenav-search input::placeholder { color:#98a1aa; }
+.console-sidenav-search kbd { font:600 10px Inter,system-ui,sans-serif;color:#a6b0b8; }
+.console-sidenav.is-filtering .console-nav-children.is-search-open {display:block!important;height:auto!important;max-height:none!important;visibility:visible!important;overflow:visible!important;}
+.console-sidenav .console-nav-group > [hidden],
+.console-sidenav .console-nav-children > [hidden],
+.console-sidenav .console-nav-label[hidden],
+.console-sidenav .console-nav-children[hidden] {display:none!important}
+body.console-nav-collapsed .console-sidenav-search {display:none}
+@media(max-width:900px){.admin-nav--drawer .console-sidenav-search{margin:10px 8px 8px}}

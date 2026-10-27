@@ -9,6 +9,8 @@ await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 await cp(path.join(root, 'public'), output, { recursive: true, filter: p => !p.includes('/public/admin') && !['.DS_Store','.gitkeep'].includes(path.basename(p)) });
 await cp(path.join(root, 'packages/heuristic-theme/storefront'), output, { recursive: true });
+// Source-faithful, authenticated Heuristic draft previews must not depend on a public route.
+await cp(path.join(root, 'packages/heuristic-theme/storefront'), path.join(output, 'admin/theme-previews/heuristic'), { recursive: true });
 await cp(path.join(root, 'packages/heuristic-theme/contracts'), path.join(output, 'theme/contracts'), { recursive: true });
 await cp(path.join(root, 'packages/heuristic-theme/presets'), path.join(output, 'theme/presets'), { recursive: true });
 await cp(path.join(root, 'packages/heuristic-theme/theme.json'), path.join(output, 'theme/theme.json'));

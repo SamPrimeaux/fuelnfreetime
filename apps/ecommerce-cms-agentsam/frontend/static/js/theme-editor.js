@@ -243,7 +243,7 @@
             '<section class="te-drawer-panel" data-drawer-panel="app-embeds" hidden><div class="te-panel-title"><span class="te-panel-kicker">Storefront</span><h2>App embeds</h2><p>Extensions that run on the storefront, not admin apps.</p></div><input class="te-page-search" id="te-embed-search" placeholder="Search app embeds" aria-label="Search app embeds"><div class="te-empty" id="te-embed-empty">No storefront embeds are installed for this theme.</div></section>' +
           '</aside>',
           '<main class="theme-studio-canvas">',
-            '<div class="te-preview-bar"><span id="te-preview-label">Storefront preview</span><div class="te-preview-bar__actions"><button class="te-import-live" type="button" id="te-import-live" hidden>Import live page</button><button class="te-icon-btn" type="button" id="te-refresh" title="Refresh preview">', icon.refresh, '</button><a class="te-icon-btn" id="te-open-tab" href="#" target="_blank" rel="noopener" title="Open published storefront page in a new tab">', icon.external, '</a></div></div>',
+            '<div class="te-preview-bar"><span id="te-preview-label">Storefront preview</span><div class="te-preview-bar__actions"><button class="te-import-live" type="button" id="te-import-live" hidden>Import live page</button><button class="te-icon-btn" type="button" id="te-refresh" title="Refresh preview">', icon.refresh, '</button><a class="te-icon-btn" id="te-open-tab" href="#" target="_blank" rel="noopener" title="Open private CMS draft in a new tab">', icon.external, '</a></div></div>',
             '<div class="te-preview-stage"><div class="te-preview-device" id="te-preview-device" data-device="desktop"><iframe id="theme-preview" title="Storefront preview" class="theme-editor-preview"></iframe></div></div>',
             '<div class="te-preview-status"><span class="te-preview-mode">Local draft preview</span><span class="te-selected-path" id="te-selected-path">Select a section in the preview or tree</span></div>',
           '</main>',
@@ -479,11 +479,15 @@
 
   async function setTheme(nextTheme) {
     if (!nextTheme || nextTheme === selectedTheme) return;
-    if (!installedThemeSlugs.has(nextTheme)) {
-      setNote('This theme is a reference preview, not an installed CMS artifact.', 'error');
+    // An installed artifact gates publishing, not inspection of a genuine
+    // source theme. The packaged Heuristic / Revise / FNF renderers are always
+    // available for merchant comparison, even before account installation.
+    const packagedTheme = window.ThemeStudioPreview?.getTheme?.(nextTheme);
+    if (!installedThemeSlugs.has(nextTheme) && !packagedTheme) {
+      setNote('The requested theme has no registered rendering implementation.', 'error');
       return;
     }
-    if (!host) {
+    if (!host && installedThemeSlugs.has(nextTheme)) {
       try {
         const saved = await editorRequest('/api/admin/cms/theme-selection', {
           method: 'PUT',
@@ -498,6 +502,7 @@
       }
     }
     selectedTheme = nextTheme;
+    if (!installedThemeSlugs.has(nextTheme)) setNote('Previewing the packaged ' + humanize(nextTheme) + ' theme. Your live storefront and published theme are unchanged.', 'success');
     document.querySelectorAll('[data-theme-preview]').forEach(function(button) {
       const current = button.dataset.themePreview === selectedTheme;
       button.classList.toggle('is-active', current);
@@ -2244,7 +2249,7 @@
       iframe.srcdoc = html;
       if (previewBlobUrl) URL.revokeObjectURL(previewBlobUrl);
       previewBlobUrl = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
-      byId('te-open-tab').href = previewBlobUrl;
+      byId('te-open-tab').href = privatePreviewUrl();
       byId('te-preview-label').textContent = 'Preview — ' + ((pageData && pageData.title) || humanize(slug));
       return;
     }
@@ -2699,7 +2704,12 @@
     });
   }
 
+  function privatePreviewUrl() {
+    return '/admin/cms-preview?slug=' + encodeURIComponent(slug) + '&theme=' + encodeURIComponent(selectedTheme);
+  }
+
   async function refreshPreview() {
+    if (!host) byId('te-open-tab').href = privatePreviewUrl();
     if (host) {
       try {
         const preview = await host.adapter.resolvePreview(slug, pageData);
@@ -2725,15 +2735,26 @@
     }
     const route = pageRoute(slug);
     if (!route) {
-      byId('theme-preview').srcdoc = '<!doctype html><html><body style="font:16px system-ui;padding:32px"><h2>No storefront route connected</h2><p>This CMS page exists, but needs a public rendering/publishing adapter before it can be previewed.</p></body></html>';
-      byId('te-open-tab').removeAttribute('href');
-      byId('te-preview-label').textContent = 'CMS document — no public route';
+      // Page-level publication routing is not required for an authenticated
+      // authoring preview. Use the actual shipped Heuristic source document,
+      // not a fake blank section or a redirected homepage. The products
+      // authoring page corresponds to the original shop source template.
+      const sourceSlug = slug === 'products' ? 'shop' : slug;
+      const sourceTemplates = ['home','shop','about','community','collaborate','policies','terms','cart','collections','collection','product','order-confirmation'];
+      if (sourceTemplates.includes(sourceSlug)) {
+        byId('theme-preview').removeAttribute('srcdoc');
+        byId('theme-preview').src = '/admin/theme-previews/heuristic/' + encodeURIComponent(sourceSlug) + '.html';
+        byId('te-preview-label').textContent = 'Private Heuristic source preview — ' + ((pageData && pageData.title) || humanize(slug));
+      } else {
+        byId('theme-preview').srcdoc = '<!doctype html><html><body style="font:16px system-ui;padding:32px"><h2>Theme template mapping needed</h2><p>This page has saved CMS content, but its Heuristic layout has not been mapped. Revise and FNF can render this draft now through the theme selector.</p></body></html>';
+        byId('te-preview-label').textContent = 'Private CMS draft — ' + ((pageData && pageData.title) || humanize(slug));
+      }
       return;
     }
     const separator = route.indexOf('?') >= 0 ? '&' : '?';
     byId('theme-preview').removeAttribute('srcdoc');
     byId('theme-preview').src = route + separator + (liveUnimported ? '_=' : 'preview=1&_=' ) + Date.now();
-    byId('te-open-tab').href = liveUnimported ? route : route + separator + 'preview=1';
+    byId('te-open-tab').href = privatePreviewUrl();
     byId('te-preview-label').textContent = slug === 'bridge-fly'
       ? 'Aviation scene · authenticated preview only'
       : liveUnimported ? 'Live storefront — source inspection' : 'Draft preview — ' + ((pageData && pageData.title) || humanize(slug));
@@ -3285,10 +3306,17 @@
       installedThemeSlugs = new Set((catalog.themes || []).map(function(theme) { return theme.slug; }));
       persistedThemeVersion = Number(catalog.content_version || 0);
       selectedTheme = catalog.preview_theme?.slug || catalog.active_theme?.slug || 'heuristic';
+      // An authenticated preview link can return to the same full source theme
+      // even when it is inspectable but not installed for publication.
+      const requestedTheme = params.get('theme');
+      if (requestedTheme && window.ThemeStudioPreview?.getTheme?.(requestedTheme)) selectedTheme = requestedTheme;
       document.querySelectorAll('[data-theme-preview]').forEach(function(button) {
         const installed = installedThemeSlugs.has(button.dataset.themePreview);
-        button.disabled = !installed;
-        button.title = installed ? 'Choose installed theme preview' : 'Theme artifact is not installed';
+        const packaged = Boolean(window.ThemeStudioPreview?.getTheme?.(button.dataset.themePreview));
+        button.disabled = !installed && !packaged;
+        button.title = installed ? 'Installed theme: draft preview available'
+          : packaged ? 'Full source theme available to preview; installation required to publish'
+          : 'Theme renderer unavailable';
         button.classList.toggle('is-active', button.dataset.themePreview === selectedTheme);
         button.setAttribute('aria-pressed', String(button.dataset.themePreview === selectedTheme));
       });

@@ -448,6 +448,11 @@ function renderSideNav(activeHref, userNav, options = {}) {
   const channels = nav.channels.map((item) => renderNavItem(item, activeHref)).join("");
   const apps = nav.apps.map((item) => renderNavItem(item, activeHref)).join("");
   return `
+    <div class="console-sidenav-search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg>
+      <input type="search" data-console-nav-search placeholder="Find a page or tool" aria-label="Filter sidebar navigation" autocomplete="off">
+      <kbd aria-hidden="true">/</kbd>
+    </div>
     <div class="console-sidenav-scroll">
       <div class="console-nav-group">${main}</div>
       <div class="console-nav-label">Sales channels</div>
@@ -606,6 +611,52 @@ function shellRouteLabel(activeHref) {
 function hydrateTopbarContext(activeHref) {
   const label = document.getElementById("console-route-title");
   if (label) label.textContent = shellRouteLabel(activeHref);
+}
+
+function installSidenavSearch() {
+  if (window.__consoleSidenavSearchBound) return;
+  window.__consoleSidenavSearchBound = true;
+  document.addEventListener("input", (event) => {
+    const search = event.target.closest?.("[data-console-nav-search]");
+    if (!search) return;
+    const sidebar = search.closest(".console-sidenav");
+    if (!sidebar) return;
+    const term = search.value.trim().toLocaleLowerCase();
+    sidebar.classList.toggle("is-filtering", Boolean(term));
+    sidebar.querySelectorAll(".console-nav-group").forEach(group => {
+      const rows = [...group.children];
+      // Split menus are paired with the following children group.
+      for (let i=0; i<rows.length; i++) {
+        const row=rows[i];
+        if (row.matches(".console-nav-children")) continue;
+        const children=rows[i+1]?.matches(".console-nav-children") ? rows[i+1] : null;
+        const ownLabel=(row.querySelector(".console-nav-item")?.textContent || row.textContent || "").trim().toLocaleLowerCase();
+        const parentMatch=Boolean(term && ownLabel.includes(term));
+        const matchingChildren=children ? [...children.querySelectorAll(".console-nav-child")].filter(item => {
+          const matched=Boolean(!term || parentMatch || item.textContent.toLocaleLowerCase().includes(term));
+          item.hidden=!matched;
+          return matched;
+        }) : [];
+        const shown=!term || parentMatch || matchingChildren.length>0;
+        row.hidden=!shown;
+        if (children) {
+          children.hidden=!shown;
+          children.classList.toggle("is-search-open", Boolean(term && shown));
+        }
+      }
+    });
+    sidebar.querySelectorAll(".console-nav-label").forEach(label => {
+      const next=label.nextElementSibling;
+      label.hidden=Boolean(term && (!next || [...next.children].every(item=>item.hidden)));
+    });
+  });
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && event.target?.matches?.("[data-console-nav-search]")) {
+      event.target.value="";
+      event.target.dispatchEvent(new Event("input", { bubbles:true }));
+      event.target.blur();
+    }
+  });
 }
 
 function installCommandPalette() {
@@ -805,6 +856,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
 
   hydrateTopbarContext(activeHref);
   installCommandPalette();
+  installSidenavSearch();
   bindConsoleGlobalHandlers();
   void loadShellCompany();
   import('/admin/profile-popup/index.js')
