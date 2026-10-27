@@ -48,6 +48,32 @@ test("large transparent PNG is ready for the operator-defined DTG profile", asyn
   assert.ok(result.effectivePpi >= 300);
 });
 
+test("extensionless saved artwork resolves its real PNG MIME before manufacturing preflight", async () => {
+  const dtg = await profile("completeful/dtg-back-large.json");
+  const dimensions = { widthPx: 4500, heightPx: 5100 };
+  const target = { printWidthIn: 14, printHeightIn: 16 };
+  const front = evaluateManufacturingCompatibility(
+    { filename: "Diesel front logo", mimeType: "image/png", ...dimensions }, dtg, target,
+  );
+  assert.equal(front.status, COMPATIBILITY_STATUS.READY);
+  assert.ok(!front.issues.some((issue) => issue.code === "unknown_source_format"));
+  const back = evaluateManufacturingCompatibility(
+    { filename: "Diesel back logo", content_type: "image/png", ...dimensions }, dtg, target,
+  );
+  assert.equal(back.status, COMPATIBILITY_STATUS.READY);
+  const renamed = evaluateManufacturingCompatibility(
+    { filename: "Friendly name with no extension", r2_key: "studio/artwork/source.png", ...dimensions },
+    dtg, target,
+  );
+  assert.equal(renamed.status, COMPATIBILITY_STATUS.READY);
+  const trulyUnknown = evaluateManufacturingCompatibility(
+    { filename: "Untyped artwork", mimeType: "application/octet-stream", ...dimensions },
+    dtg, target,
+  );
+  assert.equal(trulyUnknown.status, COMPATIBILITY_STATUS.UNSUPPORTED);
+  assert.ok(trulyUnknown.issues.some((issue) => issue.code === "unknown_source_format"));
+});
+
 test("low-resolution raster is not falsely called production ready", async () => {
   const result = evaluateManufacturingCompatibility(
     { format: "png", mediaKind: "raster", widthPx: 1500, heightPx: 1500, colorSpace: "srgb" },
