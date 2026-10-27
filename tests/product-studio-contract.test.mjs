@@ -172,7 +172,13 @@ test("Product Studio persistence and Completeful mutations are server-side contr
   assert.match(migration, /completeful_render_id/);
   assert.match(migration, /retail_price_cents/);
 
-  assert.match(backend, /completefulRequest\(env, "POST", "\/designs"/);
+  // Product Studio delegates the Completeful design operation to the typed
+  // provider module rather than duplicating the raw provider request here.
+  assert.match(backend, /completefulDesigns\.create\(env/);
+  const provider = await readFile(
+    new URL("../apps/ecommerce-cms-agentsam/backend/completeful/designs.js", import.meta.url), "utf8",
+  );
+  assert.match(provider, /completefulRequest\(env, "POST", "\/designs"/);
   assert.match(backend, /completefulRequest\(env, "POST", "\/mockups\/renders"/);
   assert.match(backend, /`\/shops\/\$\{encodeURIComponent\(shopId\)\}\/products`/);
   assert.match(backend, /completeful_operations/);

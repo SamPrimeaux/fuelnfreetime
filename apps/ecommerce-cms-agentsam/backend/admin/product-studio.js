@@ -6,6 +6,7 @@ import {
 import {
   planCompletefulMockupMatrix, renderCompletefulMockupMatrix, pollCompletefulMockupRender,
 } from "../completeful/mockup-renderer.js";
+import { completefulDesigns } from "../completeful/designs.js";
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -583,9 +584,7 @@ async function createDesign(env, draft) {
   }
 
   try {
-    const { data, meta } = await completefulRequest(env, "POST", "/designs", {
-      idempotencyKey,
-      body: {
+    const { data, meta } = await completefulDesigns.create(env, {
         name: `${draft.title} · ${location?.name || "Product artwork"}`,
         artfile_url: artUrl,
         width: Number(location?.file_width || 0) || undefined,
@@ -593,8 +592,7 @@ async function createDesign(env, draft) {
         shop_id: shop.completeful_shop_id,
         collection: "product-studio",
         tags: ["product-studio", draft.id],
-      },
-    });
+    }, idempotencyKey);
     const designId = data?.design?.id || data?.id;
     if (!designId) throw new Error("Completeful design response did not include a design id");
     await finishOperation(env, operationKey, meta, designId);

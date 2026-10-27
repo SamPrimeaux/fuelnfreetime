@@ -99,6 +99,9 @@ import { handleGrowthApi } from "./growth.js";
 import { handleDiscountsApi } from "./discounts.js";
 import { handleCompletefulAdminApi } from "./completeful.js";
 import { handleProductStudioAdminApi } from "./product-studio.js";
+import {
+  handleDesignsAdminApi, handleCompletefulDesignListApi, handleCompletefulDesignValidationApi,
+} from "./designs.js";
 import { readProductSupplierSelection } from "./product-selling-selection.js";
 import { getBrandWorkspace, patchBrandWorkspace, searchBrandAssets } from "./brand.js";
 import { getStoreSearchDiscovery } from "./search-discovery.js";
@@ -919,10 +922,19 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
     return handleDiscountsApi(request, env, url, user);
   }
 
+  if (path === "/api/admin/designs" || path.startsWith("/api/admin/designs/") ||
+      path === "/api/admin/design-collections" || path.startsWith("/api/admin/design-collections/")) {
+    return handleDesignsAdminApi(request, env, url, user);
+  }
+
   if (path.startsWith("/api/admin/product-studio")) {
     return handleProductStudioAdminApi(request, env, url);
   }
 
+  if (path === "/api/admin/completeful/designs" && method === "GET")
+    return handleCompletefulDesignListApi(env, url, user);
+  if (path === "/api/admin/completeful/print-files/validate" && method === "POST")
+    return handleCompletefulDesignValidationApi(request, env, user);
   if (path.startsWith("/api/admin/completeful")) {
     return handleCompletefulAdminApi(request, env, url);
   }
