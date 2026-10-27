@@ -239,7 +239,7 @@ export default function StudioWorkspace({
   useEffect(() => {
     if (!draft?.id || !(Number(draft.product_id) > 0)) return;
     const controller = new AbortController();
-    adminFetch<{ images?: Array<{ url: string; meta_json?: string | null }> }>(
+    adminFetch<{ images?: Array<{ id: number; url: string; alt_text?: string | null; is_primary?: number; meta_json?: string | null }> }>(
       `/api/admin/products/${encodeURIComponent(draft.product_id)}/images`,
       { signal: controller.signal },
     ).then((response) => {
