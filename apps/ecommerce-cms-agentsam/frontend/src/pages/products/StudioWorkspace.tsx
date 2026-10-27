@@ -2460,6 +2460,14 @@ export default function StudioWorkspace({
           <div className="ps-stage-toolbar">
             <div className="ps-product-title-edit"><label htmlFor="ps-product-title">Product name</label><input id="ps-product-title" aria-label="Product name" type="text" maxLength={160} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Name this product" /><small title={detail.product.name}>Blank: {detail.product.name}</small></div>
             <div className="ps-stage-toolbar__controls">
+              {location?.artboard_image_url && (
+                <div className="ps-artboard-mode" role="group" aria-label="Canvas reference">
+                  <button type="button" className={showPrintMap ? "is-active" : ""}
+                    aria-pressed={showPrintMap} onClick={() => { setShowPrintMap(true); setShowSupplierSample(false); }}>Print map</button>
+                  <button type="button" className={!showPrintMap ? "is-active" : ""}
+                    aria-pressed={!showPrintMap} onClick={() => setShowPrintMap(false)}>Product photo</button>
+                </div>
+              )}
               {enabledLocations.length > 1 && (
                 <div className="ps-print-side-toggle" role="group" aria-label="Print location">
                   {enabledLocations.map((candidate) => (
