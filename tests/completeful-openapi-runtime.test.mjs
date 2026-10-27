@@ -106,7 +106,7 @@ test("Actual admin catalog mockup endpoint uses provider live API, not D1 mockup
 test("OpenAPI contract regeneration is deterministic", async () => {
   const { execFileSync } = await import("node:child_process");
   const out = execFileSync(process.execPath,
-    [new URL("../scripts/providers/generate-completeful-api.mjs", import.meta.url).pathname,"--check"],
+    [new URL("../scripts/providers/sync-completeful-sdk.mjs", import.meta.url).pathname,"--check"],
     { encoding: "utf8" });
-  assert.match(out, /55 operations/);
+  assert.match(out, /Verified TypeScript SDK/);
 });

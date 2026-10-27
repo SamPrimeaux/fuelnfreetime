@@ -1,0 +1,15 @@
+{
+  "package": "@inneranimalmedia/agentsam-provider-completeful",
+  "version": "2.6.14",
+  "api_spec_sha256": "5aba75fabf74a4363399cf3de2f68d1b32ee33d4cad912d151f02ea9b442438e",
+  "sdk_source": "agentsam-sdk/packages/providers/completeful/src/core",
+  "artifacts": {
+    "client.js": "60ce6e8b7cfef2d1a878fe2cdda5ec4808fefe1069896ecb1a627fea1cdf9919",
+    "client.d.ts": "4a0c1c439b9ec1702b531536c5f6597dc4011666c3353a5c48939c47a4a4325f",
+    "generated/operations.generated.js": "648de6823f0b3dd998b1f20197a7489011bdd3aeba7c0238372bdaaf3bbc9266",
+    "generated/operations.generated.d.ts": "664fd928dfeae455b2c0054b6afca2a0d54c198ca540690d1074ddcf304834a6",
+    "generated/types.generated.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+    "generated/types.generated.d.ts": "e1cc91498ee96be2a77432c382a321ea65d3510a6100d069d96c35f391a80ca0"
+  },
+  "format": "compiled-typescript-only"
+}

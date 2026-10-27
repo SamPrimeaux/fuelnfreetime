@@ -7,8 +7,8 @@
     "types:check": "wrangler types --strict-vars false --check",
     "app:frontend:sync": "node scripts/sync-app-frontend.mjs",
     "build": "npm run build:admin",
-    "api:completeful:generate": "node scripts/providers/generate-completeful-api.mjs",
-    "api:completeful:check": "node scripts/providers/generate-completeful-api.mjs --check",
+    "api:completeful:generate": "node scripts/providers/sync-completeful-sdk.mjs --sync",
+    "api:completeful:check": "node scripts/providers/sync-completeful-sdk.mjs --check",
     "test:completeful-api": "node --test tests/completeful-openapi-runtime.test.mjs tests/merch-designs-api.test.mjs apps/ecommerce-cms-agentsam/tests/completeful-*.test.mjs",
     "build:admin": "npm run api:completeful:check && node scripts/ensure-admin-deps.mjs && npm run build --prefix apps/ecommerce-cms-agentsam/frontend && npm run check:cms-authoring && npm run test:cms-authoring && npm run app:frontend:sync && npm run guard:boundaries",
     "build:admin:skip": "npm run app:frontend:sync && npm run guard:boundaries",
@@ -168,6 +168,7 @@
     "@jsquash/jpeg": "^1.6.0",
     "@jsquash/png": "^3.1.1",
     "@jsquash/resize": "^2.1.1",
-    "@jsquash/webp": "^1.5.0"
+    "@jsquash/webp": "^1.5.0",
+    "@inneranimalmedia/agentsam-provider-completeful": "file:vendor/agentsam-provider-completeful"
   }
 }
