@@ -451,7 +451,7 @@ function renderSideNav(activeHref, userNav, options = {}) {
     <div class="console-sidenav-search">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg>
       <input type="search" data-console-nav-search placeholder="Find a page or tool" aria-label="Filter sidebar navigation" autocomplete="off">
-      <kbd aria-hidden="true">/</kbd>
+      <kbd aria-hidden="true">⌘K</kbd>
     </div>
     <div class="console-sidenav-scroll">
       <div class="console-nav-group">${main}</div>
@@ -651,6 +651,12 @@ function installSidenavSearch() {
     });
   });
   document.addEventListener("keydown", event => {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      event.preventDefault();
+      if (document.body.classList.contains("console-nav-collapsed")) setPersistentNav(true);
+      requestAnimationFrame(() => document.querySelector(".console-sidenav.admin-sidebar [data-console-nav-search]")?.focus());
+      return;
+    }
     if (event.key === "Escape" && event.target?.matches?.("[data-console-nav-search]")) {
       event.target.value="";
       event.target.dispatchEvent(new Event("input", { bubbles:true }));
@@ -809,41 +815,34 @@ function renderShell(activeHref, mainHtml, options = {}) {
   const mobileDrawerTrigger = includeMobileDrawer ? `<button type="button" class="console-nav-ghost-toggle admin-menu-toggle" id="admin-menu-toggle" aria-label="Show sidebar" title="Show sidebar" aria-expanded="false" aria-controls="admin-drawer">
           ${icon("textAlignStart", 21, "console-nav-ghost-icon")}
         </button>` : "";
+  // One navigation owner: sidebar search remains; utilities stay available to inspector.
   const adminChrome = shellMode.hideAdminNav ? "" : `
-      <header class="console-topbar">
-        <div class="console-topbar-context" id="console-topbar-context" aria-live="polite">
-          <span class="console-topbar-context-overline">ADMIN / MERCHANDISING</span>
-          <strong id="console-route-title">Workspace</strong>
-        </div>
-        <div class="console-search-wrap">
-          <button class="console-search" type="button" id="console-command-trigger" aria-keyshortcuts="Meta+K Control+K" aria-label="Search pages and tools">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#9b9b9b" stroke-width="1.8"/><path d="m20 20-3.2-3.2" stroke="#9b9b9b" stroke-width="1.8" stroke-linecap="round"/></svg>
-            <span>Search</span>
-            <kbd>⌘K</kbd>
-          </button>
-        </div>
+      <header class="console-topbar" aria-label="Admin utilities">
+        <button type="button" class="console-nav-ghost-toggle console-nav-ghost-toggle--persistent" data-console-nav-toggle aria-label="Show sidebar" title="Show sidebar">
+          ${icon("textAlignStart", 20, "console-nav-ghost-icon")}
+        </button>
         <div class="console-topbar-actions">
           <button type="button" class="console-icon-btn" id="agentsam-toggle" aria-label="Agent Sam" aria-expanded="false" title="Agent Sam">
             <img src="${AGENT_TRIGGER_ICON}" alt="" width="22" height="22" aria-hidden="true" style="display:block;border-radius:50%;object-fit:cover">
           </button>
           <button type="button" class="console-icon-btn" aria-label="Notifications">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 19a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.5"/></svg>
-
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 19a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.5"/></svg>
           </button>
         </div>
-      </header>
-`;
+      </header>`;
+
   document.getElementById("console-app").innerHTML = `
     <div class="console-shell admin-shell${shellMode.hideAdminNav ? " is-editor-mode" : ""}" data-shell-mode="${shellMode.id}" data-nav-packages="persistent-frosted-rail${includeMobileDrawer ? " mobile-glass-drawer" : ""}">
-      ${adminChrome}
       <div class="console-body">
-        ${shellMode.hideAdminNav ? "" : `<aside class="console-sidenav admin-sidebar" data-nav-package="persistent-frosted-rail">${renderSideNav(activeHref)}</aside>`}
+        ${shellMode.hideAdminNav ? "" : `<aside class="console-sidenav admin-sidebar" data-nav-package="persistent-frosted-rail"><div class="console-sidebar-heading"><strong>Workspace</strong><button type="button" class="console-nav-collapse" data-console-nav-toggle aria-label="Collapse sidebar" title="Collapse sidebar">${icon("arrowLeftToLine", 19, "console-nav-collapse-icon")}</button></div>${renderSideNav(activeHref)}</aside>`}
         ${shellMode.hideAdminNav ? "" : '<button type="button" class="console-nav-backdrop" data-console-nav-dismiss aria-label="Close navigation" tabindex="-1"></button>'}
         ${shellMode.hideAdminNav ? "" : mobileDrawerTrigger}
-        ${shellMode.hideAdminNav ? "" : `<button type="button" class="console-nav-ghost-toggle console-nav-ghost-toggle--persistent" data-console-nav-toggle aria-label="Show sidebar" title="Show sidebar">${icon("textAlignStart", 21, "console-nav-ghost-icon")}</button>`}
         ${shellMode.hideAdminNav ? "" : mobileDrawerMarkup}
         <div class="console-workspace">
-          <main class="${mainClass}">${mainHtml}</main>
+          <div class="console-content-column">
+            ${adminChrome}
+            <main class="${mainClass}">${mainHtml}</main>
+          </div>
           <aside id="agentsam-dock" class="agentsam-dock" aria-hidden="true"></aside>
         </div>
       </div>
@@ -976,7 +975,7 @@ function syncPersistentNavState() {
     const label = collapsed ? "Show sidebar" : (window.matchMedia?.("(max-width: 900px)")?.matches ? "Close sidebar" : "Collapse sidebar");
     button.setAttribute("aria-label", label);
     button.setAttribute("title", label);
-    button.innerHTML = icon(collapsed ? "textAlignStart" : "x", 21, "console-nav-ghost-icon");
+    button.innerHTML = icon(collapsed ? "textAlignStart" : "arrowLeftToLine", 21, "console-nav-ghost-icon");
   });
 }
 

@@ -93,13 +93,13 @@ renderShell('/admin/inventory', `
   function render() {
     const q = search.value.trim().toLowerCase();
     const filtered = groups.filter(group => {
-      if (filter.value === 'low' && group.low_stock_count === 0) return false;
+      if (filter.value === 'low' && (group.source?.kind === 'connected_provider' || group.low_stock_count === 0)) return false;
       if (filter.value === 'draft' && group.status !== 'draft') return false;
       return !q || [group.title, group.source?.label, ...group.variants.flatMap(v => [v.sku, v.size, v.color])]
         .some(value => String(value || '').toLowerCase().includes(q));
     });
     const allVariants = groups.reduce((sum, group) => sum + group.variants.length, 0);
-    const lowProducts = groups.filter(g => g.low_stock_count).length;
+    const lowProducts = groups.filter(g => g.source?.kind !== 'connected_provider' && g.low_stock_count).length;
     counts.innerHTML = '<span><strong>' + groups.length + '</strong> products</span>' +
       '<span><strong>' + allVariants + '</strong> variants</span>' +
       '<span><strong>' + lowProducts + '</strong> needing attention</span>';
@@ -118,15 +118,16 @@ renderShell('/admin/inventory', `
         '</strong><div class="inventory-meta"><span class="inventory-chip">' + escape(status) +
         '</span><span class="inventory-chip">' + escape(source.label) +
         '</span><span>' + group.variants.length + ' variants</span>' +
-        (group.low_stock_count ? '<span class="inventory-chip is-warning">' + group.low_stock_count + ' low</span>' : '') +
-        '</div></div><div class="inventory-total"><strong>' + group.total_available +
-        '</strong><small>recorded units</small></div></summary>' +
+        (!linked && group.low_stock_count ? '<span class="inventory-chip is-warning">' + group.low_stock_count + ' low</span>' : '') +
+        '</div></div><div class="inventory-total"><strong>' + (linked ? '—' : group.total_available) +
+        '</strong><small>' + (linked ? 'Supplier fulfilled' : 'recorded units') + '</small></div></summary>' +
         '<div class="inventory-variant-wrap"><table class="inventory-table"><thead><tr><th>SKU</th><th>Size</th><th>Color</th><th>Available</th><th></th></tr></thead><tbody>' +
         group.variants.map(v => '<tr data-variant-id="' + v.id + '"><td>' + escape(v.sku) + '</td><td>' +
           escape(v.size || '—') + '</td><td>' + escape(v.color || '—') + '</td><td>' +
-          '<input class="inv-qty" aria-label="Inventory for ' + escape(v.sku) + '" type="number" min="0" step="1" value="' + v.inventory_qty +
-          '" data-original="' + v.inventory_qty + '"' + (linked ? ' title="A connected supplier may control fulfillment stock"' : '') +
-          '></td><td><button type="button" class="inv-save" disabled>Save</button>' +
+          (linked ? '<span class="inventory-untracked" title="Supplier stock is validated through the fulfillment link">Supplier fulfilled</span>' :
+            '<input class="inv-qty" aria-label="Inventory for ' + escape(v.sku) + '" type="number" min="0" step="1" value="' + v.inventory_qty +
+            '" data-original="' + v.inventory_qty + '">') +
+          '</td><td>' + (linked ? '<small>Provider managed</small>' : '<button type="button" class="inv-save" disabled>Save</button>') +
           '<small class="inventory-row-status" role="status"></small></td></tr>').join('') +
         '</tbody></table><div style="padding:10px 16px;display:flex;justify-content:flex-end"><a class="inventory-link" href="/admin/product-edit?id=' +
         group.id + '">Edit product details →</a></div></div></details>';

@@ -25,7 +25,7 @@ export function resolveProductSource(product, linkedProvider = null) {
       catalog_id: linkedCatalog,
       external_id: linkedExternal,
       sync_status: linkedProvider.sync_status || 'pending',
-      manages_inventory: true,
+      manages_inventory: false,
     });
   }
   return Object.freeze({
@@ -70,7 +70,8 @@ export function groupProductInventory(rows = [], links = []) {
       price_cents: row.variant_price_cents == null ? null : Number(row.variant_price_cents),
     });
     group.total_available += inventory;
-    if (inventory <= 3) group.low_stock_count++;
+    // Supplier availability is checked at checkout; local quantities are not stock.
+    if (group.source.kind === "merchant_managed" && inventory <= 3) group.low_stock_count++;
   }
   return [...groups.values()].map((group) => ({
     ...group,

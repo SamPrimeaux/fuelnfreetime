@@ -60,3 +60,10 @@
   .pl-table .pl-action .cs-button{min-height:36px}
 }
 @media(max-width:360px){.pl-count{width:100%;margin-left:0}.pl-header-actions{flex-direction:column;align-items:stretch}}
+
+/* The accessible product-name link covers the whole row; Edit stays independent. */
+.pl-table tbody tr{position:relative;cursor:pointer}
+.pl-table .pl-name::after{content:"";position:absolute;inset:0;z-index:1}
+.pl-table .pl-name:focus-visible{outline:2px solid #6c5ce7;outline-offset:3px;border-radius:3px}
+.pl-table .pl-action a{position:relative;z-index:2}
+.pl-table tbody tr:focus-within{background:#f6f4ff}

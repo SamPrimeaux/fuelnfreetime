@@ -192,6 +192,8 @@ export default function StudioWorkspace({
   // Catalog samples may already contain another example design. Show them as
   // genuine garment references, never as completed merchant artwork.
   const [showSupplierSample, setShowSupplierSample] = useState(true);
+  const [showPrintMap, setShowPrintMap] = useState(true);
+  const mockupPollCount = useRef(0);
   const [fullPreviewOpen, setFullPreviewOpen] = useState(false);
   useEffect(() => {
     if (!fullPreviewOpen) return;
@@ -229,8 +231,44 @@ export default function StudioWorkspace({
   const [supplierMockups, setSupplierMockups] = useState<Array<{
     mockup_id: string; variant_color: string; print_location_id: string;
     render_id?: string; status: string; error?: string;
-    asset?: { url: string } | null;
+    asset?: { id?: number; url: string; alt_text?: string | null; is_primary?: number } | null;
   }>>([]);
+  // Reopen saved supplier renders instead of forcing a fresh render every time
+  // an existing product is edited. Only current, supplier-verified derivatives
+  // for this exact saved draft and prepared side are eligible for review.
+  useEffect(() => {
+    if (!draft?.id || !(Number(draft.product_id) > 0)) return;
+    const controller = new AbortController();
+    adminFetch<{ images?: Array<{ id: number; url: string; alt_text?: string | null; is_primary?: number; meta_json?: string | null }> }>(
+      `/api/admin/products/${encodeURIComponent(draft.product_id)}/images`,
+      { signal: controller.signal },
+    ).then((response) => {
+      if (controller.signal.aborted) return;
+      const completed = (response.images || []).flatMap((item) => {
+        let meta: Record<string, unknown> = {};
+        try { meta = JSON.parse(item.meta_json || "{}"); } catch { return []; }
+        if (meta.source !== "completeful_provider_render" || meta.draft_id !== draft.id ||
+            !meta.mockup_id || !meta.variant_color || !meta.print_location_id ||
+            !item.url) return [];
+        const id = String(meta.print_location_id);
+        const preparedId = draft.placement?.sides?.[id]?.prepared_media_asset_id ||
+          (draft.print_location_ids?.[0] === id ? draft.prepared_media_asset_id : null);
+        if (!preparedId || Number(meta.source_media_asset_id) !== Number(preparedId)) return [];
+        return [{
+          mockup_id: String(meta.mockup_id), variant_color: String(meta.variant_color),
+          print_location_id: id, render_id: String(meta.render_id || ""),
+          status: "succeeded", asset: { id: item.id, url: item.url, alt_text: item.alt_text, is_primary: item.is_primary },
+        }];
+      });
+      setSupplierMockups((current) => {
+        const currentKeys = new Set(current.map((m) =>
+          [m.mockup_id, m.print_location_id, m.variant_color].join("|")));
+        return [...current, ...completed.filter((m) =>
+          !currentKeys.has([m.mockup_id, m.print_location_id, m.variant_color].join("|")))];
+      });
+    }).catch(() => { /* A missing gallery must not invalidate a saved design. */ });
+    return () => controller.abort();
+  }, [draft?.id, draft?.product_id, draft?.version]);
 
   const [trimTransparent, setTrimTransparent] = useState(false);
   const [croppedPreview, setCroppedPreview] = useState<{
@@ -447,6 +485,7 @@ export default function StudioWorkspace({
     ...(isFrontLocation ? blankVariantSources : [supplierBlankCandidate]),
   ].filter((url): url is string => Boolean(url)))];
   const designImageSources = [...new Set([
+    ...(showPrintMap ? [location?.artboard_image_url] : []),
     ...cleanSideSources,
     ...(isFrontLocation
       ? [sideReferenceImage, placementBackground, location?.artboard_image_url]
@@ -456,6 +495,8 @@ export default function StudioWorkspace({
   const sidePhotoKey = `${variantId}:${locationId}`;
   const cleanSidePhotoLoaded = loadedSidePhoto?.key === sidePhotoKey &&
     cleanSideSources.includes(loadedSidePhoto.src);
+  const mappedArtboardLoaded = Boolean(showPrintMap && loadedSidePhoto?.key === sidePhotoKey &&
+    location?.artboard_image_url && loadedSidePhoto.src === location.artboard_image_url);
 
   async function approveGarmentBlank(item: MediaAsset) {
     if (!garmentColor) { setNotice("Select a real garment color before assigning its blank."); return; }
@@ -479,7 +520,7 @@ export default function StudioWorkspace({
   }
   // A missing clean back image is never replaced with the Front of a different
   // color. The exact supplier sample stays visible as a labeled reference.
-  const artboardAspectRatio = location?.artboard_width && location?.artboard_height
+  const artboardAspectRatio = showPrintMap && location?.artboard_width && location?.artboard_height
     ? Number(location.artboard_width) / Number(location.artboard_height)
     : 4 / 5;
   // Switching a print location must never carry the previous side's artwork.
@@ -614,7 +655,7 @@ export default function StudioWorkspace({
       ? location.file_width / location.file_height
       : 1;
   const hasProviderPlacementFrame = Boolean(
-    location?.artboard_width &&
+    mappedArtboardLoaded && location?.artboard_width &&
       location?.artboard_height &&
       location?.width &&
       location?.height &&
@@ -1491,7 +1532,7 @@ export default function StudioWorkspace({
   }
 
   async function renderSupplierMockups() {
-    if (!asset || !showArtwork) {
+    if (!(asset && showArtwork) && !Object.values(sidePlacements).some((side) => side.asset && side.showArtwork)) {
       setError("Select artwork on at least one print side before generating product previews.");
       openTab("designs");
       return;
@@ -1500,7 +1541,7 @@ export default function StudioWorkspace({
     // print side, and submits the verified supplier color x side matrix.
     // Provider rendering remains an explicit merchant action, never triggered
     // automatically by variant switching or publishing.
-    const saved = preparedAsset && preparedFor === currentPlacementKey
+    const saved = !(asset && showArtwork) || (preparedAsset && preparedFor === currentPlacementKey)
       ? await saveDraft()
       : await prepareArtwork();
     if (!saved) return;
@@ -1513,7 +1554,7 @@ export default function StudioWorkspace({
         ok: boolean; error?: string; skipped?: Array<{ reason: string }>;
         rendered?: Array<{
           mockup_id: string; variant_color: string; print_location_id: string;
-          render_id?: string; status: string; error?: string; asset?: { url: string } | null;
+          render_id?: string; status: string; error?: string; asset?: { id?: number; url: string; alt_text?: string | null; is_primary?: number } | null;
         }>;
       }>(`/api/admin/product-studio/drafts/${encodeURIComponent(readyDraft.id)}/render-batch`, {
         method: "POST",
@@ -1522,6 +1563,7 @@ export default function StudioWorkspace({
       if (!result.ok || !result.rendered?.length) {
         throw new Error(result.error || "No color-verified supplier mockups were available.");
       }
+      mockupPollCount.current = 0;
       setSupplierMockups(result.rendered);
       const missing = result.skipped?.length || 0;
       setNotice(`Submitted ${result.rendered.length} exact-color supplier mockups.` +
@@ -1541,7 +1583,7 @@ export default function StudioWorkspace({
       const results = await Promise.all(pending.map(async (item) => {
         try {
           return await adminFetch<{
-            status: string; render_id: string; asset?: { url: string } | null;
+            status: string; render_id: string; asset?: { id?: number; url: string; alt_text?: string | null; is_primary?: number } | null;
           }>(`/api/admin/product-studio/renders/${encodeURIComponent(item.render_id!)}/batch`);
         } catch {
           return null;
@@ -1551,7 +1593,61 @@ export default function StudioWorkspace({
         const next = results.find((result) => result?.render_id === item.render_id);
         return next ? { ...item, status: next.status, asset: next.asset || item.asset } : item;
       }));
-      setNotice("Supplier render statuses refreshed. Completed images are saved in Media Library.");
+      const completed = results.filter((item) => item?.asset?.url).length;
+      if (completed) setNotice(`${completed} Completeful image${completed === 1 ? "" : "s"} saved to the product gallery.`);
+    } finally {
+      setBusy("");
+    }
+  }
+
+  // Poll a bounded number of times; provider jobs can outlive the initial request.
+  useEffect(() => {
+    if (busy || mockupPollCount.current >= 8 ||
+        !supplierMockups.some((item) => item.render_id && !item.asset && item.status !== "failed")) return;
+    const timer = window.setTimeout(() => {
+      mockupPollCount.current += 1;
+      void refreshSupplierMockups();
+    }, 3500);
+    return () => window.clearTimeout(timer);
+  }, [busy, supplierMockups]);
+
+  async function saveSupplierMediaDescription(mediaId: number, altText: string) {
+    if (busy) return;
+    setBusy("media-update");
+    setError("");
+    try {
+      const result = await adminFetch<{ asset?: { alt_text?: string | null } }>(
+        `/api/admin/media/${encodeURIComponent(mediaId)}`, {
+          method: "PATCH", body: JSON.stringify({ alt_text: altText }),
+        },
+      );
+      setSupplierMockups((current) => current.map((mockup) =>
+        mockup.asset?.id === mediaId ? {
+          ...mockup, asset: { ...mockup.asset, alt_text: result.asset?.alt_text ?? altText },
+        } : mockup));
+      setNotice("Image description saved to Media Library.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not update image description.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function setPrimarySupplierMedia(mediaId: number) {
+    if (busy || !draft?.product_id) return;
+    setBusy("media-primary");
+    setError("");
+    try {
+      await adminFetch(
+        `/api/admin/products/${encodeURIComponent(draft.product_id)}/images/${encodeURIComponent(mediaId)}/primary`,
+        { method: "POST" },
+      );
+      setSupplierMockups((current) => current.map((mockup) =>
+        mockup.asset ? { ...mockup, asset: { ...mockup.asset,
+          is_primary: mockup.asset.id === mediaId ? 1 : 0 } } : mockup));
+      setNotice("Primary product photo updated.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not set primary product image.");
     } finally {
       setBusy("");
     }
@@ -1623,7 +1719,10 @@ export default function StudioWorkspace({
     const blankSources = [approved, ...(front ? photoSources : [candidate])]
       .filter((url): url is string => Boolean(url));
     const referenceOnly = !verifiedRender && !approved && !(front && blankVariantSources.length > 0);
-    return { id, label: sideLocation.name || (front ? 'Front' : 'Back'),
+    // Accessory Back artboards can exist even without any Back mockup templates.
+    // Show them as unverified side references, never as finished product photos.
+    const artboardReferenceUrl = !front && distinctArtboard ? sideLocation.artboard_image_url || null : null;
+    return { id, label: sideLocation.name || (front ? 'Front' : 'Back'), artboardReferenceUrl,
       photoSources: [...new Set([...blankSources,
         ...(!front && !catalogReferenceUrl && String(color).trim().toLowerCase() === "black"
           ? photoSources : [])])],
@@ -1632,12 +1731,17 @@ export default function StudioWorkspace({
       placed, frameStyle, previewIsCurrent };
   });
   const currentSideRenderedUrl = sideReviewCards.find((side) => side.id === locationId)?.verifiedRenderUrl || null;
+  const verifiedCurrentSupplierMockups = supplierMockups.filter((item) => item.asset?.url &&
+    sideReviewCards.some((side) => side.id === item.print_location_id && side.previewIsCurrent));
+  const currentSupplierMedia = verifiedCurrentSupplierMockups.find((item) =>
+    item.print_location_id === locationId &&
+    (!garmentColor || item.variant_color.toLowerCase() === garmentColor.toLowerCase()))?.asset || null;
   // A completed render for the selected color/side supersedes the supplier
   // catalog sample. Switching to Edit artwork still shows the clean placement
   // canvas rather than baking the supplier's finished image into the editor.
   const displayedRenderedUrl = showSupplierSample
     ? currentSideRenderedUrl || currentRenderUrl : null;
-  const supplierPhotoOnly = !cleanSidePhotoLoaded &&
+  const supplierPhotoOnly = !cleanSidePhotoLoaded && !mappedArtboardLoaded &&
     Boolean(designImage) && !displayedRenderedUrl;
   function renderSideReviewCards(size: "mini" | "expanded") {
     return (
@@ -1654,6 +1758,8 @@ export default function StudioWorkspace({
                 ? <ProductImage sources={[side.verifiedRenderUrl]} alt="" />
                 : side.catalogReferenceUrl
                   ? <ProductImage sources={[...side.photoSources, side.catalogReferenceUrl]} alt="" />
+                  : side.artboardReferenceUrl
+                    ? <ProductImage sources={[side.artboardReferenceUrl]} alt="" />
                   : side.photoSources.length
                     ? <ProductImage sources={side.photoSources} alt="" />
                     : <span className="ps-side-review-unverified">Garment view not available</span>}
@@ -1676,7 +1782,7 @@ export default function StudioWorkspace({
             </span>
             <span className="ps-side-review-title">{side.label}</span>
             <span className="ps-side-review-status">{side.verifiedRenderUrl ? "Supplier render"
-              : side.referenceOnly ? "Color sample · art separate"
+              : side.referenceOnly ? (side.artboardReferenceUrl ? "Provider artboard · color unverified" : "Color sample · art separate")
               : side.previewIsCurrent ? "Prepared · local preview"
               : side.placed?.asset ? "Artwork placed" : "Add artwork"}</span>
           </button>
@@ -2435,8 +2541,16 @@ export default function StudioWorkspace({
         </aside>
         <div className="ps-stage-column" ref={stage}>
           <div className="ps-stage-toolbar">
-            <h1 className="ps-stage-title" title={detail.product.name}>{detail.product.name}</h1>
+            <div className="ps-product-title-edit"><label htmlFor="ps-product-title">Product name</label><input id="ps-product-title" aria-label="Product name" type="text" maxLength={160} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Name this product" /><small title={detail.product.name}>Blank: {detail.product.name}</small></div>
             <div className="ps-stage-toolbar__controls">
+              {location?.artboard_image_url && (
+                <div className="ps-artboard-mode" role="group" aria-label="Canvas reference">
+                  <button type="button" className={showPrintMap ? "is-active" : ""}
+                    aria-pressed={showPrintMap} onClick={() => { setShowPrintMap(true); setShowSupplierSample(false); }}>Print map</button>
+                  <button type="button" className={!showPrintMap ? "is-active" : ""}
+                    aria-pressed={!showPrintMap} onClick={() => setShowPrintMap(false)}>Product photo</button>
+                </div>
+              )}
               {enabledLocations.length > 1 && (
                 <div className="ps-print-side-toggle" role="group" aria-label="Print location">
                   {enabledLocations.map((candidate) => (
@@ -2483,6 +2597,7 @@ export default function StudioWorkspace({
                     <ProductImage
                       key={`${variantId}:${locationId}:${displayedRenderedUrl || designImage}`}
                       className={"ps-design-product-image" + (hasProviderPlacementFrame ? " is-geometry-mapped" : "")}
+                      onClick={() => setFullPreviewOpen(true)}
                       sources={displayedRenderedUrl ? [displayedRenderedUrl] : designImageSources}
                       onResolvedSource={(src) => {
                         if (!displayedRenderedUrl && (loadedSidePhoto?.key !== sidePhotoKey ||
@@ -2511,7 +2626,9 @@ export default function StudioWorkspace({
                       </button>
                     </div>
                   )}
-                  {!displayedRenderedUrl && !supplierPhotoOnly && <div className={"ps-design-print-area" + (guides ? " is-gridded" : "")} style={{ ...placementFrameStyle, aspectRatio: ratio }}
+                  {!displayedRenderedUrl && !supplierPhotoOnly &&
+                    (mappedArtboardLoaded || !location?.artboard_image_url) &&
+                    <div className={"ps-design-print-area" + (guides ? " is-gridded" : "")} style={{ ...placementFrameStyle, aspectRatio: ratio }}
                     onPointerDown={(event) => {
                       const target = event.target as HTMLElement;
                       const cornerHandle = target.closest(".ps-selection-handle");
@@ -2650,6 +2767,29 @@ export default function StudioWorkspace({
               ))}
             </div>
           )}
+          {verifiedCurrentSupplierMockups.length > 0 && (
+            <section className="ps-merchant-render-strip" aria-label="Completeful product images">
+              <div className="ps-merchant-render-header"><strong>Generated product images</strong><small>Exact supplier color and print side · click to inspect</small></div>
+              <div className="ps-merchant-render-list">
+                {verifiedCurrentSupplierMockups.map((item) => (
+                  <button type="button" className="ps-merchant-render-thumb"
+                    key={item.mockup_id + item.print_location_id + item.variant_color}
+                    onClick={() => {
+                      const matching = colorAxis ? detail.variants.find((v) =>
+                        String(variantAttributes(v)[colorAxis]).toLowerCase() === item.variant_color.toLowerCase()) : null;
+                      if (matching) setVariantId(catalogVariantId(matching));
+                      if (item.print_location_id !== locationId) choosePrintLocation(item.print_location_id);
+                      setShowSupplierSample(true);
+                      setFullPreviewOpen(true);
+                    }}
+                    aria-label={`Inspect ${item.variant_color} ${detail.print_locations.find((area) => area.print_location_id === item.print_location_id)?.name || "print side"} render`}>
+                    <img src={item.asset!.url} alt="" loading="lazy" />
+                    <span>{item.variant_color} · {detail.print_locations.find((area) => area.print_location_id === item.print_location_id)?.name || "Print"}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
           {fullPreviewOpen && (
             <div className="ps-preview-overlay" onMouseDown={(event) => {
               if (event.target === event.currentTarget) setFullPreviewOpen(false);
@@ -2670,7 +2810,9 @@ export default function StudioWorkspace({
                         sources={displayedRenderedUrl ? [displayedRenderedUrl] : designImageSources}
                         alt={`${variant?.variant_title || variant?.name || detail.product.name}, ${location?.name || "selected view"}`} lazy={false} />
                     : <div className="ps-mini-unverified">No verified photo is available for this side or variant.</div>}
-                  {!displayedRenderedUrl && !supplierPhotoOnly && designImage && asset && showArtwork && (
+                  {!displayedRenderedUrl && !supplierPhotoOnly &&
+                    (mappedArtboardLoaded || !location?.artboard_image_url) &&
+                    designImage && asset && showArtwork && (
                     <div className="ps-mini-placement" style={placementFrameStyle}>
                       <img src={artworkPreviewUrl} alt="" style={{ width: `${scale}%`, left: `${x}%`, top: `${y}%`,
                         transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})` }} />
@@ -2678,7 +2820,53 @@ export default function StudioWorkspace({
                   )}
                 </div>
                 <aside className="ps-preview-views">
-                  <strong>Design views</strong>
+                  <strong>Product image & design details</strong>
+                  <label className="ps-preview-field">Product title
+                    <input type="text" maxLength={160} value={title} onChange={(event) => setTitle(event.target.value)} />
+                  </label>
+                  <div className="ps-preview-numeric-fields">
+                    <label className="ps-preview-field">X position (%)
+                      <input type="number" min="0" max="100" value={x}
+                        onChange={(event) => setX(Math.max(0, Math.min(100, Number(event.target.value) || 0)))} />
+                    </label>
+                    <label className="ps-preview-field">Y position (%)
+                      <input type="number" min="0" max="100" value={y}
+                        onChange={(event) => setY(Math.max(0, Math.min(100, Number(event.target.value) || 0)))} />
+                    </label>
+                    <label className="ps-preview-field">Artwork scale (%)
+                      <input type="number" min="5" max="150" value={scale}
+                        onChange={(event) => setScale(Math.max(5, Math.min(150, Number(event.target.value) || 5)))} />
+                    </label>
+                  </div>
+                  <button type="button" className="ps-button ps-wide" disabled={Boolean(busy)}
+                    onClick={() => void saveDraft()}>{busy === "save" ? "Saving…" : "Save design changes"}</button>
+                  <small>Placement edits invalidate old print files and mockups. Accurate print-safe geometry is shown in Print map mode.</small>
+                  {currentSupplierMedia?.id && (
+                    <section className="ps-preview-media-editor" aria-label="Generated product image metadata">
+                      <strong>Generated image settings</strong>
+                      <label className="ps-preview-field">Image description (alt text)
+                        <input type="text" maxLength={500} value={currentSupplierMedia.alt_text || ""}
+                          onChange={(event) => {
+                            const nextText = event.target.value;
+                            setSupplierMockups((current) => current.map((item) =>
+                              item.asset && item.asset.id === currentSupplierMedia.id ? {
+                                ...item, asset: { ...item.asset, alt_text: nextText },
+                              } : item));
+                          }} />
+                      </label>
+                      <button type="button" className="ps-button ps-wide" disabled={Boolean(busy)}
+                        onClick={() => void saveSupplierMediaDescription(currentSupplierMedia.id!, currentSupplierMedia.alt_text || "")}>
+                        {busy === "media-update" ? "Saving…" : "Save image description"}
+                      </button>
+                      <button type="button" className="ps-button ps-wide"
+                        disabled={Boolean(busy) || Boolean(currentSupplierMedia.is_primary)}
+                        onClick={() => void setPrimarySupplierMedia(currentSupplierMedia.id!)}>
+                        {currentSupplierMedia.is_primary ? "Primary product photo" : "Make primary product photo"}
+                      </button>
+                      <small>These fields update the actual Media Library and product gallery records—not just the preview.</small>
+                    </section>
+                  )}
+                  <strong>Print sides</strong>
                   {renderSideReviewCards("expanded")}
                   <p>Choose Front or Back to compare the selected color. Artwork stays attached to its own print location.</p>
                   {!displayedRenderedUrl && supplierPhotoOnly && exactSideCatalogReference && (

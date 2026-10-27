@@ -252,7 +252,9 @@ async function listProducts(request, env) {
               p.image_url
             ) AS primary_image,
             COUNT(v.id) AS variant_count,
-            COALESCE(SUM(v.inventory_qty), 0) AS total_inventory
+            COALESCE(SUM(v.inventory_qty), 0) AS total_inventory,
+            CASE WHEN EXISTS (SELECT 1 FROM completeful_product_links pl WHERE pl.product_id = p.id)
+              THEN 'supplier' ELSE 'stock' END AS fulfillment_kind
      FROM products p
      LEFT JOIN product_variants v ON v.product_id = p.id
      GROUP BY p.id
