@@ -1564,6 +1564,17 @@ export default function StudioWorkspace({
     }
   }
 
+  // Poll a bounded number of times; provider jobs can outlive the initial request.
+  useEffect(() => {
+    if (busy || mockupPollCount.current >= 8 ||
+        !supplierMockups.some((item) => item.render_id && !item.asset && item.status !== "failed")) return;
+    const timer = window.setTimeout(() => {
+      mockupPollCount.current += 1;
+      void refreshSupplierMockups();
+    }, 3500);
+    return () => window.clearTimeout(timer);
+  }, [busy, supplierMockups]);
+
   const cropKey = asset ? JSON.stringify([asset.id, asset.url, trimTransparent, removeFlatBackground]) : "";
   const cropPending = Boolean(asset && (trimTransparent || removeFlatBackground) &&
     croppedPreview?.key !== cropKey);
