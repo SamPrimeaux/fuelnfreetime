@@ -65,8 +65,9 @@ function setup({ failCreate = false, prelinked = false } = {}) {
       if (url === "/api/admin/products/12" && method === "GET") return snapshot();
       if (url.endsWith("/create-product") && method === "POST") {
         if (failCreate) throw new Error("Supplier temporarily unavailable");
+        const already_linked = linked;
         linked = true;
-        return { ok: true, mapped_variants: 90 };
+        return { ok: true, mapped_variants: 90, already_linked };
       }
       if (url.endsWith("/publish") && method === "POST") {
         assert.ok(linked, "Supplier product must exist before publication");
@@ -116,10 +117,10 @@ test("An upstream failure leaves saved details as Draft without false publicatio
   assert.match(t.notices.at(-1).message, /Supplier temporarily unavailable/);
 });
 
-test("A previously linked Completeful product is reused when publishing", async () => {
+test("A previously linked Completeful product is verified before publishing, without creating a duplicate", async () => {
   const t = setup({ prelinked: true });
   await t.context.runProductSave();
-  assert.equal(t.actions.some((item) => item.endsWith("/create-product")), false);
+  assert.equal(t.actions.filter((item) => item.endsWith("/create-product")).length, 1);
   assert.equal(t.actions.some((item) => item.endsWith("/publish")), true);
   assert.equal(t.status.value, "active");
 });
