@@ -711,6 +711,23 @@ export async function getCompletefulCatalogProduct(env, productId) {
       throw error;
     });
 
+  // Separate Completeful catalog records sometimes represent alternate print
+  // processes on the same physical blank. Never relabel a UV provider ID as an
+  // etching ID; switch to the exact supplier record when changing method.
+  const methods = await env.DB.prepare(
+    `SELECT completeful_product_id, catalog_product_id, name, print_type,
+       fulfillment_cost_free_cents, realistic_image_url, cover_image_url
+       FROM completeful_catalog_products
+       WHERE lower(trim(name))=lower(trim(?)) AND available=1
+       ORDER BY print_type,completeful_product_id`
+  ).bind(product.name).all();
+  const methodAlternatives = (methods.results || []).map(row=>({
+    catalog_product_id:row.catalog_product_id,
+    completeful_product_id:row.completeful_product_id,
+    print_type:row.print_type,
+    fulfillment_cost_free_cents:row.fulfillment_cost_free_cents,
+    image_url:row.realistic_image_url||row.cover_image_url,
+  }));
   const imageTotal = Number(imageCount?.n || 0);
   const imageRows = images.results || [];
 
@@ -727,6 +744,7 @@ export async function getCompletefulCatalogProduct(env, productId) {
     },
     mockups: (mockups.results || []).map(omitRaw),
     blank_views: blankViews,
+    method_alternatives: methodAlternatives,
   };
 }
 
