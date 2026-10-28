@@ -3177,3 +3177,20 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
   .product-studio-shell .ps-repair-master{grid-template-columns:44px minmax(0,1fr) auto}
   .product-studio-shell .ps-repair-master img{width:44px;height:44px}
 }
+
+/* Collapsible Completeful facets: compact mobile-friendly controls, not a second page. */
+.ps-facet-workbench{border:1px solid var(--ps-line);background:#fff;border-radius:14px;padding:14px;margin:-5px 0 22px;display:grid;gap:13px}
+.ps-facet-toolbar,.ps-facet-flags{display:flex;flex-wrap:wrap;gap:9px;align-items:end}
+.ps-facet-toolbar>label{display:grid;gap:5px;font-size:11px;font-weight:650;min-width:120px;flex:1}
+.ps-facet-toolbar select,.ps-facet-toolbar input{width:100%;min-height:39px;border:1px solid var(--ps-line);border-radius:9px;padding:7px 9px;background:#fff;color:inherit;font-size:13px}
+.ps-facet-toolbar>button{min-height:39px;padding:8px 12px;background:transparent;border:1px solid var(--ps-line);border-radius:9px}
+.ps-facet-flags label{display:flex;align-items:center;gap:7px;font-size:12px;min-height:34px;padding:5px 9px;border:1px solid var(--ps-line);border-radius:9px}
+.ps-facet-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.ps-facet-groups fieldset{border:1px solid var(--ps-line);padding:12px;border-radius:10px;min-width:0}
+.ps-facet-groups legend{padding:0 5px;font-size:12px;font-weight:750}
+.ps-facet-options{display:flex;flex-wrap:wrap;gap:6px}
+.ps-facet-options label{display:inline-flex;align-items:center;gap:6px;padding:7px 9px;min-height:36px;cursor:pointer;font-size:12px;background:#f9f9f7;border:1px solid var(--ps-line);border-radius:9px}
+.ps-facet-options label.is-selected{background:#e8eedc;border-color:#91a477}
+.ps-facet-options label small{opacity:.6}
+.ps-facet-workbench>small{font-size:11px;opacity:.7}
+@media(max-width:700px){.ps-facet-workbench{padding:10px}.ps-facet-groups{grid-template-columns:minmax(0,1fr)}.ps-facet-toolbar>label{min-width:43%}.ps-facet-options label{min-height:42px}}
