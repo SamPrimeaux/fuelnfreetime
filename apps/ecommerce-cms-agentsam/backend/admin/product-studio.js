@@ -1215,7 +1215,7 @@ export async function handleProductStudioAdminApi(request, env, url) {
   if (!path.startsWith("/api/admin/product-studio")) return null;
 
   try {
-    const scaffold = path.match(/^\\/api\\/admin\\/product-studio\\/collections\\/(\\d+)\\/scaffold$/);
+    const scaffold = path.match(new RegExp("^/api/admin/product-studio/collections/([0-9]+)/scaffold$"));
     if (scaffold && method === "POST") return scaffoldCollectionProductDrafts(request,env,scaffold[1]);
     if (path === "/api/admin/product-studio/drafts" && method === "GET") {
       return getDraft(request, env, url);
