@@ -2584,7 +2584,7 @@ export default function StudioWorkspace({
           {asset && showArtwork && (
             <div className="ps-mobile-placement-tools" role="toolbar" aria-label="Quick artwork positioning">
               <button type="button" onClick={() => openTab("layers")} aria-label="Position artwork">
-                <StudioIcon name="move" size={17} /> <span>Position</span>
+                <StudioIcon name="center" size={17} /> <span>Position</span>
               </button>
               <button type="button" aria-label="Reduce artwork size" onClick={() => setScale((v) => Math.max(5, v - 5))}>−</button>
               <output aria-label="Artwork size">{scale}%</output>
