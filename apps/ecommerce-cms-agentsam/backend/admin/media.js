@@ -947,13 +947,80 @@ export async function listMedia(request, env, url) {
   });
 }
 
-/** Single-asset detail lookup, scoped to the authenticated merchant admin route. */
+/**
+ * A source image and each saved edit are independent media assets. Read the
+ * actual R2/D1 records, never derive version cards from browser-only presets.
+ * JSON metadata is optional on legacy assets; invalid JSON must not abort the
+ * entire Media Library. Descendants remain linked by their immediate source.
+ */
 export async function getMediaAsset(request, env, id) {
   const assetId = Number(id);
   if (!Number.isSafeInteger(assetId) || assetId <= 0) return json({ error: 'Invalid media asset' }, { status: 400 });
   const row = await env.DB.prepare(`${MEDIA_SELECT} WHERE m.id = ? AND ${browsableMediaSql('m')}`).bind(assetId).first();
   if (!row) return json({ error: 'Media asset not found' }, { status: 404 });
-  return json({ ok: true, asset: rowToAsset(row), capabilities: mediaCapabilitySummary(env) });
+  const asset = rowToAsset(row);
+  const sourceId = Number(asset.meta?.media_edit?.source_media_asset_id || 0);
+  const versionRows = await env.DB.prepare(
+    `SELECT m.id, m.filename, m.url, m.r2_key, m.content_type, m.size_bytes,
+            m.created_at, m.meta_json
+       FROM media_assets m
+      WHERE (CASE WHEN json_valid(m.meta_json) THEN
+               CAST(json_extract(m.meta_json, '$.media_edit.source_media_asset_id') AS INTEGER)
+             ELSE 0 END) = ?
+      ORDER BY m.id DESC LIMIT 80`
+  ).bind(assetId).all();
+  const versions = (versionRows.results || []).map((version) => {
+    const meta = parseMeta(version.meta_json) || {};
+    const op = meta.media_edit || {};
+    const urls = publicUrlFields(version);
+    return {
+      id: Number(version.id), filename: version.filename, url: urls.url,
+      content_type: version.content_type, size_bytes: version.size_bytes,
+      operation: String(op.operation || op.kind || (op.operations || []).map(x => x.type).join(', ') || 'edit'),
+      dimensions: op.output_width && op.output_height
+        ? { width: Number(op.output_width), height: Number(op.output_height) }
+        : null,
+      created_at: version.created_at,
+      source_media_asset_id: assetId,
+    };
+  });
+  asset.linked_versions = versions;
+  asset.source_version_id = Number.isSafeInteger(sourceId) && sourceId > 0 ? sourceId : null;
+
+  // Detail pages are often opened from deep links, outside the current list
+  // page. Resolve usage independently rather than relying on listMedia().
+  const usage = [];
+  const albums = await env.DB.prepare(
+    `SELECT a.id,a.name,a.meta_json FROM media_album_assets ma
+       JOIN media_albums a ON a.id=ma.album_id WHERE ma.media_asset_id=?
+       ORDER BY a.name LIMIT 100`
+  ).bind(assetId).all();
+  for (const album of albums.results || []) {
+    const meta = parseMeta(album.meta_json) || {};
+    usage.push({ kind: meta.kind === 'gallery' ? 'Gallery' : 'Album', id: album.id, label: album.name });
+  }
+  try {
+    const products = await env.DB.prepare(
+      `SELECT p.id,p.title FROM product_images pi JOIN products p ON p.id=pi.product_id
+        WHERE pi.media_asset_id=? ORDER BY p.title LIMIT 100`
+    ).bind(assetId).all();
+    for (const product of products.results || []) {
+      usage.push({ kind: 'Product', id: product.id, label: product.title,
+        href: '/admin/product-edit?id=' + encodeURIComponent(product.id) });
+    }
+  } catch { /* Installations without product_images are supported. */ }
+  try {
+    const drafts = await env.DB.prepare(
+      `SELECT id,title,state FROM product_studio_drafts
+        WHERE original_media_asset_id=? OR prepared_media_asset_id=? OR preview_media_asset_id=?
+        ORDER BY updated_at DESC LIMIT 50`
+    ).bind(assetId, assetId, assetId).all();
+    for (const draft of drafts.results || []) {
+      usage.push({ kind: 'Product design', id: draft.id, label: draft.title || 'Draft design' });
+    }
+  } catch { /* Optional Studio table. */ }
+  asset.usage = usage;
+  return json({ ok: true, asset, capabilities: mediaCapabilitySummary(env) });
 }
 
 export async function batchMedia(request, env) {
