@@ -5,6 +5,10 @@ import { providerPrintSizeIn } from "../../../../packages/agentsam-merch/src/ind
  * Provider-specific ids (completeful_*) are optional aliases from the host adapter.
  */
 
+export type CatalogMethodAlternative = {
+  catalog_product_id:string;completeful_product_id:string;print_type:string;
+  fulfillment_cost_free_cents?:number|null;image_url?:string|null;
+};
 export type CatalogProduct = {
   /** Canonical catalog id for Product Studio / commerce.catalog */
   catalog_product_id: string;
@@ -74,6 +78,7 @@ export type PrintLocation = {
 
 export type ProductDetail = {
   product: CatalogProduct;
+  method_alternatives?: CatalogMethodAlternative[];
   variants: Variant[];
   print_locations: PrintLocation[];
   images: { url: string; thumbnail_url?: string; is_primary?: number; variant_title?: string }[];
