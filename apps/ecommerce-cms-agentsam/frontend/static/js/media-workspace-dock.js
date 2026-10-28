@@ -39,11 +39,13 @@ export function mountMediaWorkspaceDock() {
       const openable = count === 1 && $('[data-id="' + selectedIds[0] + '"].media-item');
       actions = [
         openable ? { id: "selected-open", label: "Open", icon: "gallery", invoke: true }
-          : { id: "selected-page", label: "Select page", icon: "check", invoke: true },
+          : { id: "selected-gallery", label: "Gallery", icon: "gallery", invoke: true },
         { id: "selected-album", label: availableAlbums() ? "Add to album" : "New album", icon: "album", invoke: true },
-        { id: "selected-gallery", label: "Gallery", icon: "gallery", invoke: true },
         canPrepare() ? { id: "selected-prepare", label: "Prepare", icon: "layers", invoke: true }
-          : { id: "selected-more", label: "More", icon: "menu", invoke: true },
+          : count === 1
+            ? { id: "selected-gallery", label: "Gallery", icon: "gallery", invoke: true }
+            : { id: "selected-page", label: "Select page", icon: "check", invoke: true },
+        { id: "selected-more", label: "More", icon: "menu", invoke: true },
         { id: "selected-clear", label: "Clear", icon: "close", invoke: true },
       ];
     } else {
