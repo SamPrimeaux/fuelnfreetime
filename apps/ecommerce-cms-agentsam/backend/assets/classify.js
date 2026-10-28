@@ -141,14 +141,14 @@ export function classifyMediaAsset(input) {
     retainMasterReason = "Product Studio mockup-render input";
     pipeline = "no_transform";
     outputFormat = mime;
-  } else if (productionMaster || (mediaRole === "logo" && alphaLikely && bytes > 0 && bytes < 2_000_000 && (ext === "png" || mime === "image/png"))) {
+  } else if (productionMaster || (mediaRole === "logo" && (ext === "png" || mime === "image/png"))) {
     // Transparent production/print or brand marks that must stay PNG for fulfillment.
     assetRole = "master";
     retainMasterReason = productStudioProductionMaster
       ? "Product Studio production artwork must remain print-safe"
       : productionMaster
         ? "Production/print requirements"
-        : "Transparent brand mark retained as production-capable PNG";
+        : "Logo PNG retained as editable production master (not CDN WebP)";
     pipeline = productStudioProductionMaster ? "no_transform" : mediaKind === "icon" ? "icon" : "image";
     outputFormat = mime;
   } else if (ext === "webp" && (mediaKind === "image" || mediaKind === "icon")) {

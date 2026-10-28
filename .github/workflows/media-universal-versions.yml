@@ -1,0 +1,37 @@
+name: Universal media versions and artwork quality
+on:
+  pull_request:
+    paths:
+      - apps/ecommerce-cms-agentsam/backend/admin/media.js
+      - apps/ecommerce-cms-agentsam/backend/assets/classify.js
+      - apps/ecommerce-cms-agentsam/frontend/static/content.html
+      - apps/ecommerce-cms-agentsam/frontend/static/js/media-library.js
+      - apps/ecommerce-cms-agentsam/frontend/static/css/media-library.css
+      - apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx
+      - apps/ecommerce-cms-agentsam/frontend/src/styles/product-studio.css
+      - tests/media-library-control-plane.test.mjs
+      - tests/assets-pipeline.test.mjs
+      - .github/workflows/media-universal-versions.yml
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install workspace dependencies
+        run: |
+          npm ci --ignore-scripts
+          npm ci --prefix apps/ecommerce-cms-agentsam --ignore-scripts
+      - name: Test persisted lineage, media usage, master retention, and image editor
+        run: |
+          node --test tests/media-library-control-plane.test.mjs tests/assets-pipeline.test.mjs tests/media-workbench-transform.test.mjs
+          node --check apps/ecommerce-cms-agentsam/frontend/static/js/media-library.js
+      - name: Build the production admin
+        run: npm run build:admin
+      - name: Verify Cloudflare Worker bundle
+        run: npx wrangler deploy --dry-run --outdir /tmp/fnf-media-universal-build

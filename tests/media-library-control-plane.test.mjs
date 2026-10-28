@@ -8,6 +8,7 @@ import {
   updateMediaAlbum,
   deleteMediaAlbum,
   listMedia,
+  getMediaAsset,
   listMediaAlbums,
   reorderMedia,
   uploadMedia,
@@ -605,4 +606,39 @@ test("album rename, description, cover, and deletion preserve original media rec
   assert.equal(deleted.ok, true);
   assert.equal(db.prepare("SELECT COUNT(*) AS n FROM media_assets").get().n, 3);
   assert.equal(db.prepare("SELECT COUNT(*) AS n FROM media_albums").get().n, 0);
+});
+
+test("single-asset detail shows real source-preserving versions and linked product/album usage", async () => {
+  const { db, env } = fixture(0);
+  const insert = db.prepare(
+    "INSERT INTO media_assets (r2_key,url,filename,content_type,size_bytes,category,folder,meta_json) VALUES (?,?,?,?,?,?,?,?)"
+  );
+  insert.run("masters/logo.png", "/media/masters/logo.png", "Good Times back logo", "image/png", 3000000, "logo", "images", "{}");
+  const childMeta = JSON.stringify({ media_edit: {
+    source_media_asset_id: 1, operation: "resample",
+    output_width: 1800, output_height: 2200,
+  } });
+  insert.run("derivatives/resample/1/a.png", "/media/derivatives/resample/1/a.png",
+    "Good Times back logo-resample.png", "image/png", 500000, "logo", "images", childMeta);
+  insert.run("derivatives/print-trim/1/b.png", "/media/derivatives/print-trim/1/b.png",
+    "Good Times back logo-print-trim.png", "image/png", 180000, "logo", "images",
+    JSON.stringify({media_edit:{source_media_asset_id:1,operation:"print-trim",output_width:900,output_height:1100}}));
+  insert.run("images/unrelated.jpg", "/media/images/unrelated.jpg", "Broken metadata", "image/jpeg",
+    1234, "image", "images", "not json");
+  db.exec("INSERT INTO media_albums (slug,name) VALUES ('good-times','Good Times designs')");
+  db.exec("INSERT INTO media_album_assets (album_id,media_asset_id) VALUES (1,1)");
+  db.exec("INSERT INTO products (slug,title) VALUES ('hoodie','Good Times Hoodie')");
+  db.exec("INSERT INTO product_images (product_id,media_asset_id) VALUES (1,1)");
+  const original = await responseJson(await getMediaAsset(
+    new Request("https://example.test/api/admin/media/1"), env, 1));
+  assert.equal(original.ok, true);
+  assert.deepEqual(original.asset.linked_versions.map(v => [v.id, v.operation, v.dimensions.width]),
+    [[3,"print-trim",900],[2,"resample",1800]]);
+  assert.equal(original.asset.linked_versions[0].url, "/media/derivatives/print-trim/1/b.png");
+  assert.ok(original.asset.usage.some(u => u.kind === "Product" && u.href === "/admin/product-edit?id=1"));
+  assert.ok(original.asset.usage.some(u => u.kind === "Album" && u.label === "Good Times designs"));
+  const child = await responseJson(await getMediaAsset(
+    new Request("https://example.test/api/admin/media/2"), env, 2));
+  assert.equal(child.asset.source_version_id, 1);
+  assert.equal(child.asset.linked_versions.length, 0);
 });

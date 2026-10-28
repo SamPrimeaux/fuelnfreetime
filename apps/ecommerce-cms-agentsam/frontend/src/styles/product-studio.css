@@ -3246,3 +3246,27 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
   .ps-product-card:hover .ps-catalog-sample-label,.ps-product-card:focus-visible .ps-catalog-sample-label{opacity:1}
 }
 @media(prefers-reduced-motion:reduce){.ps-catalog-hover .ps-catalog-sample,.ps-catalog-hover>img{transition:none}}
+
+/* A Studio guideline is a collapsible hint, never a manufacturing rejection banner. */
+.product-studio-shell .ps-print-quality-guidance.is-advisory {
+  display:block; padding:0 12px; background:#f6f8f7;
+  color:#4e625d; border-block:1px solid #e0e7e3;
+}
+.product-studio-shell .ps-print-quality-guidance.is-advisory .ps-print-quality-guidance__toggle {
+  display:flex; width:100%; min-height:34px; align-items:center; justify-content:space-between;
+  padding:5px 0; text-align:left; background:transparent; border:0;
+  font:600 11px/1.4 Inter,system-ui,sans-serif; color:#4e625d; cursor:pointer;
+}
+.product-studio-shell .ps-print-quality-guidance.is-advisory:not(.is-expanded) .ps-print-quality-guidance__copy,
+.product-studio-shell .ps-print-quality-guidance.is-advisory:not(.is-expanded) .ps-print-quality-guidance__actions { display:none; }
+.product-studio-shell .ps-print-quality-guidance.is-advisory.is-expanded .ps-print-quality-guidance__copy { padding:4px 0 10px; }
+.product-studio-shell .ps-print-quality-guidance.is-advisory.is-expanded .ps-print-quality-guidance__actions { padding-bottom:10px; }
+.product-studio-shell .ps-print-quality-guidance.is-advisory .ps-print-quality-guidance__copy small {
+  display:block; font-size:10px; line-height:1.45; color:#60716d;
+}
+@media (max-width:700px) {
+  .product-studio-shell .ps-print-quality-guidance.is-advisory:not(.is-expanded) { display:none; }
+  .product-studio-shell .ps-print-quality-guidance.is-advisory.is-expanded {
+    position:fixed; background:#fbfcfb; border:1px solid #dae5df; color:#425851;
+  }
+}

@@ -1623,6 +1623,76 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     }
   }
 
+  async function openSavedMediaVersion(id) {
+    if (!Number.isSafeInteger(Number(id)) || Number(id) < 1) return;
+    try {
+      const result = await adminFetch('/api/admin/media/' + encodeURIComponent(id));
+      if (!result?.asset) throw new Error('Saved version is unavailable');
+      openDrawer(result.asset, { skipDetailFetch: true });
+      setInspectorTab('versions');
+    } catch (error) {
+      const status = document.getElementById('media-enhance-status');
+      if (status) status.textContent = error.message || 'Could not open the saved version';
+    }
+  }
+
+  let editModelsLoaded = false;
+  async function loadMediaEditModels() {
+    if (editModelsLoaded) return;
+    try {
+      const response = await adminFetch('/api/admin/media/image-models');
+      const models = Array.isArray(response.models) ? response.models : [];
+      const select = document.getElementById('media-enhance-model');
+      const group = document.getElementById('media-enhance-ai');
+      if (!select || !group || !models.length) return;
+      select.replaceChildren(...models.map((model) => {
+        const option = document.createElement('option');
+        option.value = model.id;
+        option.textContent = model.name || model.id;
+        return option;
+      }));
+      group.hidden = false;
+      editModelsLoaded = true;
+    } catch (error) { console.warn('Optional image edit models unavailable', error); }
+  }
+
+  async function runImageImprovement(kind) {
+    const source = selected;
+    if (!source || assetKind(source) !== 'image') return;
+    if (!['resample','remove-background','ai-edit'].includes(kind)) return;
+    const status = document.getElementById('media-enhance-status');
+    const actions = ['media-drawer-resample','media-drawer-clean-background','media-enhance-submit']
+      .map(id => document.getElementById(id)).filter(Boolean);
+    if (kind === 'ai-edit' && !document.getElementById('media-enhance-consent')?.checked) {
+      if (status) status.textContent = 'Review and confirm that AI edits can alter lettering or fine details before continuing.';
+      return;
+    }
+    const model = document.getElementById('media-enhance-model')?.value;
+    const prompt = document.getElementById('media-enhance-prompt')?.value?.trim();
+    if (kind === 'ai-edit' && (!model || !prompt)) {
+      if (status) status.textContent = 'Choose an enabled image model and an enhancement instruction.';
+      return;
+    }
+    actions.forEach(button => { button.disabled = true; });
+    if (status) status.textContent = 'Creating a new version from the saved source…';
+    try {
+      const route = kind === 'remove-background' ? 'remove-background' : kind;
+      const body = kind === 'resample' ? { scale: 2 }
+        : kind === 'ai-edit' ? { model_id: model, prompt } : null;
+      const response = await adminFetch('/api/admin/media/' + source.id + '/' + route, {
+        method: 'POST', ...(body ? { body: JSON.stringify(body) } : {}),
+      });
+      if (!response?.asset?.id) throw new Error(response?.error || 'Image operation did not save a version');
+      // Reopen the actual derivative from storage rather than showing the
+      // source URL or a stale CSS-only size preview.
+      await load();
+      if (status) status.textContent = 'New version saved. Source is unchanged.';
+      await openSavedMediaVersion(response.asset.id);
+    } catch (error) {
+      if (status) status.textContent = error?.message || 'Image operation failed. Source is unchanged.';
+    } finally { actions.forEach(button => { button.disabled = false; }); }
+  }
+
   async function runSelectedAssetAction(action) {
     if (!selected) return null;
     try {
@@ -1651,7 +1721,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     }
   }
 
-  function openDrawer(asset, { updateHistory = true, historyMode = 'push' } = {}) {
+  function openDrawer(asset, { updateHistory = true, historyMode = 'push', skipDetailFetch = false } = {}) {
     if (!asset) return;
     closeCardMenu();
     selected = asset;
@@ -1748,14 +1818,28 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     }
 
     renderSeoReview(asset);
+    const editableRaster = ['image/png','image/jpeg','image/webp']
+      .includes(String(asset.content_type || '').split(';')[0].toLowerCase());
+    for (const id of ['media-drawer-edit-image','media-drawer-clean-background','media-drawer-resample','media-enhance-submit']) {
+      const button = document.getElementById(id);
+      if (button) {
+        button.disabled = !editableRaster || (id === 'media-drawer-clean-background' && !mediaCapabilities.can_remove_background);
+        button.title = !editableRaster ? 'Select a PNG, JPEG or WebP image to use raster tools'
+          : id === 'media-drawer-clean-background' && !mediaCapabilities.can_remove_background
+            ? 'Background-removal provider is not connected'
+            : '';
+      }
+    }
 
     const usage = document.getElementById("media-drawer-usage");
     if (usage) {
       const refs = Array.isArray(asset.usage) ? asset.usage : [];
       usage.innerHTML = refs.length
         ? refs.map((ref) =>
-            '<div class="media-usage-row"><span>' + escapeHtml(ref.kind || "Reference") + '</span><strong>' +
-            escapeHtml(ref.label || ref.id || "Used") + '</strong></div>'
+            '<div class="media-usage-row"><span>' + escapeHtml(ref.kind || "Reference") + '</span>' +
+            (ref.href
+              ? '<a href="' + escapeHtml(ref.href) + '">' + escapeHtml(ref.label || ref.id || "Used") + '</a>'
+              : '<strong>' + escapeHtml(ref.label || ref.id || "Used") + '</strong>') + '</div>'
           ).join("")
         : '<span class="media-empty-state">No known gallery or product references.</span>';
     }
@@ -1772,11 +1856,18 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
           version.provider || "",
         ].filter(Boolean).join(" · ") || "Prepared version") + '</small></div>'
       );
-      const previewRows = IMAGE_PREVIEW_PRESETS
-        .filter((preset) => preset.id !== "original")
-        .map((preset) =>
-          '<div class="media-version-row is-preview-only"><span>' + escapeHtml(preset.label) + '</span><small>Preview only · not generated</small></div>'
-        );
+      const savedRows = (asset.linked_versions || []).map((version) =>
+        '<button type="button" class="media-version-card" data-media-version-id="' + Number(version.id) +
+        '" aria-label="Open saved version ' + escapeHtml(version.filename || 'Image') + '">' +
+          (version.url ? '<img src="' + escapeHtml(version.url) + '" loading="lazy" alt="">' : '') +
+          '<span><strong>' + escapeHtml(version.filename || 'Edited image') + '</strong>' +
+          '<small>' + escapeHtml([
+            version.operation || 'edit',
+            version.dimensions ? version.dimensions.width + '×' + version.dimensions.height : '',
+            version.content_type?.replace('image/', '').toUpperCase() || '',
+            version.size_bytes ? fmtBytes(version.size_bytes) : ''
+          ].filter(Boolean).join(' · ')) + '</small></span></button>'
+      );
       const edit = asset.meta?.media_edit;
       const lineageRow = edit?.source_media_asset_id
         ? '<div class="media-version-group"><strong>Derivative provenance</strong><div class="media-version-row"><span>Edited from asset #' +
@@ -1787,9 +1878,15 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
       versions.innerHTML =
         '<div class="media-version-group"><strong>Current asset</strong><div class="media-version-row"><span>' +
         escapeHtml(asset.filename || "Source") + '</span><small>' + escapeHtml(displayLine(asset) || "Source") + '</small></div></div>' +
+        (asset.source_version_id ? '<button type="button" class="media-version-parent" data-media-version-id="' +
+          Number(asset.source_version_id) + '">← Open source image #' + Number(asset.source_version_id) + '</button>' : '') +
         lineageRow +
-        (preparedRows.length ? '<div class="media-version-group"><strong>Prepared</strong>' + preparedRows.join("") + '</div>' : '') +
-        '<div class="media-version-group"><strong>Preview only</strong>' + previewRows.join("") + '</div>';
+        '<div class="media-version-group"><strong>Saved edits & enhancements</strong>' +
+        (savedRows.length ? savedRows.join("") :
+          '<p class="media-empty-state">No saved child versions yet. Crop, resize, background removal and AI edits will appear here as separate selectable assets.</p>') +
+        '</div>' +
+        (preparedRows.length ? '<div class="media-version-group"><strong>Stored delivery outputs</strong>' + preparedRows.join("") + '</div>' : '') +
+        '<p class="media-version-hint">Thumbnail / Small / Medium are display previews only. They do not create saved files; use Image improvement to save a new asset.</p>';
     }
     applyPreviewPreset("original");
 
@@ -1817,9 +1914,27 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     document.title = `${asset.filename || 'Image'} — Media | Fuel & Free Time`;
     if (updateHistory) updateDetailUrl(asset.id, historyMode);
     window.scrollTo({ top: 0, behavior: 'instant' });
+    // Product/gallery associations and saved derivatives must be read for any
+    // detail opened from a paginated list. A late response cannot replace a
+    // newer selection. Never recursively refetch an already hydrated asset.
+    if (!skipDetailFetch && asset.linked_versions === undefined) {
+      const serial = ++detailFetchSerial;
+      void adminFetch('/api/admin/media/' + encodeURIComponent(asset.id)).then((response) => {
+        if (serial !== detailFetchSerial || Number(selected?.id) !== Number(asset.id) || !response?.asset) return;
+        // Never close an active image-edit dialog just because detail metadata
+        // resolved after the merchant started working on the canvas.
+        if (document.querySelector('.media-agent-editor[open]')) return;
+        const originalTab = inspectorTab;
+        openDrawer(response.asset, { updateHistory: false, skipDetailFetch: true });
+        setInspectorTab(originalTab);
+      }).catch((error) => {
+        console.warn('Media version and usage detail unavailable:', error);
+      });
+    }
   }
 
   function closeDrawer({ updateHistory = true } = {}) {
+    ++detailFetchSerial;
     selected = null;
     mediaWorkbench?.setAsset(null);
     document.body.classList.remove('media-detail-active');
@@ -2231,13 +2346,22 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     if (drawerPrev) mountListener(drawerPrev, "click", () => navigateDrawer(-1));
     if (drawerNext) mountListener(drawerNext, "click", () => navigateDrawer(1));
     if (drawerOptimize) mountListener(drawerOptimize, "click", () => void runSelectedAssetAction("optimize"));
+    mountListener(document.getElementById('media-drawer-edit-image'), 'click', () => document.querySelector('#media-agent-workbench [data-media-tool="crop"]')?.click());
+    mountListener(document.getElementById('media-drawer-clean-background'), 'click', () => void runImageImprovement('remove-background'));
+    mountListener(document.getElementById('media-drawer-resample'), 'click', () => void runImageImprovement('resample'));
+    mountListener(document.getElementById('media-enhance-submit'), 'click', () => void runImageImprovement('ai-edit'));
     if (drawerRetryProcessing) mountListener(drawerRetryProcessing, "click", () => void retrySelectedProcessing());
     if (drawerApplySeo) mountListener(drawerApplySeo, "click", () => void applyApprovedSeo());
     mountListener(els.drawer, "click", (event) => {
+      const version = event.target.closest('[data-media-version-id]');
+      if (version) { void openSavedMediaVersion(Number(version.dataset.mediaVersionId)); return; }
       const preview = event.target.closest("[data-media-preview-preset]");
       if (preview) { applyPreviewPreset(preview.dataset.mediaPreviewPreset); return; }
       const tab = event.target.closest("[data-media-inspector-tab]");
-      if (tab) setInspectorTab(tab.dataset.mediaInspectorTab);
+      if (tab) {
+        setInspectorTab(tab.dataset.mediaInspectorTab);
+        if (tab.dataset.mediaInspectorTab === 'optimize') void loadMediaEditModels();
+      }
     });
     mountListener(window, 'popstate', () => { void syncAssetFromLocation(); });
     mountListener(document, 'click', event => {

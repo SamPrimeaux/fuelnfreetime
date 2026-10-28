@@ -1936,21 +1936,21 @@ export default function StudioWorkspace({
         </div>
       </header>
       {printSource?.needsSharperSource && (
-        <section id="ps-print-quality-inspector" className={"ps-print-quality-guidance" + (qualityDetailsOpen ? " is-expanded" : "")}
+        <section id="ps-print-quality-inspector" className={"ps-print-quality-guidance" + (qualityDetailsOpen ? " is-expanded" : "") + (printSource.source === "studio_guideline" ? " is-advisory" : " is-supplier-required")}
           aria-label="Print quality preflight">
           <button type="button" className="ps-print-quality-guidance__toggle"
             aria-expanded={qualityDetailsOpen} onClick={() => setQualityDetailsOpen((open) => !open)}>
-            <span>{Math.round(manufacturingPreflight?.effectivePpi ?? 0)} PPI · Review artwork quality</span>
+            <span>{printSource.source === "studio_guideline" ? "Artwork ready to design · Optional quality check" : "Supplier artwork requirements · Review"}</span>
             <span aria-hidden="true">{qualityDetailsOpen ? "−" : "+"}</span>
           </button>
           <button type="button" className="ps-quality-sheet-close" aria-label="Close print quality inspector"
             onClick={() => setQualityDetailsOpen(false)}>×</button>
           <div className="ps-print-quality-guidance__copy">
-            <strong>{Math.round(manufacturingPreflight?.effectivePpi ?? 0)} PPI at this placement · {printSource.targetPpi} PPI {printSource.source === "provider" ? "supplier-declared target" : "studio quality goal"}</strong>
-            <span>At this size, use artwork with at least {printSource.requiredWidthPx.toLocaleString()} × {printSource.requiredHeightPx.toLocaleString()} active pixels.
-              Current crop: {printSource.sourceWidthPx.toLocaleString()} × {printSource.sourceHeightPx.toLocaleString()}.
-              {printSource.source === "studio_guideline" && " This is an advisory quality goal, not a verified rejection rule for this SKU. Draft editing remains available; production readiness is unverified."}
-              {" "}Resampling pixels won't recover missing detail.</span>
+            <strong>{Math.round(manufacturingPreflight?.effectivePpi ?? 0)} PPI at this placement</strong>
+            <span>{printSource.source === "studio_guideline"
+              ? "Completeful has not declared a minimum print resolution for this area. This is our optional visual-quality check, not a supplier rejection. Save your draft and request the real supplier preview."
+              : "Completeful declares a resolution target for this area. Review source detail before manufacturing."}</span>
+            <small>Source detail: {printSource.sourceWidthPx.toLocaleString()} × {printSource.sourceHeightPx.toLocaleString()} pixels. Guideline: {printSource.requiredWidthPx.toLocaleString()} × {printSource.requiredHeightPx.toLocaleString()} at {printSource.targetPpi} PPI.</small>
           </div>
           <div className="ps-print-quality-guidance__actions">
             {autoFitAvailable && resolutionFit != null
@@ -2628,7 +2628,7 @@ export default function StudioWorkspace({
                 aria-controls="ps-studio-repair-panel"
                 aria-expanded={repairOpen}
                 onClick={() => { setQualityDetailsOpen(false); openTab("tools"); setAiMode("edit"); setRepairOpen(true); }}>
-                {Math.floor(manufacturingPreflight?.effectivePpi ?? 0)} PPI · Review
+                {printSource.source === "studio_guideline" ? "Quality tips" : "Supplier quality check"}
               </button>
             )}
             <div className="ps-stage-toolbar__controls">

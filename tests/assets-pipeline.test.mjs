@@ -82,6 +82,20 @@ test("Product Studio production lanes bypass generic storefront optimization", (
   assert.equal(campaign.needs_optimize, true);
 });
 
+test("uploaded PNG logos remain print-capable masters even above 2 MB", () => {
+  const asset = classifyMediaAsset({
+    r2Key: "intake/random-media-asset.png",
+    filename: "Good Times back logo.png",
+    contentType: "image/png",
+    bytes: 4_500_000, folder: "images",
+  });
+  assert.equal(asset.media_role, "logo");
+  assert.equal(asset.asset_role, "master");
+  assert.equal(asset.output_format, "image/png");
+  assert.equal(asset.promote_deletes_intake, false);
+  assert.equal(asset.needs_optimize, false);
+});
+
 test("image/icon/video/GLB routing", () => {
   const image = classifyMediaAsset({
     r2Key: "intake/abc/shirt-front.png",
