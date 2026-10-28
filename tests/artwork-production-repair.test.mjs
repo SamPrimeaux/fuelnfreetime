@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {opaqueCrop,inspectDecodedArtwork,repairArtworkCandidate} from "../apps/ecommerce-cms-agentsam/backend/media/artwork-repair.js";
+import {opaqueCrop,inspectDecodedArtwork,repairArtworkCandidate,inspectArtworkRepair} from "../apps/ecommerce-cms-agentsam/backend/media/artwork-repair.js";
 
 function fixture(withPixel=true) {
  const data=new Uint8ClampedArray(4*4*4);
@@ -52,4 +52,29 @@ test("authenticated inspector route and deliberate before/after review are wired
  assert.match(ui,/disabled=\{!reviewed\|\|!!busy\}/);
  assert.match(studio,/onApply=\{\(candidate\) => \{/);
  assert.match(studio,/setPreparedAsset\(null\)/);
+});
+
+test("inspection reads unmodified R2 master bytes and returns measured source dimensions",async()=>{
+ const original=Uint8Array.from(Buffer.from(
+   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/pCsAAAAASUVORK5CYII=","base64"));
+ const source={id:14,filename:"test-master.png",r2_key:"masters/test-master.png",
+   content_type:"image/png",meta_json:"{}"};
+ let readCount=0;
+ const env={
+   WEBSITE_ASSETS:{async get(key){readCount++;assert.equal(key,source.r2_key);
+     return {size:original.length,arrayBuffer:async()=>original.buffer.slice(
+       original.byteOffset,original.byteOffset+original.byteLength)};}},
+   DB:{prepare(sql){return {bind(...args){return {
+     first:async()=>sql.includes("FROM media_assets WHERE id")&&Number(args[0])===14?source:null,
+     all:async()=>({results:[]}),
+   };}};}},
+ };
+ const inspected=await inspectArtworkRepair(env,14,{print_width_in:1,print_height_in:1,target_ppi:300});
+ assert.equal(inspected.ok,true);
+ assert.equal(inspected.source.id,14);
+ assert.equal(inspected.assessment.source_px.width,1);
+ assert.equal(inspected.assessment.source_px.height,1);
+ assert.equal(inspected.assessment.production_ready,false);
+ assert.equal(inspected.source_preserved,true);
+ assert.equal(readCount,1);
 });
