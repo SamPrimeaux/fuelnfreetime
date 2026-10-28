@@ -7,6 +7,15 @@ on:
       - apps/ecommerce-cms-agentsam/frontend/static/product-edit.html
       - apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx
       - apps/ecommerce-cms-agentsam/frontend/src/pages/collections/**
+      - apps/ecommerce-cms-agentsam/backend/completeful/catalog.js
+      - apps/ecommerce-cms-agentsam/frontend/src/pages/products/VectorAssetWorkbench.tsx
+      - apps/ecommerce-cms-agentsam/frontend/src/pages/products/ProductStudioPage.tsx
+      - apps/ecommerce-cms-agentsam/frontend/src/pages/products/studio-model.ts
+      - apps/ecommerce-cms-agentsam/frontend/src/styles/product-studio.css
+      - packages/agentsam-merch/src/catalog-query.*
+      - packages/agentsam-merch/src/vector-exports.*
+      - tests/catalog-query-sdk.test.mjs
+      - tests/vector-export-sdk.test.mjs
       - apps/ecommerce-cms-agentsam/backend/media/artwork-repair.js
       - apps/ecommerce-cms-agentsam/frontend/src/pages/products/ArtworkRepairPanel.tsx
       - apps/ecommerce-cms-agentsam/tests/artwork-auto-repair.test.mjs
@@ -35,6 +44,7 @@ jobs:
           node --test apps/ecommerce-cms-agentsam/tests/completeful-mockup-matrix.test.mjs
           node --test tests/product-studio-selling-handoff.test.mjs
           node --test apps/ecommerce-cms-agentsam/tests/artwork-auto-repair.test.mjs
+          node --test tests/catalog-query-sdk.test.mjs tests/vector-export-sdk.test.mjs
       - name: Build actual admin UI
         run: npm run build:admin
       - name: Validate Worker bundle
