@@ -132,6 +132,22 @@ export default function CollectionEditor() {
     finally{runningRef.current=false;setBusy(false);}
   },[form,selected,activeCount,totalMissing,navigate]);
 
+  const scaffoldDrafts=useCallback(async ()=>{
+    const id=await save("draft");
+    if(!id)return;
+    setError("");
+    try {
+      const result=await collectionsApi.scaffold(id);
+      const [updatedProducts,detail]=await Promise.all([collectionsApi.products(),collectionsApi.get(id)]);
+      const members=detail.product_ids||[];
+      setProducts(updatedProducts);
+      setSelected(members);
+      setSavedSnapshot(JSON.stringify({form:{...form,status:"draft"},selected:members}));
+      setNotice(`${result.created.length} new draft products prepared · ${result.reused.length} already linked`+
+        (result.unavailable.length?` · ${result.unavailable.length} unavailable: ${result.unavailable.map(x=>x.reason).join("; ")}`:"")+
+        ". Choose a draft to design. No product was published.");
+    }catch(e){setError(e instanceof Error?e.message:"Product scaffolding failed");}
+  },[save,form]);
   const goToStudio=useCallback(async (supplierId?:string)=>{
     const savedId=await save();
     if(!savedId)return;
@@ -200,7 +216,7 @@ export default function CollectionEditor() {
               </details>
             </section>
           </div>}
-          {tab==="products"&&<CollectionProducts products={products} selected={selected} onSelect={setSelected} plan={form.plan} onPlan={v=>setField("plan",v)} onOpenStudio={goToStudio}/>}
+          {tab==="products"&&<CollectionProducts products={products} selected={selected} onSelect={setSelected} plan={form.plan} onPlan={v=>setField("plan",v)} onOpenStudio={goToStudio} onScaffold={scaffoldDrafts}/>}
           {tab==="presentation"&&<CollectionPresentation form={form} setForm={setForm} openMedia={setMediaRole} products={products} selected={effectiveIds}/>}
           {tab==="rules"&&<CollectionRules products={products} selected={selected} onSelect={setSelected} rules={form.rules} onRules={rules=>setField("rules",rules)} />}
           {tab==="seo"&&<div className="cs-tab-stack"><section className="cs-panel">
