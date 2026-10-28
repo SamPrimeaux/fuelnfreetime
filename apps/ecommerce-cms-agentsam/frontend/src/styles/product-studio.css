@@ -2874,3 +2874,134 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
   .ps-artwork-quickview__details{padding:12px 16px}
 }
 @media(prefers-reduced-motion:reduce){.product-studio-shell .ps-mobile-artwork-strip,.ps-artwork-quickview{scroll-behavior:auto}}
+
+/* Wave 2 — canvas first. Scoped to the studio; no site-shell/global dock changes. */
+.ps-quality-sheet-close,.ps-mobile-quality-trigger{display:none}
+@media(max-width:760px){
+  .product-studio-shell .ps-workspace-header{min-height:48px;padding:3px 8px;gap:4px}
+  .product-studio-shell .ps-workspace-actions{gap:4px}
+  .product-studio-shell .ps-icon-action{min-width:44px;width:44px;min-height:44px;height:44px}
+  .product-studio-shell .ps-steps{min-width:0;flex:1 1 auto}
+  .product-studio-shell .ps-steps ol{max-width:100%;overflow:hidden}
+  .product-studio-shell .ps-stage-column{
+    padding:0 8px calc(122px + env(safe-area-inset-bottom,0px));
+    min-width:0;
+  }
+  .product-studio-shell .ps-stage-toolbar{
+    display:grid;grid-template-columns:minmax(0,1fr) auto;
+    align-items:center;gap:2px 6px;padding:2px 0 4px;
+  }
+  .product-studio-shell .ps-product-title-edit{max-width:100%;width:100%;min-width:0}
+  .product-studio-shell .ps-product-title-edit input{
+    min-height:33px;height:33px;margin:0;padding:4px 6px;
+    font-size:12px;font-weight:650;line-height:1.3;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .product-studio-shell .ps-mobile-quality-trigger{
+    display:inline-flex;align-items:center;justify-content:center;
+    white-space:nowrap;min-height:35px;min-width:96px;
+    padding:5px 9px;border:1px solid #d8ad6b;border-radius:10px;
+    background:#fff9ef;color:#67471d;font:700 11px Inter,system-ui,sans-serif;
+  }
+  .product-studio-shell .ps-mobile-quality-trigger[aria-expanded=true]{
+    background:#f6e2c7;outline:2px solid #bc8e50;outline-offset:1px;
+  }
+  .product-studio-shell .ps-stage-toolbar__controls{
+    grid-column:1/-1;display:flex;align-items:center;justify-content:flex-start;
+    flex-wrap:nowrap;min-width:0;gap:5px;padding:2px 0 3px;
+    overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;
+  }
+  .product-studio-shell .ps-stage-toolbar__controls::-webkit-scrollbar{display:none}
+  .product-studio-shell .ps-stage-toolbar .ps-artboard-mode,
+  .product-studio-shell .ps-stage-toolbar .ps-print-side-toggle{
+    flex:0 0 auto;width:auto;max-width:none;min-width:0;margin:0;
+  }
+  .product-studio-shell .ps-stage-toolbar .ps-artboard-mode button,
+  .product-studio-shell .ps-stage-toolbar .ps-print-side-toggle button{
+    min-width:68px;min-height:38px;height:38px;padding:5px 8px;
+    font-size:11px;line-height:1.2;white-space:nowrap;
+  }
+  .product-studio-shell .ps-stage-toolbar .ps-canvas-controls{
+    flex:0 0 auto;min-width:max-content;max-width:none;
+  }
+  .product-studio-shell .ps-mobile-placement-tools{
+    margin:1px 0;padding:2px 0 3px;min-height:44px;
+    display:flex;align-items:center;justify-content:space-between;
+    gap:3px;overflow:visible;
+  }
+  .product-studio-shell .ps-mobile-placement-tools button{
+    min-width:44px;min-height:44px;height:44px;
+    padding:5px 7px;display:flex;align-items:center;
+    justify-content:center;gap:5px;font-size:12px;
+    border-radius:10px;white-space:nowrap;
+  }
+  .product-studio-shell .ps-mobile-placement-tools button:first-child{
+    flex:1 1 auto;max-width:110px;
+  }
+  .product-studio-shell .ps-mobile-placement-tools button:last-child{
+    flex:1 1 auto;max-width:85px;
+  }
+  .product-studio-shell .ps-mobile-placement-tools output{
+    min-width:42px;flex:0 0 auto;font-size:12px;
+  }
+  .product-studio-shell .ps-stage{padding:0;gap:2px;min-width:0}
+  .product-studio-shell .ps-product-design-preview{
+    width:min(100%, calc((100dvh - 305px) * var(--ps-artboard-aspect,1))) !important;
+    max-width:100%;margin:0 auto;transform-origin:center top;
+  }
+  .product-studio-shell .ps-product-design-image{
+    min-height:0;max-width:100%;box-shadow:none;
+  }
+  .product-studio-shell .ps-design-guide{
+    min-height:0;max-width:100%;overflow:hidden;
+  }
+  .product-studio-shell .ps-product-design-caption{
+    padding:5px 2px;gap:2px;font-size:11px;
+  }
+  .product-studio-shell .ps-mobile-artwork-strip{
+    left:8px;right:8px;bottom:calc(67px + env(safe-area-inset-bottom,0px));
+  }
+  .product-studio-shell .ps-mobile-artwork-strip__heading{min-height:43px}
+  .product-studio-shell .ps-toolrail{
+    min-height:calc(61px + env(safe-area-inset-bottom,0px));
+    padding:4px 5px calc(4px + env(safe-area-inset-bottom,0px));
+  }
+  .product-studio-shell .ps-toolrail button,
+  .product-studio-shell .ps-toolrail__help{
+    min-height:49px;font-size:9px;gap:2px;padding:3px 1px;
+  }
+  .product-studio-shell .ps-toolrail svg{width:20px;height:20px}
+  /* Status is a button next to the title. Only expand the explanation on demand. */
+  .product-studio-shell .ps-print-quality-guidance:not(.is-expanded){display:none}
+  .product-studio-shell .ps-print-quality-guidance.is-expanded{
+    position:fixed;left:8px;right:8px;top:auto;
+    bottom:calc(66px + env(safe-area-inset-bottom,0px));
+    z-index:40;display:block;max-height:min(60dvh,460px);overflow-y:auto;
+    border:1px solid #dec9a6;border-radius:16px;padding:8px 14px 12px;
+    background:#fff9ef;box-shadow:0 14px 55px #1d172b3d;
+    overscroll-behavior:contain;
+  }
+  .product-studio-shell .ps-print-quality-guidance__toggle{
+    max-width:calc(100% - 42px);min-height:44px;font-size:12px;
+  }
+  .product-studio-shell .ps-quality-sheet-close{
+    display:grid;place-items:center;position:absolute;right:6px;top:6px;
+    z-index:2;width:44px;height:44px;background:transparent;border:0;
+    font-size:28px;color:#67471d;
+  }
+  .product-studio-shell .ps-print-quality-guidance__actions{
+    grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;
+  }
+  .product-studio-shell .ps-print-quality-guidance__copy{
+    font-size:12px;line-height:1.45;
+  }
+  .product-studio-shell .ps-print-quality-guidance__actions button{min-height:44px}
+}
+@media(max-width:390px){
+  .product-studio-shell .ps-mobile-placement-tools button span{display:none}
+  .product-studio-shell .ps-mobile-placement-tools button{flex:0 0 auto}
+  .product-studio-shell .ps-mobile-placement-tools button:first-child,
+  .product-studio-shell .ps-mobile-placement-tools button:last-child{flex:1 1 auto}
+  .product-studio-shell .ps-stage-toolbar .ps-artboard-mode button,
+  .product-studio-shell .ps-stage-toolbar .ps-print-side-toggle button{min-width:60px;padding-inline:6px}
+}

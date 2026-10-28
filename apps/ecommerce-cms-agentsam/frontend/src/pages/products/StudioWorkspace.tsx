@@ -1810,7 +1810,7 @@ export default function StudioWorkspace({
       </div>
     );
   }
-  const manufacturingPreflight = dimensions && !cropPending && printPixels && asset && location
+  const manufacturingPreflight = dimensions && !cropPending && quality.result && asset && location
     ? evaluateManufacturingCompatibility(
         { filename: asset.filename, mimeType: asset.content_type,
           widthPx: artworkCrop?.width ?? dimensions.width,
@@ -1820,9 +1820,8 @@ export default function StudioWorkspace({
           format: "png", allowRaster: true, allowVector: false,
           ppi: Number(location.dpi) || 300,
           source: { kind: "catalog-artboard", verified: false } },
-        { printWidthIn: ((printPixels.width * scale) / 100) / (Number(location.dpi) || 300),
-          printHeightIn: ((printPixels.width * scale) / 100) / (Number(location.dpi) || 300) *
-            (artworkCrop?.height ?? dimensions.height) / Math.max(1, artworkCrop?.width ?? dimensions.width) },
+        { printWidthIn: quality.result.printedWidthIn,
+          printHeightIn: quality.result.printedHeightIn },
       )
     : null;
   const resolutionFit = suggestPrintScale({ currentScale: scale,
@@ -1885,7 +1884,8 @@ export default function StudioWorkspace({
             )}
             <span className="ps-sr-only">{nextLabel}</span>
           </button>
-          {error && <p className="ps-step-feedback ps-step-feedback--error" role="alert">{error}</p>}
+          {error && !(printSource?.needsSharperSource && /effective resolution|\bppi\b|\bdpi\b/i.test(error)) &&
+            <p className="ps-step-feedback ps-step-feedback--error" role="alert">{error}</p>}
           {cropError && <p className="ps-step-feedback ps-step-feedback--error" role="alert">{cropError}</p>}
           {!error && notice && <p className="ps-step-feedback" role="status">{notice}</p>}
         </div>
@@ -1925,25 +1925,27 @@ export default function StudioWorkspace({
         </div>
       </header>
       {printSource?.needsSharperSource && (
-        <section className={"ps-print-quality-guidance" + (qualityDetailsOpen ? " is-expanded" : "")}
+        <section id="ps-print-quality-inspector" className={"ps-print-quality-guidance" + (qualityDetailsOpen ? " is-expanded" : "")}
           aria-label="Print quality preflight">
           <button type="button" className="ps-print-quality-guidance__toggle"
             aria-expanded={qualityDetailsOpen} onClick={() => setQualityDetailsOpen((open) => !open)}>
             <span>{Math.round(manufacturingPreflight?.effectivePpi ?? 0)} PPI · Review artwork quality</span>
             <span aria-hidden="true">{qualityDetailsOpen ? "−" : "+"}</span>
           </button>
+          <button type="button" className="ps-quality-sheet-close" aria-label="Close print quality inspector"
+            onClick={() => setQualityDetailsOpen(false)}>×</button>
           <div className="ps-print-quality-guidance__copy">
             <strong>{Math.round(manufacturingPreflight?.effectivePpi ?? 0)} PPI source · {printSource.targetPpi} PPI {printSource.source === "provider" ? "supplier requirement" : "studio quality goal"}</strong>
             <span>At this size, use artwork with at least {printSource.requiredWidthPx.toLocaleString()} × {printSource.requiredHeightPx.toLocaleString()} active pixels.
               Current crop: {printSource.sourceWidthPx.toLocaleString()} × {printSource.sourceHeightPx.toLocaleString()}.
-              {printSource.source === "studio_guideline" && " Completeful has not supplied a verified DPI requirement."}
+              {printSource.source === "studio_guideline" && " The 300 PPI studio goal is not a verified requirement for this individual print location."}
               {" "}Resampling pixels won't recover missing detail.</span>
           </div>
           <div className="ps-print-quality-guidance__actions">
             {autoFitAvailable && resolutionFit != null
               ? <button type="button" onClick={() => { setScale(resolutionFit); setError(""); }}>Fit safely to {resolutionFit}%</button>
               : <button type="button" onClick={() => openTab("upload")}>Choose sharper original</button>}
-            <button type="button" onClick={() => { openTab("tools"); setAiMode("edit"); }}>Review background / crop</button>
+            <button type="button" onClick={() => { setQualityDetailsOpen(false); openTab("tools"); setAiMode("edit"); }}>Improve artwork / crop</button>
           </div>
         </section>
       )}
@@ -2581,17 +2583,27 @@ export default function StudioWorkspace({
         <div className="ps-stage-column" ref={stage}>
           {asset && showArtwork && (
             <div className="ps-mobile-placement-tools" role="toolbar" aria-label="Quick artwork positioning">
-              <button type="button" onClick={() => openTab("layers")}>Position</button>
+              <button type="button" onClick={() => openTab("layers")} aria-label="Position artwork">
+                <StudioIcon name="move" size={17} /> <span>Position</span>
+              </button>
               <button type="button" aria-label="Reduce artwork size" onClick={() => setScale((v) => Math.max(5, v - 5))}>−</button>
               <output aria-label="Artwork size">{scale}%</output>
               <button type="button" aria-label="Increase artwork size" onClick={() => setScale((v) => Math.min(150, v + 5))}>+</button>
-              <button type="button" aria-label="Center artwork" onClick={() => { setX(50); setY(50); }}>Center</button>
-              <button type="button" aria-label="Flip artwork horizontally" aria-pressed={flipX}
-                onClick={() => setFlipX((v) => !v)}>Flip</button>
+              <button type="button" aria-label="More positioning options: center, rotate and flip" onClick={() => openTab("layers")}>
+                <StudioIcon name="layers" size={17} /> <span>More</span>
+              </button>
             </div>
           )}
           <div className="ps-stage-toolbar">
             <div className="ps-product-title-edit"><label htmlFor="ps-product-title">Product name</label><input id="ps-product-title" aria-label="Product name" type="text" maxLength={160} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Name this product" /><small title={detail.product.name}>Blank: {detail.product.name}</small></div>
+            {printSource?.needsSharperSource && (
+              <button type="button" className="ps-mobile-quality-trigger"
+                aria-controls="ps-print-quality-inspector"
+                aria-expanded={qualityDetailsOpen}
+                onClick={() => setQualityDetailsOpen((open) => !open)}>
+                {Math.floor(manufacturingPreflight?.effectivePpi ?? 0)} PPI · Improve
+              </button>
+            )}
             <div className="ps-stage-toolbar__controls">
               {location?.artboard_image_url && (
                 <div className="ps-artboard-mode" role="group" aria-label="Canvas reference">
