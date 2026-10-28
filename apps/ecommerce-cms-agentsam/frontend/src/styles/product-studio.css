@@ -3234,3 +3234,15 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
 .ps-method-variants button.is-active{background:#e8eedc;border-color:#93a179}
 .ps-method-variants button b{font-size:12px}.ps-method-variants button small,.ps-method-variants>small,.ps-method-single{font-size:11px;color:var(--ps-muted)}
 .ps-method-single{margin:12px 0}
+
+/* Blank first. Supplier mockup crossfades only on hover-capable devices. */
+.ps-catalog-hover{width:100%;height:100%;position:relative;overflow:hidden}
+.ps-catalog-hover>img{width:100%;height:100%;object-fit:cover;transition:transform .3s ease}
+.ps-product-card:hover .ps-catalog-hover>img:first-child{transform:scale(1.03)}
+.ps-catalog-hover .ps-catalog-sample{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;pointer-events:none;transition:opacity .22s ease}
+.ps-catalog-sample-label{position:absolute;right:9px;bottom:9px;background:#fff;color:#222;font-size:10px;padding:4px 7px;border-radius:6px;opacity:0;pointer-events:none}
+@media(hover:hover){
+  .ps-product-card:hover .ps-catalog-sample,.ps-product-card:focus-visible .ps-catalog-sample{opacity:1}
+  .ps-product-card:hover .ps-catalog-sample-label,.ps-product-card:focus-visible .ps-catalog-sample-label{opacity:1}
+}
+@media(prefers-reduced-motion:reduce){.ps-catalog-hover .ps-catalog-sample,.ps-catalog-hover>img{transition:none}}
