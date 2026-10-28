@@ -198,7 +198,7 @@ export default function ProductLibrary() {
                       aria-label={`${selectedIds.has(p.id) ? "Deselect" : "Select"} ${p.title}`}
                       aria-pressed={selectedIds.has(p.id)}
                       onClick={() => toggleProduct(p.id)}
-                    ><StudioIcon name={selectedIds.has(p.id) ? "check" : "plus"} size={18} /></button>
+                    ><StudioIcon name="check" size={18} /></button>
                     <div className="pl-thumb">{safeImage(p) ? <img src={safeImage(p)!} alt="" loading="lazy" /> : <StudioIcon name="image" size={22} />}</div>
                     <div className="pl-product-info">
                       <a href={`/admin/product-edit?id=${encodeURIComponent(p.id)}`} className="pl-name">{p.title}</a>
