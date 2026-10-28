@@ -1924,3 +1924,23 @@ body.media-detail-active #content-view-brand { display:none !important; }
     padding-bottom:calc(var(--admin-dock-clearance,100px) + 15px);
   }
 }
+
+/* Media improvement and saved image lineage share the existing detail inspector. */
+.media-enhance-controls { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+.media-enhance-controls .btn { min-height:36px; }
+.media-enhance-ai { display:grid; gap:8px; padding:12px; margin-top:12px; border:1px solid var(--border, #dce0de); border-radius:10px; }
+.media-enhance-ai[hidden] { display:none; }
+.media-enhance-ai label { font-size:12px; font-weight:600; }
+.media-enhance-ai select, .media-enhance-ai textarea { width:100%; max-width:100%; box-sizing:border-box; border:1px solid #cbd3d0; border-radius:7px; padding:8px; font:inherit; }
+.media-enhance-consent { display:flex; align-items:flex-start; gap:7px; font-weight:400 !important; line-height:1.4; }
+.media-enhance-consent input { margin-top:3px; }
+.media-enhance-status { min-height:1em; font-size:12px; line-height:1.4; overflow-wrap:anywhere; }
+.media-version-card { width:100%; display:flex; align-items:center; text-align:left; padding:9px; gap:10px; border:1px solid #dce0de; border-radius:10px; background:transparent; cursor:pointer; margin:8px 0; color:inherit; }
+.media-version-card:hover, .media-version-card:focus-visible, .media-version-parent:hover { border-color:#368b77; background:rgba(54,139,119,.06); }
+.media-version-card img { width:56px; height:56px; object-fit:contain; flex-shrink:0; background:repeating-conic-gradient(#ecefee 0% 25%,#fff 0% 50%) 50%/12px 12px; border-radius:6px; }
+.media-version-card span { min-width:0; display:flex; flex-direction:column; gap:4px; }
+.media-version-card strong { font-size:12px; font-weight:650; overflow-wrap:anywhere; }
+.media-version-card small, .media-version-hint { font-size:11px; color:#63706c; overflow-wrap:anywhere; }
+.media-version-parent { display:block; margin:8px 0; padding:8px; border:1px solid #dce0de; border-radius:7px; font-size:12px; background:transparent; color:inherit; cursor:pointer; }
+.media-version-hint { line-height:1.5; margin:10px 0; }
+@media (max-width: 650px) { .media-version-card img { width:48px; height:48px; } .media-enhance-controls .btn { flex:1 1 auto; min-height:44px; } }
