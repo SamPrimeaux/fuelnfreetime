@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { adminFetch } from "../../lib/api";
 import StudioIcon from "./StudioIcon";
 import ProductImage from "./ProductImage";
+import VectorAssetWorkbench from "./VectorAssetWorkbench";
 import {
   catalogProductId,
   catalogVariantId,
@@ -52,6 +53,7 @@ export default function ProductStudioPage() {
   const [catalogFilters,setCatalogFilters] = useState<CatalogQuery>(()=>readCatalogQuery(new URLSearchParams(location.search)));
   const [query,setQuery] = useState(catalogFilters.q);
   const [showMoreFilters,setShowMoreFilters] = useState(false);
+  const [vectorOpen,setVectorOpen] = useState(false);
   const [facets,setFacets] = useState<CatalogFacetCounts | null>(null);
   const search=catalogFilters.q;
   const [catalog,setCatalog] = useState<CatalogProduct[]>([]);
@@ -438,6 +440,11 @@ export default function ProductStudioPage() {
                   <span className="ps-eyebrow">THE POSSIBILITIES</span>
                   <h2>Find your canvas.</h2>
                 </div>
+                <div className="ps-catalog-heading-actions">
+                  <button type="button" className="ps-button" aria-expanded={vectorOpen}
+                    aria-controls="ps-catalog-vector-workbench" onClick={()=>setVectorOpen(v=>!v)}>
+                    SVG & logo optimizer
+                  </button>
                 <button
                   className="ps-catalog-refresh"
                   type="button"
@@ -453,7 +460,9 @@ export default function ProductStudioPage() {
                     <path d="M18 15a7 7 0 0 1-11.8 2L4 12" />
                   </svg>
                 </button>
+                </div>
               </div>
+              {vectorOpen&&<div id="ps-catalog-vector-workbench"><VectorAssetWorkbench/></div>}
               <div className="ps-search-row">
                 <label className="ps-search">
                   <StudioIcon name="search" />
