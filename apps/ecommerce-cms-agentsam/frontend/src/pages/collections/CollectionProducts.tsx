@@ -4,6 +4,7 @@ import { STARTER_KITS, safeMediaUrl, supplierId, supplierImage } from "./model";
 import { collectionsApi } from "./api";
 import StudioIcon from "../products/StudioIcon";
 import CollectionProductPicker from "./CollectionProductPicker";
+import { resolveAssortmentCandidates, type AssortmentSlotMatch } from "../../../../../../packages/agentsam-merch/src/collection-planning.js";
 
 export default function CollectionProducts({ products, selected, onSelect, plan, onPlan, onOpenStudio }: {
   products: Product[]; selected: number[]; onSelect: (ids: number[]) => void;
@@ -14,19 +15,32 @@ export default function CollectionProducts({ products, selected, onSelect, plan,
   const [supplierBusy, setSupplierBusy] = useState(false);
   const [supplierError, setSupplierError] = useState("");
   const [blanks, setBlanks] = useState<SupplierBlank[]>([]);
+  const [packResult, setPackResult] = useState<{ label: string; slots: AssortmentSlotMatch[]; missing: string[] } | null>(null);
   const [selectedOnly, setSelectedOnly] = useState(false);
   const [dragging, setDragging] = useState<number | null>(null);
   const order = useMemo(() => new Map(selected.map((id, index) => [id, index])), [selected]);
   const selectedProducts = useMemo(() => products.filter(p => order.has(p.id)).sort((a,b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0)), [products, order]);
   const missingIds = selected.filter(id => !products.some(p => p.id === id));
-  async function search(terms: string[]) {
-    setSupplierBusy(true); setSupplierError("");
+  async function search(terms: string[], kit?: typeof STARTER_KITS[number]) {
+    setSupplierBusy(true); setSupplierError(""); setPackResult(null);
     try {
       const data = await Promise.all(terms.map(t => collectionsApi.supplier(t)));
       const found = new Map<string, SupplierBlank>();
-      for (const item of data.flat()) { const id = supplierId(item); if (id && !found.has(id)) found.set(id, item); }
+      for (const item of data.flat()) {
+        const id = supplierId(item);
+        if (id && item.available !== 0 && item.available !== false && Number(item.variant_count || 0) > 0 && !found.has(id)) found.set(id, item);
+      }
       setBlanks([...found.values()].slice(0, 36));
-      if (!found.size) setSupplierError("No supplier blanks matched. Try a different term.");
+      if (kit) {
+        const resolved = resolveAssortmentCandidates(kit.id,
+          Object.fromEntries(kit.slots.map((slot, index) => [slot, data[index] || []])));
+        setPackResult({ label: kit.label, slots: resolved.slots, missing: resolved.missing_slots });
+        const next = [...new Set([...plan, ...resolved.recommended_ids])].slice(0, 24);
+        if (next.length !== plan.length) onPlan(next);
+        if (resolved.missing_slots.length) setSupplierError(
+          "Some pack slots are unavailable in the connected catalog; missing products were not invented or added."
+        );
+      } else if (!found.size) setSupplierError("No available supplier blanks matched. Try a different term.");
     } catch (e) { setSupplierError(e instanceof Error ? e.message : "Supplier catalog unavailable"); }
     finally { setSupplierBusy(false); }
   }
@@ -87,13 +101,28 @@ export default function CollectionProducts({ products, selected, onSelect, plan,
         <button className="cs-button" type="button" onClick={()=>void onOpenStudio()}><StudioIcon name="spark" size={15}/> Open Product Studio</button>
       </header>
       <div className="cs-starter-grid">
-        {STARTER_KITS.map(kit=><button type="button" key={kit.id} className="cs-starter-card" onClick={()=>{ setSupplierQuery(kit.searches[0]); void search(kit.searches); }}><span className="cs-starter-icon"><StudioIcon name={kit.id==="accessories"?"box":"layers"} size={19}/></span><strong>{kit.label}</strong><small>{kit.caption}</small><span className="cs-starter-arrow">Explore →</span></button>)}
+        {STARTER_KITS.map(kit=><button type="button" key={kit.id} className="cs-starter-card" disabled={supplierBusy} onClick={()=>{ setSupplierQuery(kit.searches[0]); void search(kit.searches, kit); }}><span className="cs-starter-icon"><StudioIcon name={kit.id==="accessories"?"box":"layers"} size={19}/></span><strong>{kit.label}</strong><small>{kit.caption}</small><span className="cs-starter-arrow">Explore →</span></button>)}
       </div>
       <form className="cs-supplier-search" onSubmit={e=>{e.preventDefault(); if(supplierQuery.trim()) void search([supplierQuery.trim()]);}}>
         <div className="cs-input-search"><StudioIcon name="search" size={16}/><input value={supplierQuery} onChange={e=>setSupplierQuery(e.target.value)} placeholder="Search Completeful blanks by name" aria-label="Find supplier blanks"/></div>
         <button type="submit" className="cs-button" disabled={supplierBusy || !supplierQuery.trim()}>{supplierBusy?"Searching…":"Search catalog"}</button>
       </form>
       {supplierError && <div className="cs-alert" role="status">{supplierError}</div>}
+      {packResult && <div className="cs-pack-coverage" role="status" aria-label={packResult.label + " supplier lineup"}>
+        <strong>{packResult.label} — live catalog matches</strong>
+        <p>Each proposed product is available in the connected supplier catalog, has sellable variants, and is added to your draft plan only. Nothing is published or ordered.</p>
+        <div className="cs-pack-slots">{packResult.slots.map(slot=>{
+          const product=slot.recommended;
+          const item=product as SupplierBlank | null;
+          const id=item ? supplierId(item) : "";
+          return <div className="cs-pack-slot" key={slot.slot}>
+            <small>{slot.search}</small>
+            {item ? <><strong>{item.name || item.title || id}</strong><span>{item.variant_count} variants · {item.mockup_count || 0} supplier mockup templates</span>
+              <button type="button" className="cs-button small" onClick={()=>void onOpenStudio(id)}>Design this product</button></>
+            : <><strong>Not in the available catalog</strong><span>Search another supplier product or leave this slot unfilled.</span></>}
+          </div>;
+        })}</div>
+      </div>}
       {!!blanks.length && <div className="cs-supplier-results">{blanks.map(item => {
         const id = supplierId(item); const image = supplierImage(item); const added = plan.includes(id);
         return <article className="cs-blank-card" key={id}>

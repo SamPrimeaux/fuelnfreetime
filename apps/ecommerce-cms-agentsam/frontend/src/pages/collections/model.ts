@@ -89,6 +89,9 @@ export interface SupplierBlank {
   cover_image_url?: string;
   main_icon_url?: string;
   variant_count?: number;
+  print_location_count?: number;
+  mockup_count?: number;
+  available?: number | boolean;
 }
 export type PresentationPreset = {
   id: string; name: string; caption: string;
@@ -101,10 +104,10 @@ export const PRESETS: PresentationPreset[] = [
   { id: "minimal", name: "Clean product", caption: "Product-first / restrained", backgroundColor: "#f4f5f2", gradientTo: "#dedfdc", textColor: "#141719", layout: "center", accent: "#ff7619", mode: "solid" },
 ];
 
-export type StarterKit = { id: string; label: string; caption: string; searches: string[] };
+export type StarterKit = { id: string; label: string; caption: string; slots: string[]; searches: string[] };
 export const STARTER_KITS: StarterKit[] = MERCH_ASSORTMENT_RECIPES.map(recipe => ({
   id: recipe.id, label: recipe.label, caption: recipe.caption,
-  searches: assortmentSearchTerms(recipe.id),
+  slots: [...recipe.slots], searches: assortmentSearchTerms(recipe.id),
 }));
 export const BLANK_HERO = (): MerchHero => ({
   version: 1, layout: "split", height: "standard", backgroundMode: "gradient", focus: "center",

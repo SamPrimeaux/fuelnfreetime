@@ -145,6 +145,23 @@ function mimeAndExtension(bytes) {
   throw new Error("invalid_provider_mockup_file");
 }
 /**
+ * A provider succeeded response authenticates the render source, not visual
+ * fidelity. Persist dimensions and a review state for merchant approval. A
+ * 1px placeholder image must never silently look like an approved mockup.
+ */
+export function inspectMockupPixels(bytes, mime) {
+  if (mime === "image/png") {
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const width = view.getUint32(16), height = view.getUint32(20);
+    if (!width || !height || width > 10000 || height > 10000 || width * height > 35_000_000) {
+      throw new Error("mockup_invalid_dimensions");
+    }
+    return { width, height, quality: Math.min(width, height) < 400
+      ? "low_resolution_needs_review" : "needs_visual_review", approval: "pending" };
+  }
+  return { width: null, height: null, quality: "dimensions_unverified_needs_review", approval: "pending" };
+}
+/**
  * Attach completed provider renders to the merchant's existing product gallery.
  * Color + print side stay in media metadata; this never changes the primary
  * image or creates another media file for a previously persisted render.
@@ -176,6 +193,7 @@ export async function persistCompletefulMockup(env, receipt, renderUrl, renderId
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (bytes.length > 20 * 1024 * 1024) throw new Error("mockup_image_too_large");
   const { mime, ext } = mimeAndExtension(bytes);
+  const inspection = inspectMockupPixels(bytes, mime);
   const key = `products/${slug(source.product_id)}/mockups/${slug(receipt.draft_id)}/${slug(receipt.variant_color)}-${slug(receipt.print_location_id)}-${slug(renderId)}.${ext}`;
   const existing = await env.DB.prepare("SELECT * FROM media_assets WHERE r2_key = ?").bind(key).first();
   if (existing) {
@@ -191,6 +209,8 @@ export async function persistCompletefulMockup(env, receipt, renderUrl, renderId
       source.prepared_media_asset_id,
     draft_id: receipt.draft_id,
     source: "completeful_provider_render",
+    image_inspection: inspection,
+    review_state: "pending_merchant_approval",
   };
   await env.WEBSITE_ASSETS.put(key, bytes, { httpMetadata: { contentType: mime } });
   try {
@@ -225,7 +245,21 @@ export async function renderCompletefulMockupMatrix(env, input = {}) {
     const existing = await env.DB.prepare("SELECT * FROM completeful_operations WHERE operation_key = ?")
       .bind(operation_key).first();
     if (existing?.provider_resource_id) {
-      output.push({ ...target, status: existing.status, render_id: existing.provider_resource_id, reused: true });
+      // Repeated render clicks must reconcile a pending/completed provider job,
+      // not pretend a saved receipt means that a usable image exists.
+      if (existing.status === "failed") {
+        output.push({ ...target, status: "failed", render_id: existing.provider_resource_id,
+          error: "Supplier render failed. Change the design revision before requesting a new render.", reused: true });
+        continue;
+      }
+      try {
+        const settled = await pollCompletefulMockupRender(env, existing.provider_resource_id);
+        output.push({ ...target, status: settled.status, render_id: existing.provider_resource_id,
+          asset: settled.asset || null, reused: true });
+      } catch (error) {
+        output.push({ ...target, status: "pending", render_id: existing.provider_resource_id,
+          error: String(error?.code || error?.message || "render_poll_failed"), reused: true });
+      }
       continue;
     }
     await env.DB.prepare(

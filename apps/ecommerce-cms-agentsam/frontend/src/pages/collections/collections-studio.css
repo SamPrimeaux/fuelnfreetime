@@ -286,3 +286,14 @@
 .cs-preview-outer.mobile .merch-showcase__product--featured{grid-column:1/-1}
 .cs-preview-outer.mobile .merch-showcase__meta>strong{white-space:normal}
 .cs-preview-outer.mobile .merch-showcase__foot>span{display:none}
+
+/* Supplier-backed collection pack coverage; scoped to Collections Studio only. */
+.cs-pack-coverage { margin: 14px 0; border: 1px solid var(--cs-border, #d5d9dc); border-radius: 14px; padding: 16px; background: var(--cs-surface, #fff); }
+.cs-pack-coverage > strong { display: block; font-size: 14px; margin-bottom: 5px; }
+.cs-pack-coverage > p { margin: 0 0 12px; font-size: 12px; color: #626a70; line-height: 1.6; }
+.cs-pack-slots { display: grid; gap: 9px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 205px), 1fr)); }
+.cs-pack-slot { display: flex; flex-direction: column; min-width: 0; gap: 5px; border: 1px solid #e1e3e5; background: #f9f9fa; padding: 12px; border-radius: 10px; }
+.cs-pack-slot small { font-size: 11px; color: #687077; }
+.cs-pack-slot strong { font-size: 13px; overflow-wrap: anywhere; }
+.cs-pack-slot span { font-size: 11px; color: #59646b; }
+.cs-pack-slot .cs-button { align-self: flex-start; margin-top: auto; }

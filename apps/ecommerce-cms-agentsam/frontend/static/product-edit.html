@@ -496,14 +496,24 @@ function renderMediaGrid(images) {
     return;
   }
 
+  const mediaRole = (image) => {
+    let meta = {};
+    try { meta = JSON.parse(image.meta_json || "{}"); } catch { /* older media */ }
+    if (meta.source === "completeful_provider_render") return "Supplier mockup · Review";
+    if (meta.derivative_role === "mockup" || String(image.r2_key || "").startsWith("studio/previews/")) {
+      return "Studio preview · Not supplier-verified";
+    }
+    return "Media asset";
+  };
   const tiles = (images || [])
     .map(
       (img) => `
     <div class="product-media-tile ${img.is_primary ? "is-primary" : ""}" data-asset-id="${img.id}">
-      ${img.is_primary ? '<span class="primary-tag">Primary</span>' : ""}
+      ${img.is_primary ? '<span class="primary-tag">Storefront cover</span>' : ""}
       <img src="${img.url}" alt="${img.filename || ""}">
+      <small class="product-media-role">${mediaRole(img)}</small>
       <div class="tile-actions">
-        ${img.is_primary ? "" : '<button type="button" class="btn ghost small set-primary-btn">Primary</button>'}
+        ${img.is_primary ? "" : '<button type="button" class="btn ghost small set-primary-btn">Make cover</button>'}
         <button type="button" class="btn danger small remove-btn">Remove</button>
       </div>
     </div>`
@@ -891,6 +901,12 @@ function renderStudioDesign(draft, fulfillment, source = null, sellingSelection 
   }
 
 
+  if (fulfillment?.completeful_store_product_id && draft.state !== "created" && draft.state !== "published") {
+    const warning = document.createElement("p");
+    warning.className = "product-card-hint product-design-next-action";
+    warning.textContent = "This design has changed since the linked supplier product was created. Validate the existing Completeful variant and print-location mapping before publishing. We will not silently replace your supplier listing.";
+    root.append(warning);
+  }
   if (!fulfillment?.completeful_store_product_id) {
     const selectionStatus = document.createElement("p");
     selectionStatus.className = "product-design-selection-summary";
@@ -916,29 +932,33 @@ function renderStudioDesign(draft, fulfillment, source = null, sellingSelection 
   actions.append(edit);
 
   const linkId = fulfillment?.completeful_store_product_id;
-  if (!linkId) {
+  if (!linkId || (draft.state !== "created" && draft.state !== "published")) {
     const create = document.createElement("button");
     create.type = "button";
     create.className = "btn ghost small";
     create.id = "create-provider-product-btn";
-    create.textContent = "Create with Completeful";
-    create.title = "Creates this product and your saved Studio variant selection in Completeful; does not publish.";
+    create.textContent = linkId ? "Validate supplier mapping" : "Create with Completeful";
+    create.title = linkId
+      ? "Check the saved supplier variants and print locations. If they differ from the new artwork, show a safe reconciliation error without creating duplicates."
+      : "Creates this product and your saved Studio variant selection in Completeful; does not publish.";
     const pending = document.createElement("p");
     pending.className = "product-card-hint product-design-next-action";
     pending.textContent = !draft.prepared_media_asset_id
       ? "Return to Product Studio to prepare artwork."
-      : Number(document.getElementById("price")?.value || 0) <= 0
-        ? "Enter a retail price to continue."
-        : "You can create the supplier listing now, or select Active and Publish in one step.";
+      : linkId
+        ? "Existing Completeful listing will be verified, never duplicated. A changed print layout requires explicit supplier reconciliation."
+        : Number(document.getElementById("price")?.value || 0) <= 0
+          ? "Enter a retail price to continue."
+          : "You can create the supplier listing now, or select Active and Publish in one step.";
     actions.append(pending);
     create.addEventListener("click", async () => {
       if (dirty || saveInFlight) {
         showNote("Save product details before creating the supplier product.", "error");
         return;
       }
-      if (!window.confirm("Create this product in your connected Completeful shop? This will not publish the storefront listing.")) return;
+      if (!linkId && !window.confirm("Create this product in your connected Completeful shop? This will not publish the storefront listing.")) return;
       create.disabled = true;
-      create.textContent = "Creating product…";
+      create.textContent = linkId ? "Checking supplier mapping…" : "Creating product…";
       try {
         const result = await adminFetch(
           "/api/admin/product-studio/drafts/" + encodeURIComponent(draft.id) + "/create-product",
@@ -949,7 +969,7 @@ function renderStudioDesign(draft, fulfillment, source = null, sellingSelection 
           "Product created with Completeful. Storefront listing remains a draft.", "success");
       } catch (error) {
         showNote(error.message || "Could not create supplier product", "error");
-        create.textContent = "Retry product creation";
+        create.textContent = linkId ? "Review supplier mismatch" : "Retry product creation";
         create.disabled = false;
       }
     });
@@ -1128,13 +1148,13 @@ async function saveProduct() {
     detailsSaved = true;
     if (publishSupplier) {
       showNote("Details saved. Checking your Completeful product…", "info");
-      if (!verified.fulfillment?.completeful_store_product_id) {
+      if (designContext?.draft?.state !== "created" || !verified.fulfillment?.completeful_store_product_id) {
         const result = await adminFetch(
           "/api/admin/product-studio/drafts/" + encodeURIComponent(supplierDraftId) + "/create-product",
           { method: "POST" }
         );
         const expected = Number(verified.selling_selection?.selected_count || 0);
-        if (!result.already_linked && Number(result.mapped_variants) !== expected) {
+        if (Number(result.mapped_variants) !== expected) {
           throw new Error("Completeful variant mapping is incomplete. Expected " + expected +
             " variants, received " + Number(result.mapped_variants || 0) + ".");
         }

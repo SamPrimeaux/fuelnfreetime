@@ -13,8 +13,16 @@ export const MERCH_ASSORTMENT_RECIPES = Object.freeze([
     slots: Object.freeze(["heavyweight-tee", "crewneck", "hoodie"]),
   }),
   Object.freeze({
-    id: "accessories", label: "Lifestyle accessories", caption: "Headwear + drinkware + sticker",
-    slots: Object.freeze(["headwear", "drinkware", "sticker"]),
+    id: "accessories", label: "Everyday carry", caption: "Wallet + flask + keychain",
+    slots: Object.freeze(["wallet", "flask", "keychain"]),
+  }),
+  Object.freeze({
+    id: "drinkware", label: "Drinkware collection", caption: "Tumbler + mug + glass",
+    slots: Object.freeze(["drinkware", "coffee-mug", "glass"]),
+  }),
+  Object.freeze({
+    id: "desk", label: "Desk & gifts", caption: "Journal + cutting board + acrylic desk",
+    slots: Object.freeze(["journal", "cutting-board", "acrylic-desk"]),
   }),
 ]);
 const SLOT_TERMS = Object.freeze({
@@ -26,11 +34,45 @@ const SLOT_TERMS = Object.freeze({
   "headwear": "trucker hat",
   "drinkware": "tumbler",
   "sticker": "sticker",
+  "wallet": "Metal Wallet",
+  "flask": "Flask",
+  "keychain": "Keychain",
+  "coffee-mug": "Coffee Mug",
+  "glass": "Glass",
+  "journal": "Leather Journal",
+  "cutting-board": "Cutting Board",
+  "acrylic-desk": "Acrylic Desk",
 });
+
 export function assortmentSearchTerms(recipe) {
   const found = MERCH_ASSORTMENT_RECIPES.find(item => item.id === recipe);
   if (!found) throw new TypeError("Unknown assortment recipe");
   return [...new Set(found.slots.map(slot => SLOT_TERMS[slot]).filter(Boolean))];
+}
+/**
+ * Resolve a reusable assortment recipe against *actual supplier catalog responses*.
+ * Search alone is not authority: unlisted, hidden, unavailable, or variantless
+ * products cannot be automatically planned. The host fetches and passes its catalog.
+ * Missing slots remain visible instead of being filled with made-up merchandise.
+ */
+export function resolveAssortmentCandidates(recipeId, resultsBySlot = {}) {
+  const recipe = MERCH_ASSORTMENT_RECIPES.find(item => item.id === recipeId);
+  if (!recipe) throw new TypeError("Unknown assortment recipe");
+  const seen = new Set();
+  const slots = recipe.slots.map(slot => {
+    const rows = Array.isArray(resultsBySlot[slot]) ? resultsBySlot[slot] : [];
+    const candidates = rows.filter(item => {
+      const id = String(item?.catalog_product_id || item?.completeful_product_id || item?.id || "");
+      return id && item?.available !== false && item?.available !== 0 &&
+        Number(item?.variant_count ?? 0) > 0 && Number(item?.print_location_count ?? 1) > 0;
+    }).sort((a,b) => Number(b?.mockup_count || 0) - Number(a?.mockup_count || 0));
+    const recommended = candidates.find(item => !seen.has(String(item.catalog_product_id || item.completeful_product_id || item.id))) || null;
+    if (recommended) seen.add(String(recommended.catalog_product_id || recommended.completeful_product_id || recommended.id));
+    return { slot, search: SLOT_TERMS[slot] || slot, candidates, recommended };
+  });
+  return { recipe_id: recipeId, slots,
+    recommended_ids: slots.filter(x => x.recommended).map(x => String(x.recommended.catalog_product_id || x.recommended.completeful_product_id || x.recommended.id)),
+    missing_slots: slots.filter(x => !x.recommended).map(x => x.slot) };
 }
 export const DEFAULT_COLLECTION_RULES = Object.freeze({
   mode: "manual", match: "all", conditions: Object.freeze([]), excludedIds: Object.freeze([]),
