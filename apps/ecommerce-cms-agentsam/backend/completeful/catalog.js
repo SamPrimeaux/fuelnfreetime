@@ -625,6 +625,25 @@ export async function listCompletefulCatalogMirror(env, url) {
     )`);
   }
 
+  // Canonical merchant filters: catalog tags and curated grouping take priority,
+  // with product-name fallbacks for supplier records without usable tags.
+  if (category === "accessories") {
+    where.push(`(
+      lower(coalesce(c.local_group, '')) = 'accessories' OR
+      lower(coalesce(p.tags_json, '')) LIKE '%accessories%' OR
+      lower(p.name) LIKE '%flask%' OR lower(p.name) LIKE '%journal%' OR
+      lower(p.name) LIKE '%keychain%' OR lower(p.name) LIKE '%coaster%' OR
+      lower(p.name) LIKE '%sunglass%' OR lower(p.name) LIKE '%wallet%' OR
+      lower(p.name) LIKE '%bag%'
+    ) AND lower(p.name) NOT LIKE '%knife%'`);
+  }
+  if (category === "recent") {
+    where.push(`EXISTS (
+      SELECT 1 FROM product_studio_drafts d
+      WHERE d.completeful_catalog_product_id = p.completeful_product_id
+    )`);
+  }
+
   if (favorite === "1" || favorite === "true") {
     where.push("COALESCE(c.is_favorite, 0) = 1");
   }
@@ -670,7 +689,8 @@ export async function listCompletefulCatalogMirror(env, url) {
      LEFT JOIN completeful_catalog_curation c
        ON c.completeful_product_id = p.completeful_product_id
      ${clause}
-     ORDER BY COALESCE(c.is_favorite, 0) DESC,
+     ORDER BY ${category === "recent" ? "(SELECT MAX(d.updated_at) FROM product_studio_drafts d WHERE d.completeful_catalog_product_id = p.completeful_product_id) DESC," : ""}
+              COALESCE(c.is_favorite, 0) DESC,
               COALESCE(c.priority, 0) DESC,
               p.name ASC
      LIMIT ? OFFSET ?`,
