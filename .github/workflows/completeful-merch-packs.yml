@@ -22,15 +22,15 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+      - name: Install build dependencies
+        run: |
+          npm ci --ignore-scripts
+          npm ci --prefix apps/ecommerce-cms-agentsam --ignore-scripts
       - name: Validate supplier and catalog pack regression tests
         run: |
           node --test tests/completeful-publish-reconcile.test.mjs tests/collection-planning-sdk.test.mjs
           node --test apps/ecommerce-cms-agentsam/tests/completeful-mockup-matrix.test.mjs
           node --test tests/product-studio-selling-handoff.test.mjs
-      - name: Install build dependencies
-        run: |
-          npm ci --ignore-scripts
-          npm ci --prefix apps/ecommerce-cms-agentsam --ignore-scripts
       - name: Build actual admin UI
         run: npm run build:admin
       - name: Validate Worker bundle
