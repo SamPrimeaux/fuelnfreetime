@@ -607,6 +607,10 @@ export async function listCompletefulCatalogMirror(env, url) {
        p.pricing_currency, p.fulfillment_cost_free_cents,
        p.fulfillment_cost_growth_cents, p.fulfillment_cost_business_cents,
        p.cover_image_url, p.main_icon_url, p.realistic_image_url, p.last_synced_at,
+       (SELECT m.preview_url FROM completeful_catalog_mockups m
+         WHERE m.completeful_product_id=p.completeful_product_id AND m.active=1 AND
+           m.preview_url IS NOT NULL AND trim(m.preview_url)<>''
+         ORDER BY m.sort_order,m.mockup_id LIMIT 1) AS sample_image_url,
        COALESCE(c.is_favorite, 0) AS is_favorite,
        COALESCE(c.is_hidden, 0) AS is_hidden, COALESCE(c.priority, 0) AS priority,
        c.local_group, c.notes,
