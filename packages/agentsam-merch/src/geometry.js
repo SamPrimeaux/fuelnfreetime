@@ -1,3 +1,6 @@
+/** The app-isolated vendor mirror of the canonical AgentSam SDK geometry.
+ * Pinned upstream: SamPrimeaux/agentsam-sdk@33fa5d9; parity guarded in tests.
+ */
 /**
  * Canonical portable manufacturing geometry: @inneranimalmedia/agentsam-merch.
  * This is authoritative for physical print-area units and raster source PPI.

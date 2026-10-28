@@ -1,4 +1,4 @@
-/** Thin compatibility export. The canonical kernel originates in agentsam-sdk.
- * The checked-in workspace mirror lives at /packages/agentsam-merch/src/geometry.js.
+/** Extracted app local import. See tests/merch-print-geometry-parity.test.mjs.
+ * Canonical upstream is agentsam-sdk/packages/agentsam-merch/src/geometry.js.
  */
-export { effectiveArtworkDpi, providerPrintSizeIn, rasterResolutionPreflight } from "../../../../../packages/agentsam-merch/src/geometry.js";
+export { effectiveArtworkDpi, providerPrintSizeIn, rasterResolutionPreflight } from "./geometry.js";
