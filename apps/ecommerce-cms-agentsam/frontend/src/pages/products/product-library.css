@@ -131,6 +131,8 @@
 .pl-select-product.is-selected::before{border-color:#8d75f5;background:#f0ecff}
 .pl-select-product.is-selected svg{opacity:1}
 .pl-select-product:focus-visible{outline:2px solid #7258ee;outline-offset:2px}
+.pl-table tbody tr.pl-row-selected{background:#f8f6ff;border-color:#c9beff}
+.pl-table tbody tr.pl-row-selected:hover{background:#f8f6ff}
 .pl-selection-summary{
   display:flex;align-items:center;gap:10px;padding:9px 13px;
   background:#f4f1ff;border-bottom:1px solid #ddd5ff;font-size:12px;color:#554a73;
