@@ -56,7 +56,7 @@ export default function ProductStudioPage() {
   const search=catalogFilters.q;
   const [catalog,setCatalog] = useState<CatalogProduct[]>([]);
   const [total,setTotal] = useState(0);
-  const [offset,setOffset] = useState((catalogFilters.page-1)*24);
+  const [offset,setOffset] = useState(0);
   function updateCatalog(patch:Partial<CatalogQuery>) {
     setOffset(0);
     setCatalogFilters(prev=>({...prev,...patch,page:1}));
@@ -116,7 +116,7 @@ export default function ProductStudioPage() {
       }
     });
     const params=writeCatalogQuery(catalogFilters);
-    params.set("limit","24");
+    params.set("limit",String(offset===0?Math.min(200,24*catalogFilters.page):24));
     params.set("offset",String(offset));
     adminFetch<CatalogResponse & {facets?:CatalogFacetCounts}>(`/api/admin/completeful/catalog?${params}`, {
       signal: controller.signal,
