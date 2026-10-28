@@ -970,11 +970,10 @@ export default function StudioWorkspace({
     setProviderRenderUrl(null);
     setShowArtwork(true);
     setArtworkSelected(true);
+    setFilmstripOpen(false);
     setNotice("");
-    if (window.matchMedia("(max-width: 760px)").matches)
-      requestAnimationFrame(() =>
-        stage.current?.scrollIntoView({ block: "start" }),
-      );
+    // Do not scroll the stage under the fixed global admin header on mobile.
+    // Preserve the merchant's viewport when selecting a different artwork.
   }
   async function removeBackgroundAI() {
     if (!asset || busy || !subjectRemovalAvailable) return;
@@ -1433,7 +1432,13 @@ export default function StudioWorkspace({
         effectivePpi: manufacturingPreflight?.effectivePpi,
         targetPpi: manufacturingPreflight?.target.ppi,
       });
-      if (manufacturingPreflight && ["unsupported", "needs_variant"].includes(manufacturingPreflight.status)) {
+      // A studio quality goal is advisory until a supplier-specific requirement
+      // is verified. Still reject non-resolution issues and declared supplier
+      // resolution constraints; never certify an unverified file for production.
+      const guidelineOnly = !hasDeclaredSupplierPpi &&
+        blockingIssues.length > 0 &&
+        blockingIssues.every((issue) => issue.code === "insufficient_resolution");
+      if (manufacturingPreflight && ["unsupported", "needs_variant"].includes(manufacturingPreflight.status) && !guidelineOnly) {
         throw new Error(fittedScale !== null && blockingIssues.every((issue) => issue.code === "insufficient_resolution")
           ? "This artwork is below the supplier's resolution target. Tap the DPI control to make the physical print smaller, or choose a genuinely sharper source."
           : blockingIssues[0]?.message || manufacturingPreflight.issues[0]?.message ||
@@ -1459,6 +1464,9 @@ export default function StudioWorkspace({
       if (preview) setPreviewAsset(preview);
       const saved = await saveDraft(uploaded, preview || null, finalScale);
       if (!saved) throw new Error("Prepared artwork was uploaded, but the design draft could not be saved");
+      if (!hasDeclaredSupplierPpi && printSource?.needsSharperSource) {
+        setNotice("Draft saved. Artwork is below the studio quality goal; supplier print approval is not verified.");
+      }
       return saved;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Artwork preparation failed");
@@ -1810,6 +1818,7 @@ export default function StudioWorkspace({
       </div>
     );
   }
+  const hasDeclaredSupplierPpi = Number.isFinite(Number(location?.dpi)) && Number(location?.dpi) > 0;
   const manufacturingPreflight = dimensions && !cropPending && quality.result && asset && location
     ? evaluateManufacturingCompatibility(
         { filename: asset.filename, mimeType: asset.content_type,
@@ -1935,17 +1944,17 @@ export default function StudioWorkspace({
           <button type="button" className="ps-quality-sheet-close" aria-label="Close print quality inspector"
             onClick={() => setQualityDetailsOpen(false)}>×</button>
           <div className="ps-print-quality-guidance__copy">
-            <strong>{Math.round(manufacturingPreflight?.effectivePpi ?? 0)} PPI source · {printSource.targetPpi} PPI {printSource.source === "provider" ? "supplier requirement" : "studio quality goal"}</strong>
+            <strong>{Math.round(manufacturingPreflight?.effectivePpi ?? 0)} PPI at this placement · {printSource.targetPpi} PPI {printSource.source === "provider" ? "supplier-declared target" : "studio quality goal"}</strong>
             <span>At this size, use artwork with at least {printSource.requiredWidthPx.toLocaleString()} × {printSource.requiredHeightPx.toLocaleString()} active pixels.
               Current crop: {printSource.sourceWidthPx.toLocaleString()} × {printSource.sourceHeightPx.toLocaleString()}.
-              {printSource.source === "studio_guideline" && " The 300 PPI studio goal is not a verified requirement for this individual print location."}
+              {printSource.source === "studio_guideline" && " This is an advisory quality goal, not a verified rejection rule for this SKU. Draft editing remains available; production readiness is unverified."}
               {" "}Resampling pixels won't recover missing detail.</span>
           </div>
           <div className="ps-print-quality-guidance__actions">
             {autoFitAvailable && resolutionFit != null
               ? <button type="button" onClick={() => { setScale(resolutionFit); setError(""); }}>Fit safely to {resolutionFit}%</button>
-              : <button type="button" onClick={() => openTab("upload")}>Choose sharper original</button>}
-            <button type="button" onClick={() => { setQualityDetailsOpen(false); openTab("tools"); setAiMode("edit"); }}>Improve artwork / crop</button>
+              : <button type="button" onClick={() => { setQualityDetailsOpen(false); openTab("upload"); }}>Find original artwork</button>}
+            <button type="button" onClick={() => { setQualityDetailsOpen(false); openTab("tools"); setAiMode("edit"); }}>Inspect / edit artwork</button>
           </div>
         </section>
       )}
@@ -2581,19 +2590,7 @@ export default function StudioWorkspace({
           )}
         </aside>
         <div className="ps-stage-column" ref={stage}>
-          {asset && showArtwork && (
-            <div className="ps-mobile-placement-tools" role="toolbar" aria-label="Quick artwork positioning">
-              <button type="button" onClick={() => openTab("layers")} aria-label="Position artwork">
-                <StudioIcon name="center" size={17} /> <span>Position</span>
-              </button>
-              <button type="button" aria-label="Reduce artwork size" onClick={() => setScale((v) => Math.max(5, v - 5))}>−</button>
-              <output aria-label="Artwork size">{scale}%</output>
-              <button type="button" aria-label="Increase artwork size" onClick={() => setScale((v) => Math.min(150, v + 5))}>+</button>
-              <button type="button" aria-label="More positioning options: center, rotate and flip" onClick={() => openTab("layers")}>
-                <StudioIcon name="layers" size={17} /> <span>More</span>
-              </button>
-            </div>
-          )}
+
           <div className="ps-stage-toolbar">
             <div className="ps-product-title-edit"><label htmlFor="ps-product-title">Product name</label><input id="ps-product-title" aria-label="Product name" type="text" maxLength={160} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Name this product" /><small title={detail.product.name}>Blank: {detail.product.name}</small></div>
             {printSource?.needsSharperSource && (
@@ -2601,17 +2598,32 @@ export default function StudioWorkspace({
                 aria-controls="ps-print-quality-inspector"
                 aria-expanded={qualityDetailsOpen}
                 onClick={() => setQualityDetailsOpen((open) => !open)}>
-                {Math.floor(manufacturingPreflight?.effectivePpi ?? 0)} PPI · Improve
+                {Math.floor(manufacturingPreflight?.effectivePpi ?? 0)} PPI · Review
               </button>
             )}
             <div className="ps-stage-toolbar__controls">
               {location?.artboard_image_url && (
-                <div className="ps-artboard-mode" role="group" aria-label="Canvas reference">
-                  <button type="button" className={showPrintMap ? "is-active" : ""}
-                    aria-pressed={showPrintMap} onClick={() => { setShowPrintMap(true); setShowSupplierSample(false); }}>Print map</button>
-                  <button type="button" className={!showPrintMap ? "is-active" : ""}
-                    aria-pressed={!showPrintMap} onClick={() => setShowPrintMap(false)}>Product photo</button>
-                </div>
+                <>
+                  <div className="ps-artboard-mode" role="group" aria-label="Canvas reference">
+                    <button type="button" className={showPrintMap ? "is-active" : ""}
+                      aria-pressed={showPrintMap} onClick={() => { setShowPrintMap(true); setShowSupplierSample(false); }}>Print map</button>
+                    <button type="button" className={!showPrintMap ? "is-active" : ""}
+                      aria-pressed={!showPrintMap} onClick={() => setShowPrintMap(false)}>Product photo</button>
+                  </div>
+                  <label className="ps-mobile-view-picker">
+                    <span className="ps-sr-only">Canvas display mode</span>
+                    <select aria-label="Canvas display mode" value={showPrintMap ? "map" : "photo"}
+                      onChange={(event) => {
+                        const printMap = event.target.value === "map";
+                        setShowPrintMap(printMap);
+                        if (printMap) setShowSupplierSample(false);
+                      }}>
+                      <option value="map">Print map</option>
+                      <option value="photo">Product photo</option>
+                    </select>
+                    <StudioIcon name="arrow" size={14} />
+                  </label>
+                </>
               )}
               {enabledLocations.length > 1 && (
                 <div className="ps-print-side-toggle" role="group" aria-label="Print location">
@@ -2800,6 +2812,19 @@ export default function StudioWorkspace({
               )}
             </div>
           </div>
+          {asset && showArtwork && (
+            <div className="ps-mobile-placement-tools" role="toolbar" aria-label="Quick artwork positioning">
+              <button type="button" onClick={() => openTab("layers")} aria-label="Position artwork">
+                <StudioIcon name="center" size={17} /> <span>Position</span>
+              </button>
+              <button type="button" aria-label="Reduce artwork size" onClick={() => setScale((v) => Math.max(5, v - 5))}>−</button>
+              <output aria-label="Artwork size">{scale}%</output>
+              <button type="button" aria-label="Increase artwork size" onClick={() => setScale((v) => Math.min(150, v + 5))}>+</button>
+              <button type="button" aria-label="More positioning options: center, rotate and flip" onClick={() => openTab("layers")}>
+                <StudioIcon name="layers" size={17} /> <span>More</span>
+              </button>
+            </div>
+          )}
           {colorways.length > 1 && colorAxis && (
             <div className="ps-colorway-rail" role="group" aria-label="Preview color">
               {colorways.map(({ value, sources, referenceOnly }) => (
