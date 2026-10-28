@@ -40,3 +40,15 @@ test("no synthetic size increase or false print approval is returned", () => {
       assessment: { effective_ppi: 900, recovered_detail_verified: false } }
   ] }), null);
 });
+
+
+test("with consent, actual detail reconstruction takes precedence over cosmetic cleanup", () => {
+  const needsPixels = { ...current, available_actions: {
+    trim_transparent: true, remove_background: true, reconstruct: true
+  } };
+  assert.deepEqual(planArtworkAutoRepair(needsPixels,
+    { allow_reconstruct: true, model_id: "configured-image-model" }),
+    { method: "reconstruct", model_id: "configured-image-model", confirm_changes: true });
+  assert.deepEqual(planArtworkAutoRepair(needsPixels),
+    { method: "trim_transparent" });
+});
