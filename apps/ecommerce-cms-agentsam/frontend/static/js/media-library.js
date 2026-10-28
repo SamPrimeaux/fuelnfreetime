@@ -1651,7 +1651,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     }
   }
 
-  function openDrawer(asset, { updateHistory = true, historyMode = 'push' } = {}) {
+  function openDrawer(asset, { updateHistory = true, historyMode = 'push', skipDetailFetch = false } = {}) {
     if (!asset) return;
     closeCardMenu();
     selected = asset;
@@ -1754,8 +1754,10 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
       const refs = Array.isArray(asset.usage) ? asset.usage : [];
       usage.innerHTML = refs.length
         ? refs.map((ref) =>
-            '<div class="media-usage-row"><span>' + escapeHtml(ref.kind || "Reference") + '</span><strong>' +
-            escapeHtml(ref.label || ref.id || "Used") + '</strong></div>'
+            '<div class="media-usage-row"><span>' + escapeHtml(ref.kind || "Reference") + '</span>' +
+            (ref.href
+              ? '<a href="' + escapeHtml(ref.href) + '">' + escapeHtml(ref.label || ref.id || "Used") + '</a>'
+              : '<strong>' + escapeHtml(ref.label || ref.id || "Used") + '</strong>') + '</div>'
           ).join("")
         : '<span class="media-empty-state">No known gallery or product references.</span>';
     }
@@ -1772,11 +1774,18 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
           version.provider || "",
         ].filter(Boolean).join(" · ") || "Prepared version") + '</small></div>'
       );
-      const previewRows = IMAGE_PREVIEW_PRESETS
-        .filter((preset) => preset.id !== "original")
-        .map((preset) =>
-          '<div class="media-version-row is-preview-only"><span>' + escapeHtml(preset.label) + '</span><small>Preview only · not generated</small></div>'
-        );
+      const savedRows = (asset.linked_versions || []).map((version) =>
+        '<button type="button" class="media-version-card" data-media-version-id="' + Number(version.id) +
+        '" aria-label="Open saved version ' + escapeHtml(version.filename || 'Image') + '">' +
+          (version.url ? '<img src="' + escapeHtml(version.url) + '" loading="lazy" alt="">' : '') +
+          '<span><strong>' + escapeHtml(version.filename || 'Edited image') + '</strong>' +
+          '<small>' + escapeHtml([
+            version.operation || 'edit',
+            version.dimensions ? version.dimensions.width + '×' + version.dimensions.height : '',
+            version.content_type?.replace('image/', '').toUpperCase() || '',
+            version.size_bytes ? fmtBytes(version.size_bytes) : ''
+          ].filter(Boolean).join(' · ')) + '</small></span></button>'
+      );
       const edit = asset.meta?.media_edit;
       const lineageRow = edit?.source_media_asset_id
         ? '<div class="media-version-group"><strong>Derivative provenance</strong><div class="media-version-row"><span>Edited from asset #' +
@@ -1787,9 +1796,15 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
       versions.innerHTML =
         '<div class="media-version-group"><strong>Current asset</strong><div class="media-version-row"><span>' +
         escapeHtml(asset.filename || "Source") + '</span><small>' + escapeHtml(displayLine(asset) || "Source") + '</small></div></div>' +
+        (asset.source_version_id ? '<button type="button" class="media-version-parent" data-media-version-id="' +
+          Number(asset.source_version_id) + '">← Open source image #' + Number(asset.source_version_id) + '</button>' : '') +
         lineageRow +
-        (preparedRows.length ? '<div class="media-version-group"><strong>Prepared</strong>' + preparedRows.join("") + '</div>' : '') +
-        '<div class="media-version-group"><strong>Preview only</strong>' + previewRows.join("") + '</div>';
+        '<div class="media-version-group"><strong>Saved edits & enhancements</strong>' +
+        (savedRows.length ? savedRows.join("") :
+          '<p class="media-empty-state">No saved child versions yet. Crop, resize, background removal and AI edits will appear here as separate selectable assets.</p>') +
+        '</div>' +
+        (preparedRows.length ? '<div class="media-version-group"><strong>Stored delivery outputs</strong>' + preparedRows.join("") + '</div>' : '') +
+        '<p class="media-version-hint">Thumbnail / Small / Medium are display previews only. They do not create saved files; use Image improvement to save a new asset.</p>';
     }
     applyPreviewPreset("original");
 
@@ -1817,9 +1832,24 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     document.title = `${asset.filename || 'Image'} — Media | Fuel & Free Time`;
     if (updateHistory) updateDetailUrl(asset.id, historyMode);
     window.scrollTo({ top: 0, behavior: 'instant' });
+    // Product/gallery associations and saved derivatives must be read for any
+    // detail opened from a paginated list. A late response cannot replace a
+    // newer selection. Never recursively refetch an already hydrated asset.
+    if (!skipDetailFetch && asset.linked_versions === undefined) {
+      const serial = ++detailFetchSerial;
+      void adminFetch('/api/admin/media/' + encodeURIComponent(asset.id)).then((response) => {
+        if (serial !== detailFetchSerial || Number(selected?.id) !== Number(asset.id) || !response?.asset) return;
+        const originalTab = inspectorTab;
+        openDrawer(response.asset, { updateHistory: false, skipDetailFetch: true });
+        setInspectorTab(originalTab);
+      }).catch((error) => {
+        console.warn('Media version and usage detail unavailable:', error);
+      });
+    }
   }
 
   function closeDrawer({ updateHistory = true } = {}) {
+    ++detailFetchSerial;
     selected = null;
     mediaWorkbench?.setAsset(null);
     document.body.classList.remove('media-detail-active');
