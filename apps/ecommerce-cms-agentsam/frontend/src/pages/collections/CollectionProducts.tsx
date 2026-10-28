@@ -6,10 +6,11 @@ import StudioIcon from "../products/StudioIcon";
 import CollectionProductPicker from "./CollectionProductPicker";
 import { resolveAssortmentCandidates, type AssortmentSlotMatch } from "../../../../../../packages/agentsam-merch/src/collection-planning.js";
 
-export default function CollectionProducts({ products, selected, onSelect, plan, onPlan, onOpenStudio, onScaffold }: {
+export default function CollectionProducts({ products, selected, onSelect, plan, onPlan, onOpenStudio, onScaffold, collectionId }: {
   products: Product[]; selected: number[]; onSelect: (ids: number[]) => void;
   plan: string[]; onPlan: (ids: string[]) => void; onOpenStudio: (supplierId?: string) => Promise<void>;
   onScaffold: () => Promise<void>;
+  collectionId?: number | null;
 }) {
   const [picker, setPicker] = useState(false);
   const [supplierQuery, setSupplierQuery] = useState("");
@@ -83,12 +84,17 @@ export default function CollectionProducts({ products, selected, onSelect, plan,
             onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); dropAt(p.id); }}>
             <span className="cs-drag-handle" aria-hidden="true">⠿</span>
             <div className="cs-selected-img">{src ? <img src={src} alt="" loading="lazy"/> : <StudioIcon name="image" size={22}/>}</div>
-            <div className="cs-selected-description"><strong>{p.title}</strong><small>{p.variant_count || 0} variants · {p.total_inventory ?? 0} stock units</small></div>
+            <div className="cs-selected-description"><strong>{p.title}</strong><small>{p.planned_variant_count || p.variant_count || 0} planned variants · {p.status==="active"?`${p.total_inventory ?? 0} stock units`:"Artwork/preflight pending"}</small></div>
             <span className={`cs-status-chip ${p.status === "active" ? "active" : ""}`}>{p.status === "active" ? "Published" : p.status}</span>
             <div className="cs-item-actions">
               <button type="button" className="cs-icon-button" aria-label={`Move ${p.title} up`} disabled={index === 0} onClick={()=>reorder(p.id,-1)}>↑</button>
               <button type="button" className="cs-icon-button" aria-label={`Move ${p.title} down`} disabled={index === selectedProducts.length-1} onClick={()=>reorder(p.id,1)}>↓</button>
-              <a className="cs-icon-button" aria-label={`Edit ${p.title}`} href={`/admin/product-edit?id=${p.id}`}><StudioIcon name="pen" size={15}/></a>
+              <a className="cs-icon-button" aria-label={`Design ${p.title}`}
+                 href={p.studio_draft_id && p.studio_catalog_product_id
+                   ? `/admin/products/create/${encodeURIComponent(p.studio_catalog_product_id)}?resume=${encodeURIComponent(p.studio_draft_id)}${collectionId?`&collection_id=${collectionId}`:""}`
+                   : `/admin/product-edit?id=${p.id}`}>
+                  <StudioIcon name="pen" size={15}/>
+                </a>
               <button type="button" className="cs-icon-button" aria-label={`Remove ${p.title}`} onClick={()=>onSelect(selected.filter(id=>id!==p.id))}><StudioIcon name="close" size={15}/></button>
             </div>
           </article>;
