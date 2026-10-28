@@ -89,6 +89,9 @@ export interface SupplierBlank {
   cover_image_url?: string;
   main_icon_url?: string;
   variant_count?: number;
+  print_location_count?: number;
+  mockup_count?: number;
+  available?: number | boolean;
 }
 export type PresentationPreset = {
   id: string; name: string; caption: string;
