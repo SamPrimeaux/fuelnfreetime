@@ -11,7 +11,8 @@ import encodePng from "@jsquash/png/encode.js";
 import { loadSourceImage, saveImageDerivative, editImageWithPrompt } from "./image-operations.js";
 import { effectiveArtworkDpi } from "../../packages/agentsam-merch/src/geometry.js";
 
-const MAX_RASTER_PIXELS = 20_000_000;
+const MAX_RASTER_PIXELS = 22_000_000;
+const MAX_PRINT_MASTER_BYTES = 20 * 1024 * 1024;
 const MAX_CANDIDATES = 8;
 const derivativePattern = /^(?:prepared|placement)-|-(?:ai-edit|resample|print-trim|cutout)\.png$/i;
 
@@ -123,7 +124,7 @@ async function relatedMasters(env, source, intent, supplier) {
   const seen = new Set([Number(source.row.id)]);
   if (parentId > 0 && parentId !== Number(source.row.id)) {
     try {
-      const parent = await loadSourceImage(env, parentId);
+      const parent = await loadSourceImage(env, parentId, { maxSourceBytes: MAX_PRINT_MASTER_BYTES });
       seen.add(parentId);
       const image = await decodeSource(parent);
       results.push({ asset: { id: parent.row.id, filename: parent.row.filename,
@@ -146,7 +147,7 @@ async function relatedMasters(env, source, intent, supplier) {
         String(row.r2_key || "").startsWith("derivatives/")) continue;
     seen.add(Number(row.id));
     try {
-      const candidate = await loadSourceImage(env, row.id);
+      const candidate = await loadSourceImage(env, row.id, { maxSourceBytes: MAX_PRINT_MASTER_BYTES });
       const image = await decodeSource(candidate);
       results.push({ asset: { id: row.id, filename: row.filename,
         url: "/media/" + row.r2_key },
@@ -159,7 +160,7 @@ async function relatedMasters(env, source, intent, supplier) {
 
 export async function inspectArtworkRepair(env, mediaAssetId, input) {
   const intent = printIntent(input);
-  const source = await loadSourceImage(env, mediaAssetId); // bytes from R2 original, never delivery URL
+  const source = await loadSourceImage(env, mediaAssetId, { maxSourceBytes: MAX_PRINT_MASTER_BYTES }); // bytes from R2 original, never delivery URL
   const image = await decodeSource(source);
   const meta = parsed(source.row.meta_json);
   const operation = String(meta.media_edit?.operation || "");
@@ -179,7 +180,7 @@ export async function inspectArtworkRepair(env, mediaAssetId, input) {
         (assessment.crop.x || assessment.crop.y ||
          assessment.crop.width !== image.width || assessment.crop.height !== image.height)),
       remove_background: Boolean(env.IMAGES?.input),
-      reconstruct: Boolean(env.OPENAI_API_KEY),
+      reconstruct: Boolean(env.OPENAI_API_KEY) && source.bytes.length <= 10 * 1024 * 1024,
     },
     limitation: "A source-size calculation cannot certify print quality; AI reconstruction requires side-by-side visual approval.",
   };
@@ -219,7 +220,7 @@ export async function repairArtworkCandidate(env, mediaAssetId, input, actorId) 
     });
     result = response;
   } else {
-    const source = await loadSourceImage(env, mediaAssetId);
+    const source = await loadSourceImage(env, mediaAssetId, { maxSourceBytes: MAX_PRINT_MASTER_BYTES });
     const img = await decodeSource(source);
     const crop = opaqueCrop(img);
     if (!crop) throw new Error("empty_artwork");
