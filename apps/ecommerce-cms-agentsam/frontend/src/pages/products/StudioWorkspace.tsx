@@ -970,11 +970,10 @@ export default function StudioWorkspace({
     setProviderRenderUrl(null);
     setShowArtwork(true);
     setArtworkSelected(true);
+    setFilmstripOpen(false);
     setNotice("");
-    if (window.matchMedia("(max-width: 760px)").matches)
-      requestAnimationFrame(() =>
-        stage.current?.scrollIntoView({ block: "start" }),
-      );
+    // Do not scroll the stage under the fixed global admin header on mobile.
+    // Preserve the merchant's viewport when selecting a different artwork.
   }
   async function removeBackgroundAI() {
     if (!asset || busy || !subjectRemovalAvailable) return;
