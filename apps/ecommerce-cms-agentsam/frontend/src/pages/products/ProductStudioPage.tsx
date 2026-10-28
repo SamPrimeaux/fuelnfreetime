@@ -169,6 +169,7 @@ export default function ProductStudioPage() {
             image_pagination: d.image_pagination,
             mockups: Array.isArray(d.mockups) ? d.mockups : [],
             blank_views: Array.isArray(d.blank_views) ? d.blank_views : [],
+            method_alternatives: Array.isArray(d.method_alternatives) ? d.method_alternatives : [],
           };
           const initialVariant = normalized.variants[0];
           const initialImage =
@@ -714,6 +715,24 @@ export default function ProductStudioPage() {
                         <span>Mockup views</span>
                       </div>
                     </div>
+                    {(detail.method_alternatives||[]).length>1 ? (
+                      <div className="ps-method-variants">
+                        <strong>Choose a print method</strong>
+                        <div>
+                          {(detail.method_alternatives||[]).map(option=><button key={option.completeful_product_id}
+                            type="button" className={catalogProductId(detail.product)===option.catalog_product_id?"is-active":""}
+                            aria-pressed={catalogProductId(detail.product)===option.catalog_product_id}
+                            onClick={()=>navigate(`/products/create/${encodeURIComponent(option.catalog_product_id)}`+
+                              (collectionId?`?collection_id=${collectionId}&method=${encodeURIComponent(option.print_type.toLowerCase())}`:
+                                `?method=${encodeURIComponent(option.print_type.toLowerCase())}`))}>
+                            <b>{option.print_type}</b>
+                            <small>{option.fulfillment_cost_free_cents!=null?
+                              `${(option.fulfillment_cost_free_cents/100).toFixed(2)} base`:"Cost varies"}</small>
+                          </button>)}
+                        </div>
+                        <small>Switching methods selects the matching supplier record; current artwork stays in your Media Library.</small>
+                      </div>
+                    ) : <div className="ps-method-single">Print method: {detail.product.print_type||"See supplier specification"}</div>}
                     <h3>Make it yours</h3>
                     <p>
                       Bring in artwork from your library, explore a new
