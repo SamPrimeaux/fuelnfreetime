@@ -3227,3 +3227,10 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
 .ps-vector-actions{display:flex;flex-wrap:wrap;gap:8px}
 .ps-vector-actions a.ps-button{display:inline-flex;text-decoration:none;align-items:center}
 @media(max-width:740px){.ps-vector-grid{grid-template-columns:1fr}.ps-vector-preview img{height:135px}.ps-catalog-heading-actions .ps-button{font-size:11px;padding:8px}.ps-vector-workbench{padding:10px}}
+
+.ps-method-variants{display:grid;gap:8px;margin:14px 0;padding:12px;border:1px solid var(--ps-line);border-radius:11px}
+.ps-method-variants>strong{font-size:13px}.ps-method-variants>div{display:flex;gap:7px;flex-wrap:wrap}
+.ps-method-variants button{min-width:104px;display:grid;gap:3px;border:1px solid var(--ps-line);border-radius:9px;padding:9px 12px;background:transparent;text-align:left}
+.ps-method-variants button.is-active{background:#e8eedc;border-color:#93a179}
+.ps-method-variants button b{font-size:12px}.ps-method-variants button small,.ps-method-variants>small,.ps-method-single{font-size:11px;color:var(--ps-muted)}
+.ps-method-single{margin:12px 0}
