@@ -69,7 +69,15 @@ test("inspection reads unmodified R2 master bytes and returns measured source di
      all:async()=>({results:[]}),
    };}};}},
  };
- const inspected=await inspectArtworkRepair(env,14,{print_width_in:1,print_height_in:1,target_ppi:300});
+ // The Worker uses @jsquash wasm; inject a decoded pixel fixture for Node-only
+ // storage integration coverage so Node does not import Cloudflare's .wasm loaders.
+ const inspected=await inspectArtworkRepair(env,14,
+   {print_width_in:1,print_height_in:1,target_ppi:300},
+   {decoder:async ({bytes,mime})=>{
+     assert.equal(mime,"image/png");
+     assert.deepEqual(bytes,original);
+     return {width:1,height:1,data:new Uint8ClampedArray([255,255,255,255])};
+   }});
  assert.equal(inspected.ok,true);
  assert.equal(inspected.source.id,14);
  assert.equal(inspected.assessment.source_px.width,1);
