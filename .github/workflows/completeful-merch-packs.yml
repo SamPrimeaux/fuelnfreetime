@@ -16,6 +16,7 @@ on:
       - packages/agentsam-merch/src/catalog-query.*
       - packages/agentsam-merch/src/vector-exports.*
       - tests/catalog-query-sdk.test.mjs
+      - tests/catalog-hover-source-contract.test.mjs
       - tests/vector-export-sdk.test.mjs
       - apps/ecommerce-cms-agentsam/backend/media/artwork-repair.js
       - apps/ecommerce-cms-agentsam/frontend/src/pages/products/ArtworkRepairPanel.tsx
@@ -46,6 +47,7 @@ jobs:
           node --test tests/product-studio-selling-handoff.test.mjs
           node --test apps/ecommerce-cms-agentsam/tests/artwork-auto-repair.test.mjs
           node --test tests/catalog-query-sdk.test.mjs tests/vector-export-sdk.test.mjs
+          node --test tests/catalog-hover-source-contract.test.mjs
       - name: Build actual admin UI
         run: npm run build:admin
       - name: Validate Worker bundle
