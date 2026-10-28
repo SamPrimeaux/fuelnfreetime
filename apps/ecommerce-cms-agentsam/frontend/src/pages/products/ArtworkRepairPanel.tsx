@@ -16,7 +16,8 @@ type Inspection = {ok:boolean;source:MediaAsset;assessment:Assessment; supplier?
 }|null;candidates:Recovery[];available_actions:{
   recover_master:boolean;trim_transparent:boolean;remove_background:boolean;reconstruct:boolean;
 }; limitation:string};
-type Proposal = {candidate:MediaAsset;assessment:Assessment;requires_visual_review:boolean;message?:string};
+type Proposal = {candidate:MediaAsset;assessment:Assessment;requires_visual_review:boolean;message?:string;
+  automated_choice?:string};
 
 function density(value:number|null|undefined) {
   return typeof value==="number" && Number.isFinite(value) ? value.toFixed(1)+" PPI" : "Unmeasured";
@@ -74,7 +75,7 @@ export default function ArtworkRepairPanel({
     }).catch(()=>setModels([]));
     return ()=>controller.abort();
   },[]);
-  async function repair(method:"trim_transparent"|"remove_background"|"reconstruct"|"recover_master",
+  async function repair(method:"auto"|"trim_transparent"|"remove_background"|"reconstruct"|"recover_master",
     relatedId?:number) {
     if (!canInspect || busy) return;
     if (method==="reconstruct" && (!model || !consent)) {
@@ -86,12 +87,13 @@ export default function ArtworkRepairPanel({
       const result=await adminFetch<Proposal & {ok:boolean}>(
         "/api/admin/media/"+encodeURIComponent(asset.id)+"/production-repair",{
         method:"POST",body:JSON.stringify({
-          ...geometry,method,model_id:method==="reconstruct"?model:undefined,
+          ...geometry,method,model_id:(method==="auto"||method==="reconstruct")?model:undefined,
+          allow_reconstruct:method==="auto" && consent,
           confirm_changes:method==="reconstruct"?consent:undefined,
           candidate_media_asset_id:relatedId,
         }),
       });
-      if (!result.ok || !result.candidate) throw new Error("No repair candidate returned");
+      if (!result.ok || !result.candidate) throw new Error(result.message || "No repair candidate returned");
       setCandidate(result);setReviewed(false);
     } catch(e) {
       setError(e instanceof Error?e.message:"Artwork preparation failed");
@@ -132,6 +134,12 @@ export default function ArtworkRepairPanel({
           </div>
         )}
         <div className="ps-repair-actions">
+          <button type="button" className="ps-button ps-repair-auto" disabled={!!busy}
+            onClick={()=>void repair("auto")}>
+            {busy==="auto"?"Finding best repair…":"Auto repair · compare result"}
+          </button>
+          <small>First finds a sharper original, then tries real transparency or background cleanup.
+            AI runs only when you enable reconstruction review below. No pixel resizing is treated as restored detail.</small>
           {inspection.available_actions.trim_transparent && (
             <button type="button" disabled={!!busy} onClick={()=>void repair("trim_transparent")}>
               {busy==="trim_transparent"?"Trimming…":"Trim transparent borders"}</button>
@@ -160,7 +168,7 @@ export default function ArtworkRepairPanel({
       </>}
       {candidate && (
         <section className="ps-repair-compare" aria-label="Review original and repaired artwork">
-          <strong>Before / after — compare closely</strong>
+          <strong>Before / after — compare closely{candidate.automated_choice ? " · "+candidate.automated_choice.replaceAll("_"," ") : ""}</strong>
           <div className="ps-repair-compare__images">
             <figure><img src={asset.url} alt="Current original artwork"/><figcaption>Current original</figcaption></figure>
             <figure><img src={candidate.candidate.url} alt="Candidate artwork"/><figcaption>Proposed candidate</figcaption></figure>
