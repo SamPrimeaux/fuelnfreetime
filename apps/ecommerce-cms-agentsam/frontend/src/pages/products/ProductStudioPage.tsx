@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { adminFetch } from "../../lib/api";
 import StudioIcon from "./StudioIcon";
 import ProductImage from "./ProductImage";
+import CatalogHoverImage from "./CatalogHoverImage";
 import VectorAssetWorkbench from "./VectorAssetWorkbench";
 import {
   catalogProductId,
@@ -548,12 +549,10 @@ export default function ProductStudioPage() {
                         }
                       >
                         <div className="ps-product-photo">
-                          <ProductImage
-                            sources={[
-                              p.realistic_image_url,
-                              p.cover_image_url,
-                              p.main_icon_url,
-                            ]}
+                          <CatalogHoverImage
+                            sources={[p.realistic_image_url,p.cover_image_url,p.main_icon_url]}
+                            sampleUrl={p.sample_image_url}
+                            alt={p.name}
                           />
                           <span className="ps-product-badge">
                             {p.print_type || "Customizable"}
