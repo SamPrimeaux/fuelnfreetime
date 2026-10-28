@@ -104,7 +104,7 @@ export const PRESETS: PresentationPreset[] = [
 export type StarterKit = { id: string; label: string; caption: string; slots: string[]; searches: string[] };
 export const STARTER_KITS: StarterKit[] = MERCH_ASSORTMENT_RECIPES.map(recipe => ({
   id: recipe.id, label: recipe.label, caption: recipe.caption,
-  searches: assortmentSearchTerms(recipe.id),
+  slots: [...recipe.slots], searches: assortmentSearchTerms(recipe.id),
 }));
 export const BLANK_HERO = (): MerchHero => ({
   version: 1, layout: "split", height: "standard", backgroundMode: "gradient", focus: "center",
