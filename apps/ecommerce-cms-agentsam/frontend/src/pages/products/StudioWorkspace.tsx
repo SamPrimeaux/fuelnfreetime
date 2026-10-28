@@ -233,6 +233,9 @@ export default function StudioWorkspace({
     render_id?: string; status: string; error?: string;
     asset?: { id?: number; url: string; alt_text?: string | null; is_primary?: number } | null;
   }>>([]);
+  const [supplierMockupGaps, setSupplierMockupGaps] = useState<Array<{
+    variant_color?: string; print_location_id: string; reason: string;
+  }>>([]);
   // Reopen saved supplier renders instead of forcing a fresh render every time
   // an existing product is edited. Only current, supplier-verified derivatives
   // for this exact saved draft and prepared side are eligible for review.
@@ -1551,7 +1554,9 @@ export default function StudioWorkspace({
     setError("");
     try {
       const result = await adminFetch<{
-        ok: boolean; error?: string; skipped?: Array<{ reason: string }>;
+        ok: boolean; error?: string; skipped?: Array<{
+          variant_color?: string; print_location_id: string; reason: string;
+        }>;
         rendered?: Array<{
           mockup_id: string; variant_color: string; print_location_id: string;
           render_id?: string; status: string; error?: string; asset?: { id?: number; url: string; alt_text?: string | null; is_primary?: number } | null;
@@ -1560,14 +1565,15 @@ export default function StudioWorkspace({
         method: "POST",
         body: JSON.stringify({}),
       });
+      setSupplierMockupGaps(result.skipped || []);
       if (!result.ok || !result.rendered?.length) {
-        throw new Error(result.error || "No color-verified supplier mockups were available.");
+        throw new Error(result.error || "No exact color/side supplier mockups exist. Keep the local placement preview separate; it is not a verified supplier render.");
       }
       mockupPollCount.current = 0;
       setSupplierMockups(result.rendered);
       const missing = result.skipped?.length || 0;
-      setNotice(`Submitted ${result.rendered.length} exact-color supplier mockups.` +
-        (missing ? ` ${missing} combinations lack supplier imagery and were skipped.` : ""));
+      setNotice(`Requested ${result.rendered.length} supplier renders for matched color/side pairs.` +
+        (missing ? ` ${missing} other pairs have no verified supplier mockup template; review those sides separately.` : ""));
     } catch (error) {
       setError(error instanceof Error ? error.message : "Supplier mockup rendering failed.");
     } finally {
@@ -2497,7 +2503,17 @@ export default function StudioWorkspace({
                     onClick={() => void renderSupplierMockups()}>
                     {busy === "render-batch" ? "Submitting supplier renders…" : "Prepare sides + render all selected colors"}
                   </button>
-                  <small>Uses exact supplier color and print-area mockups. Missing color matches are not fabricated.</small>
+                  <small>Uses exact supplier color and print-area mockups. Provider output is a review candidate—not automatically an approved primary storefront photo. Missing sides remain explicit.</small>
+                  {supplierMockupGaps.length > 0 && <div className="ps-asset-status" role="status">
+                    <strong>Supplier mockup coverage is incomplete</strong>
+                    <ul>{supplierMockupGaps.slice(0,12).map((gap,index) => {
+                      const name = enabledLocations.find(side=>side.print_location_id===gap.print_location_id)?.name || gap.print_location_id;
+                      return <li key={gap.print_location_id + gap.variant_color + index}>
+                        {name} · {gap.variant_color || "Unverified color"} — {gap.reason === "exact_provider_mockup_missing"
+                          ? "No matching Completeful mockup template. Local artboard remains a reference, not a final photo."
+                          : gap.reason.replaceAll("_", " ")}</li>;
+                    })}</ul>
+                  </div>}
                   {supplierMockups.length > 0 && (
                     <section className="ps-ai-gallery" aria-label="Supplier mockup results">
                       <div className="ps-ai-gallery-head">
@@ -2509,8 +2525,9 @@ export default function StudioWorkspace({
                           <figure key={mockup.mockup_id + mockup.variant_color + mockup.print_location_id}>
                             {mockup.asset?.url
                               ? <img src={mockup.asset.url} alt={`Completeful ${mockup.variant_color} ${mockup.print_location_id} mockup`} />
-                              : <div className="ps-asset-status" role="status">{mockup.status}</div>}
-                            <figcaption>{mockup.variant_color} · {mockup.print_location_id}</figcaption>
+                              : <div className="ps-asset-status" role="status">{mockup.error || mockup.status}</div>}
+                            <figcaption>{mockup.variant_color} · {enabledLocations.find(side=>side.print_location_id===mockup.print_location_id)?.name || mockup.print_location_id}
+                              {mockup.asset?.url ? " · Review before approving" : ""}</figcaption>
                           </figure>
                         ))}
                       </div>
