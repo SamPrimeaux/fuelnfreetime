@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { adminFetch } from "../../lib/api";
+import VectorAssetWorkbench from "./VectorAssetWorkbench";
 import type { MediaAsset } from "./studio-model";
 
 type Assessment = {
@@ -166,6 +167,11 @@ export default function ArtworkRepairPanel({
           </button>
         </details>
       </>}
+      <details className="ps-vector-disclosure">
+        <summary>Convert SVG / optimize logo for this print area</summary>
+        <VectorAssetWorkbench selectedAsset={asset} printWidthIn={printWidthIn} printHeightIn={printHeightIn}
+          targetPpi={targetPpi} onPrepared={(prepared)=>{onApply(prepared);onClose();}}/>
+      </details>
       {candidate && (
         <section className="ps-repair-compare" aria-label="Review original and repaired artwork">
           <strong>Before / after — compare closely{candidate.automated_choice ? " · "+candidate.automated_choice.replaceAll("_"," ") : ""}</strong>
