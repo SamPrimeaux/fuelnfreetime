@@ -1905,3 +1905,22 @@ body.media-detail-active #content-view-brand { display:none !important; }
   #content-view-library .media-lib-folders{margin-bottom:7px}
   #content-view-library .media-pagination-top{margin-bottom:3px}
 }
+
+/* Wave 2: selected media use the shared dock, not another full-width toolbar.
+   When tucked away, native batch controls remain available. */
+@media(max-width:900px){
+  body.admin-dock-workspace.media-dock-selection #content-view-library .media-batch-bar{
+    position:static;min-height:0;margin:4px 0 6px;padding:5px 9px;
+    border-radius:9px;box-shadow:none;
+  }
+  body.admin-dock-workspace.media-dock-selection #content-view-library .media-batch-bar:not(.dock-tools-expanded) .media-batch-actions{
+    display:none;
+  }
+  body.admin-dock-workspace.media-dock-selection #content-view-library .media-batch-summary{font-size:11px}
+  body.admin-dock-workspace.media-dock-selection #content-view-library .media-batch-bar.dock-tools-expanded .media-batch-actions{
+    display:flex;flex-wrap:wrap;
+  }
+  body.media-detail-active.admin-dock-visible .media-detail-page{
+    padding-bottom:calc(var(--admin-dock-clearance,100px) + 15px);
+  }
+}
