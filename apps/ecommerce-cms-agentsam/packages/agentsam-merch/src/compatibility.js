@@ -3,6 +3,7 @@ import {
   normalizeFormat,
   normalizeManufacturingProfile,
 } from "./profile.js";
+import { rasterResolutionPreflight } from "./effective-dpi.js";
 
 export const COMPATIBILITY_STATUS = Object.freeze({
   READY: "ready",
@@ -55,12 +56,18 @@ function normalizeAsset(input = {}) {
 
 function effectivePpi(asset, profile, target = {}) {
   if (asset.mediaKind !== "raster" || !asset.widthPx || !asset.heightPx) return null;
-  const widthIn = Number(target.printWidthIn || profile.preferredPrintWidthIn || 0);
-  const heightIn = Number(target.printHeightIn || profile.preferredPrintHeightIn || 0);
-  const samples = [];
-  if (widthIn > 0) samples.push(asset.widthPx / widthIn);
-  if (heightIn > 0) samples.push(asset.heightPx / heightIn);
-  return samples.length ? Math.min(...samples) : null;
+  // Legacy target.printWidthIn/printHeightIn already describe printed inches,
+  // so preserve both physical axes and delegate the math to the SDK kernel.
+  const measured = rasterResolutionPreflight({
+    sourceWidthPx: asset.widthPx,
+    sourceHeightPx: asset.heightPx,
+    printWidthIn: Number(target.printWidthIn || profile.preferredPrintWidthIn || 0),
+    printHeightIn: Number(target.printHeightIn || profile.preferredPrintHeightIn || 0),
+    placementWidthPercent: 100,
+    placementHeightPercent: 100,
+    targetPpi: profile.ppi,
+  });
+  return measured.effectivePpi;
 }
 
 export function evaluateManufacturingCompatibility(assetInput, profileInput, target = {}) {

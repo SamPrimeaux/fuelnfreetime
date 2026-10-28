@@ -9,6 +9,8 @@ export {
   validateManufacturingProfile,
 } from "./profile.js";
 export { createManufacturingProfileRegistry } from "./profile-registry.js";
+// Vendored from canonical agentsam-sdk merch geometry (pin 33fa5d9).
+export { effectiveArtworkDpi, providerPrintSizeIn, rasterResolutionPreflight } from "./geometry.js";
 export {
   COMPATIBILITY_STATUS,
   evaluateManufacturingCompatibility,
