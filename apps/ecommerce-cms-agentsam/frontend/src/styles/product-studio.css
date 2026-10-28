@@ -2876,7 +2876,7 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
 @media(prefers-reduced-motion:reduce){.product-studio-shell .ps-mobile-artwork-strip,.ps-artwork-quickview{scroll-behavior:auto}}
 
 /* Wave 2 — canvas first. Scoped to the studio; no site-shell/global dock changes. */
-.ps-quality-sheet-close,.ps-mobile-quality-trigger{display:none}
+.ps-quality-sheet-close,.ps-mobile-quality-trigger,.ps-mobile-view-picker{display:none}
 @media(max-width:760px){
   .product-studio-shell .ps-workspace-header{min-height:48px;padding:3px 8px;gap:4px}
   .product-studio-shell .ps-workspace-actions{gap:4px}
@@ -2943,6 +2943,53 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
   }
   .product-studio-shell .ps-mobile-placement-tools output{
     min-width:42px;flex:0 0 auto;font-size:12px;
+  }
+  .product-studio-shell .ps-stage-column{
+    display:flex;flex-direction:column;align-items:stretch;
+  }
+  .product-studio-shell .ps-mobile-placement-tools{
+    position:relative;order:2;
+    padding:5px 2px 7px;margin:0;
+    justify-content:center;
+  }
+  .product-studio-shell .ps-stage-toolbar{order:0}
+  .product-studio-shell .ps-stage{order:1}
+  .product-studio-shell .ps-colorway-rail{order:3}
+  .product-studio-shell .ps-mobile-artwork-strip{order:4}
+  .product-studio-shell .ps-merchant-render-strip{order:5}
+  .product-studio-shell .ps-mobile-view-picker{
+    display:flex;align-items:center;justify-content:space-between;gap:6px;
+    order:2;min-width:134px;flex:0 1 152px;height:44px;
+    border:1px solid var(--ps-line);border-radius:11px;
+    background:var(--ps-paper);padding:0 9px;color:var(--ps-ink);
+  }
+  .product-studio-shell .ps-mobile-view-picker select{
+    min-width:0;flex:1;height:100%;width:100%;
+    border:0;background:transparent;appearance:none;
+    font:650 12px Inter,system-ui,sans-serif;color:inherit;
+    cursor:pointer;
+  }
+  .product-studio-shell .ps-mobile-view-picker svg{
+    transform:rotate(90deg);flex-shrink:0;
+  }
+  .product-studio-shell .ps-stage-toolbar .ps-artboard-mode{display:none}
+  .product-studio-shell .ps-stage-toolbar .ps-print-side-toggle{
+    order:1;flex:0 0 auto;
+    min-height:44px;
+  }
+  .product-studio-shell .ps-stage-toolbar .ps-print-side-toggle button{
+    min-height:38px;height:38px;min-width:65px;font-size:12px;
+  }
+  .product-studio-shell .ps-stage-toolbar .ps-canvas-controls{
+    order:3;flex:0 0 auto;
+  }
+  .product-studio-shell .ps-stage-toolbar__controls{
+    min-height:44px;overflow-x:auto;overflow-y:hidden;
+  }
+  .product-studio-shell .ps-stage-toolbar__controls>:only-child{grid-column:auto}
+  .product-studio-shell .ps-mobile-placement-tools button:first-child,
+  .product-studio-shell .ps-mobile-placement-tools button:last-child{
+    flex:0 1 92px;
   }
   .product-studio-shell .ps-stage{padding:0;gap:2px;min-width:0}
   .product-studio-shell .ps-product-design-preview{
