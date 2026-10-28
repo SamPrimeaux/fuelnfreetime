@@ -54,7 +54,12 @@ export default function ProductLibrary() {
       if (id === "filter") {
         const select = document.querySelector<HTMLSelectElement>(".pl-status select");
         select?.focus();
-        select?.click();
+        try {
+          // showPicker keeps this a direct user action on supporting mobile browsers.
+          const picker = select as HTMLSelectElement & { showPicker?: () => void };
+          if (picker?.showPicker) picker.showPicker();
+          else select?.click();
+        } catch { select?.click(); }
       }
     };
     document.addEventListener("admin-dock:invoke", invoke);

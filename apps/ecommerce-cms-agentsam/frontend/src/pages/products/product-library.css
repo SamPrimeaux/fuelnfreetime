@@ -108,3 +108,8 @@
   .pl-table tbody{padding:7px}
   .pl-table tbody tr{padding:10px}
 }
+
+@media(max-width:700px){
+  /* Context dock replaces duplicate header CTAs; hiding the dock restores them. */
+  body.admin-dock-workspace .pl-header-actions{display:none}
+}
