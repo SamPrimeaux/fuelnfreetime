@@ -3,6 +3,8 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { adminFetch } from "../../lib/api";
 import StudioIcon from "./StudioIcon";
 import ProductImage from "./ProductImage";
+import CatalogHoverImage from "./CatalogHoverImage";
+import VectorAssetWorkbench from "./VectorAssetWorkbench";
 import {
   catalogProductId,
   catalogVariantId,
@@ -21,6 +23,9 @@ import {
   type ProductDetail,
 } from "./studio-model";
 import "../../styles/product-studio.css";
+import { CATALOG_FACETS, readCatalogQuery, writeCatalogQuery, catalogActiveFilterCount,
+  type CatalogQuery, type CatalogFacetCounts, type FacetGroup, type PrintMethod,
+} from "../../../../../../packages/agentsam-merch/src/catalog-query.js";
 
 const StudioWorkspace = lazy(() => import("./StudioWorkspace"));
 
@@ -29,12 +34,12 @@ type CatalogSyncHealth = { status: string; updated_at?: string | null;
   last_error_message?: string | null; page_count?: number; product_count?: number };
 
 const collections = [
-  { name: "Everything", query: "", caption: "Find your next idea" },
-  { name: "Apparel", query: "", category: "apparel", caption: "Shirts, layers & more" },
-  { name: "Tumblers", query: "tumbler", caption: "Everyday essentials" },
-  { name: "Framed decor", query: "frame", caption: "Make a space their own" },
-  { name: "Hats", query: "hat", caption: "Small things. Big personality." },
-  { name: "Accessories", query: "", category: "accessories", caption: "Personalized everyday gear" },
+  { name:"Everything", value:"", caption:"All products" },
+  { name:"Apparel", value:"apparel", caption:"Tees & layers" },
+  { name:"Tumblers", value:"drinkware", caption:"Cups & bottles" },
+  { name:"Framed decor", value:"home", caption:"Home & wall art" },
+  { name:"Hats", value:"hats", caption:"Headwear" },
+  { name:"Accessories", value:"accessories", caption:"Personalized gear" },
 ];
 export default function ProductStudioPage() {
   const navigate = useNavigate();
@@ -46,13 +51,31 @@ export default function ProductStudioPage() {
   const collectionId = Number.isSafeInteger(collectionCandidate) && collectionCandidate > 0
     ? collectionCandidate : null;
   const surface = useRef<HTMLElement>(null);
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("");
-  const [showMoreFilters, setShowMoreFilters] = useState(false);
-  const [search, setSearch] = useState("");
-  const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
-  const [total, setTotal] = useState(0);
-  const [offset, setOffset] = useState(0);
+  const [catalogFilters,setCatalogFilters] = useState<CatalogQuery>(()=>readCatalogQuery(new URLSearchParams(location.search)));
+  const [query,setQuery] = useState(catalogFilters.q);
+  const [showMoreFilters,setShowMoreFilters] = useState(false);
+  const [vectorOpen,setVectorOpen] = useState(false);
+  const [facets,setFacets] = useState<CatalogFacetCounts | null>(null);
+  const search=catalogFilters.q;
+  const [catalog,setCatalog] = useState<CatalogProduct[]>([]);
+  const [total,setTotal] = useState(0);
+  const [offset,setOffset] = useState(0);
+  function updateCatalog(patch:Partial<CatalogQuery>) {
+    setOffset(0);
+    setCatalogFilters(prev=>({...prev,...patch,page:1}));
+  }
+  function toggleFacet(group:FacetGroup,value:string) {
+    setOffset(0);
+    setCatalogFilters(prev=>{
+      const current=prev[group] as string[];
+      const next=current.includes(value)?current.filter(v=>v!==value):[...current,value];
+      return {...prev,[group]:next,page:1} as CatalogQuery;
+    });
+  }
+  function resetCatalog() {
+    setQuery("");
+    updateCatalog(readCatalogQuery(new URLSearchParams()));
+  }
   const [more, setMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -71,13 +94,21 @@ export default function ProductStudioPage() {
   useEffect(() => {
     surface.current?.scrollIntoView({ block: "start" });
   }, [productId, designing]);
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearch(query.trim());
-      setOffset(0);
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [query]);
+  useEffect(()=>{
+    const timer=setTimeout(()=>{
+      if(query.trim()!==catalogFilters.q)updateCatalog({q:query.trim().slice(0,160)});
+    },250);
+    return ()=>clearTimeout(timer);
+  // Search is deliberately debounced rather than triggering a catalog request per key.
+  },[query,catalogFilters.q]);
+  useEffect(()=>{
+    if(productId)return;
+    const params=writeCatalogQuery(catalogFilters);
+    if(collectionId)params.set("collection_id",String(collectionId));
+    const next=params.toString();
+    if(location.search.replace(/^\\?/,"")!==next)
+      navigate({pathname:location.pathname,search:next?"?"+next:""},{replace:true});
+  },[catalogFilters,productId,collectionId,location.pathname,location.search,navigate]);
   useEffect(() => {
     if (productId) return;
     const controller = new AbortController();
@@ -87,13 +118,10 @@ export default function ProductStudioPage() {
         setError("");
       }
     });
-    const params = new URLSearchParams({
-      limit: "24",
-      offset: String(offset),
-      search,
-    });
-    if (category) params.set("category", category);
-    adminFetch<CatalogResponse>(`/api/admin/completeful/catalog?${params}`, {
+    const params=writeCatalogQuery(catalogFilters);
+    params.set("limit",String(offset===0?Math.min(200,24*catalogFilters.page):24));
+    params.set("offset",String(offset));
+    adminFetch<CatalogResponse & {facets?:CatalogFacetCounts}>(`/api/admin/completeful/catalog?${params}`, {
       signal: controller.signal,
     })
       .then((d) => {
@@ -103,6 +131,7 @@ export default function ProductStudioPage() {
           );
           setCatalog((prev) => (offset ? [...prev, ...items] : items));
           setTotal(d.pagination.total);
+          setFacets(d.facets || null);
           setMore(d.pagination.has_more);
         }
       })
@@ -113,7 +142,7 @@ export default function ProductStudioPage() {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [search, offset, refresh, productId, category]);
+  }, [catalogFilters, offset, refresh, productId]);
   useEffect(() => {
     if (!productId) return;
     const controller = new AbortController();
@@ -141,6 +170,7 @@ export default function ProductStudioPage() {
             image_pagination: d.image_pagination,
             mockups: Array.isArray(d.mockups) ? d.mockups : [],
             blank_views: Array.isArray(d.blank_views) ? d.blank_views : [],
+            method_alternatives: Array.isArray(d.method_alternatives) ? d.method_alternatives : [],
           };
           const initialVariant = normalized.variants[0];
           const initialImage =
@@ -341,9 +371,9 @@ export default function ProductStudioPage() {
                 {collections.map((c, i) => (
                   <button
                     key={c.name}
-                    className={query === c.query && category === (c.category || "") ? "is-active" : ""}
-                    onClick={() => { setCategory(c.category || ""); setQuery(c.query); setOffset(0); }}
-                    aria-pressed={query === c.query && category === (c.category || "")}
+                    className={c.value ? catalogFilters.category.includes(c.value) ? "is-active" : "" : !catalogFilters.category.length ? "is-active" : ""}
+                    onClick={() => updateCatalog({category:c.value?[c.value]:[]})}
+                    aria-pressed={c.value ? catalogFilters.category.includes(c.value):!catalogFilters.category.length}
                   >
                     <span className="ps-collection-number">0{i + 1}</span>
                     <strong>{c.name}</strong>
@@ -354,16 +384,45 @@ export default function ProductStudioPage() {
                     aria-expanded={showMoreFilters} aria-controls="ps-extra-catalog-filters"
                     onClick={() => setShowMoreFilters(value => !value)}>
                     <StudioIcon name="options" size={18}/>
-                    <strong>Filters</strong><small>Recently used</small>
+                    <strong>Filters {catalogActiveFilterCount(catalogFilters)||""}</strong><small>Method · price · tags</small>
                   </button>
               </div>
-              {showMoreFilters && <div id="ps-extra-catalog-filters" className="ps-extra-catalog-filters">
-                <button type="button" className={category === "recent" ? "is-active" : ""}
-                  aria-pressed={category === "recent"}
-                  onClick={() => { setCategory("recent"); setQuery(""); setOffset(0); }}>
-                  Recently used in Product Studio
-                </button>
-                <button type="button" onClick={() => { setCategory(""); setQuery(""); setOffset(0); setShowMoreFilters(false); }}>Clear filters</button>
+              {showMoreFilters && <div id="ps-extra-catalog-filters" className="ps-facet-workbench" aria-label="Catalog filters">
+                <div className="ps-facet-toolbar">
+                  <label>Sort by
+                    <select value={catalogFilters.sort} onChange={e=>updateCatalog({sort:e.target.value as CatalogQuery["sort"]})}>
+                      <option value="catalog">Curated catalog</option><option value="name">Name A–Z</option>
+                      <option value="newest">Newest</option><option value="popular">Popular</option>
+                      <option value="mockups">Most mockups</option>
+                      <option value="price-low">Cost: low to high</option>
+                      <option value="price-high">Cost: high to low</option>
+                    </select>
+                  </label>
+                  <label>Min base cost ($)<input type="number" min="0" step=".5" value={catalogFilters.priceMin?catalogFilters.priceMin/100:""}
+                    placeholder="Any" onChange={e=>updateCatalog({priceMin:Math.max(0,Math.round(Number(e.target.value)*100))})}/></label>
+                  <label>Max base cost ($)<input type="number" min="0" step=".5" value={catalogFilters.priceMax===null?"":catalogFilters.priceMax/100}
+                    placeholder="Any" onChange={e=>updateCatalog({priceMax:e.target.value===""?null:Math.max(0,Math.round(Number(e.target.value)*100))})}/></label>
+                  <button type="button" onClick={resetCatalog}>Clear all</button>
+                </div>
+                <div className="ps-facet-flags">
+                  <label><input type="checkbox" checked={catalogFilters.recent} onChange={e=>updateCatalog({recent:e.target.checked})}/> Recently used</label>
+                  <label><input type="checkbox" checked={catalogFilters.available} onChange={e=>updateCatalog({available:e.target.checked})}/> Available only</label>
+                  <label><input type="checkbox" checked={catalogFilters.hasMockups} onChange={e=>updateCatalog({hasMockups:e.target.checked})}/> Has mockups</label>
+                  <label><input type="checkbox" checked={catalogFilters.favorite} onChange={e=>updateCatalog({favorite:e.target.checked})}/> Favorites</label>
+                </div>
+                <div className="ps-facet-groups">
+                  {(Object.keys(CATALOG_FACETS) as FacetGroup[]).map(group=><fieldset key={group}>
+                    <legend>{ {category:"Category",printType:"Print method",holiday:"Holiday",occasion:"Occasion"}[group]}</legend>
+                    <div className="ps-facet-options">
+                      {CATALOG_FACETS[group].map(item=><label key={item.value} className={(catalogFilters[group] as string[]).includes(item.value)?"is-selected":""}>
+                        <input type="checkbox" checked={(catalogFilters[group] as string[]).includes(item.value)}
+                          onChange={()=>toggleFacet(group,item.value)}/>
+                        <span>{item.label}</span><small>{facets?.[group]?.[item.value]??"—"}</small>
+                      </label>)}
+                    </div>
+                  </fieldset>)}
+                </div>
+                <small>Within a group: match any selected tag. Between groups: match all. Counts exclude that group's own selections.</small>
               </div>}
               {(syncHealth?.status === "error" || syncHealth?.status === "partial") && (
                 <div className="ps-catalog-sync-alert" role="alert">
@@ -383,6 +442,11 @@ export default function ProductStudioPage() {
                   <span className="ps-eyebrow">THE POSSIBILITIES</span>
                   <h2>Find your canvas.</h2>
                 </div>
+                <div className="ps-catalog-heading-actions">
+                  <button type="button" className="ps-button" aria-expanded={vectorOpen}
+                    aria-controls="ps-catalog-vector-workbench" onClick={()=>setVectorOpen(v=>!v)}>
+                    SVG & logo optimizer
+                  </button>
                 <button
                   className="ps-catalog-refresh"
                   type="button"
@@ -398,7 +462,9 @@ export default function ProductStudioPage() {
                     <path d="M18 15a7 7 0 0 1-11.8 2L4 12" />
                   </svg>
                 </button>
+                </div>
               </div>
+              {vectorOpen&&<div id="ps-catalog-vector-workbench"><VectorAssetWorkbench/></div>}
               <div className="ps-search-row">
                 <label className="ps-search">
                   <StudioIcon name="search" />
@@ -449,7 +515,7 @@ export default function ProductStudioPage() {
                   <button
                     className="ps-button ps-primary"
                     disabled={syncing}
-                    onClick={search ? () => setQuery("") : syncCatalog}
+                    onClick={search ? () => {setQuery("");updateCatalog({q:""});} : syncCatalog}
                   >
                     {search
                       ? "See all products"
@@ -475,17 +541,18 @@ export default function ProductStudioPage() {
                         onClick={() =>
                           navigate(
                             `/products/create/${encodeURIComponent(catalogProductId(p))}` +
-                              (collectionId ? `?collection_id=${collectionId}` : ""),
+                              `?${new URLSearchParams({
+                                ...(collectionId?{collection_id:String(collectionId)}:{}),
+                                ...(catalogFilters.printType.length && (p.print_methods||[]).includes(catalogFilters.printType[0])?{method:catalogFilters.printType[0]}:{})
+                              })}`,
                           )
                         }
                       >
                         <div className="ps-product-photo">
-                          <ProductImage
-                            sources={[
-                              p.realistic_image_url,
-                              p.cover_image_url,
-                              p.main_icon_url,
-                            ]}
+                          <CatalogHoverImage
+                            sources={[p.realistic_image_url,p.cover_image_url,p.main_icon_url]}
+                            sampleUrl={p.sample_image_url}
+                            alt={p.name}
                           />
                           <span className="ps-product-badge">
                             {p.print_type || "Customizable"}
@@ -524,7 +591,7 @@ export default function ProductStudioPage() {
                   <button
                     className="ps-button"
                     disabled={loading}
-                    onClick={() => setOffset(catalog.length)}
+                    onClick={() => {setOffset(catalog.length);setCatalogFilters(prev=>({...prev,page:Math.floor(catalog.length/24)+1}));}}
                   >
                     {loading ? "Loading…" : "Explore more products"}
                   </button>
@@ -647,6 +714,24 @@ export default function ProductStudioPage() {
                         <span>Mockup views</span>
                       </div>
                     </div>
+                    {(detail.method_alternatives||[]).length>1 ? (
+                      <div className="ps-method-variants">
+                        <strong>Choose a print method</strong>
+                        <div>
+                          {(detail.method_alternatives||[]).map(option=><button key={option.completeful_product_id}
+                            type="button" className={catalogProductId(detail.product)===option.catalog_product_id?"is-active":""}
+                            aria-pressed={catalogProductId(detail.product)===option.catalog_product_id}
+                            onClick={()=>navigate(`/products/create/${encodeURIComponent(option.catalog_product_id)}`+
+                              (collectionId?`?collection_id=${collectionId}&method=${encodeURIComponent(option.print_type.toLowerCase())}`:
+                                `?method=${encodeURIComponent(option.print_type.toLowerCase())}`))}>
+                            <b>{option.print_type}</b>
+                            <small>{option.fulfillment_cost_free_cents!=null?
+                              `${(option.fulfillment_cost_free_cents/100).toFixed(2)} base`:"Cost varies"}</small>
+                          </button>)}
+                        </div>
+                        <small>Switching methods selects the matching supplier record; current artwork stays in your Media Library.</small>
+                      </div>
+                    ) : <div className="ps-method-single">Print method: {detail.product.print_type||"See supplier specification"}</div>}
                     <h3>Make it yours</h3>
                     <p>
                       Bring in artwork from your library, explore a new

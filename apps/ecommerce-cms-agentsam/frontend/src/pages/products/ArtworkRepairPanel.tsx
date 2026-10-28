@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { adminFetch } from "../../lib/api";
+import VectorAssetWorkbench from "./VectorAssetWorkbench";
 import type { MediaAsset } from "./studio-model";
 
 type Assessment = {
@@ -26,11 +27,11 @@ function dims(value:Assessment["source_px"]) {
   return value ? value.width.toLocaleString()+" × "+value.height.toLocaleString()+" px" : "Unknown dimensions";
 }
 export default function ArtworkRepairPanel({
-  asset, printWidthIn, printHeightIn, targetPpi, catalogProductId, printLocationId,
+  asset, printWidthIn, printHeightIn, targetPpi, catalogProductId, printLocationId, method="dtg",
   onApply, onClose,
 }:{
   asset:MediaAsset;printWidthIn:number|null;printHeightIn:number|null;targetPpi:number;
-  catalogProductId:string;printLocationId:string;
+  catalogProductId:string;printLocationId:string;method?:string;
   onApply:(candidate:MediaAsset)=>void;onClose:()=>void;
 }) {
   const [inspection,setInspection]=useState<Inspection|null>(null);
@@ -166,6 +167,11 @@ export default function ArtworkRepairPanel({
           </button>
         </details>
       </>}
+      <details className="ps-vector-disclosure">
+        <summary>Convert SVG / optimize logo for this print area</summary>
+        <VectorAssetWorkbench selectedAsset={asset} printWidthIn={printWidthIn} printHeightIn={printHeightIn}
+          targetPpi={targetPpi} method={method} onPrepared={(prepared)=>{onApply(prepared);onClose();}}/>
+      </details>
       {candidate && (
         <section className="ps-repair-compare" aria-label="Review original and repaired artwork">
           <strong>Before / after — compare closely{candidate.automated_choice ? " · "+candidate.automated_choice.replaceAll("_"," ") : ""}</strong>
