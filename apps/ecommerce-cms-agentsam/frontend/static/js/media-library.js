@@ -1818,6 +1818,18 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     }
 
     renderSeoReview(asset);
+    const editableRaster = ['image/png','image/jpeg','image/webp']
+      .includes(String(asset.content_type || '').split(';')[0].toLowerCase());
+    for (const id of ['media-drawer-edit-image','media-drawer-clean-background','media-drawer-resample','media-enhance-submit']) {
+      const button = document.getElementById(id);
+      if (button) {
+        button.disabled = !editableRaster || (id === 'media-drawer-clean-background' && !mediaCapabilities.can_remove_background);
+        button.title = !editableRaster ? 'Select a PNG, JPEG or WebP image to use raster tools'
+          : id === 'media-drawer-clean-background' && !mediaCapabilities.can_remove_background
+            ? 'Background-removal provider is not connected'
+            : '';
+      }
+    }
 
     const usage = document.getElementById("media-drawer-usage");
     if (usage) {
