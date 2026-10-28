@@ -199,13 +199,17 @@ export function planArtworkAutoRepair(inspection, options = {}) {
     .sort((a, b) => Number(b.assessment?.effective_ppi || 0) - Number(a.assessment?.effective_ppi || 0));
   const master = targets.find(item => Number(item.assessment?.effective_ppi || 0) > sourcePpi * 1.05);
   if (master) return { method: "recover_master", candidate_media_asset_id: master.asset.id };
-  if (inspection?.available_actions?.trim_transparent) return { method: "trim_transparent" };
-  if (inspection?.available_actions?.remove_background &&
-      inspection?.assessment?.status === "needs_detail") return { method: "remove_background" };
-  if (options.allow_reconstruct === true && options.model_id &&
+  // For insufficient source pixels, genuine model-based reconstruction (when
+  // explicitly consented to) is preferable to a cosmetic background operation.
+  // Cropping alone cannot manufacture missing logo detail.
+  if (inspection?.assessment?.status === "needs_detail" &&
+      options.allow_reconstruct === true && options.model_id &&
       inspection?.available_actions?.reconstruct) {
     return { method: "reconstruct", model_id: options.model_id, confirm_changes: true };
   }
+  if (inspection?.available_actions?.trim_transparent) return { method: "trim_transparent" };
+  if (inspection?.available_actions?.remove_background &&
+      inspection?.assessment?.status === "needs_detail") return { method: "remove_background" };
   return null;
 }
 
