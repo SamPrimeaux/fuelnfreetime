@@ -67,3 +67,21 @@
 .pl-table .pl-name:focus-visible{outline:2px solid #6c5ce7;outline-offset:3px;border-radius:3px}
 .pl-table .pl-action a{position:relative;z-index:2}
 .pl-table tbody tr:focus-within{background:#f6f4ff}
+
+/* Wave 1 mobile catalog density — preserve accessible cards and existing action routes. */
+@media(max-width:700px){
+  .pl-workspace{padding:12px 12px calc(104px + env(safe-area-inset-bottom,0px))}
+  .pl-header{gap:10px;margin-bottom:14px}
+  .pl-header h1{font-size:clamp(26px,7vw,34px);line-height:1.08}
+  .pl-header p{font-size:12px;line-height:1.45;margin-top:4px}
+  .pl-header-actions{flex-wrap:nowrap;gap:7px}
+  .pl-header-actions .cs-button{min-height:44px;padding:10px;font-size:12px}
+  .pl-controls{padding:10px;gap:8px}
+  .pl-search,.pl-status select{min-height:44px}
+  .pl-search input{font-size:16px}
+  .pl-table tbody{padding:8px;gap:8px}
+  .pl-table tbody tr{gap:8px 12px;padding:11px}
+  .pl-thumb{width:52px;height:52px;flex-basis:52px}
+  .pl-table td.pl-product-cell{padding-bottom:9px}
+  .pl-table .pl-action .cs-button{min-height:44px}
+}

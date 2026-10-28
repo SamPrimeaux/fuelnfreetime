@@ -2792,3 +2792,85 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
 /* The canvas photograph enlarges on click outside the editable art area. */
 .ps-design-product-image[role="button"]{cursor:zoom-in}
 .ps-design-product-image[role="button"]:focus-visible{outline:3px solid var(--ps-accent);outline-offset:2px}
+
+
+/* Wave 1: one mobile design surface, compact contextual controls and thumb filmstrip. */
+.ps-mobile-placement-tools,.ps-mobile-artwork-strip,.ps-print-quality-guidance__toggle{display:none}
+.ps-artwork-quickview{border:0;margin:auto;padding:0;width:min(94vw,680px);max-width:none;max-height:min(94dvh,920px);background:var(--ps-paper,#faf9fc);color:var(--ps-ink,#23212b);border-radius:18px;box-shadow:0 28px 90px #12101d66}
+.ps-artwork-quickview::backdrop{background:rgba(15,12,23,.78);backdrop-filter:blur(6px)}
+.ps-artwork-quickview__content{display:flex;flex-direction:column;min-height:0;max-height:min(94dvh,920px)}
+.ps-artwork-quickview__header{display:flex;justify-content:space-between;align-items:center;padding:13px 16px;gap:12px}
+.ps-artwork-quickview__header>div{display:grid;gap:3px}
+.ps-artwork-quickview__header span,.ps-artwork-quickview__details span,.ps-artwork-quickview__details small{font-size:12px;color:var(--ps-muted,#6d6976)}
+.ps-artwork-quickview__close{height:44px;width:44px;border:1px solid #e2dfe9;border-radius:12px;background:white;font-size:24px}
+.ps-artwork-quickview__image{display:grid;grid-template-columns:42px minmax(0,1fr) 42px;align-items:center;flex:1 1 auto;min-height:180px;max-height:62dvh;background:#edeaf2;padding:10px}
+.ps-artwork-quickview__image img{display:block;width:100%;max-height:58dvh;object-fit:contain;min-width:0;user-select:none}
+.ps-artwork-quickview__previous,.ps-artwork-quickview__next{height:44px;width:40px;background:#ffffffdb;border:0;border-radius:10px;font-size:28px;color:#24212b}
+.ps-artwork-quickview__image button:disabled{opacity:.25}
+.ps-artwork-quickview__details{display:grid;gap:5px;padding:12px 16px}
+.ps-artwork-quickview__details strong{font-size:13px;overflow-wrap:anywhere}
+.ps-artwork-quickview__actions{display:flex;gap:8px;padding:10px 16px calc(12px + env(safe-area-inset-bottom,0px))}
+.ps-artwork-quickview__actions button{flex:1;min-height:46px;border:1px solid #d8d3e5;background:white;color:#24212b;border-radius:12px;font-size:13px;font-weight:700}
+.ps-artwork-quickview__actions button.is-primary{background:#24212b;color:white;border-color:#24212b}
+@media(max-width:760px){
+  .product-studio-shell .ps-workspace{min-width:0}
+  .product-studio-shell .ps-workspace-header{padding:7px 10px;min-height:54px}
+  .product-studio-shell .ps-icon-action{width:44px;height:44px;min-width:44px;min-height:44px}
+  .product-studio-shell .ps-header-artwork-tools{display:none}
+  .product-studio-shell .ps-workspace-body,.product-studio-shell .ps-workspace-body.is-panel-collapsed,
+  .product-studio-shell .ps-workspace-body:not(.is-panel-collapsed){display:flex;flex-direction:column;min-width:0}
+  .product-studio-shell .ps-stage-column{order:1;min-width:0;padding:0 10px calc(136px + env(safe-area-inset-bottom,0px))}
+  .product-studio-shell .ps-stage-toolbar{padding:5px 0 7px;gap:6px}
+  .product-studio-shell .ps-product-title-edit{max-width:100%;width:100%;min-width:0}
+  .product-studio-shell .ps-product-title-edit label,.product-studio-shell .ps-product-title-edit small{display:none}
+  .product-studio-shell .ps-product-title-edit input{width:100%;max-width:100%;min-height:38px;font-size:14px}
+  .product-studio-shell .ps-stage-toolbar__controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;align-items:center}
+  .product-studio-shell .ps-stage-toolbar__controls>:only-child{grid-column:1/-1}
+  .product-studio-shell .ps-stage-toolbar .ps-print-side-toggle{width:100%;max-width:none;margin:0;min-width:0}
+  .product-studio-shell .ps-stage-toolbar .ps-print-side-toggle button{min-height:42px;font-size:12px;padding:5px}
+  .product-studio-shell .ps-artboard-mode{width:100%;min-width:0}
+  .product-studio-shell .ps-artboard-mode button{flex:1;min-height:42px;padding:5px 3px;font-size:11px}
+  .product-studio-shell .ps-stage{padding:4px;gap:4px}
+  .product-studio-shell .ps-product-design-caption{padding:7px 4px;gap:4px}
+  .product-studio-shell .ps-print-quality-guidance{gap:0;padding:0 10px;display:block}
+  .product-studio-shell .ps-print-quality-guidance__toggle{display:flex;width:100%;justify-content:space-between;align-items:center;min-height:43px;gap:12px;color:#65441b;font-size:12px;font-weight:750;text-align:left;background:transparent;border:0}
+  .product-studio-shell .ps-print-quality-guidance__toggle span:last-child{font-size:21px}
+  .product-studio-shell .ps-print-quality-guidance:not(.is-expanded) .ps-print-quality-guidance__copy,
+  .product-studio-shell .ps-print-quality-guidance:not(.is-expanded) .ps-print-quality-guidance__actions{display:none}
+  .product-studio-shell .ps-print-quality-guidance.is-expanded .ps-print-quality-guidance__copy{padding-bottom:10px}
+  .product-studio-shell .ps-print-quality-guidance.is-expanded .ps-print-quality-guidance__actions{padding:0 0 12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .product-studio-shell .ps-print-quality-guidance__actions button{min-width:0;min-height:44px;font-size:11px;padding:7px}
+  .product-studio-shell .ps-mobile-placement-tools{display:flex;align-items:center;gap:4px;overflow-x:auto;padding:6px 0;scrollbar-width:none}
+  .product-studio-shell .ps-mobile-placement-tools button{flex:0 0 auto;border:1px solid var(--ps-line);background:#fff;min-height:40px;min-width:40px;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:650;color:var(--ps-ink)}
+  .product-studio-shell .ps-mobile-placement-tools button[aria-pressed=true]{color:var(--ps-accent);background:var(--ps-accent-soft)}
+  .product-studio-shell .ps-mobile-placement-tools output{flex:0 0 auto;min-width:42px;text-align:center;font-size:12px;font-variant-numeric:tabular-nums}
+  .product-studio-shell .ps-toolrail{display:flex;order:3;position:fixed;left:0;right:0;top:auto;bottom:0;z-index:24;min-height:calc(64px + env(safe-area-inset-bottom,0px));padding:5px 6px calc(5px + env(safe-area-inset-bottom,0px));gap:2px;background:var(--ps-paper);border-top:1px solid var(--ps-line);border-bottom:0;box-shadow:0 -4px 20px #16121b0d;justify-content:space-around;overflow-x:auto}
+  .product-studio-shell .ps-toolrail button,.product-studio-shell .ps-toolrail__help{min-width:0;flex:1 1 0;min-height:51px;gap:3px;padding:5px 2px;border-radius:10px;font-size:10px;line-height:1.2;white-space:nowrap;display:flex;align-items:center;justify-content:center}
+  .product-studio-shell .ps-toolrail svg{width:21px;height:21px}
+  .product-studio-shell .ps-toolrail button.is-active{background:var(--ps-accent-soft);color:var(--ps-accent)}
+  .product-studio-shell .ps-toolpanel:not([hidden]){z-index:25;bottom:calc(64px + env(safe-area-inset-bottom,0px));max-height:min(58dvh,530px);padding:13px 14px 18px;border-radius:18px 18px 0 0;overscroll-behavior:contain}
+  .product-studio-shell .ps-panel-heading{position:sticky;top:-13px;z-index:3;background:var(--ps-paper);padding:3px 0 8px;align-items:center}
+  .product-studio-shell .ps-panel-dismiss{min-width:44px;min-height:44px}
+  .product-studio-shell .ps-asset-rail .ps-media-grid{display:flex;flex-wrap:nowrap;gap:10px;max-height:none;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;padding:4px 2px 10px}
+  .product-studio-shell .ps-asset-rail .ps-media-grid button{flex:0 0 clamp(105px,33vw,142px);width:clamp(105px,33vw,142px);scroll-snap-align:start;min-height:0;height:auto}
+  .product-studio-shell .ps-asset-rail .ps-media-grid button img{width:100%;aspect-ratio:1/1;object-fit:contain}
+  .product-studio-shell .ps-mobile-artwork-strip{display:block;position:fixed;left:8px;right:8px;bottom:calc(69px + env(safe-area-inset-bottom,0px));z-index:18;background:var(--ps-paper);border:1px solid var(--ps-line);border-radius:14px;box-shadow:0 -4px 22px #16121b20;overflow:hidden}
+  .product-studio-shell .ps-mobile-artwork-strip.is-suppressed{display:none}
+  .product-studio-shell .ps-mobile-artwork-strip__heading{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:43px;padding:2px 9px}
+  .product-studio-shell .ps-mobile-artwork-strip__heading button{display:flex;align-items:center;gap:7px;border:0;background:none;color:var(--ps-ink);font-size:12px;font-weight:700;min-height:42px;padding:4px}
+  .product-studio-shell .ps-mobile-artwork-strip__heading button:last-child{color:var(--ps-accent);font-weight:650}
+  .product-studio-shell .ps-mobile-artwork-strip__items{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;padding:3px 10px 12px}
+  .product-studio-shell .ps-mobile-artwork-strip__items button{flex:0 0 100px;width:100px;min-width:0;display:grid;gap:4px;grid-template-rows:84px auto;scroll-snap-align:start;border:1px solid var(--ps-line);border-radius:10px;padding:5px;background:#fff;color:var(--ps-ink);font-size:10px;min-height:114px}
+  .product-studio-shell .ps-mobile-artwork-strip__items button.is-current{border:2px solid var(--ps-accent);padding:4px}
+  .product-studio-shell .ps-mobile-artwork-strip__items img{width:100%;height:84px;object-fit:contain;background:#f4f3f5;border-radius:6px}
+  .product-studio-shell .ps-mobile-artwork-strip__items span{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .product-studio-shell .ps-mobile-artwork-strip__items .ps-mobile-artwork-strip__empty{display:flex;align-items:center;justify-content:center;text-align:center;font-weight:700;padding:8px}
+  .ps-artwork-quickview{width:100vw;max-height:100dvh;height:100dvh;border-radius:0}
+  .ps-artwork-quickview__content{height:100%;max-height:100dvh}
+  .ps-artwork-quickview__header{padding-top:calc(12px + env(safe-area-inset-top,0px))}
+  .ps-artwork-quickview__image{max-height:none;min-height:0;grid-template-columns:35px minmax(0,1fr) 35px;touch-action:pan-y}
+  .ps-artwork-quickview__image img{max-height:min(62dvh,650px)}
+  .ps-artwork-quickview__previous,.ps-artwork-quickview__next{width:34px}
+  .ps-artwork-quickview__details{padding:12px 16px}
+}
+@media(prefers-reduced-motion:reduce){.product-studio-shell .ps-mobile-artwork-strip,.ps-artwork-quickview{scroll-behavior:auto}}

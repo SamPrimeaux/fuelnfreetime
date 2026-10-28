@@ -9,6 +9,7 @@ import { studioArtworkQuality, type ArtworkCrop } from "./studio-artwork-quality
 import { suggestPrintScale, printSourceRecommendation } from "./studio-print-fit";
 import { alphaBounds } from "./studio-alpha-bounds";
 import StudioIcon from "./StudioIcon";
+import ArtworkQuickView from "./ArtworkQuickView";
 import ProductImage from "./ProductImage";
 import {
   catalogProductId,
@@ -186,6 +187,8 @@ export default function StudioWorkspace({
   onBack: () => void;
 }) {
   const [tab, setTab] = useState("options");
+  const [filmstripOpen, setFilmstripOpen] = useState(false);
+  const [qualityDetailsOpen, setQualityDetailsOpen] = useState(false);
   const [manageVariants, setManageVariants] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [miniMapOpen, setMiniMapOpen] = useState(true);
@@ -220,6 +223,7 @@ export default function StudioWorkspace({
   const [mediaPage, setMediaPage] = useState(1);
   const [mediaHasMore, setMediaHasMore] = useState(false);
   const [asset, setAsset] = useState<MediaAsset | null>(null);
+  const [inspectingAsset, setInspectingAsset] = useState<MediaAsset | null>(null);
   const [preparedAsset, setPreparedAsset] = useState<MediaAsset | null>(null);
   const [preparedFor, setPreparedFor] = useState<string | null>(null);
   const [previewAsset, setPreviewAsset] = useState<MediaAsset | null>(null);
@@ -429,6 +433,7 @@ export default function StudioWorkspace({
 
   function openTab(next: string) {
     setManageVariants(false);
+    setFilmstripOpen(false);
     setPanelOpen((current) => next === tab ? !current : true);
     setTab(next);
     if (next === "designs") {
@@ -796,7 +801,9 @@ export default function StudioWorkspace({
     return () => clearTimeout(timer);
   }, [mediaSearch]);
   useEffect(() => {
-    if (tab !== "upload" && tab !== "tools" && tab !== "designs") return;
+    // Keep a small artwork rail ready for phone users, even when the tool sheet is closed.
+    if (tab !== "upload" && tab !== "tools" && tab !== "designs" &&
+        !window.matchMedia("(max-width: 760px)").matches) return;
     const controller = new AbortController();
     queueMicrotask(() => {
       if (!controller.signal.aborted) {
@@ -1918,7 +1925,13 @@ export default function StudioWorkspace({
         </div>
       </header>
       {printSource?.needsSharperSource && (
-        <section className="ps-print-quality-guidance" aria-label="Print quality preflight">
+        <section className={"ps-print-quality-guidance" + (qualityDetailsOpen ? " is-expanded" : "")}
+          aria-label="Print quality preflight">
+          <button type="button" className="ps-print-quality-guidance__toggle"
+            aria-expanded={qualityDetailsOpen} onClick={() => setQualityDetailsOpen((open) => !open)}>
+            <span>{Math.round(manufacturingPreflight?.effectivePpi ?? 0)} PPI · Review artwork quality</span>
+            <span aria-hidden="true">{qualityDetailsOpen ? "−" : "+"}</span>
+          </button>
           <div className="ps-print-quality-guidance__copy">
             <strong>{Math.round(manufacturingPreflight?.effectivePpi ?? 0)} PPI source · {printSource.targetPpi} PPI {printSource.source === "provider" ? "supplier requirement" : "studio quality goal"}</strong>
             <span>At this size, use artwork with at least {printSource.requiredWidthPx.toLocaleString()} × {printSource.requiredHeightPx.toLocaleString()} active pixels.
@@ -1929,8 +1942,8 @@ export default function StudioWorkspace({
           <div className="ps-print-quality-guidance__actions">
             {autoFitAvailable && resolutionFit != null
               ? <button type="button" onClick={() => { setScale(resolutionFit); setError(""); }}>Fit safely to {resolutionFit}%</button>
-              : <button type="button" onClick={() => { setTab("upload"); setPanelOpen(true); }}>Choose sharper original</button>}
-            <button type="button" onClick={() => { setTab("tools"); setPanelOpen(true); }}>Review background / crop</button>
+              : <button type="button" onClick={() => openTab("upload")}>Choose sharper original</button>}
+            <button type="button" onClick={() => { openTab("tools"); setAiMode("edit"); }}>Review background / crop</button>
           </div>
         </section>
       )}
@@ -2217,7 +2230,9 @@ export default function StudioWorkspace({
                   <button type="button" key={item.id} title={item.filename}
                     aria-label={blankSelectionMode ? `Approve ${item.filename} as ${garmentColor} ${sideKey} blank` : `Place ${item.filename}`}
                     aria-pressed={!blankSelectionMode && asset?.id === item.id}
-                    onClick={() => { if (blankSelectionMode) void approveGarmentBlank(item); else choose(item); }}
+                    onClick={() => { if (blankSelectionMode) void approveGarmentBlank(item);
+                      else if (window.matchMedia("(max-width: 760px)").matches) setInspectingAsset(item);
+                      else choose(item); }}
                     className={asset?.id === item.id ? "is-active" : ""}>
                     <img src={item.url} alt="" loading="lazy" />
                     <span>{item.filename}</span>
@@ -2564,6 +2579,17 @@ export default function StudioWorkspace({
           )}
         </aside>
         <div className="ps-stage-column" ref={stage}>
+          {asset && showArtwork && (
+            <div className="ps-mobile-placement-tools" role="toolbar" aria-label="Quick artwork positioning">
+              <button type="button" onClick={() => openTab("layers")}>Position</button>
+              <button type="button" aria-label="Reduce artwork size" onClick={() => setScale((v) => Math.max(5, v - 5))}>−</button>
+              <output aria-label="Artwork size">{scale}%</output>
+              <button type="button" aria-label="Increase artwork size" onClick={() => setScale((v) => Math.min(150, v + 5))}>+</button>
+              <button type="button" aria-label="Center artwork" onClick={() => { setX(50); setY(50); }}>Center</button>
+              <button type="button" aria-label="Flip artwork horizontally" aria-pressed={flipX}
+                onClick={() => setFlipX((v) => !v)}>Flip</button>
+            </div>
+          )}
           <div className="ps-stage-toolbar">
             <div className="ps-product-title-edit"><label htmlFor="ps-product-title">Product name</label><input id="ps-product-title" aria-label="Product name" type="text" maxLength={160} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Name this product" /><small title={detail.product.name}>Blank: {detail.product.name}</small></div>
             <div className="ps-stage-toolbar__controls">
@@ -2791,6 +2817,35 @@ export default function StudioWorkspace({
               ))}
             </div>
           )}
+          <section className={"ps-mobile-artwork-strip" + (filmstripOpen ? " is-open" : "") + (panelOpen ? " is-suppressed" : "")}
+            aria-label="Quick artwork browser">
+            <div className="ps-mobile-artwork-strip__heading">
+              <button type="button" aria-expanded={filmstripOpen}
+                aria-controls="ps-mobile-artwork-items"
+                onClick={() => setFilmstripOpen((open) => !open)}>
+                <StudioIcon name="image" size={20}/>
+                <span>Artwork</span>
+                <span aria-hidden="true">{filmstripOpen ? "⌄" : "⌃"}</span>
+              </button>
+              <button type="button" onClick={() => openTab("upload")}>Browse all</button>
+            </div>
+            {filmstripOpen && (
+              <div className="ps-mobile-artwork-strip__items" id="ps-mobile-artwork-items" role="group" aria-label="Swipeable artwork thumbnails">
+                {filteredMedia.slice(0, 16).map((item) => (
+                  <button type="button" key={item.id} className={asset?.id === item.id ? "is-current" : ""}
+                    aria-label={"Inspect " + item.filename}
+                    onClick={() => setInspectingAsset(item)}>
+                    <img src={item.url} alt="" loading="lazy" />
+                    <span>{item.filename}</span>
+                  </button>
+                ))}
+                {!filteredMedia.length && <button type="button" className="ps-mobile-artwork-strip__empty"
+                  onClick={() => openTab("upload")}>Find or upload artwork</button>}
+                {mediaHasMore && <button type="button" className="ps-mobile-artwork-strip__empty"
+                  onClick={() => openTab("upload")}>More artwork</button>}
+              </div>
+            )}
+          </section>
           {verifiedCurrentSupplierMockups.length > 0 && (
             <section className="ps-merchant-render-strip" aria-label="Completeful product images">
               <div className="ps-merchant-render-header"><strong>Generated product images</strong><small>Exact supplier color and print side · click to inspect</small></div>
@@ -2813,6 +2868,20 @@ export default function StudioWorkspace({
                 ))}
               </div>
             </section>
+          )}
+          {inspectingAsset && (
+            <ArtworkQuickView items={filteredMedia} initialAsset={inspectingAsset}
+              onClose={() => setInspectingAsset(null)}
+              onPlace={(item) => { choose(item); setInspectingAsset(null); setFilmstripOpen(false); }}
+              onEdit={(item) => {
+                choose(item);
+                setInspectingAsset(null);
+                setFilmstripOpen(false);
+                setTab("tools");
+                setAiMode("edit");
+                setPanelOpen(true);
+              }}
+            />
           )}
           {fullPreviewOpen && (
             <div className="ps-preview-overlay" onMouseDown={(event) => {
