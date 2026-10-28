@@ -6,13 +6,15 @@ import StudioIcon from "../products/StudioIcon";
 import CollectionProductPicker from "./CollectionProductPicker";
 import { resolveAssortmentCandidates, type AssortmentSlotMatch } from "../../../../../../packages/agentsam-merch/src/collection-planning.js";
 
-export default function CollectionProducts({ products, selected, onSelect, plan, onPlan, onOpenStudio }: {
+export default function CollectionProducts({ products, selected, onSelect, plan, onPlan, onOpenStudio, onScaffold }: {
   products: Product[]; selected: number[]; onSelect: (ids: number[]) => void;
   plan: string[]; onPlan: (ids: string[]) => void; onOpenStudio: (supplierId?: string) => Promise<void>;
+  onScaffold: () => Promise<void>;
 }) {
   const [picker, setPicker] = useState(false);
   const [supplierQuery, setSupplierQuery] = useState("");
   const [supplierBusy, setSupplierBusy] = useState(false);
+  const [scaffolding, setScaffolding] = useState(false);
   const [supplierError, setSupplierError] = useState("");
   const [blanks, setBlanks] = useState<SupplierBlank[]>([]);
   const [packResult, setPackResult] = useState<{ label: string; slots: AssortmentSlotMatch[]; missing: string[] } | null>(null);
@@ -133,8 +135,13 @@ export default function CollectionProducts({ products, selected, onSelect, plan,
         </article>;
       })}</div>}
       <div className="cs-plan-bar">
-        <div><strong>Planned blanks ({plan.length}/24)</strong><small>These are not manufactured or storefront products.</small></div>
-        <button type="button" className="cs-button primary" disabled={!plan.length} onClick={()=>void onOpenStudio(plan[0])}>Design first planned product <StudioIcon name="arrow" size={15}/></button>
+        <div><strong>Planned blanks ({plan.length}/24)</strong><small>Save the assortment and create draft product shells before editing artwork. No supplier order is placed.</small></div>
+        <div className="cs-item-actions">
+          <button type="button" className="cs-button primary" disabled={!plan.length||scaffolding} onClick={()=>{setScaffolding(true);void onScaffold().finally(()=>setScaffolding(false));}}>
+            {scaffolding?"Scaffolding…":"Scaffold draft products"} <StudioIcon name="layers" size={15}/>
+          </button>
+          <button type="button" className="cs-button" disabled={!plan.length||scaffolding} onClick={()=>void onOpenStudio(plan[0])}>Design first <StudioIcon name="arrow" size={15}/></button>
+        </div>
       </div>
       {!!plan.length && <div className="cs-plan-ids">{plan.map(id=><span key={id}>{blanks.find(p=>supplierId(p)===id)?.name || id}<button aria-label={`Remove ${id}`} onClick={()=>onPlan(plan.filter(p=>p!==id))} type="button">×</button></span>)}</div>}
     </section>
