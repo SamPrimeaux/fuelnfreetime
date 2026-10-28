@@ -2331,7 +2331,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     if (drawerPrev) mountListener(drawerPrev, "click", () => navigateDrawer(-1));
     if (drawerNext) mountListener(drawerNext, "click", () => navigateDrawer(1));
     if (drawerOptimize) mountListener(drawerOptimize, "click", () => void runSelectedAssetAction("optimize"));
-    mountListener(document.getElementById('media-drawer-edit-image'), 'click', () => mediaWorkbench?.open?.('crop'));
+    mountListener(document.getElementById('media-drawer-edit-image'), 'click', () => document.querySelector('#media-agent-workbench [data-media-tool="crop"]')?.click());
     mountListener(document.getElementById('media-drawer-clean-background'), 'click', () => void runImageImprovement('remove-background'));
     mountListener(document.getElementById('media-drawer-resample'), 'click', () => void runImageImprovement('resample'));
     mountListener(document.getElementById('media-enhance-submit'), 'click', () => void runImageImprovement('ai-edit'));
