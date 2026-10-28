@@ -20,7 +20,7 @@ function cleanSvg(source:string):string {
   if(root.localName!=="svg" || doc.querySelector("parsererror"))
     throw new Error("Choose a valid SVG vector file.");
   const inspect=(node:Element) => {
-    if(!SVG_ELEMENTS.has(node.localName))
+    if(node.namespaceURI!=="http://www.w3.org/2000/svg" || !SVG_ELEMENTS.has(node.localName))
       throw new Error("SVG contains unsupported content ("+node.localName+"). Convert embedded images to paths and outline live text first.");
     for(const attr of [...node.attributes]) {
       if(!SVG_ATTRIBUTES.has(attr.name) || /^on/i.test(attr.name) ||
@@ -141,10 +141,14 @@ export default function VectorAssetWorkbench({selectedAsset,printWidthIn,printHe
       let data=ctx.getImageData(0,0,canvas.width,canvas.height);
       const colors=new Set<string>();
       let transparent=false;
+      const left=(canvas.width-width)/2,top=(canvas.height-height)/2;
       for(let i=0;i<data.data.length;i+=Math.max(4,Math.floor(data.data.length/45000/4)*4)){
-        if(data.data[i+3]<250)transparent=true;
-        if(data.data[i+3]>128)colors.add([data.data[i]>>4,data.data[i+1]>>4,data.data[i+2]>>4].join(","));
-        if(colors.size>40)break;
+        const pixel=i/4,x=pixel%canvas.width,y=Math.floor(pixel/canvas.width);
+        // Outside-image transparent padding is not proof that a JPEG/logo has an alpha channel.
+        const inside=x>=left&&x<left+width&&y>=top&&y<top+height;
+        if(inside&&data.data[i+3]<250)transparent=true;
+        if(data.data[i+3]>128&&colors.size<=40)
+          colors.add([data.data[i]>>4,data.data[i+1]>>4,data.data[i+2]>>4].join(","));
       }
       if(mono) {
         for(let i=0;i<data.data.length;i+=4){
