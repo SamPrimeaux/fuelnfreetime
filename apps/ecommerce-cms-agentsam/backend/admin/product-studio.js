@@ -1153,11 +1153,12 @@ async function scaffoldCollectionProductDrafts(request, env, collectionId) {
     return json({ ok: false, error: "Invalid assortment plan (maximum 24 blanks)" }, { status: 400 });
   }
   const created = [], reused = [], unavailable = [];
-  const encountered = new Set();
+  const occurrence = new Map();
   for (const slot of rawPlan) {
     const supplierId = String(slot?.catalog_product_id || "").trim();
-    if (!supplierId || encountered.has(supplierId)) continue;
-    encountered.add(supplierId);
+    if (!supplierId) continue;
+    const slotIndex = Number(occurrence.get(supplierId) || 0);
+    occurrence.set(supplierId,slotIndex+1);
     const supplier = await env.DB.prepare(
       "SELECT * FROM completeful_catalog_products WHERE (catalog_product_id = ? OR completeful_product_id = ?) AND available = 1 LIMIT 1"
     ).bind(supplierId,supplierId).first();
@@ -1166,8 +1167,9 @@ async function scaffoldCollectionProductDrafts(request, env, collectionId) {
       `SELECT d.id AS draft_id,p.id AS product_id,p.title FROM store_collection_products cp
        JOIN products p ON p.id=cp.product_id
        JOIN product_studio_drafts d ON d.product_id=p.id
-       WHERE cp.collection_id=? AND d.completeful_catalog_product_id=? LIMIT 1`
-    ).bind(id,supplier.completeful_product_id).first();
+       WHERE cp.collection_id=? AND d.completeful_catalog_product_id=?
+       ORDER BY cp.sort_order, p.id LIMIT 1 OFFSET ?`
+    ).bind(id,supplier.completeful_product_id,slotIndex).first();
     if (existing) { reused.push({ catalog_product_id: supplierId, ...existing }); continue; }
     const variants = await env.DB.prepare(
       "SELECT completeful_variant_id FROM completeful_catalog_variants WHERE completeful_product_id = ?"
