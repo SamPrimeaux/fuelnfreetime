@@ -724,8 +724,15 @@ export default function StudioWorkspace({
           const ids = [saved.original_media_asset_id, saved.prepared_media_asset_id, saved.preview_media_asset_id];
           const assets = await Promise.all(ids.map(async (id) => {
             if (!id) return null;
-            const result = await adminFetch<{ asset: MediaAsset }>(`/api/admin/media/${id}`, { signal: controller.signal });
-            return result.asset;
+            try {
+              const result = await adminFetch<{ asset: MediaAsset }>(`/api/admin/media/${id}`, { signal: controller.signal });
+              return result.asset;
+            } catch (error) {
+              // Older prepared previews can be replaced or removed between
+              // revisions. Restore the remaining saved assets and side data.
+              if (controller.signal.aborted) throw error;
+              return null;
+            }
           }));
           if (controller.signal.aborted) return;
           if (assets[0]) setAsset(assets[0]);

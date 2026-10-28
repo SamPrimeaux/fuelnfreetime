@@ -12,6 +12,20 @@ test("catalog image proxy rejects arbitrary external origins", () => {
   assert.equal(catalogImageSource("https://example.com/image.jpg"), null);
 });
 
+test("catalog image proxy accepts supplier cache versions without opening arbitrary query URLs", () => {
+  const versioned = `${PROVIDER_IMAGE}?v=1771891091407`;
+  assert.equal(catalogImageSource(versioned), versioned);
+  assert.equal(catalogImageSource(PROVIDER_IMAGE), PROVIDER_IMAGE);
+  for (const invalid of [
+    `${PROVIDER_IMAGE}?v=bad`,
+    `${PROVIDER_IMAGE}?v=123&w=1600`,
+    `${PROVIDER_IMAGE}?redirect=https%3A%2F%2Fexample.com`,
+    `${PROVIDER_IMAGE}#fragment`,
+  ]) {
+    assert.equal(catalogImageSource(invalid), null, invalid);
+  }
+});
+
 test("catalog image proxy requests a physical derivative and format-safe cache key", async (t) => {
   const previousFetch = globalThis.fetch;
   const previousCaches = globalThis.caches;

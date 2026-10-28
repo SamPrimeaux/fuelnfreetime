@@ -8,8 +8,13 @@ export function catalogImageSource(value, env = {}) {
     // secret, but should be one named constant sourced from the app config/manifest so a clone is not coupled
     // to a literal project id. Audit F7: docs/AGENTSAM_MERCH_AND_TOOLS_AUDIT_20261015.md.
     const origins = (env.CATALOG_IMAGE_ORIGINS || "https://jvkydnvdajcfnqysmuwt.supabase.co").split(",");
-    if (url.protocol !== "https:" || url.username || url.password || url.search ||
-        !origins.includes(url.origin) ||
+    // Completeful supplies a numeric ?v= cache version on some public mockup
+    // references. Keep that narrow provider parameter, not arbitrary queries.
+    const version = url.searchParams.get("v");
+    const safeVersion = url.searchParams.size === 0 ||
+      (url.searchParams.size === 1 && version !== null && /^\d{1,20}$/.test(version));
+    if (url.protocol !== "https:" || url.username || url.password || url.hash ||
+        !safeVersion || !origins.includes(url.origin) ||
         !url.pathname.startsWith("/storage/v1/object/public/product-images/")) return null;
     return url.href;
   } catch { return null; }
