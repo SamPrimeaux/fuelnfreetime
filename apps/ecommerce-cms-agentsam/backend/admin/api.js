@@ -2,6 +2,7 @@ import { loadCollectionRules, normalizeCollectionRules, withDynamicCollectionCou
 import { normalizeMerchHero } from "../../../../packages/fnf-theme/src/sections/merch-hero/merch-hero.js";
 import { removeMediaBackground } from "./media-background.js";
 import { editImageWithPrompt, resampleImage, listEditableImageModels } from "../media/image-operations.js";
+import { inspectArtworkRepair, repairArtworkCandidate } from "../media/artwork-repair.js";
 import {
   hashPassword,
   verifyPassword,
@@ -1033,6 +1034,30 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   m = path.match(/^\/api\/admin\/media\/albums\/(\d+)$/);
   if (m && method === "PATCH") return updateMediaAlbum(request, env, m[1]);
   if (m && method === "DELETE") return deleteMediaAlbum(request, env, m[1]);
+
+  // Authorized, source-preserving artwork repair. All measurements use R2
+  // master bytes, never Cloudflare delivery previews. No automatic placement.
+  m = path.match(/^\/api\/admin\/media\/(\d+)\/production-repair$/);
+  if (m && (method === "GET" || method === "POST")) {
+    try {
+      const input = method === "GET"
+        ? Object.fromEntries(url.searchParams.entries())
+        : await readJson(request);
+      if (!input || typeof input !== "object" || Array.isArray(input)) {
+        return json({ ok: false, error: "invalid_repair_input" }, { status: 400 });
+      }
+      const result = method === "GET"
+        ? await inspectArtworkRepair(env, Number(m[1]), input)
+        : await repairArtworkCandidate(env, Number(m[1]), input, user.id);
+      return json(result, { status: method === "POST" && result.method !== "recover_master" ? 201 : 200 });
+    } catch (error) {
+      const code = String(error?.message || "repair_failed");
+      const status = code === "media_asset_not_found" || code === "media_source_object_not_found" ? 404
+        : code.includes("provider_not_configured") || code === "media_storage_unavailable" ? 503
+        : code.startsWith("openai_image_edit_http_") ? 502 : 400;
+      return json({ ok: false, error: code }, { status });
+    }
+  }
 
   m = path.match(/^\/api\/admin\/media\/(\d+)\/(ai-edit|resample)$/);
   if (m && method === "POST") {
