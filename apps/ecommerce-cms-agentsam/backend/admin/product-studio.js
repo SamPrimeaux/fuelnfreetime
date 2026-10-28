@@ -1136,12 +1136,85 @@ async function publishDraft(request, env, id) {
   return json({ ok: true, product_id: draft.product_id, status: "active", draft: await loadDraft(env, id) });
 }
 
+// An assortment plan is a staging tool, not a provider order. Create real
+// merchant-owned draft shells with their complete supplier option set, so each
+// planned blank can be designed later in the existing Studio.
+async function scaffoldCollectionProductDrafts(request, env, collectionId) {
+  const id = Number(collectionId);
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    return json({ ok: false, error: "Invalid collection ID" }, { status: 400 });
+  }
+  const collection = await env.DB.prepare(
+    "SELECT * FROM store_collections WHERE id = ? AND status = 'draft'"
+  ).bind(id).first();
+  if (!collection) return json({ ok: false, error: "Only draft collections can be scaffolded" }, { status: 409 });
+  const rawPlan = parseJson(collection.product_plan_json, []);
+  if (!Array.isArray(rawPlan) || rawPlan.length > 24) {
+    return json({ ok: false, error: "Invalid assortment plan (maximum 24 blanks)" }, { status: 400 });
+  }
+  const created = [], reused = [], unavailable = [];
+  const encountered = new Set();
+  for (const slot of rawPlan) {
+    const supplierId = String(slot?.catalog_product_id || "").trim();
+    if (!supplierId || encountered.has(supplierId)) continue;
+    encountered.add(supplierId);
+    const supplier = await env.DB.prepare(
+      "SELECT * FROM completeful_catalog_products WHERE (catalog_product_id = ? OR completeful_product_id = ?) AND available = 1 LIMIT 1"
+    ).bind(supplierId,supplierId).first();
+    if (!supplier) { unavailable.push({ catalog_product_id: supplierId, reason: "Supplier blank unavailable" }); continue; }
+    const existing = await env.DB.prepare(
+      `SELECT d.id AS draft_id,p.id AS product_id,p.title FROM store_collection_products cp
+       JOIN products p ON p.id=cp.product_id
+       JOIN product_studio_drafts d ON d.product_id=p.id
+       WHERE cp.collection_id=? AND d.completeful_catalog_product_id=? LIMIT 1`
+    ).bind(id,supplier.completeful_product_id).first();
+    if (existing) { reused.push({ catalog_product_id: supplierId, ...existing }); continue; }
+    const variants = await env.DB.prepare(
+      "SELECT completeful_variant_id FROM completeful_catalog_variants WHERE completeful_product_id = ?"
+    ).bind(supplier.completeful_product_id).all();
+    const locations = await env.DB.prepare(
+      "SELECT print_location_id FROM completeful_catalog_print_locations WHERE completeful_product_id = ? AND enabled = 1"
+    ).bind(supplier.completeful_product_id).all();
+    const variantIds = (variants.results || []).map(row => row.completeful_variant_id).filter(Boolean).slice(0, 100);
+    const locationIds = (locations.results || []).map(row => row.print_location_id).filter(Boolean).slice(0, 10);
+    if (!variantIds.length || !locationIds.length) {
+      unavailable.push({ catalog_product_id: supplierId, reason: "Missing sellable variants or print locations" });
+      continue;
+    }
+    // Reuse the exact Studio draft-save validator and existing merchant ownership.
+    const draftRequest = new Request(request.url, { method:"POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ force_new:true, catalog_product_id:supplier.completeful_product_id,
+        selected_variant_ids:variantIds, print_location_ids:locationIds,
+        title:String(slot?.concept || slot?.title || supplier.name).slice(0,120),
+        collection:collection.title,
+        placement:{ notes:"Draft from collection " + collection.title + ". Review artwork and supplier quality before publishing." } }),
+    });
+    const response = await saveDraft(draftRequest,env);
+    const data = await response.json();
+    if (!response.ok || !data.ok || !data.draft?.product_id) {
+      unavailable.push({ catalog_product_id: supplierId, reason: data.error || "Draft validation failed" });
+      continue;
+    }
+    await env.DB.prepare(
+      `INSERT OR IGNORE INTO store_collection_products (collection_id,product_id,sort_order)
+       VALUES (?,?,?)`
+    ).bind(id,data.draft.product_id,created.length+reused.length).run();
+    created.push({ catalog_product_id:supplierId, product_id:data.draft.product_id,
+      draft_id:data.draft.id, variant_count:variantIds.length });
+  }
+  return json({ ok:true, collection_id:id, created, reused, unavailable,
+    note:"Draft product shells only. No provider orders, designs, artwork approvals or storefront publishes." });
+}
+
 export async function handleProductStudioAdminApi(request, env, url) {
   const path = url.pathname;
   const method = request.method;
   if (!path.startsWith("/api/admin/product-studio")) return null;
 
   try {
+    const scaffold = path.match(/^\\/api\\/admin\\/product-studio\\/collections\\/(\\d+)\\/scaffold$/);
+    if (scaffold && method === "POST") return scaffoldCollectionProductDrafts(request,env,scaffold[1]);
     if (path === "/api/admin/product-studio/drafts" && method === "GET") {
       return getDraft(request, env, url);
     }
