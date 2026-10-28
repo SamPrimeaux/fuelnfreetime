@@ -158,10 +158,10 @@ async function relatedMasters(env, source, intent, supplier) {
   return results.sort((a,b) => (b.assessment.effective_ppi || 0) - (a.assessment.effective_ppi || 0));
 }
 
-export async function inspectArtworkRepair(env, mediaAssetId, input) {
+export async function inspectArtworkRepair(env, mediaAssetId, input, { decoder = decodeSource } = {}) {
   const intent = printIntent(input);
   const source = await loadSourceImage(env, mediaAssetId, { maxSourceBytes: MAX_PRINT_MASTER_BYTES }); // bytes from R2 original, never delivery URL
-  const image = await decodeSource(source);
+  const image = await decoder(source);
   const meta = parsed(source.row.meta_json);
   const operation = String(meta.media_edit?.operation || "");
   const supplier = await verifiedSupplierRequirement(env, input);
