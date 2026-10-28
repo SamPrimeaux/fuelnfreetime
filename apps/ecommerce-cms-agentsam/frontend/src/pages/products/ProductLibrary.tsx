@@ -31,9 +31,46 @@ export default function ProductLibrary() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<ProductStatus>("all");
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
+  const [onlySelected, setOnlySelected] = useState(false);
+  const [copyNotice, setCopyNotice] = useState("");
+
+  const selectedProducts = useMemo(() => products.filter((item) => selectedIds.has(item.id)), [products, selectedIds]);
+  const visible = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase();
+    return products.filter((p) =>
+      (status === "all" || p.status === status) &&
+      (!onlySelected || selectedIds.has(p.id)) &&
+      (!query || [p.title, p.collection, p.slug].some((value) => String(value || "").toLocaleLowerCase().includes(query))),
+    );
+  }, [products, search, status, onlySelected, selectedIds]);
+
+  function toggleProduct(id: number) {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    setCopyNotice("");
+  }
 
   useEffect(() => {
-    const dock = {
+    const count = selectedProducts.length;
+    const dock = count ? {
+      owner: "products",
+      label: count + (count === 1 ? " product selected" : " products selected"),
+      actions: [
+        count === 1
+          ? { id: "edit", label: "Edit", icon: "edit", invoke: true }
+          : { id: "page", label: "Select page", icon: "check", invoke: true },
+        { id: "copy", label: "Copy", icon: "copy", invoke: true },
+        { id: "isolate", label: onlySelected ? "Show all" : "Selected", icon: "filter", invoke: true },
+        { id: "collections", label: "Collections", icon: "layers", href: "/admin/collections" },
+        { id: "clear", label: "Clear", icon: "close", invoke: true },
+      ],
+    } : {
+      owner: "products",
       label: "Products",
       actions: [
         { id: "find", label: "Find", icon: "search", invoke: true },
@@ -44,31 +81,51 @@ export default function ProductLibrary() {
       ],
     };
     const w = window as Window & { __adminDockWorkspace?: typeof dock | null };
-    const publish = (detail: typeof dock | null) => {
-      w.__adminDockWorkspace = detail;
-      document.dispatchEvent(new CustomEvent("admin-dock:workspace", { detail }));
-    };
+    w.__adminDockWorkspace = dock;
+    document.dispatchEvent(new CustomEvent("admin-dock:workspace", { detail: dock }));
+
     const invoke = (event: Event) => {
       const id = (event as CustomEvent<{ id: string }>).detail?.id;
       if (id === "find") document.querySelector<HTMLInputElement>(".pl-search input")?.focus();
-      if (id === "filter") {
+      else if (id === "filter") {
         const select = document.querySelector<HTMLSelectElement>(".pl-status select");
         select?.focus();
         try {
-          // showPicker keeps this a direct user action on supporting mobile browsers.
           const picker = select as HTMLSelectElement & { showPicker?: () => void };
           if (picker?.showPicker) picker.showPicker();
           else select?.click();
         } catch { select?.click(); }
+      } else if (id === "edit" && count === 1) {
+        window.location.assign(`/admin/product-edit?id=${encodeURIComponent(selectedProducts[0].id)}`);
+      } else if (id === "page") {
+        setSelectedIds((current) => new Set([...current, ...visible.map((item) => item.id)]));
+      } else if (id === "isolate") {
+        setOnlySelected((previous) => !previous);
+      } else if (id === "clear") {
+        setSelectedIds(new Set());
+        setOnlySelected(false);
+        setCopyNotice("");
+      } else if (id === "copy" && count) {
+        const text = selectedProducts.map((item) => [item.title, item.id, item.status].join("\t")).join("\n");
+        if (!navigator.clipboard?.writeText) {
+          setCopyNotice("Clipboard not available in this browser.");
+          return;
+        }
+        void navigator.clipboard.writeText(text)
+          .then(() => setCopyNotice("Copied " + count + " product" + (count === 1 ? "" : "s") + "."))
+          .catch(() => setCopyNotice("Clipboard not available. Select and copy product names instead."));
       }
     };
     document.addEventListener("admin-dock:invoke", invoke);
-    publish(dock);
     return () => {
       document.removeEventListener("admin-dock:invoke", invoke);
-      publish(null);
+      // Don't clear a newer route's workspace on SPA transitions.
+      if (w.__adminDockWorkspace === dock) {
+        w.__adminDockWorkspace = null;
+        document.dispatchEvent(new CustomEvent("admin-dock:workspace", { detail: null }));
+      }
     };
-  }, []);
+  }, [selectedProducts, onlySelected, visible]);
 
   useEffect(() => {
     document.title = "Products — Fuel & Free Time Admin";
@@ -83,13 +140,7 @@ export default function ProductLibrary() {
     return () => { mounted = false; };
   }, []);
 
-  const visible = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase();
-    return products.filter((p) =>
-      (status === "all" || p.status === status) &&
-      (!query || [p.title, p.collection, p.slug].some((value) => String(value || "").toLocaleLowerCase().includes(query))),
-    );
-  }, [products, search, status]);
+
 
   return <main className="cs-workspace pl-workspace">
     <div className="cs-container">
@@ -119,6 +170,12 @@ export default function ProductLibrary() {
           </label>
           <span className="pl-count" aria-live="polite">{loading ? "Loading…" : `${visible.length} of ${products.length} products`}</span>
         </div>
+        {selectedProducts.length > 0 && <div className="pl-selection-summary" role="status" aria-live="polite">
+          <strong>{selectedProducts.length} selected</strong>
+          <span>{onlySelected ? "Showing your selection" : "Use the bottom dock for selection tools"}</span>
+          <button type="button" onClick={() => { setSelectedIds(new Set()); setOnlySelected(false); setCopyNotice(""); }}>Clear</button>
+        </div>}
+        {copyNotice && <p className="pl-copy-notice" role="status">{copyNotice}</p>}
         {error && <div className="pl-alert" role="alert">{error} <button type="button" onClick={() => location.reload()}>Retry</button></div>}
         {loading && <p className="pl-empty" role="status">Loading your product catalog…</p>}
         {!loading && !error && !visible.length && <div className="pl-empty">
@@ -132,7 +189,7 @@ export default function ProductLibrary() {
           <table className="pl-table">
             <thead><tr><th scope="col">Product</th><th scope="col">Collection</th><th scope="col">Price</th><th scope="col">Status</th><th scope="col">Variants</th><th scope="col">Inventory</th><th scope="col"><span className="pl-sr-only">Actions</span></th></tr></thead>
             <tbody>
-              {visible.map((p) => <tr key={p.id} onClick={(event) => {
+              {visible.map((p) => <tr key={p.id} className={selectedIds.has(p.id) ? "pl-row-selected" : undefined} onClick={(event) => {
                 // Navigate via the existing accessible product link; don't duplicate route configuration.
                 if ((event.target as HTMLElement).closest("a, button, input, select")) return;
                 const link = event.currentTarget.querySelector<HTMLAnchorElement>(".pl-name");
@@ -140,6 +197,12 @@ export default function ProductLibrary() {
               }}>
                 <td className="pl-product-cell">
                   <div className="pl-product">
+                    <button type="button"
+                      className={`pl-select-product${selectedIds.has(p.id) ? " is-selected" : ""}`}
+                      aria-label={`${selectedIds.has(p.id) ? "Deselect" : "Select"} ${p.title}`}
+                      aria-pressed={selectedIds.has(p.id)}
+                      onClick={() => toggleProduct(p.id)}
+                    ><StudioIcon name="check" size={18} /></button>
                     <div className="pl-thumb">{safeImage(p) ? <img src={safeImage(p)!} alt="" loading="lazy" /> : <StudioIcon name="image" size={22} />}</div>
                     <div className="pl-product-info">
                       <a href={`/admin/product-edit?id=${encodeURIComponent(p.id)}`} className="pl-name">{p.title}</a>

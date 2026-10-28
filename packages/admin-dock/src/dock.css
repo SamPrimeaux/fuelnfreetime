@@ -475,3 +475,6 @@ body.agentsam-open .admin-dock {
     --admin-dock-clearance:calc(var(--admin-dock-h) + 16px + env(safe-area-inset-bottom,0px));
   }
 }
+
+/* Selected-item tools use the route's own state rather than another overlay toolbar. */
+.admin-dock[data-workspace="true"] .admin-dock__tab-label{overflow:hidden;text-overflow:ellipsis;max-width:100%;white-space:nowrap}

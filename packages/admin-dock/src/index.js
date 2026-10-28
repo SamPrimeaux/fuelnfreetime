@@ -45,6 +45,11 @@ const ICONS = {
   upload: '<path d="M12 16V3m-5 5 5-5 5 5M4 17v3h16v-3"/>',
   album: '<rect x="3" y="6" width="18" height="15" rx="2"/><path d="M7 6V3h12M3 16l6-6 4 4 3-3 5 5"/>',
   gallery: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="9" r="1.5"/><path d="m3 17 6-5 4 3 3-3 5 5"/>',
+  edit: '<path d="m4 17-1 4 4-1L20 7l-4-4L4 17Zm10-10 4 4"/>',
+  copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
+  check: '<path d="M5 12l4 4L19 6"/>',
+  download: '<path d="M12 4v12m-5-5 5 5 5-5M4 18v3h16v-3"/>',
+  save: '<path d="M4 3h13l4 4v14H3V3h1Zm3 0v6h10V3M7 21v-8h10v8"/>',
   layers: '<path d="m12 3 9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 16l9 5 9-5"/>',
 };
 

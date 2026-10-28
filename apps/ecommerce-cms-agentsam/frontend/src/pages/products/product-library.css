@@ -113,3 +113,40 @@
   /* Context dock replaces duplicate header CTAs; hiding the dock restores them. */
   body.admin-dock-workspace .pl-header-actions{display:none}
 }
+
+/* Wave 2: real catalog selection + dense mobile cards. */
+.pl-product{position:relative}
+.pl-select-product{
+  flex:0 0 44px;width:44px;height:44px;display:grid;place-items:center;
+  border:1px solid #d6dce2;border-radius:11px;color:#596574;background:#fff;
+  cursor:pointer;position:relative;z-index:3;
+}
+.pl-select-product.is-selected{color:#6c50df;background:transparent;border-color:transparent}
+.pl-select-product{border-color:transparent;background:transparent}
+.pl-select-product::before{
+  content:"";position:absolute;width:24px;height:24px;border:1.5px solid #aeb7c1;
+  border-radius:7px;background:#fff;
+}
+.pl-select-product svg{position:relative;opacity:0}
+.pl-select-product.is-selected::before{border-color:#8d75f5;background:#f0ecff}
+.pl-select-product.is-selected svg{opacity:1}
+.pl-select-product:focus-visible{outline:2px solid #7258ee;outline-offset:2px}
+.pl-table tbody tr.pl-row-selected{background:#f8f6ff;border-color:#c9beff}
+.pl-table tbody tr.pl-row-selected:hover{background:#f8f6ff}
+.pl-selection-summary{
+  display:flex;align-items:center;gap:10px;padding:9px 13px;
+  background:#f4f1ff;border-bottom:1px solid #ddd5ff;font-size:12px;color:#554a73;
+}
+.pl-selection-summary strong{white-space:nowrap;font-size:13px}
+.pl-selection-summary span{flex:1;min-width:0}
+.pl-selection-summary button{padding:8px;border:0;background:transparent;font:inherit;font-weight:700;cursor:pointer}
+.pl-copy-notice{padding:8px 13px;margin:0;font-size:12px;color:#44544b;background:#eff8f0}
+@media(max-width:700px){
+  .pl-table tbody tr{grid-template-columns:1fr 1fr}
+  .pl-table .pl-product{gap:8px}
+  .pl-table .pl-select-product{width:44px;height:44px;flex-basis:44px;border-radius:10px}
+  .pl-table .pl-thumb{width:46px;height:46px;flex-basis:46px}
+  .pl-table .pl-product-info>span{display:none}
+  .pl-selection-summary{gap:5px;padding:7px 9px}
+  .pl-selection-summary span{font-size:11px}
+}
