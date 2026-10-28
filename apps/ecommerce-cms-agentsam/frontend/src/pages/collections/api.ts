@@ -38,6 +38,13 @@ export const collectionsApi = {
     const params = new URLSearchParams({ view: "images", page_size: "60", page: "1", ...(q ? { q } : {}) });
     return accepted(await adminFetch<Ok & { assets: MediaAsset[] }>(`/api/admin/media?${params}`)).assets;
   },
+  async scaffold(id: number) {
+    return accepted(await adminFetch<Ok & {
+      created: {catalog_product_id:string;product_id:number;draft_id:string;variant_count:number}[];
+      reused: {catalog_product_id:string;product_id:number;draft_id:string}[];
+      unavailable: {catalog_product_id:string;reason:string}[];
+    }>(`/api/admin/product-studio/collections/${id}/scaffold`, { method:"POST" }));
+  },
   async supplier(search: string) {
     const params = new URLSearchParams({ search, limit: "12", offset: "0" });
     const data = await adminFetch<Ok & { items?: SupplierBlank[] }>(`/api/admin/completeful/catalog?${params}`);

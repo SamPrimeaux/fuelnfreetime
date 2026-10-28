@@ -74,6 +74,9 @@ export interface Product {
   price_cents?: number;
   total_inventory?: number;
   fulfillment_kind?: "supplier" | "stock";
+  studio_draft_id?: string | null;
+  studio_catalog_product_id?: string | null;
+  planned_variant_count?: number | null;
   collection?: string;
 }
 export interface MediaAsset { id: number; url: string; filename: string; content_type?: string }

@@ -7,6 +7,9 @@ on:
       - apps/ecommerce-cms-agentsam/frontend/static/product-edit.html
       - apps/ecommerce-cms-agentsam/frontend/src/pages/products/StudioWorkspace.tsx
       - apps/ecommerce-cms-agentsam/frontend/src/pages/collections/**
+      - apps/ecommerce-cms-agentsam/backend/media/artwork-repair.js
+      - apps/ecommerce-cms-agentsam/frontend/src/pages/products/ArtworkRepairPanel.tsx
+      - apps/ecommerce-cms-agentsam/tests/artwork-auto-repair.test.mjs
       - packages/agentsam-merch/src/collection-planning.*
       - tests/completeful-publish-reconcile.test.mjs
       - tests/collection-planning-sdk.test.mjs
@@ -31,6 +34,7 @@ jobs:
           node --test tests/completeful-publish-reconcile.test.mjs tests/collection-planning-sdk.test.mjs
           node --test apps/ecommerce-cms-agentsam/tests/completeful-mockup-matrix.test.mjs
           node --test tests/product-studio-selling-handoff.test.mjs
+          node --test apps/ecommerce-cms-agentsam/tests/artwork-auto-repair.test.mjs
       - name: Build actual admin UI
         run: npm run build:admin
       - name: Validate Worker bundle

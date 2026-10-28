@@ -254,6 +254,9 @@ async function listProducts(request, env) {
             ) AS primary_image,
             COUNT(v.id) AS variant_count,
             COALESCE(SUM(v.inventory_qty), 0) AS total_inventory,
+            (SELECT d.id FROM product_studio_drafts d WHERE d.product_id=p.id LIMIT 1) AS studio_draft_id,
+            (SELECT d.completeful_catalog_product_id FROM product_studio_drafts d WHERE d.product_id=p.id LIMIT 1) AS studio_catalog_product_id,
+            (SELECT json_array_length(d.selected_variant_ids_json) FROM product_studio_drafts d WHERE d.product_id=p.id LIMIT 1) AS planned_variant_count,
             CASE WHEN EXISTS (SELECT 1 FROM completeful_product_links pl WHERE pl.product_id = p.id)
               THEN 'supplier' ELSE 'stock' END AS fulfillment_kind
      FROM products p

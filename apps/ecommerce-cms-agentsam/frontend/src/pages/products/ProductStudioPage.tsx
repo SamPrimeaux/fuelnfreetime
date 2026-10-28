@@ -34,6 +34,7 @@ const collections = [
   { name: "Tumblers", query: "tumbler", caption: "Everyday essentials" },
   { name: "Framed decor", query: "frame", caption: "Make a space their own" },
   { name: "Hats", query: "hat", caption: "Small things. Big personality." },
+  { name: "Accessories", query: "", category: "accessories", caption: "Personalized everyday gear" },
 ];
 export default function ProductStudioPage() {
   const navigate = useNavigate();
@@ -47,6 +48,7 @@ export default function ProductStudioPage() {
   const surface = useRef<HTMLElement>(null);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [search, setSearch] = useState("");
   const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
   const [total, setTotal] = useState(0);
@@ -348,7 +350,21 @@ export default function ProductStudioPage() {
                     <small>{c.caption}</small>
                   </button>
                 ))}
+                  <button type="button" className="ps-collection-more" aria-label="More catalog filters"
+                    aria-expanded={showMoreFilters} aria-controls="ps-extra-catalog-filters"
+                    onClick={() => setShowMoreFilters(value => !value)}>
+                    <StudioIcon name="options" size={18}/>
+                    <strong>Filters</strong><small>Recently used</small>
+                  </button>
               </div>
+              {showMoreFilters && <div id="ps-extra-catalog-filters" className="ps-extra-catalog-filters">
+                <button type="button" className={category === "recent" ? "is-active" : ""}
+                  aria-pressed={category === "recent"}
+                  onClick={() => { setCategory("recent"); setQuery(""); setOffset(0); }}>
+                  Recently used in Product Studio
+                </button>
+                <button type="button" onClick={() => { setCategory(""); setQuery(""); setOffset(0); setShowMoreFilters(false); }}>Clear filters</button>
+              </div>}
               {(syncHealth?.status === "error" || syncHealth?.status === "partial") && (
                 <div className="ps-catalog-sync-alert" role="alert">
                   <strong>{syncHealth.status === "error" ? "Completeful catalog refresh failed" : "Completeful catalog refresh incomplete"}</strong>

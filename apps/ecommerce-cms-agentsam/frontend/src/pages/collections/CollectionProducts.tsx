@@ -6,13 +6,16 @@ import StudioIcon from "../products/StudioIcon";
 import CollectionProductPicker from "./CollectionProductPicker";
 import { resolveAssortmentCandidates, type AssortmentSlotMatch } from "../../../../../../packages/agentsam-merch/src/collection-planning.js";
 
-export default function CollectionProducts({ products, selected, onSelect, plan, onPlan, onOpenStudio }: {
+export default function CollectionProducts({ products, selected, onSelect, plan, onPlan, onOpenStudio, onScaffold, collectionId }: {
   products: Product[]; selected: number[]; onSelect: (ids: number[]) => void;
   plan: string[]; onPlan: (ids: string[]) => void; onOpenStudio: (supplierId?: string) => Promise<void>;
+  onScaffold: () => Promise<void>;
+  collectionId?: number | null;
 }) {
   const [picker, setPicker] = useState(false);
   const [supplierQuery, setSupplierQuery] = useState("");
   const [supplierBusy, setSupplierBusy] = useState(false);
+  const [scaffolding, setScaffolding] = useState(false);
   const [supplierError, setSupplierError] = useState("");
   const [blanks, setBlanks] = useState<SupplierBlank[]>([]);
   const [packResult, setPackResult] = useState<{ label: string; slots: AssortmentSlotMatch[]; missing: string[] } | null>(null);
@@ -81,12 +84,17 @@ export default function CollectionProducts({ products, selected, onSelect, plan,
             onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); dropAt(p.id); }}>
             <span className="cs-drag-handle" aria-hidden="true">⠿</span>
             <div className="cs-selected-img">{src ? <img src={src} alt="" loading="lazy"/> : <StudioIcon name="image" size={22}/>}</div>
-            <div className="cs-selected-description"><strong>{p.title}</strong><small>{p.variant_count || 0} variants · {p.total_inventory ?? 0} stock units</small></div>
+            <div className="cs-selected-description"><strong>{p.title}</strong><small>{p.planned_variant_count || p.variant_count || 0} planned variants · {p.status==="active"?`${p.total_inventory ?? 0} stock units`:"Artwork/preflight pending"}</small></div>
             <span className={`cs-status-chip ${p.status === "active" ? "active" : ""}`}>{p.status === "active" ? "Published" : p.status}</span>
             <div className="cs-item-actions">
               <button type="button" className="cs-icon-button" aria-label={`Move ${p.title} up`} disabled={index === 0} onClick={()=>reorder(p.id,-1)}>↑</button>
               <button type="button" className="cs-icon-button" aria-label={`Move ${p.title} down`} disabled={index === selectedProducts.length-1} onClick={()=>reorder(p.id,1)}>↓</button>
-              <a className="cs-icon-button" aria-label={`Edit ${p.title}`} href={`/admin/product-edit?id=${p.id}`}><StudioIcon name="pen" size={15}/></a>
+              <a className="cs-icon-button" aria-label={`Design ${p.title}`}
+                 href={p.studio_draft_id && p.studio_catalog_product_id
+                   ? `/admin/products/create/${encodeURIComponent(p.studio_catalog_product_id)}?resume=${encodeURIComponent(p.studio_draft_id)}${collectionId?`&collection_id=${collectionId}`:""}`
+                   : `/admin/product-edit?id=${p.id}`}>
+                  <StudioIcon name="pen" size={15}/>
+                </a>
               <button type="button" className="cs-icon-button" aria-label={`Remove ${p.title}`} onClick={()=>onSelect(selected.filter(id=>id!==p.id))}><StudioIcon name="close" size={15}/></button>
             </div>
           </article>;
@@ -133,10 +141,20 @@ export default function CollectionProducts({ products, selected, onSelect, plan,
         </article>;
       })}</div>}
       <div className="cs-plan-bar">
-        <div><strong>Planned blanks ({plan.length}/24)</strong><small>These are not manufactured or storefront products.</small></div>
-        <button type="button" className="cs-button primary" disabled={!plan.length} onClick={()=>void onOpenStudio(plan[0])}>Design first planned product <StudioIcon name="arrow" size={15}/></button>
+        <div><strong>Planned blanks ({plan.length}/24)</strong><small>Save the assortment and create draft product shells before editing artwork. No supplier order is placed.</small></div>
+        <div className="cs-item-actions">
+          <button type="button" className="cs-button primary" disabled={!plan.length||scaffolding} onClick={()=>{setScaffolding(true);void onScaffold().finally(()=>setScaffolding(false));}}>
+            {scaffolding?"Scaffolding…":"Scaffold draft products"} <StudioIcon name="layers" size={15}/>
+          </button>
+          <button type="button" className="cs-button" disabled={!plan.length||scaffolding} onClick={()=>void onOpenStudio(plan[0])}>Design first <StudioIcon name="arrow" size={15}/></button>
+        </div>
       </div>
-      {!!plan.length && <div className="cs-plan-ids">{plan.map(id=><span key={id}>{blanks.find(p=>supplierId(p)===id)?.name || id}<button aria-label={`Remove ${id}`} onClick={()=>onPlan(plan.filter(p=>p!==id))} type="button">×</button></span>)}</div>}
+      {!!plan.length && <div className="cs-plan-ids">{plan.map((id,index)=><span key={id+"-"+index}>
+          {blanks.find(p=>supplierId(p)===id)?.name || id}
+          <button aria-label={`Another design using ${id}`} title="Add independent artwork design on this same supplier blank"
+            disabled={plan.length>=24} onClick={()=>onPlan([...plan.slice(0,index+1),id,...plan.slice(index+1)])} type="button">+ Design</button>
+          <button aria-label={`Remove planned item ${index+1}`} onClick={()=>onPlan(plan.filter((_,i)=>i!==index))} type="button">×</button>
+        </span>)}</div>}
     </section>
     {picker && <CollectionProductPicker products={products} chosen={selected} onApply={onSelect} onClose={()=>setPicker(false)}/>}
   </div>;

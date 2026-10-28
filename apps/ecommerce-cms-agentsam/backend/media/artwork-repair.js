@@ -186,12 +186,52 @@ export async function inspectArtworkRepair(env, mediaAssetId, input, { decoder =
   };
 }
 
+/**
+ * Choose an honest automatic repair path. Never treat interpolated pixels as
+ * recovered source detail, and never mark AI or segmentation output approved.
+ * Each selected operation returns a reviewable, source-preserving candidate.
+ */
+export function planArtworkAutoRepair(inspection, options = {}) {
+  const sourcePpi = Number(inspection?.assessment?.effective_ppi || 0);
+  const targets = (inspection?.candidates || [])
+    .filter(item => item?.asset?.id && item.assessment?.recovered_detail_verified !== false
+      && !/(?:resample|ai-edit|prepared)/i.test(String(item.asset.filename || "")))
+    .sort((a, b) => Number(b.assessment?.effective_ppi || 0) - Number(a.assessment?.effective_ppi || 0));
+  const master = targets.find(item => Number(item.assessment?.effective_ppi || 0) > sourcePpi * 1.05);
+  if (master) return { method: "recover_master", candidate_media_asset_id: master.asset.id };
+  // For insufficient source pixels, genuine model-based reconstruction (when
+  // explicitly consented to) is preferable to a cosmetic background operation.
+  // Cropping alone cannot manufacture missing logo detail.
+  if (inspection?.assessment?.status === "needs_detail" &&
+      options.allow_reconstruct === true && options.model_id &&
+      inspection?.available_actions?.reconstruct) {
+    return { method: "reconstruct", model_id: options.model_id, confirm_changes: true };
+  }
+  if (inspection?.available_actions?.trim_transparent) return { method: "trim_transparent" };
+  if (inspection?.available_actions?.remove_background &&
+      inspection?.assessment?.status === "needs_detail") return { method: "remove_background" };
+  return null;
+}
+
 export async function repairArtworkCandidate(env, mediaAssetId, input, actorId) {
   if (!actorId) throw new Error("actor_required");
   const method = String(input?.method || "");
-  const allowed = new Set(["trim_transparent", "remove_background", "reconstruct", "recover_master"]);
+  const allowed = new Set(["auto", "trim_transparent", "remove_background", "reconstruct", "recover_master"]);
   if (!allowed.has(method)) throw new Error("invalid_repair_method");
   const inspection = await inspectArtworkRepair(env, mediaAssetId, input);
+  if (method === "auto") {
+    const plan = planArtworkAutoRepair(inspection, {
+      allow_reconstruct: input?.allow_reconstruct === true,
+      model_id: String(input?.model_id || ""),
+    });
+    if (!plan) {
+      return { ok: false, method: "auto", code: "no_safe_automatic_repair",
+        message: "No verified sharper source or supported safe cleanup is available. Try a smaller placement, upload an original master, or opt into AI reconstruction for visual review.",
+        assessment: inspection.assessment, source_preserved: true };
+    }
+    return { ...await repairArtworkCandidate(env, mediaAssetId, { ...input, ...plan }, actorId),
+      automated_choice: plan.method };
+  }
   if (method === "recover_master") {
     const id = Number(input.candidate_media_asset_id);
     const found = inspection.candidates.find(c=>Number(c.asset.id)===id);
