@@ -1,3 +1,4 @@
+import { readCatalogQuery, filterCatalogRows } from "../../../../packages/agentsam-merch/src/catalog-query.js";
 import { completefulApi } from "./api.js";
 
 const DEFAULT_INCLUDE = "variants,print_locations,images,mockups,shipping";
@@ -591,94 +592,26 @@ export async function syncCompletefulCatalog(env, options = {}) {
 }
 
 export async function listCompletefulCatalogMirror(env, url) {
-  const limit = clampInt(url.searchParams.get("limit"), 50, 1, 200);
-  const offset = clampInt(url.searchParams.get("offset"), 0, 0, 1000000);
-  const search = (url.searchParams.get("search") || "").trim();
-  const favorite = url.searchParams.get("favorite");
-  const category = url.searchParams.get("category");
-
-  const where = [];
-  const params = [];
-
-  if (search) {
-    where.push(`(
-      p.name LIKE ? OR p.sku LIKE ? OR p.product_type LIKE ? OR
-      p.print_type LIKE ? OR p.material LIKE ?
-    )`);
-    const q = `%${search}%`;
-    params.push(q, q, q, q, q);
-  }
-
-  if (category === "apparel") {
-    // Explicit catalog category, not a text search for "shirt" that hides
-    // hoodies, sweaters, trousers and outerwear.
-    where.push(`(
-      lower(coalesce(p.product_type, '')) LIKE '%apparel%' OR
-      lower(coalesce(p.product_type, '')) LIKE '%clothing%' OR
-      lower(p.name) LIKE '%shirt%' OR lower(p.name) LIKE '%hood%' OR
-      lower(p.name) LIKE '%sweat%' OR lower(p.name) LIKE '%jacket%' OR
-      lower(p.name) LIKE '%polo%' OR lower(p.name) LIKE '%tank%' OR
-      lower(p.name) LIKE '%jersey%' OR lower(p.name) LIKE '%legging%' OR
-      lower(p.name) LIKE '%jogger%' OR lower(p.name) LIKE '%shorts%' OR
-      lower(p.name) LIKE '%pants%' OR lower(p.name) LIKE '%raglan%' OR
-      lower(p.name) LIKE '%vest%'
-    )`);
-  }
-
-  // Canonical merchant filters: catalog tags and curated grouping take priority,
-  // with product-name fallbacks for supplier records without usable tags.
-  if (category === "accessories") {
-    where.push(`(
-      lower(coalesce(c.local_group, '')) = 'accessories' OR
-      lower(coalesce(p.tags_json, '')) LIKE '%accessories%' OR
-      lower(p.name) LIKE '%flask%' OR lower(p.name) LIKE '%journal%' OR
-      lower(p.name) LIKE '%keychain%' OR lower(p.name) LIKE '%coaster%' OR
-      lower(p.name) LIKE '%sunglass%' OR lower(p.name) LIKE '%wallet%' OR
-      lower(p.name) LIKE '%bag%'
-    ) AND lower(p.name) NOT LIKE '%knife%'`);
-  }
-  if (category === "recent") {
-    where.push(`EXISTS (
-      SELECT 1 FROM product_studio_drafts d
-      WHERE d.completeful_catalog_product_id = p.completeful_product_id
-    )`);
-  }
-
-  if (favorite === "1" || favorite === "true") {
-    where.push("COALESCE(c.is_favorite, 0) = 1");
-  }
-
-  if (url.searchParams.get("hidden") !== "1") {
-    where.push("COALESCE(c.is_hidden, 0) = 0");
-  }
-
-  const clause = where.length ? `WHERE ${where.join(" AND ")}` : "";
-
+  // The SDK owns normalization and facet semantics. D1 remains the source of
+  // actual provider records; the browser never invents variant combinations.
+  const query = readCatalogQuery(url.searchParams);
+  const limit = clampInt(url.searchParams.get("limit"), 24, 1, 200);
+  const offset = url.searchParams.has("offset")
+    ? clampInt(url.searchParams.get("offset"), 0, 0, 1000000)
+    : (query.page - 1) * limit;
   const { results } = await env.DB.prepare(
     `SELECT
-       p.completeful_product_id,
-       p.catalog_product_id,
-       p.sku,
-       p.name,
-       p.product_type,
-       p.print_type,
-       p.material,
-       p.variant_title,
-       p.available,
-       p.marketplace_eligible,
-       p.pricing_currency,
-       p.fulfillment_cost_free_cents,
-       p.fulfillment_cost_growth_cents,
-       p.fulfillment_cost_business_cents,
-       p.cover_image_url,
-       p.main_icon_url,
-       p.realistic_image_url,
-       p.last_synced_at,
+       p.completeful_product_id, p.catalog_product_id, p.sku, p.name,
+       p.product_type, p.print_type, p.material, p.variant_title,
+       p.available, p.marketplace_eligible, p.tags_json, p.created_at,
+       p.pricing_currency, p.fulfillment_cost_free_cents,
+       p.fulfillment_cost_growth_cents, p.fulfillment_cost_business_cents,
+       p.cover_image_url, p.main_icon_url, p.realistic_image_url, p.last_synced_at,
        COALESCE(c.is_favorite, 0) AS is_favorite,
-       COALESCE(c.is_hidden, 0) AS is_hidden,
-       COALESCE(c.priority, 0) AS priority,
-       c.local_group,
-       c.notes,
+       COALESCE(c.is_hidden, 0) AS is_hidden, COALESCE(c.priority, 0) AS priority,
+       c.local_group, c.notes,
+       (SELECT MAX(d.updated_at) FROM product_studio_drafts d
+         WHERE d.completeful_catalog_product_id=p.completeful_product_id) AS last_used_at,
        (SELECT COUNT(*) FROM completeful_catalog_variants v
          WHERE v.completeful_product_id = p.completeful_product_id) AS variant_count,
        (SELECT COUNT(*) FROM completeful_catalog_print_locations l
@@ -686,40 +619,23 @@ export async function listCompletefulCatalogMirror(env, url) {
        (SELECT COUNT(*) FROM completeful_catalog_mockups m
          WHERE m.completeful_product_id = p.completeful_product_id AND m.active = 1) AS mockup_count
      FROM completeful_catalog_products p
-     LEFT JOIN completeful_catalog_curation c
-       ON c.completeful_product_id = p.completeful_product_id
-     ${clause}
-     ORDER BY ${category === "recent" ? "(SELECT MAX(d.updated_at) FROM product_studio_drafts d WHERE d.completeful_catalog_product_id = p.completeful_product_id) DESC," : ""}
-              COALESCE(c.is_favorite, 0) DESC,
-              COALESCE(c.priority, 0) DESC,
-              p.name ASC
-     LIMIT ? OFFSET ?`,
-  )
-    .bind(...params, limit, offset)
-    .all();
-
-  const countRow = await env.DB.prepare(
-    `SELECT COUNT(*) AS n
-       FROM completeful_catalog_products p
-       LEFT JOIN completeful_catalog_curation c
-         ON c.completeful_product_id = p.completeful_product_id
-       ${clause}`,
-  )
-    .bind(...params)
-    .first();
-
+     LEFT JOIN completeful_catalog_curation c ON c.completeful_product_id = p.completeful_product_id
+     WHERE COALESCE(c.is_hidden,0) = 0 OR ? = '1'
+     ORDER BY p.name ASC`
+  ).bind(url.searchParams.get("hidden") === "1" ? "1" : "0").all();
+  const { selected, facets } = filterCatalogRows(results || [], query);
+  const items = selected.slice(offset, offset + limit).map(({_facets,...row}) => ({
+    ...row, print_methods: _facets.printType, categories: _facets.category,
+  }));
   return {
-    items: results || [],
+    items, facets, query,
     pagination: {
-      limit,
-      offset,
-      count: results?.length || 0,
-      total: Number(countRow?.n || 0),
-      has_more: offset + (results?.length || 0) < Number(countRow?.n || 0),
+      limit, offset, page: Math.floor(offset / limit) + 1,
+      count: items.length, total: selected.length,
+      has_more: offset + items.length < selected.length,
     },
   };
 }
-
 export async function getCompletefulCatalogProduct(env, productId) {
   const product = await env.DB.prepare(
     `SELECT p.*, COALESCE(c.is_favorite, 0) AS is_favorite,
