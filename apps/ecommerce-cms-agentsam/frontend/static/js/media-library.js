@@ -1623,6 +1623,76 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     }
   }
 
+  async function openSavedMediaVersion(id) {
+    if (!Number.isSafeInteger(Number(id)) || Number(id) < 1) return;
+    try {
+      const result = await adminFetch('/api/admin/media/' + encodeURIComponent(id));
+      if (!result?.asset) throw new Error('Saved version is unavailable');
+      openDrawer(result.asset, { skipDetailFetch: true });
+      setInspectorTab('versions');
+    } catch (error) {
+      const status = document.getElementById('media-enhance-status');
+      if (status) status.textContent = error.message || 'Could not open the saved version';
+    }
+  }
+
+  let editModelsLoaded = false;
+  async function loadMediaEditModels() {
+    if (editModelsLoaded) return;
+    try {
+      const response = await adminFetch('/api/admin/media/image-models');
+      const models = Array.isArray(response.models) ? response.models : [];
+      const select = document.getElementById('media-enhance-model');
+      const group = document.getElementById('media-enhance-ai');
+      if (!select || !group || !models.length) return;
+      select.replaceChildren(...models.map((model) => {
+        const option = document.createElement('option');
+        option.value = model.id;
+        option.textContent = model.name || model.id;
+        return option;
+      }));
+      group.hidden = false;
+      editModelsLoaded = true;
+    } catch (error) { console.warn('Optional image edit models unavailable', error); }
+  }
+
+  async function runImageImprovement(kind) {
+    const source = selected;
+    if (!source || assetKind(source) !== 'image') return;
+    if (!['resample','remove-background','ai-edit'].includes(kind)) return;
+    const status = document.getElementById('media-enhance-status');
+    const actions = ['media-drawer-resample','media-drawer-clean-background','media-enhance-submit']
+      .map(id => document.getElementById(id)).filter(Boolean);
+    if (kind === 'ai-edit' && !document.getElementById('media-enhance-consent')?.checked) {
+      if (status) status.textContent = 'Review and confirm that AI edits can alter lettering or fine details before continuing.';
+      return;
+    }
+    const model = document.getElementById('media-enhance-model')?.value;
+    const prompt = document.getElementById('media-enhance-prompt')?.value?.trim();
+    if (kind === 'ai-edit' && (!model || !prompt)) {
+      if (status) status.textContent = 'Choose an enabled image model and an enhancement instruction.';
+      return;
+    }
+    actions.forEach(button => { button.disabled = true; });
+    if (status) status.textContent = 'Creating a new version from the saved source…';
+    try {
+      const route = kind === 'remove-background' ? 'remove-background' : kind;
+      const body = kind === 'resample' ? { scale: 2 }
+        : kind === 'ai-edit' ? { model_id: model, prompt } : null;
+      const response = await adminFetch('/api/admin/media/' + source.id + '/' + route, {
+        method: 'POST', ...(body ? { body: JSON.stringify(body) } : {}),
+      });
+      if (!response?.asset?.id) throw new Error(response?.error || 'Image operation did not save a version');
+      // Reopen the actual derivative from storage rather than showing the
+      // source URL or a stale CSS-only size preview.
+      await load();
+      if (status) status.textContent = 'New version saved. Source is unchanged.';
+      await openSavedMediaVersion(response.asset.id);
+    } catch (error) {
+      if (status) status.textContent = error?.message || 'Image operation failed. Source is unchanged.';
+    } finally { actions.forEach(button => { button.disabled = false; }); }
+  }
+
   async function runSelectedAssetAction(action) {
     if (!selected) return null;
     try {
@@ -2261,13 +2331,22 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     if (drawerPrev) mountListener(drawerPrev, "click", () => navigateDrawer(-1));
     if (drawerNext) mountListener(drawerNext, "click", () => navigateDrawer(1));
     if (drawerOptimize) mountListener(drawerOptimize, "click", () => void runSelectedAssetAction("optimize"));
+    mountListener(document.getElementById('media-drawer-edit-image'), 'click', () => mediaWorkbench?.open?.('crop'));
+    mountListener(document.getElementById('media-drawer-clean-background'), 'click', () => void runImageImprovement('remove-background'));
+    mountListener(document.getElementById('media-drawer-resample'), 'click', () => void runImageImprovement('resample'));
+    mountListener(document.getElementById('media-enhance-submit'), 'click', () => void runImageImprovement('ai-edit'));
     if (drawerRetryProcessing) mountListener(drawerRetryProcessing, "click", () => void retrySelectedProcessing());
     if (drawerApplySeo) mountListener(drawerApplySeo, "click", () => void applyApprovedSeo());
     mountListener(els.drawer, "click", (event) => {
+      const version = event.target.closest('[data-media-version-id]');
+      if (version) { void openSavedMediaVersion(Number(version.dataset.mediaVersionId)); return; }
       const preview = event.target.closest("[data-media-preview-preset]");
       if (preview) { applyPreviewPreset(preview.dataset.mediaPreviewPreset); return; }
       const tab = event.target.closest("[data-media-inspector-tab]");
-      if (tab) setInspectorTab(tab.dataset.mediaInspectorTab);
+      if (tab) {
+        setInspectorTab(tab.dataset.mediaInspectorTab);
+        if (tab.dataset.mediaInspectorTab === 'optimize') void loadMediaEditModels();
+      }
     });
     mountListener(window, 'popstate', () => { void syncAssetFromLocation(); });
     mountListener(document, 'click', event => {
