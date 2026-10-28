@@ -3194,3 +3194,36 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
 .ps-facet-options label small{opacity:.6}
 .ps-facet-workbench>small{font-size:11px;opacity:.7}
 @media(max-width:700px){.ps-facet-workbench{padding:10px}.ps-facet-groups{grid-template-columns:minmax(0,1fr)}.ps-facet-toolbar>label{min-width:43%}.ps-facet-options label{min-height:42px}}
+
+/* Source-preserving vector and raster prep, usable from catalog or repair panel. */
+.ps-catalog-heading-actions{display:flex;gap:8px;align-items:center}
+.ps-vector-disclosure{border:1px solid var(--ps-line);border-radius:12px;padding:12px;margin:12px 0}
+.ps-vector-disclosure>summary{cursor:pointer;font-weight:750;font-size:13px}
+.ps-vector-workbench{background:#fff;border:1px solid var(--ps-line);border-radius:14px;padding:14px;display:grid;gap:14px;margin-bottom:18px}
+.ps-vector-workbench header{display:flex;justify-content:space-between;align-items:center}
+.ps-vector-workbench header strong{display:block;font-size:17px;font-weight:780}
+.ps-vector-workbench header small{display:block;font-size:11px;margin-top:4px;color:var(--ps-muted)}
+.ps-vector-grid{display:grid;grid-template-columns:minmax(190px,32%) minmax(0,1fr);gap:16px}
+.ps-vector-side,.ps-vector-controls{min-width:0;display:flex;flex-direction:column;gap:12px}
+.ps-vector-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;border:1px dashed #8fa19d;border-radius:11px;min-height:148px;background:#f7f8f5;padding:12px}
+.ps-vector-drop strong{font-size:13px}.ps-vector-drop small{font-size:11px;color:var(--ps-muted)}
+.ps-vector-field{display:grid;gap:5px;font-size:12px;font-weight:700}
+.ps-vector-field input,.ps-vector-dimensions input,.ps-vector-dimensions select{border:1px solid var(--ps-line);border-radius:8px;background:#fff;color:inherit;width:100%;padding:8px;min-height:39px}
+.ps-vector-library{display:flex;gap:7px;max-width:100%;overflow-x:auto;padding:4px 0}
+.ps-vector-library button{flex:0 0 75px;min-width:0;background:#fff;border:1px solid var(--ps-line);border-radius:8px;padding:4px;font-size:10px;text-align:center}
+.ps-vector-library button.is-selected{outline:2px solid #7962ef}
+.ps-vector-library img{width:100%;aspect-ratio:1;object-fit:contain;background:#f4f4f3;border-radius:5px}
+.ps-vector-library span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ps-vector-dimensions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.ps-vector-dimensions label{display:grid;gap:5px;font-size:11px;font-weight:650}
+.ps-vector-toggle{display:flex;align-items:start;gap:9px;font-size:12px;line-height:1.4}
+.ps-vector-preview{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ps-vector-preview figure{margin:0;padding:8px;background:#f3f3f1;border-radius:9px;min-width:0}
+.ps-vector-preview img{width:100%;height:180px;object-fit:contain}
+.ps-vector-preview figcaption{text-align:center;font-size:11px;padding-top:7px;color:var(--ps-muted)}
+.ps-vector-review{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--ps-line);padding-top:13px}
+.ps-vector-review p,.ps-vector-review small{font-size:12px;color:var(--ps-muted)}
+.ps-vector-review ul{margin:0;padding-left:18px;font-size:12px;line-height:1.5;color:#8c530d}
+.ps-vector-actions{display:flex;flex-wrap:wrap;gap:8px}
+.ps-vector-actions a.ps-button{display:inline-flex;text-decoration:none;align-items:center}
+@media(max-width:740px){.ps-vector-grid{grid-template-columns:1fr}.ps-vector-preview img{height:135px}.ps-catalog-heading-actions .ps-button{font-size:11px;padding:8px}.ps-vector-workbench{padding:10px}}
