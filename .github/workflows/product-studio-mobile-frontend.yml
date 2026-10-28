@@ -21,6 +21,12 @@ jobs:
           cache-dependency-path: apps/ecommerce-cms-agentsam/frontend/package-lock.json
       - name: Install frontend dependencies
         run: npm ci --prefix apps/ecommerce-cms-agentsam/frontend
+      - name: Emit canonical authority inventory for repair
+        run: |
+          echo AGENTSAM_AUTHORITY_BEGIN
+          node scripts/package-authority.mjs --stdout | base64 -w0
+          echo
+          echo AGENTSAM_AUTHORITY_END
       - name: Typecheck and build the Product Studio frontend
         run: npm run build --prefix apps/ecommerce-cms-agentsam/frontend
       - name: Install repository artwork processing dependencies
