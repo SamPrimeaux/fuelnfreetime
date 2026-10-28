@@ -107,7 +107,11 @@ export default function ProductLibrary() {
         setCopyNotice("");
       } else if (id === "copy" && count) {
         const text = selectedProducts.map((item) => [item.title, item.id, item.status].join("\t")).join("\n");
-        void navigator.clipboard?.writeText(text)
+        if (!navigator.clipboard?.writeText) {
+          setCopyNotice("Clipboard not available in this browser.");
+          return;
+        }
+        void navigator.clipboard.writeText(text)
           .then(() => setCopyNotice("Copied " + count + " product" + (count === 1 ? "" : "s") + "."))
           .catch(() => setCopyNotice("Clipboard not available. Select and copy product names instead."));
       }
