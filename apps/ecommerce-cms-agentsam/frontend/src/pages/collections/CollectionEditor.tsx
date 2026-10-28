@@ -133,6 +133,10 @@ export default function CollectionEditor() {
   },[form,selected,activeCount,totalMissing,navigate]);
 
   const scaffoldDrafts=useCallback(async ()=>{
+    if (collection?.status==="active") {
+      setError("This collection is published. Create a separate draft collection before scaffolding new designs.");
+      return;
+    }
     const id=await save("draft");
     if(!id)return;
     setError("");
@@ -147,7 +151,7 @@ export default function CollectionEditor() {
         (result.unavailable.length?` · ${result.unavailable.length} unavailable: ${result.unavailable.map(x=>x.reason).join("; ")}`:"")+
         ". Choose a draft to design. No product was published.");
     }catch(e){setError(e instanceof Error?e.message:"Product scaffolding failed");}
-  },[save,form]);
+  },[save,form,collection?.status]);
   const goToStudio=useCallback(async (supplierId?:string)=>{
     const savedId=await save();
     if(!savedId)return;
