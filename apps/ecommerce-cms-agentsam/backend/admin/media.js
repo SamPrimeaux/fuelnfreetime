@@ -1011,10 +1011,19 @@ export async function getMediaAsset(request, env, id) {
   } catch { /* Installations without product_images are supported. */ }
   try {
     const drafts = await env.DB.prepare(
-      `SELECT id,title,state FROM product_studio_drafts
-        WHERE original_media_asset_id=? OR prepared_media_asset_id=? OR preview_media_asset_id=?
-        ORDER BY updated_at DESC LIMIT 50`
-    ).bind(assetId, assetId, assetId).all();
+      `SELECT d.id,d.title,d.state FROM product_studio_drafts d
+        WHERE d.original_media_asset_id=? OR d.prepared_media_asset_id=? OR d.preview_media_asset_id=?
+        OR EXISTS (
+          SELECT 1 FROM json_each(
+            CASE WHEN json_valid(d.placement_json) THEN d.placement_json ELSE '{}' END,
+            '$.sides'
+          ) AS side
+          WHERE CAST(json_extract(side.value, '$.original_media_asset_id') AS INTEGER)=?
+             OR CAST(json_extract(side.value, '$.prepared_media_asset_id') AS INTEGER)=?
+             OR CAST(json_extract(side.value, '$.preview_media_asset_id') AS INTEGER)=?
+        )
+        ORDER BY d.updated_at DESC LIMIT 50`
+    ).bind(assetId, assetId, assetId, assetId, assetId, assetId).all();
     for (const draft of drafts.results || []) {
       usage.push({ kind: 'Product design', id: draft.id, label: draft.title || 'Draft design' });
     }
