@@ -779,3 +779,7 @@
 }
 
 #publish-btn[hidden], #editor-action-note[hidden] { display: none !important; }
+
+/* Product image provenance: storefront cover and supplier rendering are different decisions. */
+.product-media-role { display: block; padding: 6px 7px 1px; font-size: 10px; color: #57626a; line-height: 1.35; overflow-wrap: anywhere; }
+.product-media-tile .tile-actions { flex-wrap: wrap; }
