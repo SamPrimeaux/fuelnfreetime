@@ -14,7 +14,9 @@ const SOURCES = new Set(["image/png", "image/jpeg", "image/webp"]);
 const MAX_SOURCE = 10 * 1024 * 1024;
 const MAX_DERIVATIVE = 20 * 1024 * 1024;
 
-export async function loadSourceImage(env, mediaAssetId) {
+export async function loadSourceImage(env, mediaAssetId, options = {}) {
+  const maxSourceBytes = options.maxSourceBytes == null ? MAX_SOURCE : Number(options.maxSourceBytes);
+  if (!Number.isSafeInteger(maxSourceBytes) || maxSourceBytes < 1 || maxSourceBytes > MAX_DERIVATIVE) throw new Error("invalid_source_limit");
   const id = Number(mediaAssetId);
   if (!Number.isSafeInteger(id) || id < 1) throw new Error("invalid_media_asset_id");
   const row = await env.DB.prepare("SELECT * FROM media_assets WHERE id = ?").bind(id).first();
@@ -26,9 +28,9 @@ export async function loadSourceImage(env, mediaAssetId) {
   if (!env.WEBSITE_ASSETS?.get) throw new Error("media_storage_unavailable");
   const object = await env.WEBSITE_ASSETS.get(row.r2_key);
   if (!object) throw new Error("media_source_object_not_found");
-  if (object.size > MAX_SOURCE) throw new Error("source_exceeds_image_limit");
+  if (object.size > maxSourceBytes) throw new Error("source_exceeds_image_limit");
   const bytes = new Uint8Array(await object.arrayBuffer());
-  if (!bytes.length || bytes.length > MAX_SOURCE) throw new Error("source_exceeds_image_limit");
+  if (!bytes.length || bytes.length > maxSourceBytes) throw new Error("source_exceeds_image_limit");
   return { row, bytes, mime };
 }
 

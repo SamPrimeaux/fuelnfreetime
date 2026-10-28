@@ -10,6 +10,7 @@ import { suggestPrintScale, printSourceRecommendation } from "./studio-print-fit
 import { alphaBounds } from "./studio-alpha-bounds";
 import StudioIcon from "./StudioIcon";
 import ArtworkQuickView from "./ArtworkQuickView";
+import ArtworkRepairPanel from "./ArtworkRepairPanel";
 import ProductImage from "./ProductImage";
 import {
   catalogProductId,
@@ -189,6 +190,7 @@ export default function StudioWorkspace({
   const [tab, setTab] = useState("options");
   const [filmstripOpen, setFilmstripOpen] = useState(false);
   const [qualityDetailsOpen, setQualityDetailsOpen] = useState(false);
+  const [repairOpen, setRepairOpen] = useState(false);
   const [manageVariants, setManageVariants] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [miniMapOpen, setMiniMapOpen] = useState(true);
@@ -1954,7 +1956,7 @@ export default function StudioWorkspace({
             {autoFitAvailable && resolutionFit != null
               ? <button type="button" onClick={() => { setScale(resolutionFit); setError(""); }}>Fit safely to {resolutionFit}%</button>
               : <button type="button" onClick={() => { setQualityDetailsOpen(false); openTab("upload"); }}>Find original artwork</button>}
-            <button type="button" onClick={() => { setQualityDetailsOpen(false); openTab("tools"); setAiMode("edit"); }}>Inspect / edit artwork</button>
+            <button type="button" onClick={() => { setQualityDetailsOpen(false); openTab("tools"); setAiMode("edit"); setRepairOpen(true); }}>Repair artwork</button>
           </div>
         </section>
       )}
@@ -2359,7 +2361,7 @@ export default function StudioWorkspace({
           {tab === "tools" && (
             <div className="ps-ai-tools">
               <div className="ps-ai-tabs" role="tablist" aria-label="AI image tools">
-                {([["generate", "Image generator"], ["edit", "Upscale & edit"]] as const).map(([id, label]) => (
+                {([["generate", "Image generator"], ["edit", "Repair & edit"]] as const).map(([id, label]) => (
                   <button type="button" role="tab" key={id} aria-selected={aiMode === id}
                     className={aiMode === id ? "is-active" : ""} onClick={() => setAiMode(id)}>
                     {label}
@@ -2449,6 +2451,33 @@ export default function StudioWorkspace({
               )}
               {aiMode === "edit" && (
                 <>
+                  {asset && (
+                    <div className="ps-repair-entry">
+                      <button type="button" className="ps-button ps-wide"
+                        aria-expanded={repairOpen} aria-controls="ps-studio-repair-panel"
+                        onClick={() => setRepairOpen(open => !open)}>
+                        {repairOpen ? "Close production repair" : "Repair artwork for print"}
+                      </button>
+                      {repairOpen && (
+                        <div id="ps-studio-repair-panel">
+                          <ArtworkRepairPanel
+                            asset={asset}
+                            printWidthIn={quality.result?.printedWidthIn || null}
+                            printHeightIn={quality.result?.printedHeightIn || null}
+                            targetPpi={Number(location?.dpi) || 300}
+                            catalogProductId={catalogId}
+                            printLocationId={locationId}
+                            onClose={() => setRepairOpen(false)}
+                            onApply={(candidate) => {
+                              choose(candidate);
+                              setTrimTransparent(false); setRemoveFlatBackground(false);
+                              setNotice("Reviewed artwork selected. Original preserved. Run supplier preflight before manufacturing.");
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div className="ps-ai-source">
                     {asset ? (
                       <>
@@ -2595,9 +2624,9 @@ export default function StudioWorkspace({
             <div className="ps-product-title-edit"><label htmlFor="ps-product-title">Product name</label><input id="ps-product-title" aria-label="Product name" type="text" maxLength={160} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Name this product" /><small title={detail.product.name}>Blank: {detail.product.name}</small></div>
             {printSource?.needsSharperSource && (
               <button type="button" className="ps-mobile-quality-trigger"
-                aria-controls="ps-print-quality-inspector"
-                aria-expanded={qualityDetailsOpen}
-                onClick={() => setQualityDetailsOpen((open) => !open)}>
+                aria-controls="ps-studio-repair-panel"
+                aria-expanded={repairOpen}
+                onClick={() => { setQualityDetailsOpen(false); openTab("tools"); setAiMode("edit"); setRepairOpen(true); }}>
                 {Math.floor(manufacturingPreflight?.effectivePpi ?? 0)} PPI · Review
               </button>
             )}
