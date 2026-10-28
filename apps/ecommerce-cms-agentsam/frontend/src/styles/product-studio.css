@@ -3052,3 +3052,107 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
   .product-studio-shell .ps-stage-toolbar .ps-artboard-mode button,
   .product-studio-shell .ps-stage-toolbar .ps-print-side-toggle button{min-width:60px;padding-inline:6px}
 }
+
+/* Production artwork repair shares existing product-studio theme tokens.
+   Review flow intentionally does not cover the garment or auto-replace artwork. */
+.product-studio-shell .ps-repair-workbench{
+  display:grid;gap:10px;min-width:0;border:1px solid var(--ps-line);
+  border-radius:14px;padding:12px;background:#fbfafc;color:var(--ps-ink);
+}
+.product-studio-shell .ps-repair-workbench__header{
+  display:flex;align-items:start;justify-content:space-between;gap:10px;
+}
+.product-studio-shell .ps-repair-workbench__header>div{display:grid;gap:4px;min-width:0}
+.product-studio-shell .ps-repair-workbench__header strong{font-size:13px;font-weight:750}
+.product-studio-shell .ps-repair-workbench__header small,
+.product-studio-shell .ps-repair-masters>small,
+.product-studio-shell .ps-repair-compare>small{
+  color:var(--ps-muted);font-size:10px;line-height:1.45;
+}
+.product-studio-shell .ps-repair-workbench__header button{
+  width:44px;height:44px;min-width:44px;border:1px solid var(--ps-line);
+  border-radius:10px;background:white;font-size:22px;color:var(--ps-ink);
+}
+.product-studio-shell .ps-repair-stats{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;
+}
+.product-studio-shell .ps-repair-stats>div{
+  display:grid;gap:4px;min-width:0;border:1px solid var(--ps-line);
+  border-radius:9px;background:white;padding:8px 5px;
+}
+.product-studio-shell .ps-repair-stats span{font-size:9px;color:var(--ps-muted)}
+.product-studio-shell .ps-repair-stats strong{font-size:11px;overflow-wrap:anywhere}
+.product-studio-shell .ps-repair-status,.product-studio-shell .ps-repair-error{
+  font-size:11px;line-height:1.55;margin:0;overflow-wrap:anywhere;
+}
+.product-studio-shell .ps-repair-error{color:#a4312c}
+.product-studio-shell .ps-repair-masters{display:grid;gap:8px}
+.product-studio-shell .ps-repair-masters>strong,.product-studio-shell .ps-repair-compare>strong{
+  font-size:12px;
+}
+.product-studio-shell .ps-repair-master{
+  display:grid;grid-template-columns:48px minmax(0,1fr) auto;align-items:center;
+  gap:7px;border:1px solid var(--ps-line);background:#fff;padding:6px;border-radius:10px;
+}
+.product-studio-shell .ps-repair-master img{
+  width:48px;height:48px;border-radius:7px;object-fit:contain;background:#eeeeef;
+}
+.product-studio-shell .ps-repair-master span{display:grid;gap:4px;min-width:0}
+.product-studio-shell .ps-repair-master span strong{
+  font-size:10px;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;
+}
+.product-studio-shell .ps-repair-master span small{font-size:9px;color:var(--ps-muted)}
+.product-studio-shell .ps-repair-master button,
+.product-studio-shell .ps-repair-actions button,
+.product-studio-shell .ps-repair-reconstruct button{
+  border:1px solid var(--ps-line);background:white;color:var(--ps-ink);
+  min-height:44px;padding:8px 10px;border-radius:9px;font-weight:650;font-size:11px;
+}
+.product-studio-shell .ps-repair-actions{display:flex;gap:7px;flex-wrap:wrap}
+.product-studio-shell .ps-repair-actions button{flex:1 1 auto}
+.product-studio-shell .ps-repair-actions button:first-child:not(:disabled){
+  border-color:var(--ps-accent);color:var(--ps-accent);
+}
+.product-studio-shell .ps-repair-actions button:disabled,
+.product-studio-shell .ps-repair-reconstruct button:disabled{opacity:.48}
+.product-studio-shell .ps-repair-reconstruct{
+  border:1px solid var(--ps-line);border-radius:10px;padding:10px;
+  font-size:11px;line-height:1.5;
+}
+.product-studio-shell .ps-repair-reconstruct summary{cursor:pointer;font-weight:700;min-height:27px}
+.product-studio-shell .ps-repair-reconstruct p{font-size:11px;line-height:1.5;color:var(--ps-muted)}
+.product-studio-shell .ps-repair-reconstruct label{display:grid;gap:5px;margin:8px 0}
+.product-studio-shell .ps-repair-reconstruct select{
+  max-width:100%;min-width:0;width:100%;min-height:44px;
+  border:1px solid var(--ps-line);border-radius:9px;background:white;padding:7px;
+}
+.product-studio-shell .ps-repair-reconstruct .ps-repair-consent,
+.product-studio-shell .ps-repair-consent{
+  display:flex;align-items:start;gap:9px;font-size:11px;line-height:1.5;
+}
+.product-studio-shell .ps-repair-consent input{
+  width:19px;height:19px;flex:0 0 auto;accent-color:var(--ps-accent);
+}
+.product-studio-shell .ps-repair-compare{display:grid;gap:10px;border-top:1px solid var(--ps-line);padding-top:12px}
+.product-studio-shell .ps-repair-compare__images{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;
+}
+.product-studio-shell .ps-repair-compare__images figure{
+  margin:0;display:grid;min-width:0;border-radius:9px;overflow:hidden;
+  background:white;border:1px solid var(--ps-line);
+}
+.product-studio-shell .ps-repair-compare__images img{
+  display:block;aspect-ratio:1;object-fit:contain;width:100%;
+  background:repeating-conic-gradient(#eee 0 25%,#fff 0 50%) 50% / 16px 16px;
+}
+.product-studio-shell .ps-repair-compare__images figcaption{
+  padding:7px;text-align:center;font-size:10px;font-weight:650;
+}
+.product-studio-shell .ps-repair-compare>p{margin:0;font-size:11px;color:var(--ps-muted)}
+@media(max-width:760px){
+  .product-studio-shell .ps-repair-workbench{padding:9px}
+  .product-studio-shell .ps-repair-stats{gap:4px}
+  .product-studio-shell .ps-repair-stats>div{padding:7px 4px}
+  .product-studio-shell .ps-repair-master{grid-template-columns:44px minmax(0,1fr) auto}
+  .product-studio-shell .ps-repair-master img{width:44px;height:44px}
+}
