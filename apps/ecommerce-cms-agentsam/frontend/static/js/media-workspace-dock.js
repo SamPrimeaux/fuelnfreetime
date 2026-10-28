@@ -130,6 +130,7 @@ export function mountMediaWorkspaceDock() {
   }
   function onDetail(event) {
     detailId = Number(event.detail?.id) || null;
+    if (detailId) $("#media-batch-bar")?.classList.remove("dock-tools-expanded");
     publish();
   }
   window.addEventListener("agentsam:media-selection", onSelection);
