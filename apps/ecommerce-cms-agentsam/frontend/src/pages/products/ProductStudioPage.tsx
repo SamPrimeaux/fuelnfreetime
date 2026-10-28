@@ -66,7 +66,7 @@ export default function ProductStudioPage() {
   function toggleFacet(group:FacetGroup,value:string) {
     setOffset(0);
     setCatalogFilters(prev=>{
-      const current=prev[group];
+      const current=prev[group] as string[];
       const next=current.includes(value)?current.filter(v=>v!==value):[...current,value];
       return {...prev,[group]:next,page:1} as CatalogQuery;
     });
@@ -412,8 +412,8 @@ export default function ProductStudioPage() {
                   {(Object.keys(CATALOG_FACETS) as FacetGroup[]).map(group=><fieldset key={group}>
                     <legend>{ {category:"Category",printType:"Print method",holiday:"Holiday",occasion:"Occasion"}[group]}</legend>
                     <div className="ps-facet-options">
-                      {CATALOG_FACETS[group].map(item=><label key={item.value} className={catalogFilters[group].includes(item.value)?"is-selected":""}>
-                        <input type="checkbox" checked={catalogFilters[group].includes(item.value)}
+                      {CATALOG_FACETS[group].map(item=><label key={item.value} className={(catalogFilters[group] as string[]).includes(item.value)?"is-selected":""}>
+                        <input type="checkbox" checked={(catalogFilters[group] as string[]).includes(item.value)}
                           onChange={()=>toggleFacet(group,item.value)}/>
                         <span>{item.label}</span><small>{facets?.[group]?.[item.value]??"—"}</small>
                       </label>)}
