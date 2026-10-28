@@ -2624,9 +2624,9 @@ export default function StudioWorkspace({
             <div className="ps-product-title-edit"><label htmlFor="ps-product-title">Product name</label><input id="ps-product-title" aria-label="Product name" type="text" maxLength={160} value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Name this product" /><small title={detail.product.name}>Blank: {detail.product.name}</small></div>
             {printSource?.needsSharperSource && (
               <button type="button" className="ps-mobile-quality-trigger"
-                aria-controls="ps-print-quality-inspector"
-                aria-expanded={qualityDetailsOpen}
-                onClick={() => setQualityDetailsOpen((open) => !open)}>
+                aria-controls="ps-studio-repair-panel"
+                aria-expanded={repairOpen}
+                onClick={() => { setQualityDetailsOpen(false); openTab("tools"); setAiMode("edit"); setRepairOpen(true); }}>
                 {Math.floor(manufacturingPreflight?.effectivePpi ?? 0)} PPI · Review
               </button>
             )}
