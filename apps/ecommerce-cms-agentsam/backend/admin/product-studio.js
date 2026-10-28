@@ -869,6 +869,41 @@ async function createLocalMappings(env, draft, selection, providerProductId, des
   return { productLink, mapped };
 }
 
+/**
+ * Existing Completeful listings are versioned supplier resources. Never
+ * re-label a previously front-only provider product as a newer two-sided one.
+ * The store can save this new artwork as a draft while it is reconciled.
+ */
+export function compareSupplierLinkToDraft(draft, link) {
+  const stored = parseJson(link?.selection_json, {});
+  const savedVariants = normalizeIds(stored.variant_ids || []);
+  const requestedVariants = normalizeIds(draft?.selected_variant_ids || []);
+  const savedLocations = normalizeIds(stored.print_location_ids || []);
+  const requestedLocations = normalizeIds(draft?.print_location_ids || []);
+  const twoSided = decoratedPrintLocationIds(draft).length > 1;
+  if (!link?.completeful_store_product_id) {
+    return { ok: false, code: "supplier_product_not_created",
+      error: "Create the Completeful product and verify its selected variants before publishing.",
+      saved_locations: savedLocations, requested_locations: requestedLocations };
+  }
+  if (twoSided && (savedLocations.length !== requestedLocations.length ||
+      requestedLocations.some(id => !savedLocations.includes(id)))) {
+    return { ok: false, code: "supplier_print_locations_changed",
+      error: "This Completeful product belongs to an older print layout. The saved artwork now has additional print locations, but the supplier listing has not been updated. Keep this product as Draft; reconcile the supplier product or create a new design with the intended sides in Product Studio.",
+      saved_locations: savedLocations, requested_locations: requestedLocations,
+      action: "review_design_and_supplier_mapping" };
+  }
+  if (savedVariants.length !== requestedVariants.length ||
+      requestedVariants.some(id => !savedVariants.includes(id))) {
+    return { ok: false, code: "supplier_selection_changed",
+      error: "The saved supplier variant selection no longer matches the current design. Reconcile the supplier listing in Product Studio before publishing.",
+      saved_locations: savedLocations, requested_locations: requestedLocations,
+      action: "review_design_and_supplier_mapping" };
+  }
+  return { ok: true, code: "supplier_link_verified",
+    saved_locations: savedLocations, requested_locations: requestedLocations };
+}
+
 async function createProductFromDraft(request, env, id) {
   let draft = await loadDraft(env, id);
   if (!draft) return json({ ok: false, error: "Draft not found" }, { status: 404 });
@@ -879,23 +914,9 @@ async function createProductFromDraft(request, env, id) {
     "SELECT * FROM completeful_product_links WHERE product_id = ? AND completeful_store_product_id IS NOT NULL LIMIT 1"
   ).bind(draft.product_id).first();
   if (link?.completeful_store_product_id) {
-    const linkedSelection = parseJson(link.selection_json, {});
-    const linkedLocations = normalizeIds(linkedSelection.print_location_ids || []);
-    if (decoratedPrintLocationIds(draft).length > 1 &&
-        (linkedLocations.length !== draft.print_location_ids.length ||
-          draft.print_location_ids.some((id) => !linkedLocations.includes(id)))) {
-      return json({ ok: false, code: "supplier_print_locations_changed",
-        error: "The existing supplier product does not match both print locations. Reconcile it before reusing." },
-        { status: 409 });
-    }
-    const linkedIds = normalizeIds(linkedSelection.variant_ids || []);
+    const linkedStatus = compareSupplierLinkToDraft(draft, link);
+    if (!linkedStatus.ok) return json(linkedStatus, { status: 409 });
     const requestedIds = normalizeIds(draft.selected_variant_ids);
-    if (linkedIds.length !== requestedIds.length ||
-        linkedIds.some((variantId) => !requestedIds.includes(variantId))) {
-      return json({ ok: false,
-        error: "The saved supplier selection changed after creation. Reconcile the existing Completeful product before publishing.",
-        code: "supplier_selection_changed" }, { status: 409 });
-    }
     try {
       const selection = await validateSelection(
         env, draft.completeful_catalog_product_id, requestedIds, draft.print_location_ids
@@ -1064,8 +1085,19 @@ async function createProductFromDraft(request, env, id) {
 async function publishDraft(request, env, id) {
   const draft = await loadDraft(env, id);
   if (!draft) return json({ ok: false, error: "Draft not found" }, { status: 404 });
+  // Report the actual supplier mismatch before generic state errors. A
+  // provider product linked on an older design cannot prove later artwork.
+  const linkedProduct = await env.DB.prepare(
+    "SELECT * FROM completeful_product_links WHERE product_id = ? AND completeful_store_product_id IS NOT NULL LIMIT 1"
+  ).bind(draft.product_id).first();
+  const linkedStatus = compareSupplierLinkToDraft(draft, linkedProduct);
+  if (!linkedStatus.ok && linkedStatus.code !== "supplier_product_not_created") {
+    return json(linkedStatus, { status: 409 });
+  }
   if (draft.state !== "created") {
-    return json({ ok: false, error: "Create and map the product before publishing" }, { status: 409 });
+    return json({ ok: false, code: "supplier_product_not_reconciled",
+      error: "This design is saved, but its Completeful product and selected variants must be reconciled before publishing. Use Validate supplier mapping first.",
+      action: "validate_supplier_mapping" }, { status: 409 });
   }
   const product = await env.DB.prepare(`SELECT * FROM products WHERE id = ?`).bind(draft.product_id).first();
   const link = await env.DB.prepare(
