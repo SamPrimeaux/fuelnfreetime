@@ -27,11 +27,11 @@ function dims(value:Assessment["source_px"]) {
   return value ? value.width.toLocaleString()+" × "+value.height.toLocaleString()+" px" : "Unknown dimensions";
 }
 export default function ArtworkRepairPanel({
-  asset, printWidthIn, printHeightIn, targetPpi, catalogProductId, printLocationId,
+  asset, printWidthIn, printHeightIn, targetPpi, catalogProductId, printLocationId, method="dtg",
   onApply, onClose,
 }:{
   asset:MediaAsset;printWidthIn:number|null;printHeightIn:number|null;targetPpi:number;
-  catalogProductId:string;printLocationId:string;
+  catalogProductId:string;printLocationId:string;method?:string;
   onApply:(candidate:MediaAsset)=>void;onClose:()=>void;
 }) {
   const [inspection,setInspection]=useState<Inspection|null>(null);
@@ -170,7 +170,7 @@ export default function ArtworkRepairPanel({
       <details className="ps-vector-disclosure">
         <summary>Convert SVG / optimize logo for this print area</summary>
         <VectorAssetWorkbench selectedAsset={asset} printWidthIn={printWidthIn} printHeightIn={printHeightIn}
-          targetPpi={targetPpi} onPrepared={(prepared)=>{onApply(prepared);onClose();}}/>
+          targetPpi={targetPpi} method={method} onPrepared={(prepared)=>{onApply(prepared);onClose();}}/>
       </details>
       {candidate && (
         <section className="ps-repair-compare" aria-label="Review original and repaired artwork">
