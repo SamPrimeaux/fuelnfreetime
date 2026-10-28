@@ -17,7 +17,7 @@ export default function CatalogHoverImage({sources,sampleUrl,alt}:{
     image.src=sampleUrl;
   }
   return <div className="ps-catalog-hover" onPointerEnter={preload} onFocus={preload}>
-    <ProductImage sources={sources} alt={alt||""}/>
+    <ProductImage sources={sources.filter((value):value is string=>typeof value==="string"&&value.length>0)} alt={alt||""}/>
     {loaded&&sampleUrl&&<img className="ps-catalog-sample" src={sampleUrl} alt=""
       onError={()=>setLoaded(false)}/>}
     {loaded&&<span className="ps-catalog-sample-label">Supplier sample</span>}
