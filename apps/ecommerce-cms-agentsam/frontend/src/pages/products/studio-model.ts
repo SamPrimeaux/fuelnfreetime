@@ -27,6 +27,7 @@ export type CatalogProduct = {
   realistic_image_url?: string;
   cover_image_url?: string;
   main_icon_url?: string;
+  sample_image_url?: string|null;
   variant_count?: number;
   print_location_count?: number;
   mockup_count?: number;
