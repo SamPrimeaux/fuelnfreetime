@@ -2467,6 +2467,7 @@ export default function StudioWorkspace({
                             targetPpi={Number(location?.dpi) || 300}
                             catalogProductId={catalogId}
                             printLocationId={locationId}
+                            method={detail.product.print_type||"dtg"}
                             onClose={() => setRepairOpen(false)}
                             onApply={(candidate) => {
                               choose(candidate);
