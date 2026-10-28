@@ -39,6 +39,13 @@ const ICONS = {
   undo: '<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>',
   chevronUp: '<path d="M6 15l6-6 6 6"/>',
   dot: '<circle cx="12" cy="12" r="3"/>',
+  search: '<circle cx="10.7" cy="10.7" r="6.7"/><path d="m16 16 5 5"/>',
+  filter: '<path d="M4 7h16M7 12h10M10 17h4"/><circle cx="8" cy="7" r="2"/><circle cx="16" cy="12" r="2"/>',
+  plus: '<path d="M12 4v16M4 12h16"/>',
+  upload: '<path d="M12 16V3m-5 5 5-5 5 5M4 17v3h16v-3"/>',
+  album: '<rect x="3" y="6" width="18" height="15" rx="2"/><path d="M7 6V3h12M3 16l6-6 4 4 3-3 5 5"/>',
+  gallery: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="9" r="1.5"/><path d="m3 17 6-5 4 3 3-3 5 5"/>',
+  layers: '<path d="m12 3 9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 16l9 5 9-5"/>',
 };
 
 function icon(name, size = 22) {
@@ -162,7 +169,31 @@ export function mountAdminDock(options = {}) {
   // Session choice wins; otherwise the manifest default (dock.startHidden, false unless set).
   let hidden = readHidden(win) ?? config.startHidden;
   let edit = null;
+  // Route owners publish up to five real actions; generic nav stays the fallback.
+  let workspace = null;
   let peek = { visible: false, state: "idle", text: "", expanded: false };
+
+  function setWorkspace(detail) {
+    const actions = Array.isArray(detail?.actions) ? detail.actions.slice(0, 5).filter((a) =>
+      a && typeof a.id === "string" && typeof a.label === "string" &&
+      (a.href || a.id === "more" || a.id === "agent" || a.id === "nav" || a.invoke === true)
+    ) : [];
+    workspace = actions.length ? { label: String(detail.label || "Workspace"), actions } : null;
+    root.dataset.workspace = String(Boolean(workspace));
+    tabsPanel.setAttribute("aria-label", workspace ? workspace.label + " tools" : "Quick navigation");
+    tabsPanel.innerHTML = workspace ? actions.map((action) => {
+      const content = '<span class="admin-dock__tab-icon">' + icon(action.icon || action.id) +
+        '</span><span class="admin-dock__tab-label">' + esc(action.label) + '</span>';
+      const attrs = 'class="admin-dock__tab" data-workspace-action="' + esc(action.id) + '"';
+      if (action.href) return '<a ' + attrs + ' href="' + esc(action.href) + '">' + content + '</a>';
+      if (action.id === "agent" || action.id === "nav" || action.id === "more") {
+        return '<button type="button" ' + attrs + ' data-action="' +
+          (action.id === "agent" ? "agent" : "nav") + '">' + content + '</button>';
+      }
+      return '<button type="button" ' + attrs + '>' + content + '</button>';
+    }).join("") : tabsHtml;
+    render();
+  }
 
   function setNote(text) {
     note.textContent = text || "";
@@ -190,6 +221,7 @@ export function mountAdminDock(options = {}) {
     const editing = Boolean(edit && edit.active);
     const mode = composing ? "compose" : editing ? "edit" : "nav";
     root.setAttribute("data-mode", mode);
+    doc.body.classList.toggle("admin-dock-workspace", Boolean(workspace) && !hidden);
     root.setAttribute("data-hidden", String(hidden));
     tabsPanel.hidden = mode !== "nav";
     editPanel.hidden = mode !== "edit";
@@ -282,6 +314,13 @@ export function mountAdminDock(options = {}) {
     if (action === "agent") setComposing(!composing);
     else if (action === "close-compose") setComposing(false);
     else if (action === "nav") host.openNav?.();
+  });
+  root.addEventListener("click", (event) => {
+    const target = event.target.closest("[data-workspace-action]");
+    if (!target || !root.contains(target) || target.hasAttribute("href") || target.hasAttribute("data-action")) return;
+    doc.dispatchEvent(new CustomEvent("admin-dock:invoke", {
+      detail: { id: target.getAttribute("data-workspace-action") },
+    }));
   });
   composePanel.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -433,6 +472,9 @@ export function mountAdminDock(options = {}) {
     edit = detail && detail.active ? detail : null;
     render();
   }
+  const onWorkspace = (event) => setWorkspace(event.detail);
+  doc.addEventListener("admin-dock:workspace", onWorkspace);
+  if (win.__adminDockWorkspace) setWorkspace(win.__adminDockWorkspace);
   doc.addEventListener("admin-dock:edit", (event) => setEdit(event.detail));
   if (win.__adminDockEdit) setEdit(win.__adminDockEdit);
 
@@ -470,6 +512,8 @@ export function mountAdminDock(options = {}) {
       vv?.removeEventListener("scroll", syncKeyboard);
       doc.removeEventListener("pointerdown", onDocumentPointerDown, true);
       doc.removeEventListener("keydown", onDockKeyDown);
+      doc.removeEventListener("admin-dock:workspace", onWorkspace);
+      doc.body.classList.remove("admin-dock-workspace");
       doc.body.classList.remove("admin-dock-active", "admin-dock-visible", "admin-dock-compose", "admin-dock-has-edit", "admin-dock-hidden", "admin-dock-peek");
       root.remove();
     },

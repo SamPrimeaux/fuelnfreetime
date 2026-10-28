@@ -85,3 +85,31 @@
   .pl-table td.pl-product-cell{padding-bottom:9px}
   .pl-table .pl-action .cs-button{min-height:44px}
 }
+
+/* Mobile workspace header v2: prioritize catalog rows, not page-intro chrome. */
+.pl-header-copy{min-width:0}
+.pl-header-copy h1{display:flex;align-items:center;gap:9px;margin:0}
+.pl-heading-count{display:inline-grid;place-items:center;min-width:28px;height:26px;padding:0 8px;border-radius:999px;background:#eef0f4;color:#59616e;font-size:12px;font-weight:700;line-height:1}
+.pl-header-copy p{margin:3px 0 0;color:var(--cs-sub);font-size:12px}
+@media(max-width:700px){
+  .pl-workspace{padding-top:9px}
+  .pl-workspace .pl-header{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+  .pl-header-copy h1{font-size:24px;line-height:1.15;letter-spacing:-.035em}
+  .pl-header-copy p{font-size:11px;line-height:1.2}
+  .pl-workspace .pl-header-actions{width:auto;gap:6px;flex:none;flex-direction:row}
+  .pl-header-actions .pl-action-icon{width:44px;height:44px;min-width:44px;min-height:44px;padding:0;flex:0 0 44px;border-radius:12px}
+  .pl-header-actions .pl-action-icon span{display:none}
+  .pl-panel{border-radius:12px}
+  .pl-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(112px,38%);padding:8px;gap:7px}
+  .pl-search{grid-column:1;min-width:0;min-height:44px;max-width:none;padding-inline:10px}
+  .pl-status{grid-column:2;min-width:0}
+  .pl-status select{min-width:0;width:100%;font-size:13px;padding-inline:8px}
+  .pl-count{display:none}
+  .pl-table tbody{padding:7px}
+  .pl-table tbody tr{padding:10px}
+}
+
+@media(max-width:700px){
+  /* Context dock replaces duplicate header CTAs; hiding the dock restores them. */
+  body.admin-dock-workspace .pl-header-actions{display:none}
+}

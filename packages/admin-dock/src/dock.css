@@ -461,3 +461,17 @@ body.agentsam-open .admin-dock {
 @media (prefers-reduced-motion: reduce) {
   .admin-dock, .admin-dock__main, .admin-dock__tab, .admin-dock__bar, .admin-dock__peek { transition: none; }
 }
+
+/* Workspace command dock: bottom flush only while route-specific tools are active. */
+@media(max-width:640px){
+  .admin-dock[data-workspace="true"]{bottom:var(--admin-dock-kb,0px);padding-inline:0}
+  .admin-dock[data-workspace="true"] .admin-dock__bar{
+    border-radius:22px 22px 0 0;padding-bottom:env(safe-area-inset-bottom,0px);
+    border-inline:0;border-bottom:0;box-shadow:0 -6px 24px rgba(0,0,0,.08);
+  }
+  .admin-dock[data-workspace="true"] .admin-dock__tabs{padding:13px 5px 4px}
+  .admin-dock[data-workspace="true"] .admin-dock__tab{min-height:48px}
+  body.admin-dock-visible.admin-dock-workspace{
+    --admin-dock-clearance:calc(var(--admin-dock-h) + 16px + env(safe-area-inset-bottom,0px));
+  }
+}

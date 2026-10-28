@@ -33,6 +33,44 @@ export default function ProductLibrary() {
   const [status, setStatus] = useState<ProductStatus>("all");
 
   useEffect(() => {
+    const dock = {
+      label: "Products",
+      actions: [
+        { id: "find", label: "Find", icon: "search", invoke: true },
+        { id: "filter", label: "Status", icon: "filter", invoke: true },
+        { id: "collections", label: "Collections", icon: "layers", href: "/admin/collections" },
+        { id: "create", label: "Create", icon: "plus", href: "/admin/products/create" },
+        { id: "more", label: "More", icon: "menu" },
+      ],
+    };
+    const w = window as Window & { __adminDockWorkspace?: typeof dock | null };
+    const publish = (detail: typeof dock | null) => {
+      w.__adminDockWorkspace = detail;
+      document.dispatchEvent(new CustomEvent("admin-dock:workspace", { detail }));
+    };
+    const invoke = (event: Event) => {
+      const id = (event as CustomEvent<{ id: string }>).detail?.id;
+      if (id === "find") document.querySelector<HTMLInputElement>(".pl-search input")?.focus();
+      if (id === "filter") {
+        const select = document.querySelector<HTMLSelectElement>(".pl-status select");
+        select?.focus();
+        try {
+          // showPicker keeps this a direct user action on supporting mobile browsers.
+          const picker = select as HTMLSelectElement & { showPicker?: () => void };
+          if (picker?.showPicker) picker.showPicker();
+          else select?.click();
+        } catch { select?.click(); }
+      }
+    };
+    document.addEventListener("admin-dock:invoke", invoke);
+    publish(dock);
+    return () => {
+      document.removeEventListener("admin-dock:invoke", invoke);
+      publish(null);
+    };
+  }, []);
+
+  useEffect(() => {
     document.title = "Products — Fuel & Free Time Admin";
     let mounted = true;
     void adminFetch<{ ok: boolean; products?: Product[]; error?: string }>("/api/admin/products")
@@ -55,16 +93,14 @@ export default function ProductLibrary() {
 
   return <main className="cs-workspace pl-workspace">
     <div className="cs-container">
-      <div className="cs-breadcrumb"><span>Commerce</span><span aria-hidden="true">/</span><strong>Products</strong></div>
       <header className="cs-page-header pl-header">
-        <div>
-          <span className="cs-overline">Product catalog</span>
-          <h1>Products</h1>
-          <p>Manage your published products, drafts and inventory from one library.</p>
+        <div className="pl-header-copy">
+          <h1>Products <span className="pl-heading-count">{loading ? "…" : products.length}</span></h1>
+          <p>Commerce / Catalog</p>
         </div>
         <div className="pl-header-actions">
-          <Link className="cs-button" to="/collections"><StudioIcon name="layers" size={16} /> Collections</Link>
-          <Link className="cs-button primary" to="/products/create"><StudioIcon name="plus" size={16} /> New product</Link>
+          <Link className="cs-button pl-action-icon" to="/collections" aria-label="Open collections" title="Collections"><StudioIcon name="layers" size={20} /><span>Collections</span></Link>
+          <Link className="cs-button primary pl-action-icon" to="/products/create" aria-label="Create product" title="Create product"><StudioIcon name="plus" size={20} /><span>New product</span></Link>
         </div>
       </header>
 

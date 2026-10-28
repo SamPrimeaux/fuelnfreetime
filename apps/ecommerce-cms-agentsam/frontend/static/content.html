@@ -23,6 +23,10 @@ renderShell("/admin/content", `
   <section id="content-view-library" data-content-panel="library">
   <div class="media-lib">
     <div class="media-lib-toolbar">
+      <div class="media-lib-heading">
+        <h1>Media Library</h1>
+        <a href="/admin/content/brand" aria-label="Open Brand Studio">Brand Studio ↗</a>
+      </div>
       <nav class="media-lib-crumb" id="media-crumb" aria-label="Media location"></nav>
       <div class="media-lib-actions">
         <label class="media-lib-search" for="media-search">
@@ -395,7 +399,31 @@ renderShell("/admin/content", `
     </div>
   </div>
   </section>
-`, { onReady: async () => { const media = await import("/admin/js/media-library.js"); media.initMediaLibrary(); initBrandWorkspace(); } });
+`, { onReady: async () => { const media = await import("/admin/js/media-library.js");
+    media.initMediaLibrary();
+    initBrandWorkspace();
+    // Bind workspace tools to existing media actions: no duplicate upload/editor.
+    const dock = {
+      label: "Media Library",
+      actions: [
+        { id: "upload", label: "Upload", icon: "upload", invoke: true },
+        { id: "filters", label: "Filters", icon: "filter", invoke: true },
+        { id: "album", label: "New album", icon: "album", invoke: true },
+        { id: "gallery", label: "Gallery", icon: "gallery", invoke: true },
+        { id: "more", label: "More", icon: "menu" },
+      ],
+    };
+    window.__adminDockWorkspace = dock;
+    document.dispatchEvent(new CustomEvent("admin-dock:workspace", { detail: dock }));
+    document.addEventListener("admin-dock:invoke", (event) => {
+      const target = {
+        upload: "media-upload-btn",
+        filters: "media-filter-toggle",
+        album: "media-album-new",
+        gallery: "media-gallery-new",
+      }[event.detail?.id];
+      if (target) document.getElementById(target)?.click();
+    }); } });
 </script>
 </body>
 </html>

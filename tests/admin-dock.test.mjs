@@ -94,3 +94,21 @@ test("startHidden defaults to visible, is opt-in, and is set explicitly in the m
   assert.equal(normalizeDockConfig({ tabs, startHidden: true }).startHidden, true);
   assert.equal(app.dock.startHidden, false, "dock starts visible by default");
 });
+
+
+test("contextual workspace actions reuse the existing shell, with page-owned commands", () => {
+  const dock = readFileSync(new URL("../packages/admin-dock/src/index.js", import.meta.url), "utf8");
+  const products = readFileSync(new URL("../apps/ecommerce-cms-agentsam/frontend/src/pages/products/ProductLibrary.tsx", import.meta.url), "utf8");
+  const media = readFileSync(new URL("../apps/ecommerce-cms-agentsam/frontend/static/content.html", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../packages/admin-dock/src/dock.css", import.meta.url), "utf8");
+  assert.match(dock, /admin-dock:workspace/);
+  assert.match(dock, /admin-dock:invoke/);
+  assert.match(dock, /workspace \? actions\.map/);
+  assert.match(products, /id: "find"/);
+  assert.match(products, /id: "filter"/);
+  assert.match(products, /publish\(null\)/, "SPA route change must restore normal nav");
+  for (const id of ["media-upload-btn", "media-filter-toggle", "media-album-new", "media-gallery-new"]) {
+    assert.ok(media.includes(id), id + " should remain an existing working control");
+  }
+  assert.match(css, /\.admin-dock\[data-workspace="true"\]/);
+});
