@@ -149,7 +149,12 @@ export default function CollectionProducts({ products, selected, onSelect, plan,
           <button type="button" className="cs-button" disabled={!plan.length||scaffolding} onClick={()=>void onOpenStudio(plan[0])}>Design first <StudioIcon name="arrow" size={15}/></button>
         </div>
       </div>
-      {!!plan.length && <div className="cs-plan-ids">{plan.map(id=><span key={id}>{blanks.find(p=>supplierId(p)===id)?.name || id}<button aria-label={`Remove ${id}`} onClick={()=>onPlan(plan.filter(p=>p!==id))} type="button">×</button></span>)}</div>}
+      {!!plan.length && <div className="cs-plan-ids">{plan.map((id,index)=><span key={id+"-"+index}>
+          {blanks.find(p=>supplierId(p)===id)?.name || id}
+          <button aria-label={`Another design using ${id}`} title="Add independent artwork design on this same supplier blank"
+            disabled={plan.length>=24} onClick={()=>onPlan([...plan.slice(0,index+1),id,...plan.slice(index+1)])} type="button">+ Design</button>
+          <button aria-label={`Remove planned item ${index+1}`} onClick={()=>onPlan(plan.filter((_,i)=>i!==index))} type="button">×</button>
+        </span>)}</div>}
     </section>
     {picker && <CollectionProductPicker products={products} chosen={selected} onApply={onSelect} onClose={()=>setPicker(false)}/>}
   </div>;
