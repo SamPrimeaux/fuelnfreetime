@@ -360,9 +360,28 @@ renderShell("/admin/content", `
       </div>
       <div class="media-inspector-panel" data-media-inspector-panel="optimize">
         <div class="media-inspector-card">
-          <strong>Prepare for storefront</strong>
-          <p id="media-drawer-optimize-note">Preview sizes first. Materialize only the delivery versions you actually need.</p>
-          <button type="button" class="btn primary small" id="media-drawer-optimize">Prepare recommended versions</button>
+          <strong>Image improvement</strong>
+          <p>Every saved result is a new selectable asset. The original remains unchanged. Preparation works for product art, logos, pages and galleries.</p>
+          <div class="media-enhance-controls" role="group" aria-label="Image improvement actions">
+            <button type="button" class="btn small" id="media-drawer-edit-image">Crop & transform</button>
+            <button type="button" class="btn small" id="media-drawer-clean-background">Remove background</button>
+            <button type="button" class="btn small" id="media-drawer-resample">Create 2× copy</button>
+          </div>
+          <small>2× copies contain more pixels but do not recover missing original detail. Crop and background cleanup are non-destructive.</small>
+          <div class="media-enhance-ai" id="media-enhance-ai" hidden>
+            <label for="media-enhance-model">Optional image model</label>
+            <select id="media-enhance-model" aria-label="Image enhancement model"></select>
+            <label for="media-enhance-prompt">Requested enhancement</label>
+            <textarea id="media-enhance-prompt" rows="3" maxlength="1000">Clean compression artifacts and improve visual clarity while preserving the artwork, all lettering, layout, edges and colors. Do not add new elements.</textarea>
+            <label class="media-enhance-consent"><input type="checkbox" id="media-enhance-consent"> I understand AI edits can change fine details, letters and logos. I will review the result before use.</label>
+            <button type="button" class="btn small" id="media-enhance-submit">Create AI candidate</button>
+          </div>
+          <p id="media-enhance-status" class="media-enhance-status" role="status" aria-live="polite"></p>
+        </div>
+        <div class="media-inspector-card">
+          <strong>Storefront delivery</strong>
+          <p id="media-drawer-optimize-note">Delivery previews are separate from saved image edits.</p>
+          <button type="button" class="btn small" id="media-drawer-optimize">Prepare recommended versions</button>
         </div>
       </div>
       <div class="media-inspector-panel" data-media-inspector-panel="seo">
