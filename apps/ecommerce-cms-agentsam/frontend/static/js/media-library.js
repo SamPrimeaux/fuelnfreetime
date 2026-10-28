@@ -1921,6 +1921,9 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
       const serial = ++detailFetchSerial;
       void adminFetch('/api/admin/media/' + encodeURIComponent(asset.id)).then((response) => {
         if (serial !== detailFetchSerial || Number(selected?.id) !== Number(asset.id) || !response?.asset) return;
+        // Never close an active image-edit dialog just because detail metadata
+        // resolved after the merchant started working on the canvas.
+        if (document.querySelector('.media-agent-editor[open]')) return;
         const originalTab = inspectorTab;
         openDrawer(response.asset, { updateHistory: false, skipDetailFetch: true });
         setInspectorTab(originalTab);
