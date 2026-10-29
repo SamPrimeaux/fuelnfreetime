@@ -20,10 +20,27 @@ export async function resolveApplicationAccountId(env, explicitAccountId = null)
     return row?.id ? String(row.id) : null;
   }
 
-  const { results } = await env.DB.prepare(
-    "SELECT id FROM accounts WHERE status = 'active' ORDER BY created_at ASC, id ASC LIMIT 2",
-  ).all();
+  // Preferred: the account flagged `app_owner` in meta_json. Lets accounts hold people
+  // (owner, admins, staff) while exactly one is the application's owning account.
+  try {
+    const owner = await soleActiveAccountId(
+      env,
+      "SELECT id FROM accounts WHERE status = 'active' AND json_extract(meta_json, '$.app_owner') = 1 ORDER BY created_at ASC, id ASC LIMIT 2",
+    );
+    if (owner) return owner;
+  } catch (error) {
+    if (String((error && error.message) || "") === "application_account_ambiguous") throw error;
+    // accounts has no meta_json (older schema): fall through to the sole-active-account rule.
+  }
 
+  return soleActiveAccountId(
+    env,
+    "SELECT id FROM accounts WHERE status = 'active' ORDER BY created_at ASC, id ASC LIMIT 2",
+  );
+}
+
+async function soleActiveAccountId(env, sql) {
+  const { results } = await env.DB.prepare(sql).all();
   const rows = results || [];
   if (rows.length === 0) return null;
   if (rows.length > 1) {
