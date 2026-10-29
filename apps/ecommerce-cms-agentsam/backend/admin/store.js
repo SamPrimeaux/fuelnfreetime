@@ -368,12 +368,43 @@ export async function postStorePreferences(request, env) {
   });
 }
 
+/**
+ * Read the canonical v2 page/section family for the Online Store overview.
+ * Never fall back to legacy pages/page_sections: an incomplete migration must
+ * be visible rather than quietly switching which content is authoritative.
+ */
+export async function loadCanonicalStoreOverview(env, accountId = null) {
+  let scope = accountId;
+  if (!scope) {
+    // The signed Studio bridge has no admin session account ID. Match the
+    // existing theme authority: a single-tenant Worker may infer exactly one.
+    const { results = [] } = await env.DB.prepare(
+      "SELECT account_id FROM cms_pages GROUP BY account_id LIMIT 2"
+    ).all();
+    if (results.length !== 1) throw new Error("store_overview_account_scope_required");
+    scope = results[0].account_id;
+  }
+
+  const [pagesResult, sectionsMax] = await Promise.all([
+    env.DB.prepare(
+      "SELECT slug, title, status, page_type, updated_at FROM cms_pages WHERE account_id = ? ORDER BY updated_at DESC"
+    ).bind(scope).all(),
+    env.DB.prepare(
+      "SELECT MAX(updated_at) AS last_saved FROM cms_page_sections WHERE account_id = ? AND status NOT IN ('archived', 'removed')"
+    ).bind(scope).first(),
+  ]);
+  const pages = pagesResult.results || [];
+  // A published global (e.g. 'site') is settings, not a publicly served page.
+  const publishedCount = pages.filter(page => page.status === "published" && page.page_type !== "global").length;
+  const lastSaved = [sectionsMax?.last_saved, pages[0]?.updated_at]
+    .filter(Boolean).sort().at(-1) || null;
+  return { accountId: scope, pages, publishedCount, lastSaved };
+}
+
 export async function onlineStoreOverview(env, accountId = null) {
-  const [pagesResult, sectionsMax, publishedPages, themes, performance, company] = await Promise.all([
-    env.DB.prepare(`SELECT slug, title, status, updated_at FROM pages ORDER BY updated_at DESC`).all(),
-    env.DB.prepare(`SELECT MAX(updated_at) AS last_saved FROM page_sections`).first(),
-    env.DB.prepare(`SELECT COUNT(*) AS n FROM pages WHERE status = 'published'`).first(),
-    resolveThemes(env, accountId),
+  const content = await loadCanonicalStoreOverview(env, accountId);
+  const [themes, performance, company] = await Promise.all([
+    resolveThemes(env, content.accountId),
     resolveStorePerformance(env),
     getCompany(env),
   ]);
@@ -385,19 +416,19 @@ export async function onlineStoreOverview(env, accountId = null) {
   return json({
     ok: true,
     store: {
-      visibility: passwordOn ? "password" : publishedPages.n > 0 ? "public" : "unpublished",
+      visibility: passwordOn ? "password" : content.publishedCount > 0 ? "public" : "unpublished",
       url: domain ? `https://${domain}` : null,
       domain: domain || null,
       company_name: company?.name || null,
     },
     performance,
     active_theme: themes.active_theme
-      ? { ...themes.active_theme, last_saved: themes.active_theme.last_saved || sectionsMax?.last_saved || null }
+      ? { ...themes.active_theme, last_saved: themes.active_theme.last_saved || content.lastSaved }
       : null,
     draft_themes: themes.draft_themes,
     preview_theme: themes.preview_theme,
     themes: themes.themes,
     theme_content_version: themes.content_version,
-    pages: pagesResult.results || [],
+    pages: content.pages,
   });
 }
