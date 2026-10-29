@@ -45,7 +45,7 @@ test("Chrome: real theme color, button and CSS controls fit phone and desktop an
    assert.equal(result.radius,24);
    assert.match(result.css,/letter-spacing/);
    assert.equal(result.calls,3);
-   assert.deepEqual(result.categories,["Colors","Typography","Buttons","Custom CSS"]);
+   assert.deepEqual(result.categories,["Colors","Typography","Buttons","Custom CSS","Logo and favicon","Page layout","Animations","Input fields","Popovers and modals","Icons"]);
    assert.equal(result.overflow,false);
    console.log("PASS "+width+"px: live Theme Settings render and route edits into CMS.");
   }
