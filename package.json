@@ -156,7 +156,7 @@
     "agentsam:repository-contracts:verify:remote": "./scripts/with-cf-admin-env.sh node apps/ecommerce-cms-agentsam/bin/repository-contracts.mjs verify --remote",
     "db:seed:agentsam-repository-contracts": "npm run agentsam:repository-contracts:generate && ./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/seed-agentsam-repository-contracts.generated.sql && npm run agentsam:repository-contracts:verify:remote",
     "check:cms-authoring": "apps/ecommerce-cms-agentsam/frontend/node_modules/.bin/tsc -p apps/ecommerce-cms-agentsam/cms/authoring/tsconfig.json --noEmit",
-    "test:cms-authoring": "node --test tests/cms-authoring-engine.test.mjs tests/cms-canonical-block-projection.test.mjs tests/cms-canonical-section-link.test.mjs tests/cms-composition-contract.test.mjs"
+    "test:cms-authoring": "node --test tests/cms-authoring-engine.test.mjs tests/cms-canonical-block-projection.test.mjs tests/cms-canonical-section-link.test.mjs tests/cms-composition-contract.test.mjs apps/ecommerce-cms-agentsam/tests/store-overview.test.mjs"
   },
   "devDependencies": {
     "@inneranimalmedia/agentsam-repository": "^2.6.12",
