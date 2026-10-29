@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { spawnSync } from 'node:child_process';
 const root = path.resolve(import.meta.dirname, '..');
 const require = createRequire(path.join(root, 'apps/ecommerce-cms-agentsam/frontend/package.json'));
 const ts = require('typescript');
@@ -36,6 +37,13 @@ for (const base of ['apps/ecommerce-cms-agentsam', 'packages']) {
 const config = fs.readFileSync(path.join(root, 'wrangler.toml'), 'utf8');
 if (!config.includes('directory = "./dist/assets"') || !config.includes('main = "apps/ecommerce-cms-agentsam/backend/index.js"')) failures.push('Worker build ownership drift');
 
+// Never ship customer-copied UI that disagrees with the pinned canonical SDK
+// modules. This check is offline-safe and does not require npm publication.
+const uiContract=spawnSync(process.execPath,[path.join(root,'scripts/sync-ecommerce-sdk-ui.mjs'),'--check'],{
+ cwd:root,encoding:'utf8',timeout:15000
+});
+if (uiContract.status!==0)
+  failures.push('Ecommerce SDK UI parity drift: '+(uiContract.stderr||uiContract.stdout||'verification failed').slice(0,800));
 // The SPA must render directly inside the shell-owned content mount. A separate
 // viewport-sized #root created a blank screen above every React admin route.
 const spaIndex = fs.readFileSync(path.join(root, 'apps/ecommerce-cms-agentsam/frontend/index.html'), 'utf8');

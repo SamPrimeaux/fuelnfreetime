@@ -29,7 +29,7 @@ test("merchant theme controls change the global CMS settings document, not sessi
   w.eval(editorJs);
   const root=w.document.querySelector(".ts-live");
   assert.ok(root);
-  assert.deepEqual([...root.querySelectorAll(".ts-live-group>summary")].map(node=>node.textContent),["Colors","Typography","Buttons","Custom CSS"]);
+  assert.deepEqual([...root.querySelectorAll(".ts-live-group>summary")].map(node=>node.textContent),["Colors","Typography","Buttons","Custom CSS","Logo and favicon","Page layout","Animations","Input fields","Popovers and modals","Icons"]);
   const color=root.querySelector('[data-theme-color="accent"]');
   color.value="#123456";color.dispatchEvent(new w.Event("input",{bubbles:true}));
   assert.equal(stored.colors.accent,"#123456");
@@ -40,6 +40,15 @@ test("merchant theme controls change the global CMS settings document, not sessi
   const radius=root.querySelector("[data-theme-radius]");
   radius.value="21";radius.dispatchEvent(new w.Event("input",{bubbles:true}));
   assert.equal(stored.buttonRadius,21);
+  const pageWidth=root.querySelector('[data-design-number="page.maxWidth"]');
+  pageWidth.value="1440";pageWidth.dispatchEvent(new w.Event("change",{bubbles:true}));
+  assert.equal(stored.designDraft["page.maxWidth"],1440);
+  const reducedMotion=root.querySelector('[data-design-check="motion.reduced"]');
+  reducedMotion.checked=true;reducedMotion.dispatchEvent(new w.Event("change",{bubbles:true}));
+  assert.equal(stored.designDraft["motion.reduced"],true);
+  const modalPlacement=root.querySelector('[data-design-select="overlays.placement"]');
+  modalPlacement.value="Bottom right";modalPlacement.dispatchEvent(new w.Event("change",{bubbles:true}));
+  assert.equal(stored.designDraft["overlays.placement"],"Bottom right");
   const css=root.querySelector("[data-theme-css]");
   css.value=".shop-hero { filter: saturate(.8); }";
   css.dispatchEvent(new w.Event("input",{bubbles:true}));
