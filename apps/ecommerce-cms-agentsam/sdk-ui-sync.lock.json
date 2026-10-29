@@ -1,0 +1,19 @@
+{
+  "schema": "agentsam.ecommerce-cms-ui-sync.v1",
+  "sdk_source": "SamPrimeaux/agentsam-sdk/apps/ecommerce-cms-agentsam",
+  "sdk_source_commit": "cdfa968954b6a69179a4c93aaa9888fa87b4284a",
+  "sdk_files_sha256": {
+    "frontend/static/js/theme-embed-review.js": "301c469d1f86decebb2b6525ee0874f7c0b68488f207635667e6d09f7a77f4ef",
+    "frontend/static/css/theme-embed-review.css": "02a7576579f9f57fa27cc842b96c8c3a985178d0f60ec0effdfa29eb01d7e2a1",
+    "frontend/static/js/theme-settings-live.js": "901024ef753220ff72e23f7af4fcea6d1f5bfedd5c06e01bd14c53ff1da2e767",
+    "frontend/static/css/theme-settings-live.css": "4e174c4f99ec5334e2c3366e530b70e171c4864604b378fbe2eff456e5c68d2b",
+    "scripts/sync-theme-embed-catalog.mjs": "996789daa16e2452625a3620d6428a8940a6b954efa8d4c15c441ae354575052"
+  },
+  "storefront_embed_definitions_sha256": {
+    "agentsam.app.json": "be8eb07a7492dc22a415328b4e342ff5b268870c84bea0ac0b9aedd95b9bbe71",
+    "apps/resend/agentsam.app.json": "5658cb0215523c428a04bc0284bd945f3218bca3552bdf80aede4dd4bc354f01"
+  },
+  "embed_catalog_sha256": "6901f8843f4913d28edc53dcc7674c7a997d7010821b3ccc7e6b1a018f1940cd",
+  "scope": "Editor UI only. FNF routes, storefront, product models, and customer data remain independent.",
+  "sdk_npm_release_required": false
+}

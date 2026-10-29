@@ -10,7 +10,7 @@
     "api:completeful:generate": "node scripts/providers/sync-completeful-sdk.mjs --sync",
     "api:completeful:check": "node scripts/providers/sync-completeful-sdk.mjs --check",
     "test:completeful-api": "node --test tests/completeful-openapi-runtime.test.mjs tests/merch-designs-api.test.mjs apps/ecommerce-cms-agentsam/tests/completeful-*.test.mjs",
-    "build:admin": "npm run api:completeful:check && node scripts/ensure-admin-deps.mjs && npm run build --prefix apps/ecommerce-cms-agentsam/frontend && npm run check:cms-authoring && npm run test:cms-authoring && npm run app:frontend:sync && npm run guard:boundaries",
+    "build:admin": "npm run sync:cms-ui:check && npm run api:completeful:check && node scripts/ensure-admin-deps.mjs && npm run build --prefix apps/ecommerce-cms-agentsam/frontend && npm run check:cms-authoring && npm run test:cms-authoring && npm run app:frontend:sync && npm run guard:boundaries",
     "build:admin:skip": "npm run app:frontend:sync && npm run guard:boundaries",
     "predeploy:worker": "npm run guard:boundaries",
     "check:authority": "node scripts/package-authority.mjs --check",
@@ -156,7 +156,9 @@
     "agentsam:repository-contracts:verify:remote": "./scripts/with-cf-admin-env.sh node apps/ecommerce-cms-agentsam/bin/repository-contracts.mjs verify --remote",
     "db:seed:agentsam-repository-contracts": "npm run agentsam:repository-contracts:generate && ./scripts/with-cf-admin-env.sh npx wrangler d1 execute fuelnfreetime --remote --file=db/seed-agentsam-repository-contracts.generated.sql && npm run agentsam:repository-contracts:verify:remote",
     "check:cms-authoring": "apps/ecommerce-cms-agentsam/frontend/node_modules/.bin/tsc -p apps/ecommerce-cms-agentsam/cms/authoring/tsconfig.json --noEmit",
-    "test:cms-authoring": "node --test tests/cms-authoring-engine.test.mjs tests/cms-canonical-block-projection.test.mjs tests/cms-canonical-section-link.test.mjs tests/cms-composition-contract.test.mjs apps/ecommerce-cms-agentsam/tests/store-overview.test.mjs"
+    "test:cms-authoring": "node --test tests/cms-authoring-engine.test.mjs tests/cms-canonical-block-projection.test.mjs tests/cms-canonical-section-link.test.mjs tests/cms-composition-contract.test.mjs apps/ecommerce-cms-agentsam/tests/store-overview.test.mjs",
+    "sync:cms-ui": "node scripts/sync-ecommerce-sdk-ui.mjs --sync",
+    "sync:cms-ui:check": "node scripts/sync-ecommerce-sdk-ui.mjs --check"
   },
   "devDependencies": {
     "@inneranimalmedia/agentsam-repository": "^2.6.12",
