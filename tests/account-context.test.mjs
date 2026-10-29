@@ -16,9 +16,13 @@ function envWithAccounts(rows) {
             };
           },
           async all() {
+            if (sql.includes("meta_json") && rows.noMetaJson) {
+              throw new Error("no such column: meta_json");
+            }
             return {
               results: rows
                 .filter((row) => row.status === "active")
+                .filter((row) => !sql.includes("app_owner") || row.app_owner === true)
                 .slice(0, 2)
                 .map((row) => ({ id: row.id })),
             };
