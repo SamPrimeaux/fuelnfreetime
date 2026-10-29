@@ -7,7 +7,7 @@ function fixture(rowsByAccount) {
   const db = {
     prepare(sql) {
       statements.push(sql);
-      if (/\\bFROM\\s+(?:pages|page_sections)\\b/i.test(sql)) {
+      if (/\bFROM\s+(?:pages|page_sections)\b/i.test(sql)) {
         throw new Error("Legacy CMS table queried");
       }
       if (sql.includes("FROM cms_pages GROUP BY account_id")) {
@@ -51,7 +51,7 @@ test("Online Store reads v2 pages and sections, excluding published globals from
   assert.deepEqual(result.pages.map(p => p.slug), ["shop", "home", "site"]);
   assert.equal(result.lastSaved, "2026-10-28 15:00:00");
   assert.equal(statements.filter(s => s.includes("FROM cms_")).length, 2);
-  assert.ok(statements.every(s => !/\\bFROM\\s+(?:pages|page_sections)\\b/i.test(s)));
+  assert.ok(statements.every(s => !/\bFROM\s+(?:pages|page_sections)\b/i.test(s)));
 });
 
 test("Single-tenant Studio bridge can infer account from canonical pages", async () => {
