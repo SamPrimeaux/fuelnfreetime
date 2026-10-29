@@ -24,7 +24,7 @@ INSERT INTO agentsam_repository_contracts (
   name, description, manifest_path, contract_hash, status, metadata_json,
   created_at, updated_at
 )
-SELECT 'rct_b877060ef5dca29f', r.account_id, r.id, 'application.ecommerce-cms-agentsam', '1.0.0', 'package', 'Ecommerce + CMS application contract', 'Canonical reusable Ecommerce application contract: core admin surface plus bundled Apps.', 'apps/ecommerce-cms-agentsam/agentsam.app.json', 'b3e1ec2c4b8ea0fb1e5bd4205edddcb7734b60fa2b86bda0bcdd1c7ffc10a77f', 'active', '{"classification":"application","apps_registry":"apps/ecommerce-cms-agentsam/apps/registry.json","hash_algorithm":"sha256"}', unixepoch(), unixepoch()
+SELECT 'rct_b877060ef5dca29f', r.account_id, r.id, 'application.ecommerce-cms-agentsam', '1.0.0', 'package', 'Ecommerce + CMS application contract', 'Canonical reusable Ecommerce application contract: core admin surface plus bundled Apps.', 'apps/ecommerce-cms-agentsam/agentsam.app.json', '8a4f8f8f4ff2897d89450cef6b9c6ce92632bc7fa51fbe4cc497dff336e8f2dc', 'active', '{"classification":"application","apps_registry":"apps/ecommerce-cms-agentsam/apps/registry.json","hash_algorithm":"sha256"}', unixepoch(), unixepoch()
 FROM code_repositories r WHERE r.id = 'github:samprimeaux/fuelnfreetime'
 ON CONFLICT(repository_id,contract_key,contract_version) DO UPDATE SET
   account_id=excluded.account_id,
@@ -114,7 +114,7 @@ INSERT INTO agentsam_repository_contracts (
   name, description, manifest_path, contract_hash, status, metadata_json,
   created_at, updated_at
 )
-SELECT 'rct_88b98a67db6126d7', r.account_id, r.id, 'app.resend', '1.0.0', 'package', 'Resend Email App', 'Bundled Email/Resend provider App contract with mailbox-scoped authorization.', 'apps/ecommerce-cms-agentsam/apps/resend/agentsam.app.json', '86b1b720ff9f7067e5f539711a7bf4ed67006c02d50837e047f9b23739ee1018', 'active', '{"app_id":"resend","plugin_key":"resend","mailbox_authority":"mail_mailboxes","hash_algorithm":"sha256"}', unixepoch(), unixepoch()
+SELECT 'rct_88b98a67db6126d7', r.account_id, r.id, 'app.resend', '1.0.0', 'package', 'Resend Email App', 'Bundled Email/Resend provider App contract with mailbox-scoped authorization.', 'apps/ecommerce-cms-agentsam/apps/resend/agentsam.app.json', 'ec03c1e004c4e87eef77e6704a4f1e185581308b4bbbd954ab2aa94831c27070', 'active', '{"app_id":"resend","plugin_key":"resend","mailbox_authority":"mail_mailboxes","hash_algorithm":"sha256"}', unixepoch(), unixepoch()
 FROM code_repositories r WHERE r.id = 'github:samprimeaux/fuelnfreetime'
 ON CONFLICT(repository_id,contract_key,contract_version) DO UPDATE SET
   account_id=excluded.account_id,
